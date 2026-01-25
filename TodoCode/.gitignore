@@ -1,0 +1,8 @@
+stitch-ai-mcp
+.vscode
+node_modules
+.env
+.next
+coverage
+build
+public
