@@ -6,3 +6,7 @@ node_modules
 coverage
 build
 public
+.venv
+__pycache__
+*.pyc
+testing/.venv

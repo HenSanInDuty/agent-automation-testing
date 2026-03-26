@@ -1,44 +1,52 @@
-# API Documentation - Todo Application
+# Tài liệu API — Todo Application
 
-This document provides a detailed overview of the API endpoints available in the Todo application backend. All endpoints are prefixed with `/api`.
+Tài liệu này mô tả các endpoint của backend Todo. Tất cả endpoint bắt đầu bằng tiền tố `/api`.
 
-## Data Models
+**Lưu ý**: backend hiện tại trả về `200 OK` cho các thao tác tạo, cập nhật và xóa; phản hồi JSON chứa đối tượng tạo/cập nhật hoặc thông báo lỗi tương ứng.
+
+## Mô hình dữ liệu
 
 ### Task
-Represents a todo item.
-| Field | Type | Description | format |
+Trường theo `backend/models/models.go`:
+
+| Trường | Kiểu | Mô tả | Định dạng |
 | :--- | :--- | :--- | :--- |
-| `id` | `uint` | Primary key | |
-| `title` | `string` | Task title | |
-| `is_done` | `bool` | Completion status | |
-| `start_time` | `string` | Start time | `HH:mm` |
-| `end_time` | `string` | End time | `HH:mm` |
-| `date` | `string` | Task date | `YYYY-MM-DD` |
+| `id` | `uint` | Khóa chính |
+| `title` | `string` | Tiêu đề công việc |
+| `is_done` | `bool` | Trạng thái hoàn thành |
+| `start_time` | `string` | Thời gian bắt đầu | `HH:mm` |
+| `end_time` | `string` | Thời gian kết thúc | `HH:mm` |
+| `date` | `string` | Ngày công việc | `YYYY-MM-DD` |
+| `created_at` | `time` | Thời điểm tạo (ISO timestamp) |
+| `updated_at` | `time` | Thời điểm cập nhật (ISO timestamp) |
+| `deleted_at` | `gorm.DeletedAt` | Xóa mềm (nullable) |
 
 ### Goal
-Represents a goal (daily, monthly, or yearly).
-| Field | Type | Description | format |
+
+| Trường | Kiểu | Mô tả | Định dạng |
 | :--- | :--- | :--- | :--- |
-| `id` | `uint` | Primary key | |
-| `title` | `string` | Goal title | |
-| `type` | `string` | Goal type | `day`, `month`, or `year` |
-| `date` | `string` | Date for 'day' goals | `YYYY-MM-DD` |
-| `month` | `string` | Month for 'month' goals | `YYYY-MM` |
-| `year` | `string` | Year for 'year' goals | `YYYY` |
-| `is_done` | `bool` | Completion status | |
+| `id` | `uint` | Khóa chính |
+| `title` | `string` | Tiêu đề mục tiêu |
+| `type` | `string` | `day`, `month`, hoặc `year` |
+| `date` | `string` | Dùng cho `day` goals | `YYYY-MM-DD` |
+| `month` | `string` | Dùng cho `month` goals | `YYYY-MM` |
+| `year` | `string` | Dùng cho `year` goals | `YYYY` |
+| `is_done` | `bool` | Trạng thái hoàn thành |
+| `created_at` | `time` | Thời điểm tạo |
+| `updated_at` | `time` | Thời điểm cập nhật |
 
 ---
 
 ## Endpoints
 
-### 1. Tasks
+### Tasks
 
-#### Get All Tasks
-- **URL**: `GET /api/tasks`
-- **Query Parameters**:
-    - `date` (optional): Filter tasks by date (`YYYY-MM-DD`)
-- **Response**: `200 OK`
-- **Example Response**:
+- Get all tasks
+  - URL: `GET /api/tasks`
+  - Query params: `date` (optional, `YYYY-MM-DD`)
+  - Response: `200 OK` — mảng JSON các `Task`.
+
+  Example response:
   ```json
   [
     {
@@ -47,90 +55,56 @@ Represents a goal (daily, monthly, or yearly).
       "is_done": false,
       "start_time": "08:00",
       "end_time": "09:00",
-      "date": "2026-01-25"
+      "date": "2026-01-25",
+      "created_at": "2026-01-25T08:00:00Z",
+      "updated_at": "2026-01-25T08:00:00Z"
     }
   ]
   ```
 
-#### Create Task
-- **URL**: `POST /api/tasks`
-- **Body**:
-  ```json
-  {
-    "title": "Đi chợ",
-    "is_done": false,
-    "start_time": "10:00",
-    "end_time": "11:00",
-    "date": "2026-01-25"
-  }
-  ```
-- **Response**: `200 OK` (returns the created object)
+- Create task
+  - URL: `POST /api/tasks`
+  - Body: JSON với các trường `title` (string), `is_done` (bool), `start_time` (HH:mm), `end_time` (HH:mm), `date` (YYYY-MM-DD)
+  - Nếu `date` không cung cấp, backend sẽ gán ngày hiện tại tự động.
+  - Response: `200 OK` — trả về đối tượng `Task` vừa tạo.
 
-#### Update Task
-- **URL**: `PUT /api/tasks/:id`
-- **Body**: Partial Task object
-  ```json
-  {
-    "is_done": true
-  }
-  ```
-- **Response**: `200 OK` (returns the updated object)
+- Update task
+  - URL: `PUT /api/tasks/:id`
+  - Body: Partial JSON (chỉ gửi các trường cần cập nhật)
+  - Response: `200 OK` với đối tượng `Task` sau khi cập nhật; `404` nếu không tìm thấy.
 
-#### Delete Task
-- **URL**: `DELETE /api/tasks/:id`
-- **Response**: `200 OK`
-  ```json
-  {
-    "message": "Task deleted"
-  }
-  ```
+- Delete task
+  - URL: `DELETE /api/tasks/:id`
+  - Response: `200 OK` — `{ "message": "Task deleted" }`.
 
----
+### Goals
 
-### 2. Goals
+- Get goals
+  - URL: `GET /api/goals`
+  - Query params (optional): `type` (`day|month|year`), `date` (`YYYY-MM-DD`), `month` (`YYYY-MM`), `year` (`YYYY`).
+  - Nếu `date`, `month` và `year` cung cấp đồng thời, backend sẽ tìm các goal phù hợp trong ngữ cảnh ngày đó.
+  - Response: `200 OK` — mảng `Goal`.
 
-#### Get Goals
-- **URL**: `GET /api/goals`
-- **Query Parameters**:
-    - `type` (optional): `day`, `month`, or `year`
-    - `date` (optional): `YYYY-MM-DD`
-    - `month` (optional): `YYYY-MM`
-    - `year` (optional): `YYYY`
-    - **Note**: If `date`, `month`, and `year` are all provided, it fetches all relevant goals for that specific date context across types.
-- **Response**: `200 OK`
+- Create goal
+  - URL: `POST /api/goals`
+  - Body: `title`, `type` (required), và trường tương ứng (`date`/`month`/`year`) nếu cần. Backend có thể tự gán `date`/`month`/`year` theo `type` nếu không truyền.
+  - Response: `200 OK` — đối tượng `Goal` đã tạo.
 
-#### Create Goal
-- **URL**: `POST /api/goals`
-- **Body**:
-  ```json
-  {
-    "title": "Học tiếng Anh mỗi ngày",
-    "type": "month",
-    "month": "2026-01"
-  }
-  ```
-- **Response**: `200 OK`
+- Delete goal
+  - URL: `DELETE /api/goals/:id`
+  - Response: `200 OK` — `{ "message": "Goal deleted" }`.
 
-#### Delete Goal
-- **URL**: `DELETE /api/goals/:id`
-- **Response**: `200 OK`
-  ```json
-  {
-    "message": "Goal deleted"
-  }
-  ```
+### Statistics
 
----
+- Get stats
+  - URL: `GET /api/stats`
+  - Query params: `date` (optional, `YYYY-MM-DD`), `month` (optional, `YYYY-MM`)
+  - Response: `200 OK` — object JSON có các trường:
+    - `daily_goal`: float (tỉ lệ % hoàn thành cho ngày được chọn hoặc ngày hiện tại)
+    - `last_5_days`: array of `{ "date": "YYYY-MM-DD", "rate": float }`
+    - `success_days`: array of `YYYY-MM-DD` (các ngày trong tháng có tỉ lệ >= 80%)
 
-### 3. Statistics
-
-#### Get Stats
-- **URL**: `GET /api/stats`
-- **Query Parameters**:
-    - `date` (optional): `YYYY-MM-DD` (defaults to today)
-    - `month` (optional): `YYYY-MM` (for success days list)
-- **Response**: `200 OK`
-- **Example Response**:
+  Example response:
   ```json
   {
     "daily_goal": 80.0,
@@ -144,3 +118,9 @@ Represents a goal (daily, monthly, or yearly).
     "success_days": ["2026-01-01", "2026-01-02", "2026-01-05"]
   }
   ```
+
+---
+
+File đã cập nhật: [api_documentation.md](api_documentation.md)
+
+Bạn muốn tôi thêm ví dụ lỗi (400/404/500) cho từng endpoint không?

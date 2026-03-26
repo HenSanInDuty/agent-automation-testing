@@ -1,0 +1,220 @@
+{
+  "info": {
+    "name": "TodoCode API",
+    "_postman_id": "todo-code-api-collection",
+    "description": "Postman collection generated from backend routes and models",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Get all tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tasks",
+              "host": [
+                "{{base_url}}/tasks"
+              ]
+            },
+            "description": "Query params: `date` (YYYY-MM-DD) to filter tasks by date."
+          }
+        },
+        {
+          "name": "Create task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Example Task\",\n  \"is_done\": false,\n  \"start_time\": \"09:00\",\n  \"end_time\": \"10:00\",\n  \"date\": \"2026-01-27\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/tasks"
+            },
+            "description": "Create a new `Task`. Fields: `title`, `is_done`, `start_time` (HH:mm), `end_time` (HH:mm), `date` (YYYY-MM-DD)."
+          }
+        },
+        {
+          "name": "Update task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_done\": true,\n  \"end_time\": \"11:30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/tasks/:id",
+              "host": [
+                "{{base_url}}/tasks/:id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Update fields on an existing `Task`. Use path variable `id`."
+          }
+        },
+        {
+          "name": "Delete task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tasks/:id",
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Delete a `Task` by id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Goals",
+      "item": [
+        {
+          "name": "Get all goals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/goals",
+              "query": [
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Optional: day, month, year"
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "description": "YYYY-MM-DD (for day goals)"
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "description": "YYYY-MM (for month goals)"
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "description": "YYYY (for year goals)"
+                }
+              ]
+            },
+            "description": "Fetch goals. Use query params to filter by type/date/month/year."
+          }
+        },
+        {
+          "name": "Create goal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Example Goal\",\n  \"type\": \"day\",\n  \"date\": \"2026-01-27\",\n  \"is_done\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/goals"
+            },
+            "description": "Create a new `Goal`. `type` must be one of: `day`, `month`, `year`. Provide the corresponding `date`/`month`/`year` field when applicable."
+          }
+        },
+        {
+          "name": "Delete goal",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/goals/:id",
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Delete a `Goal` by id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "item": [
+        {
+          "name": "Get stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stats",
+              "query": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "description": "Optional: YYYY-MM-DD to calculate daily_goal for a specific date"
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "description": "Optional: YYYY-MM to return success_days for that month"
+                }
+              ]
+            },
+            "description": "Returns JSON with keys: `daily_goal` (float percent), `last_5_days` (array of {date, rate}), `success_days` (array of YYYY-MM-DD strings)."
+          }
+        }
+      ]
+    }
+  ]
+}
