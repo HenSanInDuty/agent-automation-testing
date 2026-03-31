@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Enable React strict mode for better development experience
   reactStrictMode: true,
 
+  // Required for Docker multi-stage build (copies only necessary files)
+  output: "standalone",
+
   // API proxy to avoid CORS issues in development
   async rewrites() {
     return [

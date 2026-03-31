@@ -6,16 +6,13 @@ WORKDIR /app
 RUN pip install uv
 
 # Copy dependency files
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # Install dependencies
 RUN uv sync --frozen --no-dev
 
 # Copy source
 COPY . .
-
-# Run migrations
-RUN uv run alembic upgrade head
 
 EXPOSE 8000
 
