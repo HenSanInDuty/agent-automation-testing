@@ -1,0 +1,325 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Design tokens
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Backgrounds */
+  --bg:               #101622;
+  --surface:          #18202F;
+  --surface-elevated: #1e2a3d;
+  --surface-hover:    #263450;
+
+  /* Borders */
+  --border:           #2b3b55;
+  --border-subtle:    #1e2a3d;
+  --border-focus:     #135bec;
+
+  /* Text */
+  --text-primary:     #ffffff;
+  --text-secondary:   #92a4c9;
+  --text-muted:       #3d5070;
+  --text-inverse:     #101622;
+
+  /* Brand */
+  --primary:          #135bec;
+  --primary-hover:    #1a6aff;
+  --primary-muted:    rgba(19, 91, 236, 0.15);
+
+  /* Semantic */
+  --success:          #22c55e;
+  --success-text:     #4ade80;
+  --success-muted:    rgba(34, 197, 94, 0.15);
+
+  --warning:          #f59e0b;
+  --warning-text:     #fbbf24;
+  --warning-muted:    rgba(245, 158, 11, 0.15);
+
+  --danger:           #ef4444;
+  --danger-text:      #f87171;
+  --danger-muted:     rgba(239, 68, 68, 0.15);
+
+  --info:             #06b6d4;
+  --info-text:        #22d3ee;
+  --info-muted:       rgba(6, 182, 212, 0.15);
+
+  /* Radius */
+  --radius-sm:  0.375rem;  /* 6px  */
+  --radius:     0.5rem;    /* 8px  */
+  --radius-md:  0.625rem;  /* 10px */
+  --radius-lg:  0.75rem;   /* 12px */
+  --radius-xl:  1rem;      /* 16px */
+  --radius-2xl: 1.25rem;   /* 20px */
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow:     0 2px 8px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md:  0 4px 16px 0 rgba(0, 0, 0, 0.5);
+  --shadow-lg:  0 8px 32px 0 rgba(0, 0, 0, 0.6);
+  --shadow-xl:  0 16px 48px 0 rgba(0, 0, 0, 0.7);
+
+  /* Transitions */
+  --transition-fast:   150ms ease;
+  --transition-base:   200ms ease;
+  --transition-slow:   300ms ease;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Tailwind v4 theme extension
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  /* Map CSS vars to Tailwind color utilities */
+  --color-bg:               var(--bg);
+  --color-surface:          var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-hover:    var(--surface-hover);
+
+  --color-border:           var(--border);
+  --color-border-subtle:    var(--border-subtle);
+  --color-border-focus:     var(--border-focus);
+
+  --color-text-primary:     var(--text-primary);
+  --color-text-secondary:   var(--text-secondary);
+  --color-text-muted:       var(--text-muted);
+
+  --color-primary:          var(--primary);
+  --color-primary-hover:    var(--primary-hover);
+
+  --color-success:          var(--success);
+  --color-warning:          var(--warning);
+  --color-danger:           var(--danger);
+  --color-info:             var(--info);
+
+  /* Border radius */
+  --radius-sm:   var(--radius-sm);
+  --radius:      var(--radius);
+  --radius-md:   var(--radius-md);
+  --radius-lg:   var(--radius-lg);
+  --radius-xl:   var(--radius-xl);
+  --radius-2xl:  var(--radius-2xl);
+  --radius-full: var(--radius-full);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Custom keyframes
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes shrink {
+  from { width: 100%; }
+  to   { width: 0%;   }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes zoom-in-95 {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes slide-in-from-right {
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to   { opacity: 1; transform: translateY(0);       }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Animation utility classes
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.zoom-in-95 {
+  animation-name: zoom-in-95;
+}
+
+.slide-in-from-right {
+  animation-name: slide-in-from-right;
+}
+
+.slide-up {
+  animation-name: slide-up;
+}
+
+.duration-150 { animation-duration: 150ms; }
+.duration-200 { animation-duration: 200ms; }
+.duration-300 { animation-duration: 300ms; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Skeleton / shimmer loading
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-elevated) 25%,
+    #263450 50%,
+    var(--surface-elevated) 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Base / reset
+   ───────────────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Custom scrollbar (Webkit)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: var(--radius-full);
+  transition: background-color var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--surface-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Focus ring
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Remove default focus ring for non-keyboard navigation */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Typography helpers
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+/* Code / monospace */
+code,
+kbd,
+samp,
+pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+  font-size: 0.875em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Form element resets  (native elements used in some UI components)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+select option {
+  background-color: var(--surface);
+  color: var(--text-primary);
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.4;
+}
+
+input[type="number"]::-webkit-inner-spin-button:hover,
+input[type="number"]::-webkit-outer-spin-button:hover {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Transition preset utilities
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.transition-base {
+  transition: all var(--transition-base);
+}
+
+.transition-colors-base {
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast),
+              border-color var(--transition-fast);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Layout helpers
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.page-container {
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .page-container {
+    padding-inline: 2rem;
+  }
+}

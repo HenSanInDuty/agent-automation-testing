@@ -1,0 +1,270 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// LLM Provider
+// ─────────────────────────────────────────────────────────────────────────────
+
+export enum LLMProvider {
+  OPENAI = "openai",
+  ANTHROPIC = "anthropic",
+  OLLAMA = "ollama",
+  HUGGINGFACE = "huggingface",
+  AZURE = "azure_openai",
+  GROQ = "groq",
+}
+
+export const LLM_PROVIDER_LABELS: Record<LLMProvider, string> = {
+  [LLMProvider.OPENAI]: "OpenAI",
+  [LLMProvider.ANTHROPIC]: "Anthropic",
+  [LLMProvider.OLLAMA]: "Ollama (Local)",
+  [LLMProvider.HUGGINGFACE]: "HuggingFace",
+  [LLMProvider.AZURE]: "Azure OpenAI",
+  [LLMProvider.GROQ]: "Groq",
+};
+
+/** Providers that require an API key */
+export const PROVIDERS_REQUIRING_API_KEY: LLMProvider[] = [
+  LLMProvider.OPENAI,
+  LLMProvider.ANTHROPIC,
+  LLMProvider.HUGGINGFACE,
+  LLMProvider.AZURE,
+  LLMProvider.GROQ,
+];
+
+/** Providers that require a base URL */
+export const PROVIDERS_REQUIRING_BASE_URL: LLMProvider[] = [
+  LLMProvider.OLLAMA,
+  LLMProvider.AZURE,
+];
+
+/** Common model suggestions per provider */
+export const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
+  [LLMProvider.OPENAI]: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
+  [LLMProvider.ANTHROPIC]: [
+    "claude-opus-4-5",
+    "claude-sonnet-4-5",
+    "claude-3-5-sonnet-20241022",
+    "claude-3-5-haiku-20241022",
+    "claude-3-opus-20240229",
+  ],
+  [LLMProvider.OLLAMA]: ["llama3.2", "llama3.1", "granite3.1-dense", "mistral", "qwen2.5"],
+  [LLMProvider.HUGGINGFACE]: ["meta-llama/Llama-3.1-8B-Instruct"],
+  [LLMProvider.AZURE]: ["gpt-4o", "gpt-4-turbo"],
+  [LLMProvider.GROQ]: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LLM Profile
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LLMProfileResponse {
+  id: number;
+  name: string;
+  provider: LLMProvider;
+  model: string;
+  /** Masked API key, e.g. "••••••••abcd". Null if no key configured. */
+  api_key: string | null;
+  base_url: string | null;
+  temperature: number;
+  max_tokens: number;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LLMProfileCreate {
+  name: string;
+  provider: LLMProvider;
+  model: string;
+  api_key?: string | null;
+  base_url?: string | null;
+  temperature: number;
+  max_tokens: number;
+  is_default: boolean;
+}
+
+export interface LLMProfileUpdate {
+  name?: string;
+  provider?: LLMProvider;
+  model?: string;
+  api_key?: string | null;
+  base_url?: string | null;
+  temperature?: number;
+  max_tokens?: number;
+  is_default?: boolean;
+}
+
+export interface LLMProfileListResponse {
+  items: LLMProfileResponse[];
+  total: number;
+}
+
+export interface LLMTestRequest {
+  prompt?: string;
+  timeout_seconds?: number;
+}
+
+export interface LLMTestResponse {
+  success: boolean;
+  message: string;
+  response_preview?: string | null;
+  latency_ms?: number | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Agent Config
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type AgentStage = "ingestion" | "testcase" | "execution" | "reporting";
+
+export const STAGE_LABELS: Record<AgentStage, string> = {
+  ingestion: "Stage 1 – Ingestion & Analysis",
+  testcase: "Stage 2 – Test Case Generation",
+  execution: "Stage 3 – Execution",
+  reporting: "Stage 4 – Reporting",
+};
+
+export const STAGE_ORDER: AgentStage[] = [
+  "ingestion",
+  "testcase",
+  "execution",
+  "reporting",
+];
+
+export interface AgentConfigSummary {
+  id: number;
+  agent_id: string;
+  display_name: string;
+  stage: AgentStage;
+  llm_profile_id: number | null;
+  llm_profile_name: string | null;
+  enabled: boolean;
+  verbose: boolean;
+  max_iter: number;
+  updated_at: string;
+}
+
+export interface AgentConfigResponse {
+  id: number;
+  agent_id: string;
+  display_name: string;
+  stage: AgentStage;
+  role: string;
+  goal: string;
+  backstory: string;
+  llm_profile_id: number | null;
+  llm_profile: LLMProfileResponse | null;
+  enabled: boolean;
+  verbose: boolean;
+  max_iter: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentConfigGrouped {
+  ingestion: AgentConfigSummary[];
+  testcase: AgentConfigSummary[];
+  execution: AgentConfigSummary[];
+  reporting: AgentConfigSummary[];
+}
+
+export interface AgentConfigUpdate {
+  display_name?: string;
+  stage?: AgentStage;
+  role?: string;
+  goal?: string;
+  backstory?: string;
+  llm_profile_id?: number | null;
+  enabled?: boolean;
+  verbose?: boolean;
+  max_iter?: number;
+}
+
+export interface AgentConfigResetResponse {
+  agent_id: string;
+  message: string;
+  config: AgentConfigResponse;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pipeline
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PipelineStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type AgentRunStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "skipped";
+
+export interface PipelineRunCreate {
+  llm_profile_id?: number | null;
+}
+
+export interface AgentRunResult {
+  agent_id: string;
+  display_name: string;
+  stage: AgentStage;
+  status: AgentRunStatus;
+  output_preview?: string | null;
+  error_message?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+}
+
+export interface PipelineRunResponse {
+  id: string;
+  status: PipelineStatus;
+  llm_profile_id?: number | null;
+  document_filename: string;
+  created_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error_message?: string | null;
+  agent_runs: AgentRunResult[];
+}
+
+export interface PipelineRunListResponse {
+  items: PipelineRunResponse[];
+  total: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WebSocket Events
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WSEventType =
+  | "run.started"
+  | "stage.started"
+  | "agent.started"
+  | "agent.completed"
+  | "agent.failed"
+  | "stage.completed"
+  | "run.completed"
+  | "run.failed"
+  | "log";
+
+export interface WSEvent {
+  event: WSEventType;
+  run_id: string;
+  timestamp: string;
+  data: Record<string, unknown>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Generic API helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ApiError {
+  detail: string | { msg: string; type: string }[];
+}
+
+export interface PaginationParams {
+  skip?: number;
+  limit?: number;
+}
