@@ -142,6 +142,10 @@ class IngestionCrew(BaseCrew):
         self._min_chunk_size = min_chunk_size
         self._llm_factory = LLMFactory(db)
 
+        # Lazy cache for the per-agent LLM profile lookup
+        self._per_agent_profile_checked: bool = False
+        self._per_agent_profile: Any = None  # LLMProfile | None
+
     # ─────────────────────────────────────────────────────────────────────────
     # Public entry point
     # ─────────────────────────────────────────────────────────────────────────
@@ -628,20 +632,55 @@ class IngestionCrew(BaseCrew):
         """
         Resolve the LLM profile to use for ingestion analysis.
 
-        Priority:
-            1. run_profile_id  (if supplied at construction time)
-            2. Global default profile (is_default=True in DB)
-            3. None  (caller falls back to mock extraction)
+        Priority (consistent with AgentFactory override chain):
+            1. Per-agent profile  (AgentConfig["ingestion_pipeline"].llm_profile)
+            2. Run-level override (self._run_profile_id)
+            3. Global default profile (is_default=True in DB)
+            4. None  (caller falls back to mock extraction)
 
         Returns:
             An :class:`LLMProfile` ORM instance, or ``None`` if no profile is found.
         """
-        # 1. Run-level override
+        # 1. Per-agent profile — cached after the first DB lookup
+        if not self._per_agent_profile_checked:
+            self._per_agent_profile_checked = True
+            try:
+                from sqlalchemy import select
+
+                from app.db.models import AgentConfig
+
+                stmt = select(AgentConfig).where(
+                    AgentConfig.agent_id == "ingestion_pipeline"
+                )
+                cfg = self._db.scalar(stmt)
+                if cfg is not None and cfg.llm_profile is not None:
+                    self._per_agent_profile = cfg.llm_profile
+                    logger.debug(
+                        "[Ingestion][%s] Using per-agent LLM profile: %r",
+                        self._run_id,
+                        cfg.llm_profile.name,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "[Ingestion][%s] Failed to load per-agent profile: %s",
+                    self._run_id,
+                    exc,
+                )
+
+        if self._per_agent_profile is not None:
+            return self._per_agent_profile
+
+        # 2. Run-level override
         if self._run_profile_id is not None:
             from app.db.models import LLMProfile
 
             profile = self._db.get(LLMProfile, self._run_profile_id)
             if profile is not None:
+                logger.debug(
+                    "[Ingestion][%s] Using run-level LLM profile id=%d",
+                    self._run_id,
+                    self._run_profile_id,
+                )
                 return profile
             logger.warning(
                 "[Ingestion][%s] Run profile id=%d not found — using global default.",
@@ -649,7 +688,7 @@ class IngestionCrew(BaseCrew):
                 self._run_profile_id,
             )
 
-        # 2. Global default
+        # 3. Global default
         return self._llm_factory._load_default_profile()
 
 

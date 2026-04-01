@@ -2,7 +2,7 @@
 tests/test_seed.py
 ──────────────────
 Verify that seed_all() correctly inserts the default LLM profile and all
-18 agent configs into an in-memory SQLite database.
+19 agent configs into an in-memory SQLite database.
 
 Run with:
     cd backend
@@ -123,7 +123,7 @@ class TestSeedAgentConfigsCounts:
         seed_agent_configs(db)
 
         total = db.query(AgentConfig).count()
-        assert total == 18
+        assert total == 19
 
     def test_total_matches_seed_data_length(self, db: Session) -> None:
         seed_agent_configs(db)
@@ -143,6 +143,12 @@ class TestSeedAgentConfigsCounts:
         count = db.query(AgentConfig).filter(AgentConfig.stage == "execution").count()
         assert count == 5
 
+    def test_ingestion_stage_count(self, db: Session) -> None:
+        seed_agent_configs(db)
+
+        count = db.query(AgentConfig).filter(AgentConfig.stage == "ingestion").count()
+        assert count == 1
+
     def test_reporting_stage_count(self, db: Session) -> None:
         seed_agent_configs(db)
 
@@ -155,7 +161,7 @@ class TestSeedAgentConfigsCounts:
         seed_agent_configs(db)
 
         total = db.query(AgentConfig).count()
-        assert total == 18
+        assert total == 19
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,6 +169,8 @@ class TestSeedAgentConfigsCounts:
 # ─────────────────────────────────────────────────────────────────────────────
 
 EXPECTED_AGENT_IDS = [
+    # ingestion (1)
+    "ingestion_pipeline",
     # testcase (10)
     "requirement_analyzer",
     "rule_parser",
@@ -366,7 +374,7 @@ class TestSeedAll:
         agents = db.query(AgentConfig).all()
 
         assert len(profiles) == 1
-        assert len(agents) == 18
+        assert len(agents) == 19
 
     def test_seed_all_is_idempotent(self, db: Session) -> None:
         seed_all(db)
@@ -377,7 +385,7 @@ class TestSeedAll:
         agents = db.query(AgentConfig).all()
 
         assert len(profiles) == 1
-        assert len(agents) == 18
+        assert len(agents) == 19
 
     def test_seed_all_preserves_user_customisations(self, db: Session) -> None:
         """

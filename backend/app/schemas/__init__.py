@@ -18,8 +18,10 @@ from app.schemas.llm_profile import (
     LLMTestResponse,
 )
 from app.schemas.pipeline import (
+    AGENT_STATUS_TO_FRONTEND,
     AgentCompletedEvent,
     AgentFailedEvent,
+    AgentRunResult,
     AgentRunStatus,
     AgentStartedEvent,
     LogEvent,
@@ -59,6 +61,8 @@ __all__ = [
     # pipeline
     "PipelineStatus",
     "AgentRunStatus",
+    "AGENT_STATUS_TO_FRONTEND",
+    "AgentRunResult",
     "WSEventType",
     "PipelineRunCreate",
     "PipelineRunResponse",

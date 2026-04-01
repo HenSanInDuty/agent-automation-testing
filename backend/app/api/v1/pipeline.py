@@ -23,6 +23,8 @@ from app.api.v1.deps import get_db
 from app.config import settings
 from app.db import crud
 from app.schemas.pipeline import (
+    AGENT_STATUS_TO_FRONTEND,
+    AgentRunResult,
     AgentRunStatus,
     PipelineResultResponse,
     PipelineRunListItem,
@@ -92,24 +94,53 @@ def _get_run_or_404(db: Session, run_id: str):
     return run
 
 
-def _orm_run_to_response(run) -> PipelineRunResponse:
+def _orm_run_to_response(run, db: Session) -> PipelineRunResponse:
     """Convert a PipelineRun ORM instance to PipelineRunResponse."""
-    agent_statuses: dict[str, AgentRunStatus] = {}
-    for agent_id, raw_status in run.get_agent_statuses().items():
-        try:
-            agent_statuses[agent_id] = AgentRunStatus(raw_status)
-        except ValueError:
-            agent_statuses[agent_id] = AgentRunStatus.WAITING
+    raw_statuses: dict[str, str] = run.get_agent_statuses()
+
+    # Build agent_runs from agent configs + statuses + results
+    agent_runs: list[AgentRunResult] = []
+
+    if raw_statuses:
+        # Get all agent configs for display names and stages
+        all_configs = crud.get_all_agent_configs(db)
+        config_map = {c.agent_id: c for c in all_configs}
+
+        # Get all results for output previews
+        all_results = crud.get_pipeline_results(db, run.id)
+        results_map: dict[str, str] = {}
+        for r in all_results:
+            out = r.get_output()
+            preview = str(out)[:500] if out else None
+            results_map[r.agent_id] = preview
+
+        for agent_id, raw_status in raw_statuses.items():
+            config = config_map.get(agent_id)
+            frontend_status = AGENT_STATUS_TO_FRONTEND.get(raw_status, "pending")
+
+            agent_runs.append(
+                AgentRunResult(
+                    agent_id=agent_id,
+                    display_name=config.display_name if config else agent_id,
+                    stage=config.stage if config else "ingestion",
+                    status=frontend_status,
+                    output_preview=results_map.get(agent_id),
+                    error_message=None,
+                    started_at=None,
+                    completed_at=None,
+                )
+            )
 
     return PipelineRunResponse(
         id=run.id,
-        document_name=run.document_name,
+        document_filename=run.document_name,
         status=PipelineStatus(run.status),
-        agent_statuses=agent_statuses,
-        error=run.error,
+        agent_runs=agent_runs,
+        error_message=run.error,
         llm_profile_id=run.llm_profile_id,
         created_at=run.created_at,
-        finished_at=run.finished_at,
+        started_at=run.created_at,
+        completed_at=run.finished_at,
     )
 
 
@@ -409,7 +440,7 @@ async def start_pipeline_run(
         environment=environment,
     )
 
-    return _orm_run_to_response(run)
+    return _orm_run_to_response(run, db)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -457,17 +488,45 @@ def list_pipeline_runs(
         status=status_filter,
     )
 
-    items = [
-        PipelineRunListItem(
-            id=r.id,
-            document_name=r.document_name,
-            status=PipelineStatus(r.status),
-            llm_profile_id=r.llm_profile_id,
-            created_at=r.created_at,
-            finished_at=r.finished_at,
+    # Get agent configs once for building agent_runs
+    all_configs = crud.get_all_agent_configs(db)
+    config_map = {c.agent_id: c for c in all_configs}
+
+    items = []
+    for r in runs:
+        raw_statuses = r.get_agent_statuses()
+        all_results = crud.get_pipeline_results(db, r.id)
+        results_map = {
+            res.agent_id: str(res.get_output())[:500] if res.get_output() else None
+            for res in all_results
+        }
+
+        agent_runs = []
+        for agent_id, raw_status in raw_statuses.items():
+            config = config_map.get(agent_id)
+            agent_runs.append(
+                AgentRunResult(
+                    agent_id=agent_id,
+                    display_name=config.display_name if config else agent_id,
+                    stage=config.stage if config else "ingestion",
+                    status=AGENT_STATUS_TO_FRONTEND.get(raw_status, "pending"),
+                    output_preview=results_map.get(agent_id),
+                )
+            )
+
+        items.append(
+            PipelineRunListItem(
+                id=r.id,
+                document_filename=r.document_name,
+                status=PipelineStatus(r.status),
+                llm_profile_id=r.llm_profile_id,
+                created_at=r.created_at,
+                started_at=r.created_at,
+                completed_at=r.finished_at,
+                error_message=r.error,
+                agent_runs=agent_runs,
+            )
         )
-        for r in runs
-    ]
 
     return PipelineRunListResponse(
         items=items,
@@ -503,7 +562,7 @@ def get_pipeline_run(
     ),
 ) -> dict[str, Any]:
     run = _get_run_or_404(db, run_id)
-    run_response = _orm_run_to_response(run)
+    run_response = _orm_run_to_response(run, db)
 
     response: dict[str, Any] = run_response.model_dump()
 
@@ -615,7 +674,7 @@ def cancel_pipeline_run(db: DB, run_id: str) -> PipelineRunResponse:
             error="Run was cancelled by user before it started.",
         )
         logger.info("[Pipeline] Cancelled PENDING run  run_id=%r", run_id)
-        return _orm_run_to_response(updated)
+        return _orm_run_to_response(updated, db)
 
     # RUNNING — register the cancellation request; background task will honour it
     _CANCEL_REQUESTED.add(run_id)
@@ -623,7 +682,7 @@ def cancel_pipeline_run(db: DB, run_id: str) -> PipelineRunResponse:
 
     # Re-fetch to return the latest state
     run = crud.get_pipeline_run(db, run_id)
-    return _orm_run_to_response(run)
+    return _orm_run_to_response(run, db)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

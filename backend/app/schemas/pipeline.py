@@ -26,6 +26,15 @@ class AgentRunStatus(str, Enum):
     ERROR = "error"
 
 
+AGENT_STATUS_TO_FRONTEND: dict[str, str] = {
+    "waiting": "pending",
+    "running": "running",
+    "done": "completed",
+    "skipped": "skipped",
+    "error": "failed",
+}
+
+
 class WSEventType(str, Enum):
     RUN_STARTED = "run.started"
     STAGE_STARTED = "stage.started"
@@ -55,36 +64,31 @@ class PipelineRunCreate(BaseModel):
     )
 
 
+class AgentRunResult(BaseModel):
+    agent_id: str
+    display_name: str
+    stage: str
+    status: str  # frontend values: pending, running, completed, failed, skipped
+    output_preview: Optional[str] = None
+    error_message: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
 class PipelineRunResponse(BaseModel):
     """Trả về khi tạo run mới hoặc GET run detail."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: str = Field(description="UUID của run")
-    document_name: str
     status: PipelineStatus
-    agent_statuses: dict[str, AgentRunStatus] = Field(
-        default_factory=dict,
-        description="Trạng thái từng agent: { agent_id: status }",
-    )
-    error: Optional[str] = None
     llm_profile_id: Optional[int] = None
+    document_filename: str
     created_at: datetime
-    finished_at: Optional[datetime] = None
-
-    # Computed
-    duration_seconds: Optional[float] = Field(
-        default=None,
-        description="Thời gian chạy (giây). None nếu chưa hoàn thành.",
-    )
-
-    def model_post_init(self, __context: Any) -> None:
-        """Tính duration nếu đã hoàn thành."""
-        if self.finished_at and self.created_at:
-            delta = self.finished_at - self.created_at
-            object.__setattr__(
-                self, "duration_seconds", round(delta.total_seconds(), 2)
-            )
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    agent_runs: list[AgentRunResult] = Field(default_factory=list)
 
 
 class PipelineRunListItem(BaseModel):
@@ -93,11 +97,14 @@ class PipelineRunListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    document_name: str
+    document_filename: str
     status: PipelineStatus
     llm_profile_id: Optional[int] = None
     created_at: datetime
-    finished_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    agent_runs: list[AgentRunResult] = Field(default_factory=list)
 
 
 class PipelineRunListResponse(BaseModel):

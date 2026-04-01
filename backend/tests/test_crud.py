@@ -750,7 +750,7 @@ class TestSeeder:
         assert default_profile.is_default is True
 
         configs = get_all_agent_configs(db)
-        assert len(configs) == 18
+        assert len(configs) == 19
 
     def test_seed_all_is_idempotent(self, db):
         from app.db.crud import get_all_agent_configs, get_all_llm_profiles
@@ -763,7 +763,7 @@ class TestSeeder:
         configs = get_all_agent_configs(db)
 
         assert profile_total == 1
-        assert len(configs) == 18
+        assert len(configs) == 19
 
     def test_seed_all_covers_all_stages(self, db):
         from app.db.crud import get_all_agent_configs

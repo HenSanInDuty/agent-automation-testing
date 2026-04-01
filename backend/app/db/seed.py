@@ -49,11 +49,32 @@ DEFAULT_LLM_PROFILE: dict[str, Any] = {
 #   backstory     – personality/expertise that shapes the LLM's behaviour
 #   max_iter      – max LLM reasoning iterations per task
 #
-# NOTE: The ingestion stage (Parsing → Chunking → Analysis) is implemented
-# with Python tools that reuse code from automationtestingmultiagent.py.
-# It does not use CrewAI Agents, so it is not seeded here.
+# NOTE: The ingestion stage uses a pure-Python pipeline (not CrewAI Agents),
+# but we still seed an AgentConfig row so that the admin can assign a
+# per-stage LLM profile override via the UI — consistent with other stages.
 
 DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
+    # ── Stage: ingestion ──────────────────────────────────────────────────────
+    {
+        "agent_id": "ingestion_pipeline",
+        "display_name": "Ingestion Pipeline",
+        "stage": "ingestion",
+        "role": "Document Ingestion Analyst",
+        "goal": (
+            "Parse, chunk, and extract structured software requirements from uploaded "
+            "documents (PDF, DOCX, Excel, plain text) using a Large Language Model, "
+            "producing a clean, deduplicated list of RequirementItem objects."
+        ),
+        "backstory": (
+            "You are a document analysis expert with deep expertise in natural language "
+            "processing and information extraction. You have processed thousands of "
+            "requirements documents across many industries and can reliably identify, "
+            "classify, and structure software requirements from any format. "
+            "You are meticulous about accuracy, never inventing requirements that "
+            "aren't explicitly stated in the source document."
+        ),
+        "max_iter": 3,
+    },
     # ── Stage: testcase ───────────────────────────────────────────────────────
     {
         "agent_id": "requirement_analyzer",

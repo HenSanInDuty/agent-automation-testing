@@ -542,8 +542,8 @@ class TestAgentConfigsList:
         r = seeded_client.get("/api/v1/admin/agent-configs")
         assert r.status_code == 200
         agents = r.json()
-        # 18 agents seeded (10 testcase + 5 execution + 3 reporting)
-        assert len(agents) == 18
+        # 19 agents seeded (1 ingestion + 10 testcase + 5 execution + 3 reporting)
+        assert len(agents) == 19
 
     def test_list_grouped_shape(self, seeded_client: TestClient):
         r = seeded_client.get("/api/v1/admin/agent-configs?grouped=true")
@@ -553,7 +553,7 @@ class TestAgentConfigsList:
         assert len(body["testcase"]) == 10
         assert len(body["execution"]) == 5
         assert len(body["reporting"]) == 3
-        assert len(body["ingestion"]) == 0  # ingestion is pure Python, no agents
+        assert len(body["ingestion"]) == 1
 
     def test_list_filter_by_stage(self, seeded_client: TestClient):
         r = seeded_client.get("/api/v1/admin/agent-configs?stage=testcase")
@@ -577,8 +577,8 @@ class TestAgentConfigsList:
     def test_list_enabled_only_all_enabled_by_default(self, seeded_client: TestClient):
         r = seeded_client.get("/api/v1/admin/agent-configs?enabled_only=true")
         assert r.status_code == 200
-        # All 18 default agents are enabled
-        assert len(r.json()) == 18
+        # All 19 default agents are enabled
+        assert len(r.json()) == 19
 
     def test_list_enabled_only_after_disabling_one(self, seeded_client: TestClient):
         seeded_client.put(
@@ -587,7 +587,7 @@ class TestAgentConfigsList:
         )
         r = seeded_client.get("/api/v1/admin/agent-configs?enabled_only=true")
         assert r.status_code == 200
-        assert len(r.json()) == 17
+        assert len(r.json()) == 18
 
     def test_list_stage_and_enabled_combined(self, seeded_client: TestClient):
         seeded_client.put(
@@ -809,7 +809,7 @@ class TestAgentConfigsReset:
         r = seeded_client.post("/api/v1/admin/agent-configs/reset-all")
         assert r.status_code == 200
         body = r.json()
-        assert body["reset_count"] == 18
+        assert body["reset_count"] == 19
         assert "agent_ids" in body
 
         # Verify each mutated agent is back to defaults
@@ -855,7 +855,7 @@ class TestPipelineRun:
         body = r.json()
         assert "id" in body
         assert body["status"] == "pending"
-        assert body["document_name"] == "requirements.md"
+        assert body["document_filename"] == "requirements.md"
 
     def test_run_response_has_required_fields(self, seeded_client: TestClient):
         r = seeded_client.post(
@@ -866,9 +866,9 @@ class TestPipelineRun:
         body = r.json()
         assert "id" in body
         assert "status" in body
-        assert "document_name" in body
+        assert "document_filename" in body
         assert "created_at" in body
-        assert "agent_statuses" in body
+        assert "agent_runs" in body
 
     def test_run_with_llm_profile_override(self, seeded_client: TestClient):
         profile = seeded_client.post(
@@ -993,7 +993,7 @@ class TestPipelineList:
         r = seeded_client.get("/api/v1/pipeline/runs")
         for item in r.json()["items"]:
             assert "id" in item
-            assert "document_name" in item
+            assert "document_filename" in item
             assert "status" in item
             assert "created_at" in item
 
@@ -1018,7 +1018,7 @@ class TestPipelineGetDetail:
         assert r.status_code == 200
         body = r.json()
         assert body["id"] == created["id"]
-        assert body["document_name"] == "requirements.md"
+        assert body["document_filename"] == "requirements.md"
 
     def test_get_not_found(self, seeded_client: TestClient):
         fake_id = str(uuid.uuid4())
@@ -1049,8 +1049,8 @@ class TestPipelineGetDetail:
         ).json()
         r = seeded_client.get(f"/api/v1/pipeline/runs/{created['id']}")
         body = r.json()
-        assert "agent_statuses" in body
-        assert isinstance(body["agent_statuses"], dict)
+        assert "agent_runs" in body
+        assert isinstance(body["agent_runs"], list)
 
 
 class TestPipelineDelete:
@@ -1092,7 +1092,7 @@ class TestPipelineCancel:
         assert r.status_code == 200
         body = r.json()
         assert body["status"] == "failed"
-        assert "cancelled" in (body.get("error") or "").lower()
+        assert "cancelled" in (body.get("error_message") or "").lower()
 
     def test_cancel_not_found(self, seeded_client: TestClient):
         r = seeded_client.post(f"/api/v1/pipeline/runs/{uuid.uuid4()}/cancel")
