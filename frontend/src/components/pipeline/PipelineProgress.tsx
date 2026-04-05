@@ -141,6 +141,7 @@ const PIPELINE_STATUS_BADGE: Record<PipelineStatus, PipelineStatusBadgeConfig> =
   {
     pending: { variant: "default", label: "Pending", dot: false },
     running: { variant: "info", label: "Running", dot: true },
+    paused: { variant: "warning", label: "Paused", dot: false },
     completed: { variant: "success", label: "Completed", dot: false },
     failed: { variant: "danger", label: "Failed", dot: false },
     cancelled: { variant: "warning", label: "Cancelled", dot: false },
@@ -582,6 +583,20 @@ export function PipelineProgress({
           />
           <p className="text-xs text-[#f87171] leading-relaxed">
             {run.error_message}
+          </p>
+        </div>
+      )}
+
+      {/* ── Paused banner ─────────────────────────────────────────────────── */}
+      {run.status === "paused" && (
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/25">
+          <span
+            className="w-2 h-2 rounded-full bg-[#f59e0b] shrink-0"
+            aria-hidden="true"
+          />
+          <p className="text-xs text-[#fbbf24] leading-relaxed">
+            Pipeline is paused. It will resume from the next stage when you
+            click Resume.
           </p>
         </div>
       )}

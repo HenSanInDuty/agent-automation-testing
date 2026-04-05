@@ -146,14 +146,16 @@ class LLMProfileUpdate(BaseModel):
 
 
 class LLMProfileResponse(BaseModel):
-    """
-    Safe response schema — api_key is always masked before sending to the FE.
-    Use LLMProfileInternal (below) when you need the real key for LLM calls.
+    """Safe response schema — api_key is always masked before sending to the FE.
+
+    The ``id`` field carries the MongoDB ObjectId as a hex string.
+    Use :class:`LLMProfileInternal` when the real API key is needed for LLM
+    calls — never serialise that class to an HTTP response.
     """
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str  # MongoDB ObjectId as hex string
     name: str
     provider: LLMProvider
     model: str
@@ -172,19 +174,20 @@ class LLMProfileResponse(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _mask_api_key(cls, data: object) -> object:
-        """
-        Mask the raw api_key before Pydantic stores it.
-        Works both when data is a dict and when it is an ORM model instance.
+        """Mask the raw api_key before Pydantic stores it.
 
-        For ORM objects we convert to a plain dict so that the alias field
-        ``api_key_masked`` (alias="api_key") receives the masked value rather
-        than the raw key that lives on the ORM instance.
+        Works both when *data* is a plain ``dict`` and when it is a Beanie
+        ``Document`` instance (accessed via ``__dict__`` / ``getattr``).
+
+        For Document objects the attributes are extracted into a plain dict so
+        that the aliased field ``api_key_masked`` (alias="api_key") receives
+        the masked value rather than the raw key on the document.
         """
-        # ORM object — extract attributes into a dict so we can mask safely
+        # Beanie Document (or any object with attributes) — extract to dict
         if hasattr(data, "__dict__") and not isinstance(data, dict):
             raw = getattr(data, "api_key", None)
             return {
-                "id": getattr(data, "id", None),
+                "id": str(getattr(data, "id", None) or ""),
                 "name": getattr(data, "name", None),
                 "provider": getattr(data, "provider", None),
                 "model": getattr(data, "model", None),
@@ -197,26 +200,29 @@ class LLMProfileResponse(BaseModel):
                 "updated_at": getattr(data, "updated_at", None),
             }
 
-        # Dict
+        # Plain dict
         if isinstance(data, dict):
-            raw = data.get("api_key")
-            data = dict(data)  # make a mutable copy
-            data["api_key"] = _mask(raw)
+            data = dict(data)  # mutable copy
+            data["api_key"] = _mask(data.get("api_key"))
+            # Coerce ObjectId to str when coming from a serialised document
+            if "id" in data and data["id"] is not None:
+                data["id"] = str(data["id"])
             return data
 
         return data
 
 
 class LLMProfileInternal(BaseModel):
-    """
-    Internal-only schema that includes the REAL api_key.
-    Never serialize this to an HTTP response.
-    Used exclusively inside llm_factory.py and crew builders.
+    """Internal-only schema that exposes the real ``api_key``.
+
+    **Never** serialise this to an HTTP response.  Used exclusively inside
+    ``llm_factory.py`` and crew builders where the raw key is needed to
+    authenticate against the LLM provider.
     """
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str  # MongoDB ObjectId as hex string
     name: str
     provider: LLMProvider
     model: str
@@ -228,7 +234,7 @@ class LLMProfileInternal(BaseModel):
 
     @property
     def litellm_model_string(self) -> str:
-        """Returns the LiteLLM-style 'provider/model' string."""
+        """Return the LiteLLM-style ``'provider/model'`` string."""
         return f"{self.provider.litellm_prefix}/{self.model}"
 
 
@@ -270,11 +276,11 @@ class LLMProfileListResponse(BaseModel):
 
 
 def _mask(api_key: Optional[str]) -> Optional[str]:
-    """
-    Mask an API key for display.
-    - None / empty  → None
-    - <= 8 chars    → "••••••••"
-    - > 8 chars     → "••••••••" + last 4 chars
+    """Mask an API key for safe display.
+
+    - ``None`` / empty string → ``None``
+    - 8 characters or fewer  → ``"••••••••"``
+    - More than 8 characters → ``"••••••••"`` + last 4 characters
     """
     if not api_key:
         return None

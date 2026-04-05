@@ -1,14 +1,14 @@
 [project]
 name = "auto-at-backend"
-version = "0.1.0"
+version = "2.0.0"
 description = "Auto-AT: Multi-Agent Testing Automation Backend"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
-    "sqlalchemy>=2.0.0",
-    "alembic>=1.13.0",
+    "motor>=3.3.0",
+    "beanie>=1.26.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "python-multipart>=0.0.9",
@@ -21,11 +21,6 @@ dependencies = [
     "cryptography>=42.0.0",
     "python-dotenv>=1.0.0",
     "aiofiles>=23.0.0",
-    # CrewAI multi-agent framework.
-    # lancedb is pinned to 0.30.0 because 0.30.1+ dropped Windows wheels
-    # (only manylinux / macOS builds are published for newer releases).
-    # Revisit the pin when lancedb publishes win_amd64 wheels again:
-    #   https://github.com/lancedb/lancedb/releases
     "crewai>=1.0.0",
     "lancedb==0.30.0",
 ]

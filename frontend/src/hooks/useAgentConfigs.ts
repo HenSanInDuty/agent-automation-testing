@@ -1,12 +1,8 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { agentConfigsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
-import type { AgentConfigUpdate } from "@/types";
+import type { AgentConfigCreate, AgentConfigUpdate } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Queries
@@ -78,7 +74,7 @@ export function useResetAgentConfig() {
       // Store the fresh detail returned by the reset endpoint
       qc.setQueryData(
         queryKeys.agentConfigs.detail(data.agent_id),
-        data.config
+        data.config,
       );
     },
   });
@@ -95,6 +91,37 @@ export function useResetAllAgentConfigs() {
     mutationFn: () => agentConfigsApi.resetAll(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.all });
+    },
+  });
+}
+
+/**
+ * Create a new custom agent config.
+ * Invalidates the grouped list so the new agent appears immediately.
+ */
+export function useCreateAgentConfig() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: AgentConfigCreate) => agentConfigsApi.create(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.grouped() });
+    },
+  });
+}
+
+/**
+ * Delete a custom agent config.
+ * Invalidates the grouped list and removes the stale detail entry.
+ */
+export function useDeleteAgentConfig() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (agentId: string) => agentConfigsApi.delete(agentId),
+    onSuccess: (_data, agentId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.grouped() });
+      qc.removeQueries({ queryKey: queryKeys.agentConfigs.detail(agentId) });
     },
   });
 }

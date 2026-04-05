@@ -1,4 +1,21 @@
 services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+      MONGO_INITDB_DATABASE: auto_at
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -7,11 +24,14 @@ services:
       - "8000:8000"
     environment:
       - APP_ENV=production
-      - DATABASE_URL=sqlite:///./auto_at.db
+      - MONGODB_URI=mongodb://admin:${MONGO_PASSWORD:-changeme}@mongodb:27017/auto_at?authSource=admin
+      - MONGODB_DB_NAME=auto_at
       - UPLOAD_DIR=./uploads
     volumes:
-      - backend_data:/app/data
       - backend_uploads:/app/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test:
@@ -41,5 +61,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  backend_data:
+  mongo_data:
   backend_uploads:

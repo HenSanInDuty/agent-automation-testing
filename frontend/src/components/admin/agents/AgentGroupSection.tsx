@@ -23,6 +23,7 @@ interface AgentGroupSectionProps {
   agents: AgentConfigSummary[];
   onEditAgent: (agentId: string, payload?: AgentConfigUpdate) => void;
   onResetAgent: (agentId: string) => void;
+  onDeleteAgent: (agentId: string) => void;
   /** Zero-based position of this stage in STAGE_ORDER — used for accent styling */
   index: number;
 }
@@ -89,6 +90,7 @@ export function AgentGroupSection({
   agents,
   onEditAgent,
   onResetAgent,
+  onDeleteAgent,
   index,
 }: AgentGroupSectionProps) {
   const [expanded, setExpanded] = React.useState(true);
@@ -204,6 +206,7 @@ export function AgentGroupSection({
                   index={i}
                   onEdit={onEditAgent}
                   onReset={onResetAgent}
+                  onDelete={onDeleteAgent}
                 />
               </div>
             ))

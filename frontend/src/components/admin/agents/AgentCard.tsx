@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Edit3, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
+import { Edit3, RotateCcw, CheckCircle2, XCircle, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Toggle, Badge } from "@/components/ui/Select";
@@ -25,13 +25,21 @@ export interface AgentCardProps {
   onEdit: (agentId: string, payload?: AgentConfigUpdate) => void;
   /** Trigger the per-agent reset confirmation flow */
   onReset: (agentId: string) => void;
+  /** Trigger the per-agent delete confirmation flow (custom agents only) */
+  onDelete?: (agentId: string) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AgentCard
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function AgentCard({ agent, index, onEdit, onReset }: AgentCardProps) {
+export function AgentCard({
+  agent,
+  index,
+  onEdit,
+  onReset,
+  onDelete,
+}: AgentCardProps) {
   return (
     <div
       className={cn(
@@ -98,9 +106,7 @@ export function AgentCard({ agent, index, onEdit, onReset }: AgentCardProps) {
         </span>
         <Toggle
           checked={agent.enabled}
-          onChange={() =>
-            onEdit(agent.agent_id, { enabled: !agent.enabled })
-          }
+          onChange={() => onEdit(agent.agent_id, { enabled: !agent.enabled })}
           size="sm"
           aria-label={`Toggle enabled for ${agent.display_name}`}
         />
@@ -113,9 +119,7 @@ export function AgentCard({ agent, index, onEdit, onReset }: AgentCardProps) {
         </span>
         <Toggle
           checked={agent.verbose}
-          onChange={() =>
-            onEdit(agent.agent_id, { verbose: !agent.verbose })
-          }
+          onChange={() => onEdit(agent.agent_id, { verbose: !agent.verbose })}
           size="sm"
           aria-label={`Toggle verbose for ${agent.display_name}`}
         />
@@ -129,10 +133,7 @@ export function AgentCard({ agent, index, onEdit, onReset }: AgentCardProps) {
             aria-label="Enabled"
           />
         ) : (
-          <XCircle
-            className="w-4 h-4 text-[#f87171]"
-            aria-label="Disabled"
-          />
+          <XCircle className="w-4 h-4 text-[#f87171]" aria-label="Disabled" />
         )}
       </div>
 
@@ -166,6 +167,23 @@ export function AgentCard({ agent, index, onEdit, onReset }: AgentCardProps) {
         >
           Reset
         </Button>
+
+        {agent.is_custom && onDelete && (
+          <Button
+            variant="ghost"
+            size="xs"
+            leftIcon={<Trash2 className="w-3 h-3" aria-hidden="true" />}
+            onClick={() => onDelete(agent.agent_id)}
+            title={`Delete ${agent.display_name}`}
+            className={cn(
+              "opacity-0 group-hover:opacity-100",
+              "transition-opacity duration-150",
+              "text-[#92a4c9] hover:text-[#f87171] hover:bg-[#ef4444]/10",
+            )}
+          >
+            Delete
+          </Button>
+        )}
       </div>
     </div>
   );

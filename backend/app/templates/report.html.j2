@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto-AT Report — {{ document_name | e }}</title>
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1e293b;
+      background: #f1f5f9;
+    }
+
+    /* ── Page wrapper ───────────────────────────────────────────── */
+    .page {
+      max-width: 1000px;
+      margin: 32px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.10);
+      overflow: hidden;
+    }
+
+    /* ── Header band ────────────────────────────────────────────── */
+    .report-header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+      color: #ffffff;
+      padding: 40px 48px 32px;
+    }
+    .report-header .brand {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: .7;
+      margin-bottom: 8px;
+    }
+    .report-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .report-header .subtitle {
+      font-size: 14px;
+      opacity: .8;
+    }
+    .report-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,.2);
+    }
+    .report-meta .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .report-meta .meta-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      opacity: .65;
+    }
+    .report-meta .meta-value {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* ── Status badge ───────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+    .badge-completed, .badge-passed   { background: #dcfce7; color: #15803d; }
+    .badge-failed, .badge-error       { background: #fee2e2; color: #b91c1c; }
+    .badge-running                    { background: #dbeafe; color: #1d4ed8; }
+    .badge-paused                     { background: #fef9c3; color: #854d0e; }
+    .badge-cancelled                  { background: #f3f4f6; color: #374151; }
+    .badge-skipped                    { background: #fef3c7; color: #92400e; }
+    .badge-pending, .badge-not-run    { background: #f3f4f6; color: #6b7280; }
+
+    /* ── Content area ───────────────────────────────────────────── */
+    .content { padding: 40px 48px; }
+
+    /* ── Sections ───────────────────────────────────────────────── */
+    section { margin-bottom: 48px; }
+    section:last-child { margin-bottom: 0; }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .icon {
+      width: 24px;
+      height: 24px;
+      background: #1e3a5f;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    /* ── Metrics grid ───────────────────────────────────────────── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .metric-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .metric-card .metric-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1e3a5f;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .metric-card .metric-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: #64748b;
+    }
+    .metric-card.green .metric-value  { color: #15803d; }
+    .metric-card.red   .metric-value  { color: #b91c1c; }
+    .metric-card.blue  .metric-value  { color: #1d4ed8; }
+
+    /* ── Prose text ─────────────────────────────────────────────── */
+    .prose {
+      color: #475569;
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+
+    /* ── Tables ─────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr {
+      background: #1e3a5f;
+      color: #ffffff;
+    }
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover           { background: #eff6ff; }
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+      vertical-align: top;
+    }
+    tbody td.id-cell {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      color: #3b82f6;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .row-count {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    /* ── Two-column stats table ─────────────────────────────────── */
+    .stats-table {
+      max-width: 480px;
+    }
+    .stats-table tbody td:first-child {
+      font-weight: 600;
+      color: #1e293b;
+      width: 220px;
+    }
+
+    /* ── Lists ──────────────────────────────────────────────────── */
+    .rec-list, .risk-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .rec-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: #f0fdf4;
+      border-left: 3px solid #22c55e;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      color: #166534;
+      font-size: 13px;
+    }
+    .rec-list li .num {
+      font-weight: 700;
+      color: #15803d;
+      flex-shrink: 0;
+    }
+    .risk-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: #fff7ed;
+      border-left: 3px solid #f97316;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      color: #7c2d12;
+      font-size: 13px;
+    }
+    .risk-list li .icon-warn { flex-shrink: 0; }
+
+    /* ── Empty state ────────────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      padding: 24px;
+      color: #94a3b8;
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* ── Coverage bar ───────────────────────────────────────────── */
+    .coverage-bar-wrap {
+      margin: 12px 0 20px;
+    }
+    .coverage-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .coverage-bar-track {
+      background: #e2e8f0;
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .coverage-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #3b82f6, #22c55e);
+      transition: width .4s ease;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    .report-footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 20px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .report-footer a { color: #3b82f6; text-decoration: none; }
+
+    /* ── Print overrides ────────────────────────────────────────── */
+    @media print {
+      body        { background: #fff; }
+      .page       { box-shadow: none; margin: 0; border-radius: 0; }
+      .content    { padding: 24px 32px; }
+      section     { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="report-header">
+    <div class="brand">Auto-AT &mdash; Automated Testing Report</div>
+    <h1>{{ document_name | e }}</h1>
+    <div class="subtitle">Pipeline Execution Report</div>
+    <div class="report-meta">
+      <div class="meta-item">
+        <span class="meta-label">Status</span>
+        <span class="meta-value">
+          <span class="badge badge-{{ run_status | lower | replace(' ', '-') }}">{{ run_status | title | e }}</span>
+        </span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Run ID</span>
+        <span class="meta-value" style="font-family: monospace; font-size: 12px;">{{ run_id | e }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Generated</span>
+        <span class="meta-value">{{ generated_at | e }}</span>
+      </div>
+      {% if total_test_cases %}
+      <div class="meta-item">
+        <span class="meta-label">Test Cases</span>
+        <span class="meta-value">{{ total_test_cases }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ CONTENT ══════════════════════════ -->
+  <div class="content">
+
+    <!-- ── Executive Summary ──────────────────────────────────────── -->
+    <section id="summary">
+      <h2 class="section-title">
+        <span class="icon">&#9733;</span>
+        Executive Summary
+      </h2>
+
+      <!-- Metrics grid -->
+      <div class="metrics-grid">
+        <div class="metric-card {{ 'green' if pass_rate >= 80 else ('red' if pass_rate < 50 else '') }}">
+          <div class="metric-value">{{ "%.1f"|format(pass_rate) }}%</div>
+          <div class="metric-label">Pass Rate</div>
+        </div>
+        <div class="metric-card {{ 'green' if coverage_percentage >= 80 else ('red' if coverage_percentage < 50 else '') }}">
+          <div class="metric-value">{{ "%.1f"|format(coverage_percentage) }}%</div>
+          <div class="metric-label">Coverage</div>
+        </div>
+        <div class="metric-card blue">
+          <div class="metric-value">{{ total_test_cases }}</div>
+          <div class="metric-label">Total Tests</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">{{ requirements | length }}</div>
+          <div class="metric-label">Requirements</div>
+        </div>
+      </div>
+
+      <!-- Coverage progress bar -->
+      {% if coverage_percentage %}
+      <div class="coverage-bar-wrap">
+        <div class="coverage-bar-label">
+          <span>Requirement Coverage</span>
+          <span>{{ "%.1f"|format(coverage_percentage) }}%</span>
+        </div>
+        <div class="coverage-bar-track">
+          <div class="coverage-bar-fill" style="width: {{ [coverage_percentage, 100] | min }}%;"></div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Summary prose -->
+      {% if executive_summary %}
+      <p class="prose">{{ executive_summary | e }}</p>
+      {% else %}
+      <p class="prose">No executive summary available for this run.</p>
+      {% endif %}
+    </section>
+
+    <!-- ── Execution Summary block (if execution ran) ────────────── -->
+    {% if execution and execution.summary %}
+    {% set s = execution.summary %}
+    <section id="exec-summary">
+      <h2 class="section-title">
+        <span class="icon">&#9654;</span>
+        Execution Summary
+      </h2>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">{{ s.total | default(0) }}</div>
+          <div class="metric-label">Total</div>
+        </div>
+        <div class="metric-card green">
+          <div class="metric-value">{{ s.passed | default(0) }}</div>
+          <div class="metric-label">Passed</div>
+        </div>
+        <div class="metric-card red">
+          <div class="metric-value">{{ s.failed | default(0) }}</div>
+          <div class="metric-label">Failed</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">{{ s.skipped | default(0) }}</div>
+          <div class="metric-label">Skipped</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">{{ s.errors | default(0) }}</div>
+          <div class="metric-label">Errors</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">{{ "%.1f"|format(s.duration_seconds | default(0)) }}s</div>
+          <div class="metric-label">Duration</div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ── Requirements ───────────────────────────────────────────── -->
+    {% if requirements %}
+    <section id="requirements">
+      <h2 class="section-title">
+        <span class="icon">&#9776;</span>
+        Requirements
+        <span style="font-size:13px;font-weight:400;color:#64748b;margin-left:8px;">({{ requirements | length }})</span>
+      </h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in requirements %}
+            <tr>
+              <td class="id-cell">{{ req.id | default('') | e }}</td>
+              <td>{{ req.title | default('') | e }}</td>
+              <td>
+                <span class="badge badge-{{ req.type | default('functional') | lower | replace('_', '-') }}">
+                  {{ req.type | default('functional') | replace('_', ' ') | title | e }}
+                </span>
+              </td>
+              <td>
+                {% set p = req.priority | default('medium') | lower %}
+                <span class="badge {% if p == 'high' %}badge-failed{% elif p == 'low' %}badge-pending{% else %}badge-running{% endif %}">
+                  {{ p | title | e }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ── Test Cases ─────────────────────────────────────────────── -->
+    {% if test_cases %}
+    {% set exec_map = {} %}
+    {% for r in exec_results %}
+      {% if r.test_case_id %}
+        {% set _ = exec_map.update({r.test_case_id: r.status | default('not run')}) %}
+      {% endif %}
+    {% endfor %}
+    <section id="testcases">
+      <h2 class="section-title">
+        <span class="icon">&#9745;</span>
+        Test Cases
+        <span style="font-size:13px;font-weight:400;color:#64748b;margin-left:8px;">({{ test_cases | length }})</span>
+      </h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Requirement</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tc in test_cases %}
+            {% set tc_status = exec_map.get(tc.id, 'not run') %}
+            <tr>
+              <td class="id-cell">{{ tc.id | default('') | e }}</td>
+              <td>{{ tc.title | default('') | e }}</td>
+              <td class="id-cell">{{ tc.requirement_id | default('') | e }}</td>
+              <td>{{ tc.test_type | default('') | replace('_', ' ') | upper | e }}</td>
+              <td>{{ tc.category | default('') | replace('_', ' ') | title | e }}</td>
+              <td>
+                {% set p = tc.priority | default('medium') | lower %}
+                <span class="badge {% if p == 'high' %}badge-failed{% elif p == 'low' %}badge-pending{% else %}badge-running{% endif %}">
+                  {{ p | title | e }}
+                </span>
+              </td>
+              <td>
+                <span class="badge badge-{{ tc_status | lower | replace(' ', '-') }}">
+                  {{ tc_status | replace('_', ' ') | title | e }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ── Coverage Analysis ──────────────────────────────────────── -->
+    {% if report and report.coverage_analysis %}
+    {% set cov = report.coverage_analysis %}
+    <section id="coverage">
+      <h2 class="section-title">
+        <span class="icon">&#9670;</span>
+        Coverage Analysis
+      </h2>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">{{ cov.total_requirements | default(0) }}</div>
+          <div class="metric-label">Total Requirements</div>
+        </div>
+        <div class="metric-card green">
+          <div class="metric-value">{{ cov.covered_requirements | default(0) }}</div>
+          <div class="metric-label">Covered</div>
+        </div>
+        <div class="metric-card blue">
+          <div class="metric-value">{{ cov.validated_requirements | default(0) }}</div>
+          <div class="metric-label">Validated</div>
+        </div>
+        <div class="metric-card {{ 'green' if (cov.coverage_percentage | default(0)) >= 80 else 'red' }}">
+          <div class="metric-value">{{ "%.1f"|format(cov.coverage_percentage | default(0)) }}%</div>
+          <div class="metric-label">Coverage %</div>
+        </div>
+      </div>
+
+      {% if cov.uncovered_requirements %}
+      <div style="margin-top:16px;">
+        <strong style="color:#b91c1c;">Uncovered Requirements:</strong>
+        <span style="color:#475569; font-size:13px; margin-left:6px;">
+          {{ cov.uncovered_requirements | join(', ') | e }}
+        </span>
+      </div>
+      {% endif %}
+
+      {% if cov.failed_requirements %}
+      <div style="margin-top:8px;">
+        <strong style="color:#f97316;">Failed Requirements:</strong>
+        <span style="color:#475569; font-size:13px; margin-left:6px;">
+          {{ cov.failed_requirements | join(', ') | e }}
+        </span>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- ── Root Cause Analysis ────────────────────────────────────── -->
+    {% if root_causes %}
+    <section id="rootcause">
+      <h2 class="section-title">
+        <span class="icon">&#9888;</span>
+        Root Cause Analysis
+        <span style="font-size:13px;font-weight:400;color:#64748b;margin-left:8px;">({{ root_causes | length }})</span>
+      </h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Test Case</th>
+              <th>Failure Pattern</th>
+              <th>Category</th>
+              <th>Severity</th>
+              <th>Recommendation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rc in root_causes %}
+            {% set sev = rc.severity | default('medium') | lower %}
+            <tr>
+              <td class="id-cell">{{ rc.test_case_id | default('') | e }}</td>
+              <td>{{ rc.failure_pattern | default('') | e }}</td>
+              <td>
+                <span class="badge badge-pending">
+                  {{ rc.root_cause_category | default('unknown') | replace('_', ' ') | title | e }}
+                </span>
+              </td>
+              <td>
+                <span class="badge
+                  {% if sev == 'critical' %}badge-failed
+                  {% elif sev == 'high' %}badge-error
+                  {% elif sev == 'medium' %}badge-paused
+                  {% else %}badge-pending{% endif %}">
+                  {{ sev | title | e }}
+                </span>
+              </td>
+              <td>{{ rc.recommendation | default('') | e }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ── Recommendations ───────────────────────────────────────── -->
+    {% if recommendations %}
+    <section id="recommendations">
+      <h2 class="section-title">
+        <span class="icon">&#10003;</span>
+        Recommendations
+      </h2>
+      <ul class="rec-list">
+        {% for rec in recommendations %}
+        <li>
+          <span class="num">{{ loop.index }}.</span>
+          <span>{{ rec | e }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <!-- ── Risks ──────────────────────────────────────────────────── -->
+    {% if risks %}
+    <section id="risks">
+      <h2 class="section-title">
+        <span class="icon" style="background:#f97316;">&#9888;</span>
+        Risks
+      </h2>
+      <ul class="risk-list">
+        {% for risk in risks %}
+        <li>
+          <span class="icon-warn">&#9654;</span>
+          <span>{{ risk | e }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <!-- ── No data fallback ───────────────────────────────────────── -->
+    {% if not test_cases and not requirements and not root_causes %}
+    <section>
+      <div class="empty">
+        No pipeline stage results are available yet for this run.
+        The pipeline may still be running or no stages have completed.
+      </div>
+    </section>
+    {% endif %}
+
+  </div><!-- /content -->
+
+  <!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+  <footer class="report-footer">
+    <span>Generated by <strong>Auto-AT</strong> &mdash; Automated Testing System</span>
+    <span>Run ID: <code style="font-size:11px;">{{ run_id | e }}</code></span>
+    <span>{{ generated_at | e }}</span>
+  </footer>
+
+</div><!-- /page -->
+</body>
+</html>

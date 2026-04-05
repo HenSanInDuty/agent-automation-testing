@@ -13,6 +13,7 @@ import {
   Bell,
   ExternalLink,
   ChevronRight,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,11 @@ function resolveBreadcrumbs(pathname: string): BreadcrumbSegment[] {
       crumbs.push({
         label: "Agent Configs",
         icon: <Bot className="w-3.5 h-3.5" />,
+      });
+    } else if (pathname.startsWith("/admin/stages")) {
+      crumbs.push({
+        label: "Stage Configs",
+        icon: <Layers className="w-3.5 h-3.5" />,
       });
     }
   } else if (pathname.startsWith("/pipeline")) {
@@ -82,7 +88,7 @@ function Navbar({
         "sticky top-0 z-30 flex items-center h-14 shrink-0",
         "bg-[#18202F]/95 backdrop-blur-md",
         "border-b border-[#2b3b55]",
-        "px-4 gap-3"
+        "px-4 gap-3",
       )}
     >
       {/* Desktop: sidebar collapse toggle */}
@@ -96,7 +102,7 @@ function Navbar({
           "text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d]",
           "transition-colors duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]",
-          "shrink-0"
+          "shrink-0",
         )}
       >
         <Menu className="w-4 h-4" aria-hidden="true" />
@@ -113,7 +119,7 @@ function Navbar({
           "w-8 h-8 rounded-lg shrink-0",
           "text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d]",
           "transition-colors duration-150",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]"
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]",
         )}
       >
         {mobileMenuOpen ? (
@@ -156,7 +162,7 @@ function Navbar({
                       "flex items-center gap-1.5 text-sm shrink-0",
                       "text-[#92a4c9] hover:text-white",
                       "transition-colors duration-150",
-                      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#135bec] rounded"
+                      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#135bec] rounded",
                     )}
                   >
                     {crumb.icon && (
@@ -170,9 +176,7 @@ function Navbar({
                   <span
                     className={cn(
                       "flex items-center gap-1.5 text-sm min-w-0",
-                      isLast
-                        ? "text-white font-medium"
-                        : "text-[#92a4c9]"
+                      isLast ? "text-white font-medium" : "text-[#92a4c9]",
                     )}
                     aria-current={isLast ? "page" : undefined}
                   >
@@ -202,7 +206,7 @@ function Navbar({
             "text-[#92a4c9] hover:text-white border border-transparent",
             "hover:bg-[#1e2a3d] hover:border-[#2b3b55]",
             "transition-all duration-150",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]"
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]",
           )}
         >
           <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
@@ -217,7 +221,7 @@ function Navbar({
             "relative flex items-center justify-center w-8 h-8 rounded-lg",
             "text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d]",
             "transition-colors duration-150",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]"
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]",
           )}
         >
           <Bell className="w-4 h-4" aria-hidden="true" />
@@ -264,7 +268,7 @@ function MobileNavOverlay({ open, onClose }: MobileNavOverlayProps) {
       <div
         className={cn(
           "fixed inset-y-0 left-0 z-50 md:hidden",
-          "animate-in slide-in-from-right duration-200"
+          "animate-in slide-in-from-right duration-200",
         )}
         style={{ animationName: "slideInFromLeft" }}
       >
@@ -326,9 +330,7 @@ export default function AdminLayout({
           className="flex-1 overflow-y-auto"
           tabIndex={-1}
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-            {children}
-          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</div>
         </main>
       </div>
     </div>

@@ -36,8 +36,6 @@ import re
 import textwrap
 from typing import Any, Optional
 
-from sqlalchemy.orm import Session
-
 from app.crews.base_crew import BaseCrew, ProgressCallback
 from app.schemas.pipeline_io import (
     AutomationReadiness,
@@ -90,14 +88,13 @@ class TestcaseCrew(BaseCrew):
 
     def __init__(
         self,
-        db: Session,
         run_id: str,
-        run_profile_id: Optional[int] = None,
+        run_profile_id: Optional[str] = None,
         progress_callback: Optional[ProgressCallback] = None,
         mock_mode: Optional[bool] = None,
+        **_kwargs: Any,
     ) -> None:
         super().__init__(
-            db=db,
             run_id=run_id,
             run_profile_id=run_profile_id,
             progress_callback=progress_callback,
@@ -198,19 +195,26 @@ class TestcaseCrew(BaseCrew):
 
         # ── Build agents ──────────────────────────────────────────────────────
         self._emit_log("Building agents from database configuration …")
-        factory = AgentFactory(self._db, run_profile_id=self._run_profile_id)
+        import asyncio as _asyncio
 
-        agents = {}
-        for agent_id in _AGENT_IDS:
-            # agent.started is emitted via task_callback during kickoff, not here
+        factory = AgentFactory(run_profile_id=self._run_profile_id)
+
+        try:
             try:
-                agents[agent_id] = factory.build(agent_id)
-                logger.debug("[TestcaseCrew] Built agent: %s", agent_id)
-            except Exception as exc:
+                _loop = _asyncio.get_running_loop()
+            except RuntimeError:
+                _loop = None
+            if _loop is not None and _loop.is_running():
+                _fut = _asyncio.run_coroutine_threadsafe(
+                    factory.build_many(_AGENT_IDS), _loop
+                )
+                agents = _fut.result(timeout=60)
+            else:
+                agents = _asyncio.run(factory.build_many(_AGENT_IDS))
+        except Exception as exc:
+            for agent_id in _AGENT_IDS:
                 self._emit_agent_failed(agent_id, str(exc))
-                raise RuntimeError(
-                    f"Failed to build agent '{agent_id}': {exc}"
-                ) from exc
+            raise RuntimeError(f"Failed to build agents: {exc}") from exc
 
         # ── Build tasks in dependency order ───────────────────────────────────
         self._emit_log("Assembling task pipeline …")

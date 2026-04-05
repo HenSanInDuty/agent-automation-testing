@@ -33,8 +33,6 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
-from sqlalchemy.orm import Session
-
 from app.core.llm_factory import LLMFactory, get_model_string
 from app.crews.base_crew import BaseCrew, ProgressCallback
 from app.schemas.pipeline_io import IngestionOutput, RequirementItem, RequirementType
@@ -120,18 +118,17 @@ class IngestionCrew(BaseCrew):
 
     def __init__(
         self,
-        db: Session,
         run_id: str,
-        run_profile_id: Optional[int] = None,
+        run_profile_id: Optional[str] = None,
         progress_callback: Optional[ProgressCallback] = None,
         mock_mode: Optional[bool] = None,
         # Chunking parameters (can be overridden via input_data)
         chunk_size: int = 2000,
         chunk_overlap: int = 200,
         min_chunk_size: int = _MIN_CHUNK_FOR_LLM,
+        **_kwargs: Any,
     ) -> None:
         super().__init__(
-            db=db,
             run_id=run_id,
             run_profile_id=run_profile_id,
             progress_callback=progress_callback,
@@ -140,11 +137,7 @@ class IngestionCrew(BaseCrew):
         self._chunk_size = chunk_size
         self._chunk_overlap = chunk_overlap
         self._min_chunk_size = min_chunk_size
-        self._llm_factory = LLMFactory(db)
-
-        # Lazy cache for the per-agent LLM profile lookup
-        self._per_agent_profile_checked: bool = False
-        self._per_agent_profile: Any = None  # LLMProfile | None
+        self._llm_factory = LLMFactory(run_profile_id)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Public entry point
@@ -626,64 +619,36 @@ class IngestionCrew(BaseCrew):
         """
         Resolve the LLM profile to use for ingestion analysis.
 
-        Priority (consistent with AgentFactory override chain):
-            1. Per-agent profile  (AgentConfig["ingestion_pipeline"].llm_profile)
-            2. Run-level override (self._run_profile_id)
-            3. Global default profile (is_default=True in DB)
-            4. None  (caller falls back to mock extraction)
+        Priority (handled internally by LLMFactory):
+            1. Run-level override (self._run_profile_id)
+            2. Global default profile (is_default=True in DB)
+            3. None  (caller falls back to mock extraction)
 
         Returns:
-            An :class:`LLMProfile` ORM instance, or ``None`` if no profile is found.
+            An :class:`~app.db.models.LLMProfileDocument` instance, or ``None``
+            if no profile is found.
         """
-        # 1. Per-agent profile — cached after the first DB lookup
-        if not self._per_agent_profile_checked:
-            self._per_agent_profile_checked = True
-            try:
-                from sqlalchemy import select
+        import asyncio
 
-                from app.db.models import AgentConfig
+        coro = self._llm_factory._load_default_profile()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
 
-                stmt = select(AgentConfig).where(
-                    AgentConfig.agent_id == "ingestion_pipeline"
-                )
-                cfg = self._db.scalar(stmt)
-                if cfg is not None and cfg.llm_profile is not None:
-                    self._per_agent_profile = cfg.llm_profile
-                    logger.debug(
-                        "[Ingestion][%s] Using per-agent LLM profile: %r",
-                        self._run_id,
-                        cfg.llm_profile.name,
-                    )
-            except Exception as exc:
-                logger.warning(
-                    "[Ingestion][%s] Failed to load per-agent profile: %s",
-                    self._run_id,
-                    exc,
-                )
-
-        if self._per_agent_profile is not None:
-            return self._per_agent_profile
-
-        # 2. Run-level override
-        if self._run_profile_id is not None:
-            from app.db.models import LLMProfile
-
-            profile = self._db.get(LLMProfile, self._run_profile_id)
-            if profile is not None:
-                logger.debug(
-                    "[Ingestion][%s] Using run-level LLM profile id=%d",
-                    self._run_id,
-                    self._run_profile_id,
-                )
-                return profile
+        try:
+            if loop is not None and loop.is_running():
+                fut = asyncio.run_coroutine_threadsafe(coro, loop)
+                return fut.result(timeout=30)
+            else:
+                return asyncio.run(coro)
+        except Exception as exc:
             logger.warning(
-                "[Ingestion][%s] Run profile id=%d not found — using global default.",
+                "[Ingestion][%s] Failed to resolve LLM profile: %s — falling back to mock",
                 self._run_id,
-                self._run_profile_id,
+                exc,
             )
-
-        # 3. Global default
-        return self._llm_factory._load_default_profile()
+            return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Optional
 from app.config import settings
 
 if TYPE_CHECKING:
-    from app.db.models import LLMProfile
+    from app.db.models import LLMProfileDocument
     from app.schemas.llm_profile import LLMProfileInternal
 
 logger = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ def get_model_string(provider: str, model: str) -> str:
     return f"{prefix}/{model}"
 
 
-def build_llm(profile: "LLMProfile | LLMProfileInternal"):
+def build_llm(profile: "LLMProfileDocument | LLMProfileInternal"):
     """
     Build a CrewAI LLM object from a DB profile (ORM instance or
     LLMProfileInternal Pydantic schema).
@@ -215,8 +215,8 @@ def build_fallback_llm():
 
 
 def resolve_llm(
-    agent_profile: Optional["LLMProfile | LLMProfileInternal"],
-    default_profile: Optional["LLMProfile | LLMProfileInternal"],
+    agent_profile: Optional["LLMProfileDocument | LLMProfileInternal"],
+    default_profile: Optional["LLMProfileDocument | LLMProfileInternal"],
 ):
     """
     Resolve the correct LLM for an agent following the override hierarchy:
@@ -254,7 +254,7 @@ def resolve_llm(
 
 
 def probe_llm_connection(
-    profile: "LLMProfile | LLMProfileInternal",
+    profile: "LLMProfileDocument | LLMProfileInternal",
     prompt: str = "Reply with the single word: OK",
     timeout_seconds: int = 15,
 ) -> dict:
@@ -335,45 +335,84 @@ def probe_llm_connection(
 
 
 class LLMFactory:
-    """
-    Session-scoped factory that builds and caches CrewAI LLM objects.
+    """Async factory that builds and caches CrewAI LLM objects.
 
-    Designed to be held as an attribute of AgentFactory so that the global
-    default profile is queried from the DB at most once per pipeline run.
+    Designed to be held as an attribute of :class:`~app.core.agent_factory.AgentFactory`
+    so that the global default profile is queried from MongoDB at most once per
+    pipeline run (lazy-loaded and cached on first use).
+
+    No SQLAlchemy session is needed — all DB access goes through Beanie CRUD
+    functions which use the global Motor client initialised at startup.
 
     Args:
-        db: Active SQLAlchemy session.
+        run_profile_id: Optional MongoDB ObjectId string of a run-level LLM
+            profile override.  When provided, :meth:`build_default` returns an
+            LLM built from this profile instead of the ``is_default=True`` one.
     """
 
-    def __init__(self, db) -> None:
-        self._db = db
-        self._default_profile: Optional["LLMProfile"] = None
+    def __init__(self, run_profile_id: Optional[str] = None) -> None:
+        self._run_profile_id = run_profile_id
+        self._default_profile: Optional["LLMProfileDocument"] = None
         self._default_loaded: bool = False
 
-    def build_from_profile(self, profile: "LLMProfile | LLMProfileInternal"):
-        """Build a CrewAI LLM from a concrete profile object."""
+    def build_from_profile(self, profile: "LLMProfileDocument | LLMProfileInternal"):
+        """Build a CrewAI LLM from a concrete profile object.
+
+        Args:
+            profile: A :class:`~app.db.models.LLMProfileDocument` (Beanie) or
+                a :class:`~app.schemas.llm_profile.LLMProfileInternal` (Pydantic).
+
+        Returns:
+            A ``crewai.LLM`` instance ready to be passed to a CrewAI Agent.
+        """
         return build_llm(profile)
 
-    def build_default(self):
+    async def build_default(self):
+        """Build a LLM using the run-level or global default DB profile.
+
+        Resolution order:
+
+        1. Run-level profile (``run_profile_id`` supplied to the constructor).
+        2. Global default profile (``is_default=True`` in MongoDB).
+        3. Environment-variable fallback (``DEFAULT_LLM_*`` settings).
+
+        Returns:
+            A ``crewai.LLM`` instance.
         """
-        Build a LLM using the global default DB profile.
-        Falls back to environment variables if no default profile is set.
-        """
-        profile = self._load_default_profile()
+        profile = await self._load_default_profile()
         if profile is not None:
             return build_llm(profile)
         return build_fallback_llm()
 
-    def _load_default_profile(self) -> Optional["LLMProfile"]:
-        """Lazy-load the global default LLM profile (cached per factory instance)."""
+    async def _load_default_profile(self) -> Optional["LLMProfileDocument"]:
+        """Lazy-load the effective default LLM profile (cached per factory instance).
+
+        When a ``run_profile_id`` was supplied to the constructor, that profile
+        is fetched and cached.  Otherwise the collection-level
+        ``is_default=True`` profile is used.
+
+        Returns:
+            The resolved :class:`~app.db.models.LLMProfileDocument`, or ``None``
+            if neither a run-level profile nor a global default could be found.
+        """
         if not self._default_loaded:
             self._default_loaded = True
-            from sqlalchemy import select
+            from app.db import crud
 
-            from app.db.models import LLMProfile
+            if self._run_profile_id is not None:
+                profile = await crud.get_llm_profile(self._run_profile_id)
+                if profile is None:
+                    logger.warning(
+                        "[LLMFactory] Run-level profile id=%r not found; "
+                        "falling back to global default.",
+                        self._run_profile_id,
+                    )
+                    profile = await crud.get_default_llm_profile()
+            else:
+                profile = await crud.get_default_llm_profile()
 
-            stmt = select(LLMProfile).where(LLMProfile.is_default.is_(True)).limit(1)
-            self._default_profile = self._db.scalar(stmt)
+            self._default_profile = profile
+
         return self._default_profile
 
 

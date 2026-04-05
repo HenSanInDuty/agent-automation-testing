@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bot, Search, Filter, RotateCcw, RefreshCw } from "lucide-react";
+import { Bot, Search, Filter, RotateCcw, RefreshCw, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,6 +13,7 @@ import {
   useResetAgentConfig,
   useResetAllAgentConfigs,
   useUpdateAgentConfig,
+  useDeleteAgentConfig,
 } from "@/hooks/useAgentConfigs";
 import {
   STAGE_ORDER,
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 import { AgentGroupSection } from "./AgentGroupSection";
 import { AgentDialog } from "./AgentDialog";
+import { AddAgentDialog } from "./AddAgentDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Loading skeleton
@@ -207,12 +209,17 @@ export function AgentList() {
   const [stageFilter, setStageFilter] = React.useState<AgentStage | "all">(
     "all",
   );
+  const [addAgentOpen, setAddAgentOpen] = React.useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
+    null,
+  );
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const { data, isLoading, isError, refetch } = useAgentConfigsGrouped();
   const resetMutation = useResetAgentConfig();
   const resetAllMutation = useResetAllAgentConfigs();
   const updateMutation = useUpdateAgentConfig();
+  const deleteAgentMutation = useDeleteAgentConfig();
 
   const grouped = data ?? {
     ingestion: [] as AgentConfigSummary[],
@@ -350,6 +357,36 @@ export function AgentList() {
     setStageFilter("all");
   };
 
+  const handleDeleteAgent = React.useCallback((agentId: string) => {
+    setDeleteConfirmId(agentId);
+  }, []);
+
+  const handleDeleteAgentConfirm = async () => {
+    if (!deleteConfirmId) return;
+    // find the agent name for toast
+    let agentName = deleteConfirmId;
+    for (const stage of STAGE_ORDER) {
+      const found = grouped[stage]?.find(
+        (a: AgentConfigSummary) => a.agent_id === deleteConfirmId,
+      );
+      if (found) {
+        agentName = found.display_name;
+        break;
+      }
+    }
+    try {
+      await deleteAgentMutation.mutateAsync(deleteConfirmId);
+      toast.success("Agent deleted", `"${agentName}" has been removed.`);
+    } catch {
+      toast.error(
+        "Delete failed",
+        "Could not delete the agent. Please try again.",
+      );
+    } finally {
+      setDeleteConfirmId(null);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
@@ -393,18 +430,28 @@ export function AgentList() {
           </p>
         </div>
 
-        {/* Reset All button */}
-        <Button
-          variant="danger"
-          size="sm"
-          leftIcon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}
-          onClick={() => setResetAllConfirm(true)}
-          disabled={isLoading || isError || totalAgents === 0}
-          className="shrink-0"
-          title="Reset all agent configurations to their seeded defaults"
-        >
-          Reset All to Default
-        </Button>
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />}
+            onClick={() => setAddAgentOpen(true)}
+          >
+            Add Agent
+          </Button>
+
+          <Button
+            variant="danger"
+            size="sm"
+            leftIcon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}
+            onClick={() => setResetAllConfirm(true)}
+            disabled={isLoading || isError || totalAgents === 0}
+            title="Reset all agent configurations to their seeded defaults"
+          >
+            Reset All to Default
+          </Button>
+        </div>
       </div>
 
       {/* ── Search & filter toolbar ───────────────────────────────────────── */}
@@ -496,6 +543,7 @@ export function AgentList() {
                 agents={agents}
                 onEditAgent={handleEditAgent}
                 onResetAgent={handleResetAgent}
+                onDeleteAgent={handleDeleteAgent}
                 index={i}
               />
             );
@@ -538,6 +586,25 @@ export function AgentList() {
         cancelLabel="Cancel"
         variant="danger"
         loading={resetAllMutation.isPending}
+      />
+
+      {/* ── Add agent dialog ──────────────────────────────────────────────── */}
+      <AddAgentDialog
+        open={addAgentOpen}
+        onClose={() => setAddAgentOpen(false)}
+      />
+
+      {/* ── Delete agent confirmation ─────────────────────────────────────── */}
+      <ConfirmDialog
+        open={Boolean(deleteConfirmId)}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={handleDeleteAgentConfirm}
+        title="Delete Agent"
+        description="Are you sure you want to delete this agent? This action cannot be undone."
+        confirmLabel="Delete Agent"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={deleteAgentMutation.isPending}
       />
     </>
   );

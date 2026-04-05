@@ -48,8 +48,6 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy.orm import Session
-
 from app.crews.base_crew import BaseCrew, ProgressCallback
 
 logger = logging.getLogger(__name__)
@@ -89,14 +87,13 @@ class ReportingCrew(BaseCrew):
 
     def __init__(
         self,
-        db: Session,
         run_id: str,
-        run_profile_id: Optional[int] = None,
+        run_profile_id: Optional[str] = None,
         progress_callback: Optional[ProgressCallback] = None,
         mock_mode: Optional[bool] = None,
+        **_kwargs: Any,
     ) -> None:
         super().__init__(
-            db=db,
             run_id=run_id,
             run_profile_id=run_profile_id,
             progress_callback=progress_callback,
@@ -185,6 +182,8 @@ class ReportingCrew(BaseCrew):
         The crew uses ``Process.sequential`` — each agent's output is automatically
         made available as context to the next agent by CrewAI's context injection.
         """
+        import asyncio as _asyncio
+
         from app.core.agent_factory import AgentFactory
         from app.tasks.reporting_tasks import (
             make_coverage_analyzer_task,
@@ -192,12 +191,22 @@ class ReportingCrew(BaseCrew):
             make_root_cause_task,
         )
 
-        factory = AgentFactory(self._db, run_profile_id=self._run_profile_id)
+        factory = AgentFactory(run_profile_id=self._run_profile_id)
 
         # ── Build agents ──────────────────────────────────────────────────────
         self._emit_log("Building reporting agents from DB configuration")
         try:
-            agents = factory.build_for_stage("reporting")
+            try:
+                _loop = _asyncio.get_running_loop()
+            except RuntimeError:
+                _loop = None
+            if _loop is not None and _loop.is_running():
+                _fut = _asyncio.run_coroutine_threadsafe(
+                    factory.build_for_stage("reporting"), _loop
+                )
+                agents = _fut.result(timeout=60)
+            else:
+                agents = _asyncio.run(factory.build_for_stage("reporting"))
         except Exception as exc:
             logger.error(
                 "[ReportingCrew][%s] Failed to build agents: %s", self._run_id, exc

@@ -1,5 +1,5 @@
 from app.schemas.agent_config import (
-    AgentConfigBase,
+    AgentConfigCreate,
     AgentConfigGrouped,
     AgentConfigResetResponse,
     AgentConfigResponse,
@@ -31,13 +31,22 @@ from app.schemas.pipeline import (
     PipelineRunListResponse,
     PipelineRunResponse,
     PipelineStatus,
+    RunCancelledEvent,
     RunCompletedEvent,
     RunFailedEvent,
+    RunPausedEvent,
+    RunResumedEvent,
     RunStartedEvent,
     StageCompletedEvent,
     StageStartedEvent,
     WSEventBase,
     WSEventType,
+)
+from app.schemas.stage_config import (
+    StageConfigCreate,
+    StageConfigResponse,
+    StageConfigUpdate,
+    StageReorderRequest,
 )
 
 __all__ = [
@@ -52,12 +61,17 @@ __all__ = [
     "LLMTestRequest",
     "LLMTestResponse",
     # agent_config
-    "AgentConfigBase",
+    "AgentConfigCreate",
     "AgentConfigUpdate",
     "AgentConfigResponse",
     "AgentConfigSummary",
     "AgentConfigGrouped",
     "AgentConfigResetResponse",
+    # stage_config
+    "StageConfigCreate",
+    "StageConfigUpdate",
+    "StageConfigResponse",
+    "StageReorderRequest",
     # pipeline
     "PipelineStatus",
     "AgentRunStatus",
@@ -78,5 +92,8 @@ __all__ = [
     "AgentFailedEvent",
     "RunCompletedEvent",
     "RunFailedEvent",
+    "RunPausedEvent",
+    "RunResumedEvent",
+    "RunCancelledEvent",
     "LogEvent",
 ]

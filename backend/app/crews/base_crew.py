@@ -6,10 +6,13 @@ crews/base_crew.py
 Abstract base class for all pipeline crews.
 
 Provides:
-  - Uniform constructor signature (db, run_id, run_profile_id, progress_callback)
+  - Uniform constructor signature (run_id, run_profile_id, progress_callback,
+    mock_mode) — the legacy ``db`` parameter has been removed in V2 since all
+    DB access now goes through async Beanie/Motor rather than SQLAlchemy.
   - Progress-event emission helpers (_emit, _emit_agent_started, …)
   - JSON output parsing with graceful fallback (_parse_json_output)
   - Mock-mode detection (_is_mock_mode)
+  - Async DB helper (_load_agents_from_db) for fetching agent configs
 
 Every concrete crew (IngestionCrew, TestcaseCrew, ExecutionCrew, ReportingCrew)
 inherits from BaseCrew and implements the single abstract method ``run()``.
@@ -35,8 +38,6 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Optional
 
-from sqlalchemy.orm import Session
-
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,14 @@ class BaseCrew(ABC):
 
     And must implement:
         run(input_data) -> dict
+
+    V2 Changes
+    ----------
+    * The ``db`` (SQLAlchemy session) parameter has been removed. All database
+      access now goes through async Beanie CRUD helpers. Subclasses should use
+      ``await self._load_agents_from_db()`` or import ``app.db.crud`` directly.
+    * ``run_profile_id`` type changed from ``int`` to ``str`` (MongoDB ObjectId
+      string representation).
     """
 
     # ── Override in subclasses ────────────────────────────────────────────────
@@ -68,34 +77,36 @@ class BaseCrew(ABC):
 
     def __init__(
         self,
-        db: Session,
         run_id: str,
-        run_profile_id: Optional[int] = None,
+        run_profile_id: Optional[str] = None,
         progress_callback: Optional[ProgressCallback] = None,
         mock_mode: Optional[bool] = None,
+        **_kwargs: Any,  # absorb legacy keyword args (e.g. db=) from V1 subclasses
     ) -> None:
         """
         Initialise the crew.
 
         Args:
-            db:                Active SQLAlchemy session.
             run_id:            UUID of the current pipeline run (used in events).
-            run_profile_id:    Optional run-level LLM profile override.
+            run_profile_id:    Optional MongoDB ObjectId string of the run-level
+                               LLM profile override.
             progress_callback: Optional callable that receives (event_type, data)
                                for real-time progress streaming.  When None, events
                                are only logged at DEBUG level.
             mock_mode:         When True, the crew produces deterministic mock output
                                without calling any LLM.  When None, falls back to
                                the MOCK_CREWS environment variable / settings flag.
+            **_kwargs:         Silently absorbs unknown keyword arguments for
+                               backward compatibility with V1 subclasses that
+                               pass ``db=<session>``.
         """
-        self._db = db
         self._run_id = run_id
         self._run_profile_id = run_profile_id
         self._progress_callback = progress_callback
 
         # Resolve mock_mode: explicit arg > settings > False
         if mock_mode is None:
-            self._mock_mode: bool = getattr(settings, "MOCK_CREWS", False)
+            self._mock_mode: bool = bool(getattr(settings, "MOCK_CREWS", False))
         else:
             self._mock_mode = mock_mode
 
@@ -117,6 +128,29 @@ class BaseCrew(ABC):
             ``schemas.pipeline_io`` model (e.g. IngestionOutput, TestCaseOutput).
         """
         ...
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Async DB helpers (V2)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def _load_agents_from_db(self) -> list:
+        """Load enabled agents for this stage from MongoDB.
+
+        Uses the Beanie-backed CRUD layer to query
+        :class:`~app.db.models.AgentConfigDocument` objects for the current
+        stage.  Only enabled agents are returned.
+
+        Returns:
+            List of :class:`~app.db.models.AgentConfigDocument` instances
+            whose ``stage`` matches :attr:`stage` and whose ``enabled`` flag
+            is ``True``.
+        """
+        from app.db import crud
+
+        return await crud.get_agent_configs_for_stage(
+            stage=self.stage,
+            enabled_only=True,
+        )
 
     # ─────────────────────────────────────────────────────────────────────────
     # Progress event helpers

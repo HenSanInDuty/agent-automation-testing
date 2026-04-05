@@ -1,24 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Zap, History, PlayCircle, StopCircle } from "lucide-react";
+import { Zap, History, PlayCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
-import {
-  useStartPipeline,
-  useCancelPipeline,
-  usePipelineRun,
-} from "@/hooks/usePipeline";
-import { usePipelineWebSocket } from "@/hooks/usePipelineWebSocket";
+import { useStartPipeline, usePipelineRun } from "@/hooks/usePipeline";
+import { usePipelineStore } from "@/store/pipelineStore";
 import { cn } from "@/lib/utils";
-import type { PipelineRunResponse, PipelineStatus, WSEvent } from "@/types";
+import type { PipelineRunResponse, PipelineStatus } from "@/types";
 
 import { DocumentUpload } from "./DocumentUpload";
 import { LLMProfileSelector } from "./LLMProfileSelector";
+import { PipelineControls } from "./PipelineControls";
 import { PipelineProgress } from "./PipelineProgress";
 import { ResultsViewer } from "./ResultsViewer";
 import { RunHistory } from "./RunHistory";
+import { StageResultsPanel } from "./StageResultsPanel";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -69,91 +67,101 @@ function RightPanelPlaceholder() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function PipelinePage() {
-  // ── UI / selection state ───────────────────────────────────────────────────
+  // ── Local UI state ─────────────────────────────────────────────────────────
   const [file, setFile] = React.useState<File | null>(null);
   const [llmProfileId, setLlmProfileId] = React.useState<number | null>(null);
-  const [activeRunId, setActiveRunId] = React.useState<string | null>(null);
   const [selectedHistoryRun, setSelectedHistoryRun] =
     React.useState<PipelineRunResponse | null>(null);
   const [showHistory, setShowHistory] = React.useState(false);
 
-  // Ref used to scroll the results section into view when a history run is
-  // selected or when the active run reaches a terminal state.
   const resultsRef = React.useRef<HTMLDivElement>(null);
+
+  // ── Global pipeline store ──────────────────────────────────────────────────
+  const {
+    activeRunId,
+    activeRunStatus,
+    agentStatuses,
+    agentProgress,
+    currentStage,
+    completedStages,
+    stageSummaries,
+    logMessages,
+    events,
+    isTerminal,
+    wsStatus,
+    startSession,
+    clearSession,
+    connectWebSocket,
+  } = usePipelineStore();
+
+  // ── Rehydration: reconnect WS if returning to page with an active session ──
+  React.useEffect(() => {
+    if (activeRunId && !isTerminal && wsStatus === "disconnected") {
+      connectWebSocket(activeRunId);
+    }
+  }, [activeRunId, isTerminal, wsStatus, connectWebSocket]);
 
   // ── Data / mutations ───────────────────────────────────────────────────────
   const startMutation = useStartPipeline();
-  const cancelMutation = useCancelPipeline();
 
-  // Fetch the active run so we always have the authoritative status after WS
-  // events trigger a refetch.
   const { data: activeRun, refetch: refetchActiveRun } = usePipelineRun(
     activeRunId ?? undefined,
   );
 
-  // ── WebSocket ──────────────────────────────────────────────────────────────
-  const {
-    status: wsStatus,
-    events,
-    agentStatuses,
-    agentProgress,
-    currentStage,
-    isTerminal,
-    logMessages,
-  } = usePipelineWebSocket({
-    runId: activeRunId ?? undefined,
-    enabled: !!activeRunId,
-    onEvent: (event: WSEvent) => {
-      switch (event.event) {
-        case "run.completed":
-          // Pull the fresh run object so the ResultsViewer has final data
-          refetchActiveRun();
-          toast.success(
-            "Pipeline completed",
-            "Your pipeline run finished successfully.",
-          );
-          // Scroll to results once data arrives (slight delay for refetch)
-          setTimeout(() => {
-            resultsRef.current?.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
-          }, 400);
-          break;
+  // Poll for run status while running or paused (as a fallback to WS)
+  React.useEffect(() => {
+    if (activeRunStatus === "running" || activeRunStatus === "paused") {
+      const id = setInterval(() => {
+        refetchActiveRun();
+      }, 5000);
+      return () => clearInterval(id);
+    }
+  }, [activeRunStatus, refetchActiveRun]);
 
-        case "run.failed":
-          refetchActiveRun();
-          toast.error(
-            "Pipeline failed",
-            "Your pipeline run encountered an error.",
-          );
-          break;
-
-        default:
-          break;
+  // Sync store terminal status from polled run data; auto-scroll to results
+  React.useEffect(() => {
+    if (activeRun && TERMINAL_STATUSES.includes(activeRun.status)) {
+      if (!isTerminal) {
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 400);
       }
-    },
-  });
+    }
+  }, [activeRun, isTerminal]);
 
   // ── Derived state ──────────────────────────────────────────────────────────
+  const effectiveStatus = activeRun?.status ?? activeRunStatus;
 
-  // Is the current active run still in a live (non-terminal) state?
   const isRunning =
-    !!activeRun &&
-    (activeRun.status === "running" || activeRun.status === "pending");
+    effectiveStatus === "running" || effectiveStatus === "pending";
 
-  // The run whose results we show in the right panel.
-  // Priority: explicitly selected history run > active run (if terminal).
+  const isPaused = effectiveStatus === "paused";
+
+  /** Show PipelineControls whenever the run is running or paused */
+  const showControls = (isRunning || isPaused) && !!activeRunId;
+
+  const isActiveRunTerminal =
+    !!effectiveStatus &&
+    TERMINAL_STATUSES.includes(effectiveStatus as PipelineStatus);
+
+  // The run to display in ResultsViewer
   const displayRun: PipelineRunResponse | null =
-    selectedHistoryRun ??
-    (activeRun && TERMINAL_STATUSES.includes(activeRun.status)
-      ? activeRun
-      : null);
+    selectedHistoryRun ?? (activeRun && isActiveRunTerminal ? activeRun : null);
 
-  const showProgress = !!activeRunId;
+  const showProgress = !!activeRunId && !isActiveRunTerminal;
+  const showStageResults =
+    !!activeRunId && completedStages.length > 0 && !isActiveRunTerminal;
   const showResults = displayRun !== null;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
+
+  /** Called by PipelineControls after a successful cancel. */
+  const handleCancelled = () => {
+    clearSession();
+  };
 
   const handleStartPipeline = async () => {
     if (!file) return;
@@ -161,8 +169,8 @@ export function PipelinePage() {
     try {
       const run = await startMutation.mutateAsync({ file, llmProfileId });
 
-      // Wire up the new run and clear any previously-viewed history selection
-      setActiveRunId(run.id);
+      // Start global session (resets state + connects WS)
+      startSession(run.id);
       setSelectedHistoryRun(null);
 
       toast.success("Pipeline started", `Processing "${file.name}"…`);
@@ -174,24 +182,8 @@ export function PipelinePage() {
     }
   };
 
-  const handleCancelPipeline = async () => {
-    if (!activeRunId) return;
-    try {
-      await cancelMutation.mutateAsync(activeRunId);
-      toast.warning("Pipeline cancelled", "The pipeline run has been stopped.");
-    } catch {
-      toast.error(
-        "Cancel failed",
-        "Could not cancel the pipeline run. Please try again.",
-      );
-    }
-  };
-
   const handleSelectHistoryRun = (run: PipelineRunResponse) => {
     setSelectedHistoryRun(run);
-
-    // Scroll the results panel into view (useful on mobile where the right
-    // column is stacked below the left column / history panel).
     setTimeout(() => {
       resultsRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -227,7 +219,6 @@ export function PipelinePage() {
           </div>
         </div>
 
-        {/* Run History toggle */}
         <Button
           variant={showHistory ? "secondary" : "outline"}
           size="sm"
@@ -241,55 +232,38 @@ export function PipelinePage() {
       </div>
 
       {/* ── Two-column layout ─────────────────────────────────────────────── */}
-      {/*   Left (2fr): controls   Right (3fr): progress + results            */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-6 items-start">
         {/* ── LEFT: Controls ──────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
-          {/* Document upload */}
           <DocumentUpload file={file} onChange={setFile} />
-
-          {/* LLM profile selector */}
           <LLMProfileSelector value={llmProfileId} onChange={setLlmProfileId} />
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-3">
-            <Button
-              variant="primary"
-              size="md"
-              fullWidth
-              loading={startMutation.isPending}
-              disabled={!file || startMutation.isPending}
-              leftIcon={
-                !startMutation.isPending ? (
-                  <PlayCircle className="w-4 h-4" aria-hidden="true" />
-                ) : undefined
-              }
-              onClick={handleStartPipeline}
-            >
-              {startMutation.isPending ? "Starting…" : "Run Pipeline"}
-            </Button>
+          {/* Run button */}
+          <Button
+            variant="primary"
+            size="md"
+            fullWidth
+            loading={startMutation.isPending}
+            disabled={!file || startMutation.isPending || isRunning || isPaused}
+            leftIcon={
+              !startMutation.isPending ? (
+                <PlayCircle className="w-4 h-4" aria-hidden="true" />
+              ) : undefined
+            }
+            onClick={handleStartPipeline}
+          >
+            {startMutation.isPending ? "Starting…" : "Run Pipeline"}
+          </Button>
 
-            {/* Cancel button — visible only while a run is live */}
-            {isRunning && (
-              <Button
-                variant="danger"
-                size="md"
-                loading={cancelMutation.isPending}
-                leftIcon={
-                  !cancelMutation.isPending ? (
-                    <StopCircle className="w-4 h-4" aria-hidden="true" />
-                  ) : undefined
-                }
-                onClick={handleCancelPipeline}
-                title="Cancel the running pipeline"
-                aria-label="Cancel pipeline"
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
+          {/* Pipeline controls (Pause / Resume / Cancel) */}
+          {showControls && activeRunId && effectiveStatus && (
+            <PipelineControls
+              runId={activeRunId}
+              status={effectiveStatus as PipelineStatus}
+              onCancelled={handleCancelled}
+            />
+          )}
 
-          {/* Start-pipeline error feedback (non-toast fallback) */}
           {startMutation.isError && (
             <p
               role="alert"
@@ -302,10 +276,9 @@ export function PipelinePage() {
           )}
         </div>
 
-        {/* ── RIGHT: Progress + Results ────────────────────────────────────── */}
+        {/* ── RIGHT: Progress + Per-Stage Results + Final Results ──────────── */}
         <div className="flex flex-col gap-4">
-          {/* Pipeline progress (always rendered when a run is active so the
-              WS status / event stream is visible during execution) */}
+          {/* Live progress panel (running or paused) */}
           {showProgress && (
             <PipelineProgress
               run={activeRun ?? null}
@@ -318,15 +291,27 @@ export function PipelinePage() {
             />
           )}
 
-          {/* Results viewer — shown once a terminal run is available */}
+          {/* Per-stage progressive results */}
+          {showStageResults && activeRunId && (
+            <StageResultsPanel
+              runId={activeRunId}
+              completedStages={completedStages}
+              stageSummaries={stageSummaries}
+              currentStage={currentStage}
+            />
+          )}
+
+          {/* Final results viewer */}
           {showResults && displayRun && (
             <div ref={resultsRef}>
               <ResultsViewer run={displayRun} />
             </div>
           )}
 
-          {/* Placeholder when nothing is active or selected */}
-          {!showProgress && !showResults && <RightPanelPlaceholder />}
+          {/* Placeholder */}
+          {!showProgress && !showStageResults && !showResults && (
+            <RightPanelPlaceholder />
+          )}
         </div>
       </div>
 
@@ -335,7 +320,7 @@ export function PipelinePage() {
         <section id="run-history-panel" aria-label="Run history">
           <RunHistory
             onSelectRun={handleSelectHistoryRun}
-            selectedRunId={selectedHistoryRun?.id ?? activeRunId}
+            selectedRunId={selectedHistoryRun?.id ?? activeRunId ?? undefined}
           />
         </section>
       )}

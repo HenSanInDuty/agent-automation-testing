@@ -4,89 +4,105 @@ from __future__ import annotations
 core/agent_factory.py – Build CrewAI Agent instances from DB configuration.
 
 Override hierarchy (highest → lowest priority):
-    1. Per-agent LLM profile  (agent_configs.llm_profile_id)
-    2. Run-level LLM profile  (passed in as `run_profile`)
-    3. Global default profile (llm_profiles.is_default = True, queried from DB)
+    1. Per-agent LLM profile  (AgentConfigDocument.llm_profile_id)
+    2. Run-level LLM profile  (passed in as ``run_profile_id``)
+    3. Global default profile (LLMProfileDocument.is_default = True)
     4. ENV fallback           (settings.DEFAULT_LLM_*)
 
-Usage:
-    from app.core.agent_factory import AgentFactory
+All public methods are ``async`` because they may need to hit MongoDB to load
+agent configs or LLM profiles on first use.
 
-    factory = AgentFactory(db)
-    agent = factory.build("requirement_analyzer")
-    # or with a run-level override:
-    agent = factory.build("requirement_analyzer", run_profile_id=3)
+Usage::
+
+    factory = AgentFactory(run_profile_id="64f1a2b3c4d5e6f7a8b9c0d1")
+    agent = await factory.build("requirement_analyzer")
+
+    # Build all enabled agents for a stage at once:
+    agents = await factory.build_for_stage("testcase")
 """
 
 import logging
 from typing import Optional
 
+try:
+    from crewai import Agent  # type: ignore[import-untyped]
+except ImportError:
+    Agent = None  # type: ignore[assignment,misc]
+
 from app.core.llm_factory import LLMFactory
-from app.db.models import AgentConfig, LLMProfile
-from crewai import Agent
-from sqlalchemy.orm import Session
+from app.db.models import AgentConfigDocument, LLMProfileDocument
 
 logger = logging.getLogger(__name__)
 
 
 class AgentFactory:
-    """
-    Builds CrewAI Agent objects from AgentConfig rows stored in the database.
+    """Async factory that builds CrewAI ``Agent`` objects from MongoDB config.
 
-    The factory holds a DB session and an LLMFactory instance so both can be
-    reused across multiple `build()` calls within the same request / task.
+    The factory holds an :class:`~app.core.llm_factory.LLMFactory` instance
+    so both the config cache and the LLM cache can be reused across multiple
+    :meth:`build` calls within the same pipeline run.
+
+    Args:
+        run_profile_id: Optional MongoDB ObjectId string of the run-level LLM
+            profile override.  When set, every agent that has no per-agent
+            profile uses this profile instead of the global default.
     """
 
     def __init__(
         self,
-        db: Session,
-        run_profile_id: Optional[int] = None,
+        run_profile_id: Optional[str] = None,
     ) -> None:
-        """
-        Args:
-            db:               Active SQLAlchemy session.
-            run_profile_id:   Optional run-level LLM profile override.
-                              When set, this profile is used for every agent
-                              that does not have its own per-agent profile.
-        """
-        self._db = db
-        self._llm_factory = LLMFactory(db)
         self._run_profile_id = run_profile_id
+        self._llm_factory = LLMFactory(run_profile_id=run_profile_id)
 
-        # Lazy caches — populated on first use
-        self._run_profile: Optional[LLMProfile] = None
-        self._run_profile_loaded: bool = False
-        self._agent_configs: dict[str, AgentConfig] = {}
+        # Lazy caches — populated on first use to avoid unnecessary DB round-trips
+        self._agent_configs: dict[str, AgentConfigDocument] = {}
+
+        logger.debug(
+            "[AgentFactory] Initialised  run_profile_id=%s",
+            run_profile_id,
+        )
 
     # ─────────────────────────────────────────────────────────────────────────
     # Public API
     # ─────────────────────────────────────────────────────────────────────────
 
-    def build(
+    async def build(
         self,
         agent_id: str,
         *,
-        override_profile_id: Optional[int] = None,
-    ) -> Agent:
-        """
-        Build a CrewAI Agent for the given agent_id.
+        override_profile_id: Optional[str] = None,
+    ) -> "Agent":  # type: ignore[name-defined]  # crewai imported lazily
+        """Build a CrewAI ``Agent`` for the given *agent_id*.
+
+        The LLM override chain is resolved in this order:
+
+        1. *override_profile_id* argument (one-off, highest priority).
+        2. Per-agent ``llm_profile_id`` stored in
+           :class:`~app.db.models.AgentConfigDocument`.
+        3. Run-level ``run_profile_id`` supplied to the constructor.
+        4. Global default profile (``is_default=True``).
+        5. ENV-variable fallback handled by
+           :class:`~app.core.llm_factory.LLMFactory`.
 
         Args:
-            agent_id:            Unique slug, e.g. "requirement_analyzer".
-            override_profile_id: One-off LLM profile override (highest priority).
-                                 Useful when you want to test a single agent with
-                                 a different model without touching the DB.
+            agent_id:            Unique slug, e.g. ``"requirement_analyzer"``.
+            override_profile_id: One-off LLM profile ObjectId string (highest
+                                 priority override for this single call).
 
         Returns:
-            A fully-configured crewai.Agent instance.
+            A fully-configured :class:`crewai.Agent` instance.
 
         Raises:
-            ValueError: If no AgentConfig row exists for the given agent_id.
+            ValueError: If no :class:`~app.db.models.AgentConfigDocument` row
+                exists for the given *agent_id*.
         """
-        config = self._get_config(agent_id)
+        from crewai import Agent  # local import — crewai may not be installed in dev
+
+        config = await self._get_config(agent_id)
 
         # Resolve the LLM following the override chain
-        llm = self._resolve_llm(config, override_profile_id)
+        llm = await self._resolve_llm(config, override_profile_id)
 
         agent_kwargs: dict = {
             "role": config.role,
@@ -94,14 +110,14 @@ class AgentFactory:
             "backstory": config.backstory,
             "verbose": config.verbose,
             "max_iter": config.max_iter,
-            "allow_delegation": False,  # agents only do their own task
+            "allow_delegation": False,  # agents only execute their own task
         }
 
         if llm is not None:
             agent_kwargs["llm"] = llm
 
         logger.debug(
-            "Building agent %r (stage=%s, llm=%s)",
+            "[AgentFactory] Built agent %r  stage=%s  llm=%s",
             agent_id,
             config.stage,
             getattr(llm, "model", "env-default"),
@@ -109,79 +125,83 @@ class AgentFactory:
 
         return Agent(**agent_kwargs)
 
-    def build_many(
+    async def build_many(
         self,
         agent_ids: list[str],
         *,
         enabled_only: bool = True,
-    ) -> dict[str, Agent]:
-        """
-        Build multiple agents at once.
+    ) -> dict[str, "Agent"]:  # type: ignore[name-defined]
+        """Build multiple agents at once.
 
         Args:
             agent_ids:    List of agent_id slugs to build.
-            enabled_only: If True, silently skip disabled agents instead of
-                          raising an error.
+            enabled_only: When ``True``, silently skip disabled agents instead
+                          of raising a :class:`ValueError`.
 
         Returns:
-            Dict mapping agent_id → Agent for every agent that was built.
+            Mapping of ``agent_id`` → :class:`crewai.Agent` for every agent
+            that was successfully built.
         """
-        result: dict[str, Agent] = {}
+        result: dict[str, "Agent"] = {}  # type: ignore[name-defined]
 
         for agent_id in agent_ids:
-            config = self._get_config(agent_id)
+            config = await self._get_config(agent_id)
 
             if enabled_only and not config.enabled:
-                logger.info("Skipping disabled agent: %r", agent_id)
+                logger.info("[AgentFactory] Skipping disabled agent: %r", agent_id)
                 continue
 
-            result[agent_id] = self.build(agent_id)
+            result[agent_id] = await self.build(agent_id)
 
         return result
 
-    def build_for_stage(self, stage: str) -> dict[str, Agent]:
-        """
-        Build all enabled agents belonging to a specific pipeline stage.
+    async def build_for_stage(self, stage: str) -> dict[str, "Agent"]:  # type: ignore[name-defined]
+        """Build all enabled agents belonging to a specific pipeline stage.
+
+        Fetches the configs for *stage* from MongoDB, populates the internal
+        cache, then calls :meth:`build` for each one.
 
         Args:
-            stage: One of "ingestion" | "testcase" | "execution" | "reporting".
+            stage: One of ``"ingestion"``, ``"testcase"``, ``"execution"``,
+                   ``"reporting"``, or any custom stage slug.
 
         Returns:
-            Ordered dict of agent_id → Agent, in DB insertion order (= seed order).
+            Ordered mapping of ``agent_id`` → :class:`crewai.Agent` in seed
+            insertion order.
         """
-        from sqlalchemy import select
+        from app.db import crud
 
-        stmt = (
-            select(AgentConfig)
-            .where(AgentConfig.stage == stage)
-            .where(AgentConfig.enabled.is_(True))
-            .order_by(AgentConfig.id)
-        )
-        configs = list(self._db.scalars(stmt).all())
+        configs = await crud.get_agent_configs_for_stage(stage, enabled_only=True)
 
-        # Populate the config cache so build() calls below use cached values
+        # Pre-populate the cache so build() calls below skip the DB lookup
         for cfg in configs:
             self._agent_configs[cfg.agent_id] = cfg
 
-        return {cfg.agent_id: self.build(cfg.agent_id) for cfg in configs}
+        return {cfg.agent_id: await self.build(cfg.agent_id) for cfg in configs}
 
     # ─────────────────────────────────────────────────────────────────────────
     # Private helpers
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _get_config(self, agent_id: str) -> AgentConfig:
-        """
-        Return the AgentConfig for agent_id, using an internal cache to avoid
-        repeated DB round-trips within the same factory instance.
+    async def _get_config(self, agent_id: str) -> AgentConfigDocument:
+        """Return the :class:`~app.db.models.AgentConfigDocument` for *agent_id*.
+
+        Results are cached per factory instance to avoid repeated DB hits
+        within the same pipeline run.
+
+        Args:
+            agent_id: Unique agent slug.
+
+        Returns:
+            The matching document.
 
         Raises:
-            ValueError: If no row exists for the given agent_id.
+            ValueError: If no document exists for *agent_id*.
         """
         if agent_id not in self._agent_configs:
-            from sqlalchemy import select
+            from app.db import crud
 
-            stmt = select(AgentConfig).where(AgentConfig.agent_id == agent_id)
-            config = self._db.scalar(stmt)
+            config = await crud.get_agent_config(agent_id)
 
             if config is None:
                 raise ValueError(
@@ -193,81 +213,67 @@ class AgentFactory:
 
         return self._agent_configs[agent_id]
 
-    def _get_run_profile(self) -> Optional[LLMProfile]:
-        """
-        Lazy-load the run-level LLM profile (if a run_profile_id was supplied).
-        Result is cached so the DB is only hit once per factory instance.
-        """
-        if not self._run_profile_loaded:
-            self._run_profile_loaded = True
-            if self._run_profile_id is not None:
-                self._run_profile = self._db.get(LLMProfile, self._run_profile_id)
-                if self._run_profile is None:
-                    logger.warning(
-                        "Run-level LLM profile id=%d not found; "
-                        "falling back to global default.",
-                        self._run_profile_id,
-                    )
-        return self._run_profile
-
-    def _resolve_llm(
+    async def _resolve_llm(
         self,
-        config: AgentConfig,
-        override_profile_id: Optional[int],
+        config: AgentConfigDocument,
+        override_profile_id: Optional[str],
     ):
-        """
-        Walk the override chain and return the first LLM object that can be built:
+        """Walk the LLM override chain and return the first resolved LLM object.
 
-        priority 1 – one-off override_profile_id (passed directly to build())
-        priority 2 – per-agent llm_profile (config.llm_profile)
-        priority 3 – run-level profile     (self._run_profile_id)
-        priority 4 – global default profile (is_default=True)
-        priority 5 – ENV fallback           (LLMFactory handles this automatically)
+        Resolution order:
 
-        Returns None only when LLMFactory itself returns None (i.e. no LLM can
-        be resolved at all — CrewAI will then use its own default).
+        1. *override_profile_id* argument → one-off override.
+        2. ``config.llm_profile_id`` → per-agent profile.
+        3. Run-level ``_run_profile_id`` → set on the factory constructor.
+        4. Global default / ENV fallback → delegated to
+           :class:`~app.core.llm_factory.LLMFactory`.
+
+        Args:
+            config:              Agent config document being built.
+            override_profile_id: Optional one-off profile ObjectId string.
+
+        Returns:
+            A CrewAI ``LLM`` object, or ``None`` if no profile could be
+            resolved (CrewAI will then use its own built-in default).
         """
-        # 1. One-off override
+        from app.db import crud
+
+        # 1. One-off override (highest priority)
         if override_profile_id is not None:
-            profile = self._db.get(LLMProfile, override_profile_id)
+            profile = await crud.get_llm_profile(override_profile_id)
             if profile is not None:
                 logger.debug(
-                    "Agent %r: using one-off override profile %r",
+                    "[AgentFactory] Agent %r: using one-off override profile %r",
                     config.agent_id,
                     profile.name,
                 )
                 return self._llm_factory.build_from_profile(profile)
             logger.warning(
-                "Agent %r: override profile id=%d not found; falling back.",
+                "[AgentFactory] Agent %r: override profile id=%r not found; "
+                "falling back.",
                 config.agent_id,
                 override_profile_id,
             )
 
         # 2. Per-agent profile
-        if config.llm_profile is not None:
-            logger.debug(
-                "Agent %r: using per-agent profile %r",
-                config.agent_id,
-                config.llm_profile.name,
-            )
-            return self._llm_factory.build_from_profile(config.llm_profile)
+        if config.llm_profile_id is not None:
+            profile = await crud.get_llm_profile(config.llm_profile_id)
+            if profile is not None:
+                logger.debug(
+                    "[AgentFactory] Agent %r: using per-agent profile %r",
+                    config.agent_id,
+                    profile.name,
+                )
+                return self._llm_factory.build_from_profile(profile)
 
-        # 3. Run-level profile
-        run_profile = self._get_run_profile()
-        if run_profile is not None:
-            logger.debug(
-                "Agent %r: using run-level profile %r",
-                config.agent_id,
-                run_profile.name,
-            )
-            return self._llm_factory.build_from_profile(run_profile)
-
-        # 4 + 5. Global default / ENV fallback — delegated entirely to LLMFactory
+        # 3 + 4. Run-level / global default / ENV fallback
         logger.debug(
-            "Agent %r: no profile override found; using global default / ENV fallback.",
+            "[AgentFactory] Agent %r: no direct profile; "
+            "delegating to LLMFactory (run_profile_id=%s).",
             config.agent_id,
+            self._run_profile_id,
         )
-        return self._llm_factory.build_default()
+        return await self._llm_factory.build_default()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -275,18 +281,25 @@ class AgentFactory:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def build_agent(
-    db: Session,
+async def build_agent(
     agent_id: str,
     *,
-    run_profile_id: Optional[int] = None,
-) -> Agent:
-    """
-    Module-level convenience wrapper around AgentFactory.
+    run_profile_id: Optional[str] = None,
+) -> "Agent":  # type: ignore[name-defined]
+    """Async module-level convenience wrapper around :class:`AgentFactory`.
 
-    Example:
-        agent = build_agent(db, "requirement_analyzer")
-        agent = build_agent(db, "test_runner", run_profile_id=2)
+    Args:
+        agent_id:        Unique agent slug to build.
+        run_profile_id:  Optional MongoDB ObjectId string of the run-level
+                         LLM profile override.
+
+    Returns:
+        A fully-configured :class:`crewai.Agent` instance.
+
+    Example::
+
+        agent = await build_agent("requirement_analyzer")
+        agent = await build_agent("test_runner", run_profile_id="64f1a2b3...")
     """
-    factory = AgentFactory(db, run_profile_id=run_profile_id)
-    return factory.build(agent_id)
+    factory = AgentFactory(run_profile_id=run_profile_id)
+    return await factory.build(agent_id)

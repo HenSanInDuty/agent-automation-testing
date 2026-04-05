@@ -154,6 +154,7 @@ export interface AgentConfigSummary {
   enabled: boolean;
   verbose: boolean;
   max_iter: number;
+  is_custom: boolean;
   updated_at: string;
 }
 
@@ -206,6 +207,7 @@ export interface AgentConfigResetResponse {
 export type PipelineStatus =
   | "pending"
   | "running"
+  | "paused"
   | "completed"
   | "failed"
   | "cancelled";
@@ -266,6 +268,9 @@ export type WSEventType =
   | "stage.completed"
   | "run.completed"
   | "run.failed"
+  | "run.paused"
+  | "run.resumed"
+  | "run.cancelled"
   | "log";
 
 export interface WSEvent {
@@ -314,4 +319,72 @@ export interface ChatProfileItem {
   provider: string;
   model: string;
   is_default: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage Config
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type StageCrewType =
+  | "pure_python"
+  | "crewai_sequential"
+  | "crewai_hierarchical";
+
+export const CREW_TYPE_LABELS: Record<StageCrewType, string> = {
+  pure_python: "Pure Python",
+  crewai_sequential: "CrewAI Sequential",
+  crewai_hierarchical: "CrewAI Hierarchical",
+};
+
+export interface StageConfig {
+  stage_id: string;
+  display_name: string;
+  description: string;
+  order: number;
+  enabled: boolean;
+  crew_type: StageCrewType;
+  timeout_seconds: number;
+  is_builtin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StageConfigCreate {
+  stage_id: string;
+  display_name: string;
+  description?: string;
+  order: number;
+  enabled: boolean;
+  crew_type: StageCrewType;
+  timeout_seconds: number;
+}
+
+export interface StageConfigUpdate {
+  display_name?: string;
+  description?: string;
+  order?: number;
+  enabled?: boolean;
+  crew_type?: StageCrewType;
+  timeout_seconds?: number;
+}
+
+export interface StageReorderRequest {
+  stages: { stage_id: string; order: number }[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Agent Config (extended for V2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AgentConfigCreate {
+  agent_id: string;
+  display_name: string;
+  stage: string;
+  role: string;
+  goal: string;
+  backstory: string;
+  llm_profile_id?: number | null;
+  enabled?: boolean;
+  verbose?: boolean;
+  max_iter?: number;
 }

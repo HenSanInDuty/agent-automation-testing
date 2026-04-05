@@ -41,8 +41,6 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy.orm import Session
-
 from app.crews.base_crew import BaseCrew, ProgressCallback
 from app.schemas.pipeline_io import (
     ExecutionOutput,
@@ -100,26 +98,24 @@ class ExecutionCrew(BaseCrew):
 
     def __init__(
         self,
-        db: Session,
         run_id: str,
-        run_profile_id: Optional[int] = None,
+        run_profile_id: Optional[str] = None,
         progress_callback: Optional[ProgressCallback] = None,
         mock_mode: Optional[bool] = None,
         environment: str = "default",
+        **_kwargs: Any,
     ) -> None:
         """
         Initialise the Execution crew.
 
         Args:
-            db:                Active SQLAlchemy session.
             run_id:            UUID of the current pipeline run.
-            run_profile_id:    Optional run-level LLM profile override.
+            run_profile_id:    Optional run-level LLM profile override (MongoDB ObjectId string).
             progress_callback: Optional progress event callback.
             mock_mode:         Force mock mode (overrides settings.MOCK_CREWS).
             environment:       Default target environment name (can be overridden in input_data).
         """
         super().__init__(
-            db=db,
             run_id=run_id,
             run_profile_id=run_profile_id,
             progress_callback=progress_callback,
@@ -206,36 +202,46 @@ class ExecutionCrew(BaseCrew):
 
         # ── Build agents ─────────────────────────────────────────────────────
         self._emit_log("Building execution agents from database configuration…")
-        factory = AgentFactory(self._db, run_profile_id=self._run_profile_id)
+        import asyncio as _asyncio
 
-        # Build each agent, injecting tools where applicable
-        agent_objects: dict[str, Any] = {}
+        factory = AgentFactory(run_profile_id=self._run_profile_id)
+
+        # Tool injection map — applied after async build completes
         tool_map: dict[str, list] = {
             "env_adapter": [ConfigLoaderTool()],
             "test_runner": [APIRunnerTool()],
         }
 
-        for agent_id in self.agent_ids:
-            # agent.started is emitted via task_callback during kickoff, not here
+        # Build all agents via the async factory, bridging into the sync context
+        try:
             try:
-                agent = factory.build(agent_id)
-                # Inject tools after building (crewai Agent supports `tools` attr)
-                tools = tool_map.get(agent_id, [])
-                if tools:
-                    existing_tools = list(getattr(agent, "tools", []) or [])
-                    agent.tools = existing_tools + tools
-                agent_objects[agent_id] = agent
-                logger.debug(
-                    "[ExecutionCrew][%s] Built agent %r with %d tool(s)",
-                    self._run_id,
-                    agent_id,
-                    len(tool_map.get(agent_id, [])),
+                _loop = _asyncio.get_running_loop()
+            except RuntimeError:
+                _loop = None
+            if _loop is not None and _loop.is_running():
+                _fut = _asyncio.run_coroutine_threadsafe(
+                    factory.build_many(list(self.agent_ids)), _loop
                 )
-            except Exception as exc:
+                agent_objects: dict[str, Any] = _fut.result(timeout=60)
+            else:
+                agent_objects = _asyncio.run(factory.build_many(list(self.agent_ids)))
+        except Exception as exc:
+            for agent_id in self.agent_ids:
                 self._emit_agent_failed(agent_id, str(exc))
-                raise RuntimeError(
-                    f"Failed to build execution agent {agent_id!r}: {exc}"
-                ) from exc
+            raise RuntimeError(f"Failed to build execution agents: {exc}") from exc
+
+        # Inject tools after building
+        for agent_id, agent in agent_objects.items():
+            tools = tool_map.get(agent_id, [])
+            if tools:
+                existing_tools = list(getattr(agent, "tools", []) or [])
+                agent.tools = existing_tools + tools
+            logger.debug(
+                "[ExecutionCrew][%s] Built agent %r with %d tool(s)",
+                self._run_id,
+                agent_id,
+                len(tool_map.get(agent_id, [])),
+            )
 
         # ── Build tasks ──────────────────────────────────────────────────────
         self._emit_log("Building task chain…")

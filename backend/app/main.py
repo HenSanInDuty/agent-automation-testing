@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.db.database import SessionLocal, check_connection, create_tables
+from app.db.database import check_connection, close_db, init_db
 from app.db.seed import seed_all
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -27,13 +27,20 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Startup / shutdown logic.
-    - Creates all DB tables (idempotent).
-    - Seeds default data if AUTO_SEED=true.
-    - Creates the upload directory if it does not exist.
-    - Registers the running event loop on the WebSocket manager so that
-      broadcast_from_thread() works even before the first client connects.
+    """Application startup / shutdown lifecycle handler.
+
+    On startup:
+    * Creates the upload directory if it does not already exist.
+    * Initialises the MongoDB connection and registers all Beanie Document
+      models via :func:`~app.db.database.init_db`.
+    * Seeds default data (LLM profile, agent configs, stage configs) when
+      ``AUTO_SEED=true`` (the default).
+    * Registers the running event loop on the WebSocket manager so that
+      :meth:`~app.api.v1.websocket.ConnectionManager.broadcast_from_thread`
+      works even before the first client connects.
+
+    On shutdown:
+    * Closes the MongoDB connection via :func:`~app.db.database.close_db`.
     """
     import asyncio
 
@@ -41,20 +48,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("Starting Auto-AT backend (env=%s)", settings.APP_ENV)
 
-    # Ensure upload directory exists
+    # ── Upload directory ──────────────────────────────────────────────────
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     logger.info("Upload directory: %s", settings.UPLOAD_DIR)
 
-    # Create DB tables
-    logger.info("Initialising database: %s", settings.DATABASE_URL)
-    create_tables()
-    logger.info("Database tables ready.")
+    # ── MongoDB + Beanie ──────────────────────────────────────────────────
+    await init_db()
 
-    # Seed default data
+    # ── Seed default data ─────────────────────────────────────────────────
     if settings.AUTO_SEED:
-        with SessionLocal() as db:
-            seed_all(db)
+        await seed_all()
 
+    # ── WebSocket event-loop registration ─────────────────────────────────
     # Register the event loop on the WebSocket manager BEFORE any pipeline
     # background tasks start.  Without this, broadcast_from_thread() drops
     # every event if the pipeline thread fires before the first WS client
@@ -66,13 +71,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield  # ← application runs here
 
-    logger.info("Shutting down Auto-AT backend.")
+    # ── Shutdown ──────────────────────────────────────────────────────────
+    logger.info("Shutting down Auto-AT backend…")
+    await close_db()
+    logger.info("Auto-AT backend stopped.")
 
 
 # ── App factory ───────────────────────────────────────────────────────────────
 
 
 def create_app() -> FastAPI:
+    """Construct and configure the FastAPI application instance.
+
+    All routers are registered here so that the module-level ``app`` object
+    is fully wired up when imported (e.g. by Uvicorn or tests).
+
+    Returns:
+        A fully-configured :class:`~fastapi.FastAPI` instance.
+    """
     app = FastAPI(
         title=settings.APP_TITLE,
         version=settings.APP_VERSION,
@@ -87,7 +103,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── CORS ──────────────────────────────────────────────────────────────────
+    # ── CORS ──────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
@@ -96,8 +112,15 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Routers ───────────────────────────────────────────────────────────────
-    from app.api.v1 import agent_configs, chat, llm_profiles, pipeline, websocket
+    # ── Routers ───────────────────────────────────────────────────────────
+    from app.api.v1 import (
+        agent_configs,
+        chat,
+        llm_profiles,
+        pipeline,
+        stage_configs,
+        websocket,
+    )
 
     # REST API routers – all mounted under /api/v1
     app.include_router(pipeline.router, prefix="/api/v1", tags=["Pipeline"])
@@ -107,10 +130,12 @@ def create_app() -> FastAPI:
     app.include_router(
         agent_configs.router, prefix="/api/v1", tags=["Admin – Agent Configs"]
     )
-
+    app.include_router(
+        stage_configs.router, prefix="/api/v1", tags=["Admin – Stage Configs"]
+    )
     app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
 
-    # WebSocket router – mounted at root (the route itself defines /ws/pipeline/{run_id})
+    # WebSocket router – the route itself defines /ws/pipeline/{run_id}
     app.include_router(websocket.router, tags=["WebSocket"])
 
     return app
@@ -123,13 +148,18 @@ app = create_app()
 
 
 @app.get("/health", tags=["Health"], summary="Health check")
-def health_check() -> dict[str, str]:
+async def health_check() -> dict[str, str]:
+    """Return application status and a live MongoDB connectivity check.
+
+    Used by Docker health-checks, load balancers, and the frontend to verify
+    that the backend is reachable before starting a pipeline run.
+
+    Returns:
+        A JSON dict with ``status``, ``version``, ``env``, and ``database``
+        keys.  ``status`` is ``"ok"`` when MongoDB responds to a ping,
+        ``"degraded"`` otherwise.
     """
-    Returns the application status and a DB connectivity check.
-    Used by Docker health-checks, load balancers, and the frontend
-    to verify the backend is reachable before starting a pipeline run.
-    """
-    db_ok = check_connection()
+    db_ok = await check_connection()
     return {
         "status": "ok" if db_ok else "degraded",
         "version": settings.APP_VERSION,
@@ -139,7 +169,8 @@ def health_check() -> dict[str, str]:
 
 
 @app.get("/", include_in_schema=False)
-def root() -> dict[str, str]:
+async def root() -> dict[str, str]:
+    """Redirect hint for the API root."""
     return {"message": "Auto-AT API", "docs": "/docs"}
 
 

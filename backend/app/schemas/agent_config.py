@@ -1,62 +1,58 @@
+"""
+schemas/agent_config.py – Pydantic schemas for pipeline agent configurations.
+
+Changes in V2 (Phase 7-9):
+- IDs are now MongoDB ObjectId strings instead of ints
+- AgentConfigCreate added for Phase 8 (Dynamic Agent Management)
+- VALID_STAGES validation removed — stages are now dynamic, stored in MongoDB
+- is_custom field added to distinguish built-in vs user-created agents
+- AgentConfigGrouped includes a `custom` bucket for non-standard stages
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
 
+from pydantic import BaseModel, ConfigDict, Field
+
 from app.schemas.llm_profile import LLMProfileResponse
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Enums / Constants
-# ─────────────────────────────────────────────────────────────────────────────
-
-VALID_STAGES = {"ingestion", "testcase", "execution", "reporting"}
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Base
+# Create — used for Phase 8 dynamic agent creation
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class AgentConfigBase(BaseModel):
-    """Shared fields used in create / update payloads."""
+class AgentConfigCreate(BaseModel):
+    """Schema for creating a new custom agent (Phase 8: Dynamic Agent Management)."""
 
-    display_name: str = Field(..., min_length=1, max_length=150)
-    stage: str = Field(..., description="ingestion | testcase | execution | reporting")
+    agent_id: str = Field(
+        ...,
+        pattern=r"^[a-z][a-z0-9_]{2,49}$",
+        description="Unique snake_case identifier (3-50 chars, must start with a letter)",
+    )
+    display_name: str = Field(..., min_length=2, max_length=150)
+    stage: str = Field(..., description="stage_id of an existing stage config")
 
     # CrewAI prompts
-    role: str = Field(..., min_length=1, description="CrewAI agent role")
-    goal: str = Field(..., min_length=1, description="CrewAI agent goal")
-    backstory: str = Field(..., min_length=1, description="CrewAI agent backstory")
+    role: str = Field(..., min_length=10)
+    goal: str = Field(..., min_length=10)
+    backstory: str = Field(..., min_length=10)
 
     # LLM override — None means "use global default profile"
-    llm_profile_id: Optional[int] = Field(
+    llm_profile_id: Optional[str] = Field(
         default=None,
-        description="ID of the LLM profile to use. None → inherit global default.",
+        description="MongoDB ObjectId of the LLM profile to use. None → inherit global default.",
     )
 
     # Behaviour flags
-    enabled: bool = Field(
-        default=True, description="Whether this agent runs in the pipeline"
-    )
-    verbose: bool = Field(
-        default=False, description="Enable CrewAI verbose logging for this agent"
-    )
-    max_iter: int = Field(
-        default=5, ge=1, le=50, description="Max LLM iterations per task"
-    )
-
-    @model_validator(mode="after")
-    def validate_stage(self) -> "AgentConfigBase":
-        if self.stage not in VALID_STAGES:
-            raise ValueError(
-                f"stage must be one of {sorted(VALID_STAGES)}, got {self.stage!r}"
-            )
-        return self
+    enabled: bool = True
+    verbose: bool = False
+    max_iter: int = Field(default=5, ge=1, le=50)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Update — all fields optional so partial updates are supported (PATCH)
+# Update — all fields optional so partial updates are supported (PUT / PATCH)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -64,6 +60,7 @@ class AgentConfigUpdate(BaseModel):
     """
     Payload for PUT /admin/agent-configs/{agent_id}.
     All fields are optional — only supplied fields are updated.
+    Stage validation is intentionally omitted; stages are now dynamic.
     """
 
     display_name: Optional[str] = Field(default=None, min_length=1, max_length=150)
@@ -73,19 +70,11 @@ class AgentConfigUpdate(BaseModel):
     goal: Optional[str] = Field(default=None, min_length=1)
     backstory: Optional[str] = Field(default=None, min_length=1)
 
-    llm_profile_id: Optional[int] = None
+    llm_profile_id: Optional[str] = None  # MongoDB ObjectId string
 
     enabled: Optional[bool] = None
     verbose: Optional[bool] = None
     max_iter: Optional[int] = Field(default=None, ge=1, le=50)
-
-    @model_validator(mode="after")
-    def validate_stage_if_provided(self) -> "AgentConfigUpdate":
-        if self.stage is not None and self.stage not in VALID_STAGES:
-            raise ValueError(
-                f"stage must be one of {sorted(VALID_STAGES)}, got {self.stage!r}"
-            )
-        return self
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -98,7 +87,7 @@ class AgentConfigResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str  # MongoDB ObjectId string
     agent_id: str = Field(description="Unique slug, e.g. 'requirement_analyzer'")
     display_name: str
     stage: str
@@ -109,13 +98,16 @@ class AgentConfigResponse(BaseModel):
     backstory: str
 
     # FK + joined relation
-    llm_profile_id: Optional[int] = None
+    llm_profile_id: Optional[str] = None  # MongoDB ObjectId string
     llm_profile: Optional[LLMProfileResponse] = None
 
     # Behaviour
     enabled: bool
     verbose: bool
     max_iter: int
+
+    # Provenance
+    is_custom: bool = False  # True for user-created agents, False for built-ins
 
     # Timestamps
     created_at: datetime
@@ -135,11 +127,11 @@ class AgentConfigSummary(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str  # MongoDB ObjectId string
     agent_id: str
     display_name: str
     stage: str
-    llm_profile_id: Optional[int] = None
+    llm_profile_id: Optional[str] = None  # MongoDB ObjectId string
     llm_profile_name: Optional[str] = Field(
         default=None,
         description="Display name of the assigned LLM profile, if any.",
@@ -147,13 +139,8 @@ class AgentConfigSummary(BaseModel):
     enabled: bool
     verbose: bool
     max_iter: int
+    is_custom: bool = False  # True for user-created agents, False for built-ins
     updated_at: datetime
-
-    @model_validator(mode="after")
-    def populate_llm_profile_name(self) -> "AgentConfigSummary":
-        # When built from_attributes, llm_profile is not a field here
-        # so we rely on the caller to populate llm_profile_name directly.
-        return self
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -165,24 +152,30 @@ class AgentConfigGrouped(BaseModel):
     """
     Response shape for GET /admin/agent-configs?grouped=true.
     Groups agents by pipeline stage for easier rendering in the admin UI.
+    Agents in non-standard stages fall into the `custom` bucket.
     """
 
     ingestion: list[AgentConfigSummary] = []
     testcase: list[AgentConfigSummary] = []
     execution: list[AgentConfigSummary] = []
     reporting: list[AgentConfigSummary] = []
+    custom: list[AgentConfigSummary] = []  # agents in dynamically-created stages
 
     @classmethod
     def from_list(cls, agents: list[AgentConfigSummary]) -> "AgentConfigGrouped":
+        known_stages = {"ingestion", "testcase", "execution", "reporting"}
         grouped: dict[str, list[AgentConfigSummary]] = {
             "ingestion": [],
             "testcase": [],
             "execution": [],
             "reporting": [],
+            "custom": [],
         }
         for agent in agents:
-            if agent.stage in grouped:
+            if agent.stage in known_stages:
                 grouped[agent.stage].append(agent)
+            else:
+                grouped["custom"].append(agent)
         return cls(**grouped)
 
 

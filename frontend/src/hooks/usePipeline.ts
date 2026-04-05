@@ -77,6 +77,38 @@ export function useCancelPipeline() {
 }
 
 /**
+ * Pause a running pipeline.
+ * Invalidates the specific run detail on success.
+ */
+export function usePausePipeline() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (runId: string) => pipelineApi.pauseRun(runId),
+    onSuccess: (_data, runId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.detail(runId) });
+      qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.lists() });
+    },
+  });
+}
+
+/**
+ * Resume a paused pipeline.
+ * Invalidates the specific run detail on success.
+ */
+export function useResumePipeline() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (runId: string) => pipelineApi.resumeRun(runId),
+    onSuccess: (_data, runId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.detail(runId) });
+      qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.lists() });
+    },
+  });
+}
+
+/**
  * Delete a pipeline run record.
  * Removes the cached detail entry and invalidates the runs list on success.
  */
@@ -89,5 +121,24 @@ export function useDeletePipelineRun() {
       qc.removeQueries({ queryKey: queryKeys.pipelineRuns.detail(runId) });
       qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.lists() });
     },
+  });
+}
+
+/**
+ * Fetch results for a specific stage of a pipeline run.
+ * Enabled only when both runId and stage are provided.
+ */
+export function useStageResults(
+  runId: string | undefined,
+  stage: string | undefined,
+) {
+  return useQuery({
+    queryKey:
+      runId && stage
+        ? queryKeys.stageResults.byStage(runId, stage)
+        : ["stage-results", "disabled"],
+    queryFn: () => pipelineApi.getStageResults(runId!, stage),
+    enabled: !!runId && !!stage,
+    staleTime: 5 * 60_000, // stage results don't change once saved
   });
 }

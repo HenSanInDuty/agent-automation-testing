@@ -3,125 +3,127 @@ from __future__ import annotations
 """
 core/pipeline_runner.py
 ───────────────────────
-Main pipeline orchestrator — coordinates all four crews in sequence.
+V2 async pipeline orchestrator — reads stage configs dynamically from MongoDB
+and supports pause / resume / cancel via SignalManager.
 
-Pipeline flow:
+Pipeline flow (dynamic — driven by StageConfigDocument records):
     [Document file]
-        → IngestionCrew   → RequirementJSON     (saved to DB)
-        → TestcaseCrew    → TestCaseJSON        (saved to DB)
-        → ExecutionCrew   → ExecutionResultJSON (saved to DB)
-        → ReportingCrew   → PipelineReport      (saved to DB)
+        → stage_1  (e.g. ingestion)   → output_1
+        → stage_2  (e.g. testcase)    → output_2
+        → stage_3  (e.g. execution)   → output_3
+        → stage_4  (e.g. reporting)   → output_4
+        → … any custom stages …
 
 Responsibilities:
-  - Create / update the PipelineRun DB record at each stage boundary.
-  - Persist intermediate results as PipelineResult rows for later retrieval.
-  - Emit structured WebSocket events (via an optional async broadcaster).
-  - Propagate errors from one stage without crashing the whole pipeline
-    (e.g. if execution fails, we still run reporting with partial data).
-  - Respect per-stage timeouts defined in settings.
+  - Load enabled stages from MongoDB at run-time (order ascending).
+  - Create / update the PipelineRunDocument at each stage boundary.
+  - Persist intermediate results via crud.save_pipeline_result.
+  - Emit structured WebSocket events via an optional sync callback.
+  - Check SignalManager between stages for pause / resume / cancel.
+  - Respect per-stage timeouts from StageConfigDocument.timeout_seconds.
   - Support MOCK_CREWS mode for testing without a live LLM.
 
-Usage (synchronous, e.g. from a background task)::
+Usage::
 
-    from app.core.pipeline_runner import PipelineRunner
+    from app.core.pipeline_runner import run_pipeline_async
 
-    runner = PipelineRunner(db=session, run_id="abc-123")
-    result = runner.run(file_path="/uploads/spec.pdf", document_name="spec.pdf")
-
-Usage with WebSocket broadcaster::
-
-    async def ws_broadcast(event_type: str, data: dict) -> None:
-        await manager.broadcast(run_id, json.dumps({"event": event_type, **data}))
-
-    runner = PipelineRunner(
-        db=session,
+    result = await run_pipeline_async(
         run_id="abc-123",
-        run_profile_id=2,
-        ws_broadcaster=ws_broadcast,
+        file_path="/uploads/spec.pdf",
+        document_name="spec.pdf",
+        ws_broadcaster=my_broadcaster,
     )
-    result = runner.run(file_path="/uploads/spec.pdf")
+
+Signal handling::
+
+    from app.core.signal_manager import signal_manager, PipelineSignal
+
+    # Pause a running pipeline (checked before the next stage starts):
+    await signal_manager.set_signal(run_id, PipelineSignal.PAUSE)
+
+    # Resume after pause:
+    await signal_manager.set_signal(run_id, PipelineSignal.RESUME)
+
+    # Cancel (acts immediately on next stage boundary):
+    await signal_manager.set_signal(run_id, PipelineSignal.CANCEL)
 """
 
-import json
+import asyncio
+import importlib
 import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from sqlalchemy.orm import Session
-
 from app.config import settings
-from app.db.models import PipelineResult, PipelineRun
-from app.schemas.pipeline_io import (
-    ExecutionOutput,
-    IngestionOutput,
-    PipelineReport,
-    TestCaseOutput,
-)
+from app.db import crud
 
 logger = logging.getLogger(__name__)
 
 # Callback type: (event_type: str, data: dict) -> None
-# The callback may be synchronous or asynchronous (async variant handled in
-# the async wrapper at the bottom of this module).
 ProgressCallback = Callable[[str, dict[str, Any]], None]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PipelineRunner
+# Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class PipelineRunner:
-    """
-    Synchronous pipeline orchestrator.
+def _now() -> datetime:
+    """Return the current UTC datetime (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
-    Coordinates the four pipeline crews in sequence, persists intermediate
-    results to the database, and emits WebSocket-compatible progress events
-    via an optional callback.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PipelineRunnerV2
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PipelineRunnerV2:
+    """
+    V2 fully-async pipeline orchestrator.
+
+    Reads stage configurations dynamically from MongoDB so that custom stages
+    and reordering take effect without any code changes.  Supports
+    pause / resume / cancel via the module-level :data:`signal_manager`
+    singleton.
 
     Args:
-        db:               Active SQLAlchemy session (caller owns lifecycle).
-        run_id:           UUID string of the PipelineRun record.
-        run_profile_id:   Optional LLM profile override for all agents.
-        ws_broadcaster:   Optional callback for real-time event streaming.
-                          Signature: (event_type: str, data: dict) -> None.
-        mock_mode:        When True, all crews skip LLM calls and return
-                          deterministic mock output.  Falls back to
-                          settings.MOCK_CREWS if None.
-        environment:      Target test environment name for execution crew.
+        run_id:          UUID string of the PipelineRun record.
+        run_profile_id:  Optional MongoDB ObjectId string for the run-level
+                         LLM profile override.
+        ws_broadcaster:  Optional sync callback for real-time event streaming.
+                         Signature: ``(event_type: str, data: dict) -> None``.
+        mock_mode:       When ``True``, all crews skip LLM calls and return
+                         deterministic mock output.  Falls back to
+                         ``settings.MOCK_CREWS`` when ``None``.
+        environment:     Target test-environment name forwarded to the
+                         execution crew.
     """
 
     def __init__(
         self,
-        db: Session,
         run_id: str,
-        run_profile_id: Optional[int] = None,
-        ws_broadcaster: Optional[ProgressCallback] = None,
+        run_profile_id: Optional[str] = None,
+        ws_broadcaster: Optional[Callable] = None,
         mock_mode: Optional[bool] = None,
         environment: str = "default",
     ) -> None:
-        self._db = db
         self._run_id = run_id
         self._run_profile_id = run_profile_id
         self._ws_broadcaster = ws_broadcaster
         self._environment = environment
-
-        # Resolve mock_mode
-        if mock_mode is None:
-            self._mock_mode: bool = bool(getattr(settings, "MOCK_CREWS", False))
-        else:
-            self._mock_mode = mock_mode
-
-        # Shared state accumulated across stages
-        self._ingestion_output: Optional[dict[str, Any]] = None
-        self._testcase_output: Optional[dict[str, Any]] = None
-        self._execution_output: Optional[dict[str, Any]] = None
-        self._report_output: Optional[dict[str, Any]] = None
+        self._mock_mode: bool = (
+            bool(getattr(settings, "MOCK_CREWS", False))
+            if mock_mode is None
+            else mock_mode
+        )
+        self._completed_stages: list[str] = []
+        self._t_start: float = 0.0
 
         logger.info(
-            "[PipelineRunner] Initialised run_id=%r mock=%s profile=%s env=%s",
+            "[PipelineRunnerV2] Initialised  run_id=%r  mock=%s  profile=%s  env=%s",
             run_id,
             self._mock_mode,
             run_profile_id,
@@ -132,1010 +134,529 @@ class PipelineRunner:
     # Public entry point
     # ─────────────────────────────────────────────────────────────────────────
 
-    def run(  # noqa: C901  (complexity is intentional — it's the main orchestration method)
+    async def run(
         self,
         file_path: str | Path,
         document_name: Optional[str] = None,
-        ingestion_options: Optional[dict[str, Any]] = None,
-        execution_config: Optional[dict[str, Any]] = None,
         skip_execution: bool = False,
     ) -> dict[str, Any]:
-        """
-        Execute the full four-stage pipeline for a single document.
+        """Execute the full pipeline end-to-end.
+
+        Loads all enabled stages from MongoDB (ordered by ``order`` ascending),
+        optionally skips execution and reporting, then iterates through stages.
+        Between each stage the runner checks the :data:`signal_manager` for
+        PAUSE / CANCEL signals and reacts accordingly.
 
         Args:
-            file_path:         Absolute or relative path to the uploaded document.
-            document_name:     Human-readable filename (defaults to the path basename).
-            ingestion_options: Optional overrides for the IngestionCrew
-                               (chunk_size, chunk_overlap, mock_mode).
-            execution_config:  Optional overrides for the ExecutionCrew
-                               (timeouts, execution_mode).
-            skip_execution:    If True, skip the Execution and Reporting stages.
-                               Useful when you only want test case generation.
+            file_path:      Path to the requirements document on disk.
+            document_name:  Optional display name (defaults to filename).
+            skip_execution: When ``True``, execution and reporting stages are
+                            excluded from this run.
 
         Returns:
-            A dict with keys:
-                run_id, document_name, status,
-                ingestion, testcase, execution, report,
-                started_at, finished_at, duration_seconds, error.
-
-        Raises:
-            FileNotFoundError: If the document file does not exist.
+            A dict with keys ``run_id``, ``status``, ``completed_stages``,
+            ``error``, and ``duration_seconds``.
         """
+        from app.core.signal_manager import PipelineSignal, signal_manager
+
         file_path = Path(file_path)
-        if not file_path.exists():
-            logger.error(
-                "[Runner][%s] Document file not found: %r",
-                self._run_id[:8],
-                str(file_path),
-            )
-            raise FileNotFoundError(f"Document not found: {file_path}")
-
         doc_name = document_name or file_path.name
-        t_start = time.monotonic()
+        self._t_start = time.monotonic()
 
-        logger.info(
-            "[Runner][%s] ════ PIPELINE START  doc=%r  profile=%s  mock=%s  skip_exec=%s  ws=%s",
-            self._run_id[:8],
-            doc_name,
-            self._run_profile_id,
-            self._mock_mode,
-            skip_execution,
-            "yes" if self._ws_broadcaster else "NO ← events will not be sent",
-        )
+        # ── Load enabled stages ───────────────────────────────────────────
+        stages = await crud.get_all_stage_configs(enabled_only=True)
 
-        # Mark run as running
-        self._update_db_status("running")
+        if skip_execution:
+            stages = [s for s in stages if s.stage_id not in ("execution", "reporting")]
+
+        if not stages:
+            raise ValueError("No enabled stages found in database")
+
+        # ── Signal run.started ────────────────────────────────────────────
         self._emit(
             "run.started",
             {
                 "document_name": doc_name,
-                "total_agents": 18,
+                "total_stages": len(stages),
                 "mock_mode": self._mock_mode,
             },
         )
+        await crud.update_pipeline_status(self._run_id, "running", started_at=_now())
 
+        # Stage-to-stage data propagation
+        stage_input: dict[str, Any] = {
+            "file_path": str(file_path),
+            "document_name": doc_name,
+        }
         error: Optional[str] = None
 
         try:
-            # ── Stage 1: Ingestion ────────────────────────────────────────────
-            self._emit("stage.started", {"stage": "ingestion", "agent_count": 0})
-            try:
-                self._ingestion_output = self._run_ingestion(
-                    file_path=file_path,
-                    document_name=doc_name,
-                    options=ingestion_options or {},
-                )
-                req_count = len((self._ingestion_output or {}).get("requirements", []))
-                self._save_result(
-                    "ingestion", "ingestion_pipeline", self._ingestion_output
-                )
-                self._emit(
-                    "stage.completed",
-                    {
-                        "stage": "ingestion",
-                        "requirements_count": req_count,
-                    },
-                )
+            for stage_config in stages:
+                # ── Check signal before each stage ────────────────────────
+                signal = await signal_manager.get_signal(self._run_id)
+
+                if signal == PipelineSignal.CANCEL:
+                    await self._handle_cancel()
+                    return self._build_result("cancelled", error="Cancelled by user")
+
+                elif signal == PipelineSignal.PAUSE:
+                    await self._handle_pause(stage_config.stage_id)
+                    # Block until RESUME or CANCEL (or timeout → auto-cancel)
+                    signal = await signal_manager.wait_for_resume(self._run_id)
+                    if signal == PipelineSignal.CANCEL:
+                        await self._handle_cancel()
+                        return self._build_result(
+                            "cancelled",
+                            error="Cancelled by user after pause",
+                        )
+                    # RESUME received — continue running
+                    await crud.update_pipeline_status(
+                        self._run_id,
+                        "running",
+                        resumed_at=_now(),
+                    )
+                    self._emit(
+                        "run.resumed",
+                        {
+                            "message": "Pipeline resumed by user",
+                            "continuing_from": stage_config.stage_id,
+                        },
+                    )
+                    await signal_manager.clear_signal(self._run_id)
+
+                # ── Execute stage ─────────────────────────────────────────
                 logger.info(
-                    "[PipelineRunner][%s] Ingestion done: %d requirements",
-                    self._run_id,
-                    req_count,
-                )
-            except Exception as exc:
-                error = f"Ingestion stage failed: {exc}"
-                logger.exception(
-                    "[Runner][%s] ── INGESTION FAILED (aborting pipeline): %s",
+                    "[PipelineRunnerV2][%s] Starting stage %r",
                     self._run_id[:8],
-                    exc,
+                    stage_config.stage_id,
                 )
-                self._emit("log", {"message": error, "level": "error"})
-                # Cannot continue without requirements
-                self._update_db_status("failed", error=error)
-                self._emit("run.failed", {"error": error})
-                return self._build_result(doc_name, "failed", t_start, error=error)
-
-            # ── Stage 2: Test Case Generation ─────────────────────────────────
-            self._emit("stage.started", {"stage": "testcase", "agent_count": 10})
-            try:
-                self._testcase_output = self._run_testcase(
-                    requirements=self._ingestion_output.get("requirements", []),
-                    document_name=doc_name,
-                )
-                tc_count = len((self._testcase_output or {}).get("test_cases", []))
-                self._save_result("testcase", "testcase_crew", self._testcase_output)
-                self._emit(
-                    "stage.completed",
-                    {
-                        "stage": "testcase",
-                        "test_cases_count": tc_count,
-                    },
-                )
-                logger.info(
-                    "[PipelineRunner][%s] Testcase done: %d test cases",
+                self._emit("stage.started", {"stage": stage_config.stage_id})
+                await crud.update_pipeline_status(
                     self._run_id,
-                    tc_count,
+                    "running",
+                    current_stage=stage_config.stage_id,
                 )
-            except Exception as exc:
-                error = f"Test case generation failed: {exc}"
-                logger.exception(
-                    "[Runner][%s] ── TESTCASE FAILED (continuing with empty test cases): %s",
-                    self._run_id[:8],
-                    exc,
-                )
-                self._emit("log", {"message": error, "level": "error"})
-                self._testcase_output = {"test_cases": [], "error": str(exc)}
-                # Continue to reporting with partial data
-                self._save_result("testcase", "testcase_crew", self._testcase_output)
 
-            if skip_execution:
-                logger.info(
-                    "[PipelineRunner][%s] skip_execution=True — stopping after testcase stage.",
-                    self._run_id,
-                )
-                duration = time.monotonic() - t_start
-                self._update_db_status("completed")
-                self._emit(
-                    "run.completed",
-                    {
-                        "total_agents": 10,
-                        "duration_seconds": round(duration, 2),
-                    },
-                )
-                return self._build_result(doc_name, "completed", t_start)
+                try:
+                    stage_output = await self._execute_stage(stage_config, stage_input)
 
-            # ── Stage 3: Execution ────────────────────────────────────────────
-            test_cases = (self._testcase_output or {}).get("test_cases", [])
-            self._emit("stage.started", {"stage": "execution", "agent_count": 5})
-            try:
-                self._execution_output = self._run_execution(
-                    test_cases=test_cases,
-                    environment=self._environment,
-                    execution_config=execution_config or {},
-                )
-                result_count = len((self._execution_output or {}).get("results", []))
-                self._save_result("execution", "execution_crew", self._execution_output)
-                exec_summary = (self._execution_output or {}).get("summary", {})
-                self._emit(
-                    "stage.completed",
-                    {
-                        "stage": "execution",
-                        "results_count": result_count,
-                        "pass_rate": exec_summary.get("pass_rate", 0.0),
-                    },
-                )
-                logger.info(
-                    "[PipelineRunner][%s] Execution done: %d results, %.1f%% pass rate",
-                    self._run_id,
-                    result_count,
-                    exec_summary.get("pass_rate", 0.0),
-                )
-            except Exception as exc:
-                error = f"Execution stage failed: {exc}"
-                logger.exception(
-                    "[Runner][%s] ── EXECUTION FAILED (continuing with empty results): %s",
-                    self._run_id[:8],
-                    exc,
-                )
-                self._emit("log", {"message": error, "level": "error"})
-                # Build minimal error output so reporting can still run
-                self._execution_output = {
-                    "results": [],
-                    "summary": {
-                        "total": len(test_cases),
-                        "passed": 0,
-                        "failed": 0,
-                        "skipped": 0,
-                        "errors": len(test_cases),
-                        "pass_rate": 0.0,
-                        "duration_seconds": 0.0,
-                    },
-                    "environment": self._environment,
-                    "execution_notes": [f"Execution crew failed: {exc}"],
-                }
-                self._save_result("execution", "execution_crew", self._execution_output)
+                    await crud.save_pipeline_result(
+                        self._run_id,
+                        stage_config.stage_id,
+                        "crew_output",
+                        stage_output,
+                    )
 
-            # ── Stage 4: Reporting ────────────────────────────────────────────
-            exec_results = (self._execution_output or {}).get("results", [])
-            exec_summary = (self._execution_output or {}).get("summary", {})
-            requirements = (self._ingestion_output or {}).get("requirements", [])
+                    self._completed_stages.append(stage_config.stage_id)
+                    await crud.update_pipeline_status(
+                        self._run_id,
+                        "running",
+                        completed_stages=self._completed_stages,
+                    )
 
-            self._emit("stage.started", {"stage": "reporting", "agent_count": 3})
-            try:
-                self._report_output = self._run_reporting(
-                    test_cases=test_cases,
-                    exec_results=exec_results,
-                    requirements=requirements,
-                    exec_summary=exec_summary,
-                    document_name=doc_name,
-                )
-                self._save_result("reporting", "reporting_crew", self._report_output)
-                self._emit(
-                    "stage.completed",
-                    {
-                        "stage": "reporting",
-                        "coverage_percentage": (self._report_output or {}).get(
-                            "coverage_percentage", 0.0
-                        ),
-                    },
-                )
-                logger.info(
-                    "[PipelineRunner][%s] Reporting done: coverage=%.1f%%",
-                    self._run_id,
-                    (self._report_output or {}).get("coverage_percentage", 0.0),
-                )
-            except Exception as exc:
-                report_error = f"Reporting stage failed: {exc}"
-                logger.exception(
-                    "[Runner][%s] ── REPORTING FAILED (pipeline still marked completed): %s",
-                    self._run_id[:8],
-                    exc,
-                )
-                self._emit("log", {"message": report_error, "level": "error"})
-                # Build minimal report
-                self._report_output = {
-                    "coverage_percentage": 0.0,
-                    "executive_summary": f"Reporting failed: {exc}",
-                    "recommendations": [],
-                    "risk_items": [f"Reporting crew error: {exc}"],
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                    "total_test_cases": len(test_cases),
-                    "pass_rate": exec_summary.get("pass_rate", 0.0),
-                    "metrics": exec_summary,
-                }
-                self._save_result("reporting", "reporting_crew", self._report_output)
-                # Reporting failure is non-fatal — pipeline is still "completed"
+                    self._emit(
+                        "stage.completed",
+                        {
+                            "stage": stage_config.stage_id,
+                            "has_full_results": True,
+                        },
+                    )
+
+                    logger.info(
+                        "[PipelineRunnerV2][%s] Stage %r completed",
+                        self._run_id[:8],
+                        stage_config.stage_id,
+                    )
+
+                    # Propagate output as next stage's input
+                    stage_input = (
+                        stage_output
+                        if isinstance(stage_output, dict)
+                        else {"output": stage_output}
+                    )
+                    # Always re-inject file context so every stage has access
+                    stage_input["file_path"] = str(file_path)
+                    stage_input["document_name"] = doc_name
+
+                except asyncio.TimeoutError:
+                    error = (
+                        f"Stage '{stage_config.stage_id}' timed out after "
+                        f"{stage_config.timeout_seconds}s"
+                    )
+                    self._emit(
+                        "stage.failed",
+                        {"stage": stage_config.stage_id, "error": error},
+                    )
+                    raise
+
+                except Exception as exc:
+                    error = str(exc)
+                    self._emit(
+                        "stage.failed",
+                        {"stage": stage_config.stage_id, "error": error},
+                    )
+                    raise
 
         except Exception as exc:
-            # Unexpected top-level error (should rarely happen — each stage has its own try/except)
-            error = f"Pipeline runner unexpected error: {exc}"
+            error = str(exc)
             logger.exception(
-                "[Runner][%s] ════ PIPELINE UNEXPECTED FAILURE: %s",
+                "[PipelineRunnerV2][%s] Pipeline failed: %s",
                 self._run_id[:8],
-                exc,
+                error,
             )
-            self._update_db_status("failed", error=error)
+            await crud.update_pipeline_status(
+                self._run_id,
+                "failed",
+                error=error,
+                completed_stages=self._completed_stages,
+            )
             self._emit("run.failed", {"error": error})
-            return self._build_result(doc_name, "failed", t_start, error=error)
+            return self._build_result("failed", error=error)
 
-        # ── Success ───────────────────────────────────────────────────────────
-        duration = time.monotonic() - t_start
-        self._update_db_status("completed")
+        # ── Pipeline completed ────────────────────────────────────────────
+        duration = time.monotonic() - self._t_start
+        await crud.update_pipeline_status(
+            self._run_id,
+            "completed",
+            completed_stages=self._completed_stages,
+        )
         self._emit(
             "run.completed",
             {
-                "total_agents": 18,
+                "total_stages": len(stages),
                 "duration_seconds": round(duration, 2),
-                "result_url": f"/api/v1/pipeline/runs/{self._run_id}",
             },
         )
         logger.info(
-            "[Runner][%s] ════ PIPELINE COMPLETED  duration=%.1fs  "
-            "requirements=%d  test_cases=%d  pass_rate=%s%%",
+            "[PipelineRunnerV2][%s] Pipeline completed in %.1fs  stages=%s",
             self._run_id[:8],
             duration,
-            len((self._ingestion_output or {}).get("requirements", [])),
-            len((self._testcase_output or {}).get("test_cases", [])),
-            (self._execution_output or {}).get("summary", {}).get("pass_rate", "n/a"),
+            self._completed_stages,
         )
-
-        return self._build_result(doc_name, "completed", t_start)
+        return self._build_result("completed")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Stage runners
+    # Stage dispatch
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _run_ingestion(
+    async def _execute_stage(
         self,
-        file_path: Path,
-        document_name: str,
-        options: dict[str, Any],
+        stage_config: Any,
+        input_data: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Run IngestionCrew and return the output dict.
+        """Dispatch a single stage to the appropriate crew.
+
+        Resolution order:
+        1. ``pure_python`` → look up builtin crew class; call ``run()``
+           directly (supports both sync and async ``run`` methods).
+        2. ``crewai_sequential`` / ``crewai_hierarchical`` → try builtin crew
+           first (for the 4 default stages); fall back to
+           :class:`~app.crews.dynamic_crew.DynamicCrewAICrew` for custom
+           stages.
+
+        Stage timeouts are enforced via :func:`asyncio.wait_for`.
+        ``timeout_seconds == 0`` means no timeout.
 
         Args:
-            file_path:     Document file path.
-            document_name: Display name.
-            options:       Optional overrides (chunk_size, chunk_overlap, mock_mode).
+            stage_config: :class:`~app.db.models.StageConfigDocument` instance.
+            input_data:   Dict of inputs passed from the previous stage.
 
         Returns:
-            IngestionOutput.model_dump() dict.
+            Dict output from the crew's ``run()`` method.
+
+        Raises:
+            asyncio.TimeoutError: When the stage exceeds its timeout budget.
+            ValueError:           When ``crew_type`` is unknown.
         """
-        t0 = time.monotonic()
-        logger.info(
-            "[Runner][%s] ── INGESTION START  file=%r  mock=%s  chunk_size=%s  chunk_overlap=%s",
-            self._run_id[:8],
-            str(file_path),
-            options.get("mock_mode", self._mock_mode),
-            options.get("chunk_size", settings.INGESTION_CHUNK_SIZE),
-            options.get("chunk_overlap", settings.INGESTION_CHUNK_OVERLAP),
+        timeout: Optional[float] = (
+            float(stage_config.timeout_seconds)
+            if stage_config.timeout_seconds > 0
+            else None
         )
 
-        try:
-            from app.crews.ingestion_crew import IngestionCrew
+        if stage_config.crew_type == "pure_python":
+            crew = self._get_builtin_crew(stage_config.stage_id)
+            if asyncio.iscoroutinefunction(crew.run):
+                coro = crew.run(input_data)
+            else:
+                coro = asyncio.to_thread(crew.run, input_data)
+            return await asyncio.wait_for(coro, timeout=timeout)
 
-            crew = IngestionCrew(
-                db=self._db,
+        elif stage_config.crew_type in ("crewai_sequential", "crewai_hierarchical"):
+            builtin_crew = self._try_get_builtin_crew(stage_config.stage_id)
+            if builtin_crew is not None:
+                coro = asyncio.to_thread(builtin_crew.run, input_data)
+                return await asyncio.wait_for(coro, timeout=timeout)
+
+            # Custom stage: build a DynamicCrewAICrew from DB agent configs
+            agent_configs = await crud.get_agent_configs_for_stage(
+                stage_config.stage_id, enabled_only=True
+            )
+            from app.crews.dynamic_crew import DynamicCrewAICrew
+
+            process = (
+                "sequential"
+                if stage_config.crew_type == "crewai_sequential"
+                else "hierarchical"
+            )
+            crew = DynamicCrewAICrew(
+                stage=stage_config.stage_id,
+                agent_configs=agent_configs,
                 run_id=self._run_id,
                 run_profile_id=self._run_profile_id,
-                progress_callback=self._progress_callback,
-                chunk_size=int(
-                    options.get("chunk_size", settings.INGESTION_CHUNK_SIZE)
-                ),
-                chunk_overlap=int(
-                    options.get("chunk_overlap", settings.INGESTION_CHUNK_OVERLAP)
-                ),
-            )
-
-            input_data: dict[str, Any] = {
-                "file_path": str(file_path),
-                "document_name": document_name,
-                "mock_mode": options.get("mock_mode", self._mock_mode),
-            }
-            if "chunk_size" in options:
-                input_data["chunk_size"] = options["chunk_size"]
-            if "chunk_overlap" in options:
-                input_data["chunk_overlap"] = options["chunk_overlap"]
-
-            result = crew.run(input_data)
-
-            req_count = len(result.get("requirements", []))
-            logger.info(
-                "[Runner][%s] ── INGESTION DONE  elapsed=%.2fs  requirements=%d",
-                self._run_id[:8],
-                time.monotonic() - t0,
-                req_count,
-            )
-            return result
-
-        except Exception:
-            logger.exception(
-                "[Runner][%s] ── INGESTION FAILED  elapsed=%.2fs",
-                self._run_id[:8],
-                time.monotonic() - t0,
-            )
-            raise
-
-    def _run_testcase(
-        self,
-        requirements: list[dict[str, Any]],
-        document_name: str,
-    ) -> dict[str, Any]:
-        """
-        Run TestcaseCrew and return the output dict.
-
-        Args:
-            requirements:  List of RequirementItem dicts from ingestion.
-            document_name: Source document name.
-
-        Returns:
-            TestCaseOutput.model_dump() dict.
-        """
-        t0 = time.monotonic()
-        logger.info(
-            "[Runner][%s] ── TESTCASE START  requirements=%d  mock=%s",
-            self._run_id[:8],
-            len(requirements),
-            self._mock_mode,
-        )
-
-        try:
-            from app.crews.testcase_crew import TestcaseCrew
-
-            crew = TestcaseCrew(
-                db=self._db,
-                run_id=self._run_id,
-                run_profile_id=self._run_profile_id,
-                progress_callback=self._progress_callback,
+                progress_callback=self._ws_broadcaster,
                 mock_mode=self._mock_mode,
+                process=process,
             )
+            coro = asyncio.to_thread(crew.run, input_data)
+            return await asyncio.wait_for(coro, timeout=timeout)
 
-            result = crew.run(
-                {
-                    "requirements": requirements,
-                    "document_name": document_name,
-                }
-            )
-
-            tc_count = len(result.get("test_cases", []))
-            logger.info(
-                "[Runner][%s] ── TESTCASE DONE  elapsed=%.2fs  test_cases=%d",
-                self._run_id[:8],
-                time.monotonic() - t0,
-                tc_count,
-            )
-            return result
-
-        except Exception:
-            logger.exception(
-                "[Runner][%s] ── TESTCASE FAILED  elapsed=%.2fs",
-                self._run_id[:8],
-                time.monotonic() - t0,
-            )
-            raise
-
-    def _run_execution(
-        self,
-        test_cases: list[dict[str, Any]],
-        environment: str,
-        execution_config: dict[str, Any],
-    ) -> dict[str, Any]:
-        """
-        Run ExecutionCrew and return the output dict.
-
-        Args:
-            test_cases:       List of TestCase dicts from testcase crew.
-            environment:      Target environment name.
-            execution_config: Execution configuration overrides.
-
-        Returns:
-            ExecutionOutput.model_dump() dict.
-        """
-        t0 = time.monotonic()
-        logger.info(
-            "[Runner][%s] ── EXECUTION START  test_cases=%d  env=%r  mock=%s",
-            self._run_id[:8],
-            len(test_cases),
-            environment,
-            self._mock_mode,
-        )
-
-        try:
-            from app.crews.execution_crew import ExecutionCrew
-
-            crew = ExecutionCrew(
-                db=self._db,
-                run_id=self._run_id,
-                run_profile_id=self._run_profile_id,
-                progress_callback=self._progress_callback,
-                mock_mode=self._mock_mode,
-                environment=environment,
-            )
-
-            result = crew.run(
-                {
-                    "test_cases": test_cases,
-                    "environment": environment,
-                    "execution_config": execution_config,
-                }
-            )
-
-            summary = result.get("summary", {})
-            logger.info(
-                "[Runner][%s] ── EXECUTION DONE  elapsed=%.2fs  total=%s  passed=%s  pass_rate=%s%%",
-                self._run_id[:8],
-                time.monotonic() - t0,
-                summary.get("total", "?"),
-                summary.get("passed", "?"),
-                summary.get("pass_rate", "?"),
-            )
-            return result
-
-        except Exception:
-            logger.exception(
-                "[Runner][%s] ── EXECUTION FAILED  elapsed=%.2fs",
-                self._run_id[:8],
-                time.monotonic() - t0,
-            )
-            raise
-
-    def _run_reporting(
-        self,
-        test_cases: list[dict[str, Any]],
-        exec_results: list[dict[str, Any]],
-        requirements: list[dict[str, Any]],
-        exec_summary: dict[str, Any],
-        document_name: str,
-    ) -> dict[str, Any]:
-        """
-        Run ReportingCrew and return the output dict.
-
-        Args:
-            test_cases:    List of TestCase dicts from testcase crew.
-            exec_results:  List of TestExecutionResult dicts from execution crew.
-            requirements:  List of RequirementItem dicts from ingestion.
-            exec_summary:  ExecutionSummary dict (pass rate, totals, etc.).
-            document_name: Source document display name.
-
-        Returns:
-            PipelineReport-compatible dict.
-        """
-        t0 = time.monotonic()
-        logger.info(
-            "[Runner][%s] ── REPORTING START  test_cases=%d  exec_results=%d  pass_rate=%s%%",
-            self._run_id[:8],
-            len(test_cases),
-            len(exec_results),
-            exec_summary.get("pass_rate", "?"),
-        )
-
-        try:
-            from app.crews.reporting_crew import ReportingCrew
-
-            crew = ReportingCrew(
-                db=self._db,
-                run_id=self._run_id,
-                run_profile_id=self._run_profile_id,
-                progress_callback=self._progress_callback,
-                mock_mode=self._mock_mode,
-            )
-
-            result = crew.run(
-                {
-                    "test_cases_json": test_cases,
-                    "execution_results_json": exec_results,
-                    "requirements_json": requirements,
-                    "execution_summary": exec_summary,
-                    "document_name": document_name,
-                }
-            )
-
-            logger.info(
-                "[Runner][%s] ── REPORTING DONE  elapsed=%.2fs  coverage=%.1f%%",
-                self._run_id[:8],
-                time.monotonic() - t0,
-                result.get("coverage_percentage", 0.0),
-            )
-            return result
-
-        except Exception:
-            logger.exception(
-                "[Runner][%s] ── REPORTING FAILED  elapsed=%.2fs",
-                self._run_id[:8],
-                time.monotonic() - t0,
-            )
-            raise
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Progress event emission
-    # ─────────────────────────────────────────────────────────────────────────
-
-    def _progress_callback(self, event_type: str, data: dict[str, Any]) -> None:
-        """
-        Internal progress callback passed to each crew.
-
-        Relays all crew events to the WebSocket broadcaster (if configured)
-        and logs them.  Also handles ``agent.started`` and
-        ``agent.completed`` events to update the DB agent_statuses field.
-
-        Args:
-            event_type: Dot-separated event name (e.g. "agent.started").
-            data:       Event payload dict (always includes run_id).
-        """
-        _info_cb_events = {"agent.started", "agent.completed", "agent.failed"}
-        if event_type in _info_cb_events:
-            agent_id = data.get("agent_id", "?")
-            extra = data.get("error", data.get("output_preview", ""))
-            logger.info(
-                "[Runner][%s] %-18s  agent=%-35s  %s",
-                self._run_id[:8],
-                event_type,
-                agent_id,
-                f"error={extra!r}"
-                if event_type == "agent.failed"
-                else (f"preview={str(extra)[:80]!r}" if extra else ""),
-            )
         else:
-            logger.debug(
-                "[Runner][%s] callback event=%r  data_keys=%s",
-                self._run_id[:8],
-                event_type,
-                sorted(data.keys()),
+            raise ValueError(
+                f"Unknown crew_type {stage_config.crew_type!r} "
+                f"for stage {stage_config.stage_id!r}"
             )
 
-        # Update per-agent DB status
-        if event_type == "agent.started":
-            agent_id = data.get("agent_id")
-            if agent_id:
-                self._update_agent_status(agent_id, "running")
+    # ─────────────────────────────────────────────────────────────────────────
+    # Builtin crew registry
+    # ─────────────────────────────────────────────────────────────────────────
 
-        elif event_type == "agent.completed":
-            agent_id = data.get("agent_id")
-            if agent_id:
-                self._update_agent_status(agent_id, "done")
+    #: Mapping of stage_id → (module_path, class_name) for the 4 builtin crews.
+    _BUILTIN_CREWS: dict[str, tuple[str, str]] = {
+        "ingestion": ("app.crews.ingestion_crew", "IngestionCrew"),
+        "testcase": ("app.crews.testcase_crew", "TestcaseCrew"),
+        "execution": ("app.crews.execution_crew", "ExecutionCrew"),
+        "reporting": ("app.crews.reporting_crew", "ReportingCrew"),
+    }
 
-        elif event_type == "agent.failed":
-            agent_id = data.get("agent_id")
-            if agent_id:
-                self._update_agent_status(agent_id, "error")
+    def _get_builtin_crew(self, stage_id: str) -> Any:
+        """Instantiate and return a builtin crew for *stage_id*.
 
-        # Relay to WebSocket broadcaster
-        self._emit(event_type, data)
+        Args:
+            stage_id: Pipeline stage slug (e.g. ``"ingestion"``).
+
+        Returns:
+            A crew instance with a ``run(input_data)`` method.
+
+        Raises:
+            ValueError:  When no builtin crew is registered for *stage_id*.
+            ImportError: When the crew's module cannot be imported.
+        """
+        entry = self._BUILTIN_CREWS.get(stage_id)
+        if not entry:
+            raise ValueError(f"No builtin crew registered for stage: {stage_id!r}")
+
+        module_path, class_name = entry
+        mod = importlib.import_module(module_path)
+        cls = getattr(mod, class_name)
+        return cls(
+            run_id=self._run_id,
+            run_profile_id=self._run_profile_id,
+            progress_callback=self._ws_broadcaster,
+            mock_mode=self._mock_mode,
+        )
+
+    def _try_get_builtin_crew(self, stage_id: str) -> Optional[Any]:
+        """Try to get a builtin crew instance; return ``None`` if unavailable.
+
+        This is used as a soft lookup — when a stage matches a builtin stage ID
+        the registered crew is returned, otherwise ``None`` tells the caller to
+        use a :class:`~app.crews.dynamic_crew.DynamicCrewAICrew` instead.
+
+        Args:
+            stage_id: Pipeline stage slug.
+
+        Returns:
+            A crew instance, or ``None`` if the stage is not a builtin.
+        """
+        try:
+            return self._get_builtin_crew(stage_id)
+        except (ValueError, ImportError, Exception):
+            return None
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Signal handlers
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def _handle_pause(self, next_stage_id: str) -> None:
+        """Transition to ``paused`` status and emit ``run.paused`` event.
+
+        Args:
+            next_stage_id: The stage that will execute once the run resumes.
+        """
+        logger.info(
+            "[PipelineRunnerV2][%s] Pausing before stage %r",
+            self._run_id[:8],
+            next_stage_id,
+        )
+        await crud.update_pipeline_status(
+            self._run_id,
+            "paused",
+            paused_at=_now(),
+            completed_stages=self._completed_stages,
+        )
+        self._emit(
+            "run.paused",
+            {
+                "message": "Pipeline paused by user",
+                "completed_stages": self._completed_stages,
+                "next_stage": next_stage_id,
+            },
+        )
+
+    async def _handle_cancel(self) -> None:
+        """Transition to ``cancelled`` status, emit event and clean up signal."""
+        from app.core.signal_manager import signal_manager
+
+        logger.info(
+            "[PipelineRunnerV2][%s] Cancelling pipeline",
+            self._run_id[:8],
+        )
+        await crud.update_pipeline_status(
+            self._run_id,
+            "cancelled",
+            error="Cancelled by user",
+            completed_stages=self._completed_stages,
+        )
+        self._emit(
+            "run.cancelled",
+            {
+                "message": "Pipeline cancelled by user",
+                "completed_stages": self._completed_stages,
+            },
+        )
+        await signal_manager.clear_signal(self._run_id)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Event emission
+    # ─────────────────────────────────────────────────────────────────────────
 
     def _emit(self, event_type: str, data: dict[str, Any]) -> None:
-        """
-        Relay an event to the WebSocket broadcaster (if set).
+        """Forward a pipeline event to the registered WebSocket broadcaster.
 
-        Always safe to call — silently ignores broadcaster errors so a WS
-        failure never aborts the pipeline.
+        The ``run_id`` is automatically injected into *data*.  When no
+        broadcaster is registered events are only logged at DEBUG level.
 
         Args:
-            event_type: Event name string.
+            event_type: Dot-separated event name (e.g. ``"stage.completed"``).
             data:       Event payload dict.
         """
-        # Log important lifecycle events at INFO, everything else at DEBUG
-        _info_events = {
-            "run.started",
-            "run.completed",
-            "run.failed",
-            "stage.started",
-            "stage.completed",
-        }
-        if event_type in _info_events:
-            logger.info(
-                "[Runner][%s] EMIT %-20s  data=%s",
-                self._run_id[:8],
-                event_type,
-                {k: v for k, v in data.items() if k not in ("run_id", "timestamp")},
-            )
-        else:
-            logger.debug(
-                "[Runner][%s] emit %-20s  data_keys=%s",
-                self._run_id[:8],
-                event_type,
-                sorted(data.keys()),
-            )
-
-        if self._ws_broadcaster is None:
-            logger.debug(
-                "[Runner][%s] emit %r — no ws_broadcaster registered, event not sent",
-                self._run_id[:8],
-                event_type,
-            )
-            return
-
-        try:
-            self._ws_broadcaster(event_type, data)
-        except Exception as exc:
-            logger.warning(
-                "[Runner][%s] ws_broadcaster raised for event %r: %s",
-                self._run_id[:8],
-                event_type,
-                exc,
-                exc_info=True,
-            )
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Database helpers
-    # ─────────────────────────────────────────────────────────────────────────
-
-    def _update_db_status(
-        self,
-        status: str,
-        error: Optional[str] = None,
-    ) -> None:
-        """
-        Update the PipelineRun.status (and optionally PipelineRun.error) in the DB.
-
-        Args:
-            status: "pending" | "running" | "completed" | "failed"
-            error:  Optional error message (set when status == "failed").
-        """
-        logger.info(
-            "[Runner][%s] DB status → %s%s",
-            self._run_id[:8],
-            status.upper(),
-            f"  error={error[:120]!r}" if error else "",
-        )
-        try:
-            run = self._db.get(PipelineRun, self._run_id)
-            if run is None:
+        payload: dict[str, Any] = {"run_id": self._run_id, **data}
+        if self._ws_broadcaster is not None:
+            try:
+                self._ws_broadcaster(event_type, payload)
+            except Exception as exc:
                 logger.warning(
-                    "[Runner][%s] PipelineRun not found in DB — cannot update status to %r.",
-                    self._run_id[:8],
-                    status,
+                    "[PipelineRunnerV2] Broadcaster raised an exception (event=%r): %s",
+                    event_type,
+                    exc,
                 )
-                return
-
-            run.status = status
-            if error:
-                run.error = error[:2000]  # truncate long tracebacks
-            if status in ("completed", "failed"):
-                run.finished_at = datetime.now(timezone.utc)
-
-            self._db.add(run)
-            self._db.commit()
-            logger.debug(
-                "[Runner][%s] DB commit OK  status=%s", self._run_id[:8], status
-            )
-
-        except Exception as exc:
-            logger.exception(
-                "[Runner][%s] Failed to update run status to %r: %s",
-                self._run_id[:8],
-                status,
-                exc,
-            )
-            try:
-                self._db.rollback()
-            except Exception:
-                pass
-
-    def _update_agent_status(self, agent_id: str, status: str) -> None:
-        """
-        Update the per-agent status inside PipelineRun.agent_statuses (JSON blob).
-
-        Args:
-            agent_id: Agent slug (e.g. "requirement_analyzer").
-            status:   Status string: waiting | running | done | error | skipped.
-        """
-        try:
-            run = self._db.get(PipelineRun, self._run_id)
-            if run is None:
-                return
-            run.set_agent_status(agent_id, status)
-            self._db.add(run)
-            self._db.commit()
-        except Exception as exc:
-            logger.debug(
-                "[PipelineRunner][%s] Failed to update agent status %r: %s",
-                self._run_id,
-                agent_id,
-                exc,
-            )
-            try:
-                self._db.rollback()
-            except Exception:
-                pass
-
-    def _save_result(
-        self,
-        stage: str,
-        agent_id: str,
-        output: Optional[dict[str, Any]],
-    ) -> None:
-        """
-        Persist stage output as a PipelineResult row in the database.
-
-        The output is JSON-serialised and stored in PipelineResult.output.
-        This allows the frontend to retrieve intermediate results via
-        GET /api/v1/pipeline/runs/{run_id}.
-
-        Args:
-            stage:    Pipeline stage name (e.g. "ingestion", "testcase").
-            agent_id: Identifier for what produced this result.
-            output:   The stage output dict (serialised to JSON string).
-        """
-        if output is None:
-            return
-
-        try:
-            result = PipelineResult(
-                run_id=self._run_id,
-                stage=stage,
-                agent_id=agent_id,
-                output=json.dumps(output, default=str),
-            )
-            self._db.add(result)
-            self._db.commit()
-            logger.debug(
-                "[PipelineRunner][%s] Saved result: stage=%r agent=%r bytes=%d",
-                self._run_id,
-                stage,
-                agent_id,
-                len(result.output),
-            )
-        except Exception as exc:
-            logger.warning(
-                "[PipelineRunner][%s] Failed to save stage result %r: %s",
-                self._run_id,
-                stage,
-                exc,
-            )
-            try:
-                self._db.rollback()
-            except Exception:
-                pass
+        else:
+            logger.debug("[PipelineRunnerV2] event=%r  data=%r", event_type, payload)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Result builder
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _build_result(
-        self,
-        document_name: str,
-        status: str,
-        t_start: float,
-        error: Optional[str] = None,
-    ) -> dict[str, Any]:
-        """
-        Build the final return dict summarising the pipeline run.
+    def _build_result(self, status: str, error: Optional[str] = None) -> dict[str, Any]:
+        """Build the standardised result dict returned by :meth:`run`.
 
         Args:
-            document_name: Source document name.
-            status:        Final pipeline status ("completed" | "failed").
-            t_start:       ``time.monotonic()`` timestamp from the start.
-            error:         Optional error message.
+            status: Terminal pipeline status string (e.g. ``"completed"``).
+            error:  Optional human-readable error message.
 
         Returns:
-            Flat dict with all stage outputs and metadata.
+            Dict with ``run_id``, ``status``, ``completed_stages``,
+            ``error``, and ``duration_seconds``.
         """
-        duration = round(time.monotonic() - t_start, 2)
-        now = datetime.now(timezone.utc).isoformat()
-
         return {
             "run_id": self._run_id,
-            "document_name": document_name,
             "status": status,
-            "duration_seconds": duration,
-            "finished_at": now,
+            "completed_stages": list(self._completed_stages),
             "error": error,
-            # Stage outputs (None if that stage was not reached or failed)
-            "ingestion": self._ingestion_output,
-            "testcase": self._testcase_output,
-            "execution": self._execution_output,
-            "report": self._report_output,
-            # High-level metrics for quick access
-            "metrics": self._compute_summary_metrics(),
+            "duration_seconds": round(time.monotonic() - self._t_start, 2),
         }
-
-    def _compute_summary_metrics(self) -> dict[str, Any]:
-        """
-        Compute high-level summary metrics from the accumulated stage outputs.
-
-        Returns:
-            Dict with: requirements_count, test_cases_count, pass_rate,
-            coverage_percentage, and any other quick-access stats.
-        """
-        metrics: dict[str, Any] = {
-            "requirements_count": 0,
-            "test_cases_count": 0,
-            "execution_total": 0,
-            "execution_passed": 0,
-            "pass_rate": 0.0,
-            "coverage_percentage": 0.0,
-        }
-
-        if self._ingestion_output:
-            metrics["requirements_count"] = len(
-                self._ingestion_output.get("requirements", [])
-            )
-
-        if self._testcase_output:
-            metrics["test_cases_count"] = self._testcase_output.get(
-                "total_test_cases", len(self._testcase_output.get("test_cases", []))
-            )
-
-        if self._execution_output:
-            summary = self._execution_output.get("summary", {})
-            metrics["execution_total"] = summary.get("total", 0)
-            metrics["execution_passed"] = summary.get("passed", 0)
-            metrics["pass_rate"] = summary.get("pass_rate", 0.0)
-
-        if self._report_output:
-            metrics["coverage_percentage"] = self._report_output.get(
-                "coverage_percentage", 0.0
-            )
-
-        return metrics
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Async wrapper
+# Backward-compatibility alias
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Deprecated alias — use :class:`PipelineRunnerV2` directly.
+PipelineRunner = PipelineRunnerV2
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Async entry point (used by background task in api/v1/pipeline.py)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 async def run_pipeline_async(
-    db: Session,
     run_id: str,
     file_path: str | Path,
     document_name: Optional[str] = None,
-    run_profile_id: Optional[int] = None,
+    run_profile_id: Optional[str] = None,
     ws_broadcaster: Optional[Callable] = None,
     mock_mode: Optional[bool] = None,
     environment: str = "default",
     skip_execution: bool = False,
+    # Legacy / ignored parameters kept for call-site backward compatibility:
+    db: Any = None,
     execution_config: Optional[dict[str, Any]] = None,
     ingestion_options: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """
-    Async convenience wrapper around :class:`PipelineRunner`.
+    """Async entry point for the pipeline.
 
-    Runs the synchronous PipelineRunner in the default asyncio executor so it
-    doesn't block the event loop.
-
-    The ``ws_broadcaster`` callable, if supplied, should accept
-    ``(event_type: str, data: dict)`` and can be either sync or coroutine.
-    When it's a coroutine, this wrapper schedules it via ``asyncio.ensure_future``.
+    Used by the background task in ``api/v1/pipeline.py``.  V2 implementation
+    is fully async — no thread-pool executor needed.
 
     Args:
-        db:               SQLAlchemy session (caller owns lifecycle).
         run_id:           UUID of the pipeline run.
         file_path:        Path to the document to process.
         document_name:    Optional display name.
-        run_profile_id:   Optional LLM profile override.
-        ws_broadcaster:   Optional async or sync progress callback.
-        mock_mode:        Force mock mode.
-        environment:      Target execution environment.
-        skip_execution:   Skip Execution + Reporting stages.
-        execution_config: Execution crew overrides.
-        ingestion_options: Ingestion crew overrides.
+        run_profile_id:   Optional MongoDB ObjectId string of the LLM profile
+                          override.
+        ws_broadcaster:   Optional sync or async progress callback.  When an
+                          async callable is supplied it is scheduled via
+                          ``asyncio.ensure_future`` so the runner's synchronous
+                          ``_emit`` path still works.
+        mock_mode:        Force mock mode.  ``None`` honours ``MOCK_CREWS`` env.
+        environment:      Target execution environment name.
+        skip_execution:   Skip Execution + Reporting stages when ``True``.
+        db:               **Ignored** — accepted for backward compatibility with
+                          V1 call sites that passed an SQLAlchemy session.
+        execution_config: **Ignored** — accepted for backward compatibility.
+        ingestion_options: **Ignored** — accepted for backward compatibility.
 
     Returns:
-        The same dict returned by :meth:`PipelineRunner.run`.
+        Dict with ``run_id``, ``status``, ``completed_stages``, ``error``,
+        and ``duration_seconds``.
     """
-    import asyncio
+    import inspect
 
-    loop = asyncio.get_event_loop()
+    # Wrap an async broadcaster into a sync wrapper so PipelineRunnerV2._emit
+    # can call it without awaiting (it schedules the coroutine on the loop).
+    if ws_broadcaster is None:
+        sync_broadcaster: Optional[Callable] = None
+    elif inspect.iscoroutinefunction(ws_broadcaster):
+        _async_ws = ws_broadcaster  # capture for closure
 
-    # Wrap an async broadcaster so it can be called synchronously
-    sync_broadcaster: Optional[ProgressCallback] = None
-    if ws_broadcaster is not None:
-        import inspect
+        def _sync_wrap(event_type: str, data: dict[str, Any]) -> None:
+            asyncio.ensure_future(_async_ws(event_type, data))
 
-        if inspect.iscoroutinefunction(ws_broadcaster):
+        sync_broadcaster = _sync_wrap
+    else:
+        sync_broadcaster = ws_broadcaster
 
-            def sync_broadcaster(event_type: str, data: dict[str, Any]) -> None:  # noqa: E306
-                asyncio.ensure_future(ws_broadcaster(event_type, data))
-        else:
-            sync_broadcaster = ws_broadcaster  # type: ignore[assignment]
-
-    runner = PipelineRunner(
-        db=db,
+    runner = PipelineRunnerV2(
         run_id=run_id,
         run_profile_id=run_profile_id,
         ws_broadcaster=sync_broadcaster,
         mock_mode=mock_mode,
         environment=environment,
     )
-
-    # Run the synchronous pipeline in a thread pool so we don't block the loop
-    result = await loop.run_in_executor(
-        None,
-        lambda: runner.run(
-            file_path=file_path,
-            document_name=document_name,
-            ingestion_options=ingestion_options,
-            execution_config=execution_config,
-            skip_execution=skip_execution,
-        ),
+    return await runner.run(
+        file_path=file_path,
+        document_name=document_name,
+        skip_execution=skip_execution,
     )
-
-    return result
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CLI entry point (for quick manual testing)
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def _cli_main() -> None:  # pragma: no cover
-    """
-    Quick manual test: python -m app.core.pipeline_runner <file_path>
-    """
-    import sys
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
-    )
-
-    if len(sys.argv) < 2:
-        print("Usage: python -m app.core.pipeline_runner <file_path> [run_id]")
-        sys.exit(1)
-
-    file_path = Path(sys.argv[1])
-    run_id = sys.argv[2] if len(sys.argv) > 2 else "test-run-cli"
-
-    from app.db.database import get_db
-
-    with next(get_db()) as db:
-        runner = PipelineRunner(
-            db=db,
-            run_id=run_id,
-            mock_mode=True,  # always mock in CLI test
-        )
-        result = runner.run(file_path=file_path)
-
-    print("\n" + "=" * 60)
-    print("Pipeline result:")
-    print(json.dumps(result["metrics"], indent=2, default=str))
-    print(f"\nStatus : {result['status']}")
-    print(f"Duration: {result['duration_seconds']}s")
-    if result.get("error"):
-        print(f"Error  : {result['error']}")
-
-
-if __name__ == "__main__":
-    _cli_main()

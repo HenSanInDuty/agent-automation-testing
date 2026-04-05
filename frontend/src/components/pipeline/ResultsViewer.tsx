@@ -6,6 +6,7 @@ import {
   BarChart3,
   BookOpen,
   FileText,
+  FileDown,
   Clock,
   CheckCircle2,
   XCircle,
@@ -15,7 +16,9 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { pipelineApi } from "@/lib/api";
 import type {
   PipelineRunResponse,
   AgentRunResult,
@@ -67,7 +70,7 @@ const TABS: TabDef[] = [
 
 function formatDuration(
   startedAt: string | null | undefined,
-  completedAt: string | null | undefined
+  completedAt: string | null | undefined,
 ): string {
   if (!startedAt || !completedAt) return "—";
   const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime();
@@ -86,9 +89,17 @@ function formatDuration(
 function AgentStatusBadge({ status }: { status: AgentRunStatus }) {
   switch (status) {
     case "completed":
-      return <Badge variant="success" size="xs">Completed</Badge>;
+      return (
+        <Badge variant="success" size="xs">
+          Completed
+        </Badge>
+      );
     case "failed":
-      return <Badge variant="danger" size="xs">Failed</Badge>;
+      return (
+        <Badge variant="danger" size="xs">
+          Failed
+        </Badge>
+      );
     case "running":
       return (
         <Badge variant="primary" size="xs" dot className="animate-pulse">
@@ -96,9 +107,17 @@ function AgentStatusBadge({ status }: { status: AgentRunStatus }) {
         </Badge>
       );
     case "skipped":
-      return <Badge variant="default" size="xs">Skipped</Badge>;
+      return (
+        <Badge variant="default" size="xs">
+          Skipped
+        </Badge>
+      );
     default:
-      return <Badge variant="default" size="xs">Pending</Badge>;
+      return (
+        <Badge variant="default" size="xs">
+          Pending
+        </Badge>
+      );
   }
 }
 
@@ -185,7 +204,7 @@ function AgentOutputCard({ agent }: { agent: AgentRunResult }) {
               // Scrollbar styling
               "[&::-webkit-scrollbar]:w-1.5",
               "[&::-webkit-scrollbar-track]:bg-transparent",
-              "[&::-webkit-scrollbar-thumb]:bg-[#2b3b55] [&::-webkit-scrollbar-thumb]:rounded-full"
+              "[&::-webkit-scrollbar-thumb]:bg-[#2b3b55] [&::-webkit-scrollbar-thumb]:rounded-full",
             )}
           >
             {agent.output_preview}
@@ -221,13 +240,15 @@ function EmptyStage({ message }: { message: string }) {
         className={cn(
           "w-12 h-12 rounded-xl",
           "bg-[#1e2a3d] border border-[#2b3b55]",
-          "flex items-center justify-center"
+          "flex items-center justify-center",
         )}
         aria-hidden="true"
       >
         <FileText className="w-5 h-5 text-[#3d5070]" />
       </div>
-      <p className="text-sm text-[#3d5070] max-w-xs leading-relaxed">{message}</p>
+      <p className="text-sm text-[#3d5070] max-w-xs leading-relaxed">
+        {message}
+      </p>
     </div>
   );
 }
@@ -239,18 +260,56 @@ function EmptyStage({ message }: { message: string }) {
 const statusTextColor: Record<PipelineStatus, string> = {
   pending: "text-[#fbbf24]",
   running: "text-[#22d3ee]",
+  paused: "text-[#fbbf24]",
   completed: "text-[#4ade80]",
   failed: "text-[#f87171]",
   cancelled: "text-[#92a4c9]",
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ExportButtons
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ExportButtons({ runId }: { runId: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        leftIcon={<FileDown className="w-3.5 h-3.5" aria-hidden="true" />}
+        onClick={() =>
+          window.open(pipelineApi.getExportHtmlUrl(runId), "_blank")
+        }
+        title="Download self-contained HTML report"
+      >
+        HTML
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        leftIcon={<FileText className="w-3.5 h-3.5" aria-hidden="true" />}
+        onClick={() =>
+          window.open(pipelineApi.getExportDocxUrl(runId), "_blank")
+        }
+        title="Download Microsoft Word report"
+      >
+        DOCX
+      </Button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RunSummaryCard
+// ─────────────────────────────────────────────────────────────────────────────
+
 function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
   const totalAgents = run.agent_runs.length;
   const completedAgents = run.agent_runs.filter(
-    (a) => a.status === "completed"
+    (a) => a.status === "completed",
   ).length;
   const failedAgents = run.agent_runs.filter(
-    (a) => a.status === "failed"
+    (a) => a.status === "failed",
   ).length;
   const duration = formatDuration(run.started_at, run.completed_at);
 
@@ -280,7 +339,10 @@ function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
             Duration
           </span>
           <span className="flex items-center gap-1.5 text-2xl font-semibold text-white tabular-nums leading-none">
-            <Clock className="w-4 h-4 text-[#92a4c9] shrink-0" aria-hidden="true" />
+            <Clock
+              className="w-4 h-4 text-[#92a4c9] shrink-0"
+              aria-hidden="true"
+            />
             {duration}
           </span>
         </div>
@@ -293,7 +355,7 @@ function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
           <span
             className={cn(
               "text-2xl font-semibold capitalize leading-none",
-              statusTextColor[run.status]
+              statusTextColor[run.status],
             )}
           >
             {run.status}
@@ -322,8 +384,14 @@ function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
 
       {/* ── Document ─────────────────────────────────────────────────────── */}
       <div className="mt-4 pt-4 border-t border-[#2b3b55] flex items-center gap-2">
-        <FileText className="w-3.5 h-3.5 text-[#3d5070] shrink-0" aria-hidden="true" />
-        <span className="text-xs text-[#92a4c9] truncate" title={run.document_filename}>
+        <FileText
+          className="w-3.5 h-3.5 text-[#3d5070] shrink-0"
+          aria-hidden="true"
+        />
+        <span
+          className="text-xs text-[#92a4c9] truncate"
+          title={run.document_filename}
+        >
           {run.document_filename}
         </span>
       </div>
@@ -356,42 +424,54 @@ export function ResultsViewer({ run }: ResultsViewerProps) {
   const executionAgents = run.agent_runs.filter((a) => a.stage === "execution");
   const reportingAgents = run.agent_runs.filter((a) => a.stage === "reporting");
 
+  const isCompleted = run.status === "completed";
+  const canExport = run.status === "completed" || run.status === "paused";
+
   return (
     <div className="rounded-2xl border border-[#2b3b55] bg-[#18202F] overflow-hidden">
-      {/* ── Tab bar ──────────────────────────────────────────────────────── */}
-      <div
-        className="flex items-center border-b border-[#2b3b55] px-1"
-        role="tablist"
-        aria-label="Results sections"
-      >
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              id={`results-tab-${tab.id}`}
-              aria-selected={isActive}
-              aria-controls={`results-panel-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                // Base
-                "inline-flex items-center gap-2 px-4 py-3.5 text-sm font-medium",
-                "border-b-2 transition-colors duration-150 select-none",
-                // Focus
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#135bec]",
-                // Active vs inactive
-                isActive
-                  ? "text-white border-[#135bec]"
-                  : "text-[#92a4c9] border-transparent hover:text-white hover:border-[#2b3b55]"
-              )}
-            >
-              <span className="shrink-0">{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+      {/* ── Tab bar + Export buttons ──────────────────────────────────────── */}
+      <div className="flex items-center justify-between border-b border-[#2b3b55] px-1">
+        <div
+          className="flex items-center"
+          role="tablist"
+          aria-label="Results sections"
+        >
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`results-tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`results-panel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  // Base
+                  "inline-flex items-center gap-2 px-4 py-3.5 text-sm font-medium",
+                  "border-b-2 transition-colors duration-150 select-none",
+                  // Focus
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#135bec]",
+                  // Active vs inactive
+                  isActive
+                    ? "text-white border-[#135bec]"
+                    : "text-[#92a4c9] border-transparent hover:text-white hover:border-[#2b3b55]",
+                )}
+              >
+                <span className="shrink-0">{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Export buttons (completed or paused with partial results) ─── */}
+        {canExport && (
+          <div className="px-3 py-1.5">
+            <ExportButtons runId={run.id} />
+          </div>
+        )}
       </div>
 
       {/* ── Tab panels ───────────────────────────────────────────────────── */}

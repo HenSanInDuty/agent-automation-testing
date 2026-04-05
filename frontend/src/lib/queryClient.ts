@@ -47,6 +47,16 @@ export const queryKeys = {
       [...queryKeys.agentConfigs.details(), agentId] as const,
   },
 
+  // Stage Configs
+  stageConfigs: {
+    all: ["stage-configs"] as const,
+    lists: () => [...queryKeys.stageConfigs.all, "list"] as const,
+    list: () => [...queryKeys.stageConfigs.lists()] as const,
+    details: () => [...queryKeys.stageConfigs.all, "detail"] as const,
+    detail: (stageId: string) =>
+      [...queryKeys.stageConfigs.details(), stageId] as const,
+  },
+
   // Pipeline Runs
   pipelineRuns: {
     all: ["pipeline-runs"] as const,
@@ -56,6 +66,14 @@ export const queryKeys = {
     details: () => [...queryKeys.pipelineRuns.all, "detail"] as const,
     detail: (runId: string) =>
       [...queryKeys.pipelineRuns.details(), runId] as const,
+  },
+
+  // Pipeline Stage Results
+  stageResults: {
+    all: ["stage-results"] as const,
+    byRun: (runId: string) => [...queryKeys.stageResults.all, runId] as const,
+    byStage: (runId: string, stage: string) =>
+      [...queryKeys.stageResults.byRun(runId), stage] as const,
   },
 
   // Health

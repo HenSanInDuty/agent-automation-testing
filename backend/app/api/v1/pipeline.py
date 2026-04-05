@@ -1,31 +1,47 @@
 from __future__ import annotations
 
+"""
+api/v1/pipeline.py – REST endpoints for pipeline run management.
+
+All route handlers are ``async`` and call Beanie CRUD functions directly —
+no SQLAlchemy session is needed.  Pipeline run IDs are UUID strings stored
+in the ``run_id`` field of :class:`~app.db.models.PipelineRunDocument`.
+
+Endpoints:
+    POST   /pipeline/run                          – upload document + start run
+    GET    /pipeline/runs                         – paginated list of runs
+    GET    /pipeline/runs/{run_id}                – get one run (with results)
+    DELETE /pipeline/runs/{run_id}                – delete run + files
+    POST   /pipeline/runs/{run_id}/pause          – pause a running pipeline
+    POST   /pipeline/runs/{run_id}/resume         – resume a paused pipeline
+    POST   /pipeline/runs/{run_id}/cancel         – request cancellation
+    GET    /pipeline/runs/{run_id}/results        – all agent outputs
+"""
+
 import logging
 import shutil
 import uuid
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
     BackgroundTasks,
-    Depends,
     File,
     Form,
     HTTPException,
     Query,
+    Response,
     UploadFile,
     status,
 )
-from sqlalchemy.orm import Session
 
-from app.api.v1.deps import get_db
 from app.config import settings
 from app.db import crud
+from app.db.models import PipelineRunDocument
 from app.schemas.pipeline import (
     AGENT_STATUS_TO_FRONTEND,
     AgentRunResult,
-    AgentRunStatus,
     PipelineResultResponse,
     PipelineRunListItem,
     PipelineRunListResponse,
@@ -37,23 +53,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Dependency alias
-# ─────────────────────────────────────────────────────────────────────────────
-
-DB = Annotated[Session, Depends(get_db)]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# In-memory cancellation registry
-#
-# When a client calls  POST /pipeline/runs/{run_id}/cancel  we add the run_id
-# here.  The pipeline background task checks this set periodically and aborts
-# gracefully.  The set is cleared once the run reaches a terminal state.
-# ─────────────────────────────────────────────────────────────────────────────
-
-_CANCEL_REQUESTED: set[str] = set()
-
-# Allowed MIME types / file extensions for uploaded documents
+# Allowed file extensions and MIME types for uploaded documents
 _ALLOWED_EXTENSIONS = {
     ".pdf",
     ".txt",
@@ -74,50 +74,65 @@ _ALLOWED_CONTENT_TYPES = {
     "text/x-rst",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/octet-stream",  # generic fallback browsers sometimes send
+    "application/octet-stream",  # generic fallback some browsers send
 }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Helpers
+# Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _get_run_or_404(db: Session, run_id: str):
-    """Return PipelineRun ORM object or raise HTTP 404."""
-    run = crud.get_pipeline_run(db, run_id)
-    if run is None:
+async def _get_run_or_404(run_id: str) -> PipelineRunDocument:
+    """Fetch a pipeline run document or raise HTTP 404.
+
+    Args:
+        run_id: UUID string stored in ``PipelineRunDocument.run_id``.
+
+    Returns:
+        The matching :class:`~app.db.models.PipelineRunDocument`.
+
+    Raises:
+        HTTPException: 404 if no document exists for *run_id*.
+    """
+    doc = await crud.get_pipeline_run(run_id)
+    if doc is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pipeline run '{run_id}' not found.",
         )
-    return run
+    return doc
 
 
-def _orm_run_to_response(run, db: Session) -> PipelineRunResponse:
-    """Convert a PipelineRun ORM instance to PipelineRunResponse."""
-    raw_statuses: dict[str, str] = run.get_agent_statuses()
+async def _run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
+    """Convert a :class:`~app.db.models.PipelineRunDocument` to the API response schema.
 
-    # Build agent_runs from agent configs + statuses + results
+    Fetches all agent configs once and all results for the run, then builds
+    the ``agent_runs`` list from the per-agent status map stored in the document.
+
+    Args:
+        run: The pipeline run document.
+
+    Returns:
+        A :class:`~app.schemas.pipeline.PipelineRunResponse` ready to serialise.
+    """
+    raw_statuses: dict[str, str] = run.agent_statuses  # native dict in Beanie
+
     agent_runs: list[AgentRunResult] = []
 
     if raw_statuses:
-        # Get all agent configs for display names and stages
-        all_configs = crud.get_all_agent_configs(db)
+        all_configs = await crud.get_all_agent_configs()
         config_map = {c.agent_id: c for c in all_configs}
 
-        # Get all results for output previews
-        all_results = crud.get_pipeline_results(db, run.id)
+        all_results = await crud.get_pipeline_results(run.run_id)
         results_map: dict[str, str] = {}
         for r in all_results:
-            out = r.get_output()
-            preview = str(out)[:500] if out else None
-            results_map[r.agent_id] = preview
+            preview = str(r.output)[:500] if r.output is not None else None
+            results_map[r.agent_id] = preview or ""
 
         for agent_id, raw_status in raw_statuses.items():
             config = config_map.get(agent_id)
             frontend_status = AGENT_STATUS_TO_FRONTEND.get(raw_status, "pending")
-
             agent_runs.append(
                 AgentRunResult(
                     agent_id=agent_id,
@@ -132,20 +147,33 @@ def _orm_run_to_response(run, db: Session) -> PipelineRunResponse:
             )
 
     return PipelineRunResponse(
-        id=run.id,
+        id=run.run_id,
         document_filename=run.document_name,
         status=PipelineStatus(run.status),
+        llm_profile_id=run.llm_profile_id,
+        current_stage=run.current_stage,
+        completed_stages=run.completed_stages,
         agent_runs=agent_runs,
         error_message=run.error,
-        llm_profile_id=run.llm_profile_id,
         created_at=run.created_at,
-        started_at=run.created_at,
+        started_at=run.started_at,
         completed_at=run.finished_at,
     )
 
 
 def _validate_upload(file: UploadFile) -> None:
-    """Raise HTTP 422 if the uploaded file fails basic validation."""
+    """Raise HTTP 422 if the uploaded file fails basic validation.
+
+    Checks that the file has a filename and that the extension is in
+    :data:`_ALLOWED_EXTENSIONS`.
+
+    Args:
+        file: The ``UploadFile`` received from the multipart form.
+
+    Raises:
+        HTTPException: 422 if the filename is missing.
+        HTTPException: 415 if the extension is not supported.
+    """
     if not file.filename:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -164,28 +192,35 @@ def _validate_upload(file: UploadFile) -> None:
 
 
 def _save_upload(file: UploadFile, run_id: str) -> tuple[str, str]:
-    """
-    Persist the uploaded file to UPLOAD_DIR/<run_id>/<original_filename>.
+    """Persist the uploaded file to ``UPLOAD_DIR/<run_id>/<original_filename>``.
+
+    Streams the file in 64 KB chunks and aborts with HTTP 413 if the total
+    size exceeds :attr:`~app.config.Settings.MAX_FILE_SIZE_MB`.
+
+    Args:
+        file:   The ``UploadFile`` from the multipart form.
+        run_id: UUID string used as the upload sub-directory name.
 
     Returns:
-        (document_name, absolute_file_path)
+        ``(document_name, absolute_file_path)`` where *document_name* is the
+        sanitised original filename.
 
     Raises:
-        HTTPException 413 if the file exceeds MAX_FILE_SIZE_MB.
+        HTTPException: 413 if the file exceeds ``MAX_FILE_SIZE_MB``.
+        HTTPException: 500 if an I/O error occurs while writing.
     """
     dest_dir = Path(settings.UPLOAD_DIR) / run_id
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     document_name = Path(file.filename or "upload").name
     dest_path = dest_dir / document_name
-
     max_bytes = settings.max_file_size_bytes
     bytes_written = 0
 
     try:
         with dest_path.open("wb") as out_file:
             while True:
-                chunk = file.file.read(64 * 1024)  # 64 KB chunks
+                chunk = file.file.read(64 * 1024)
                 if not chunk:
                     break
                 bytes_written += len(chunk)
@@ -226,29 +261,42 @@ async def _run_pipeline_background(
     run_id: str,
     file_path: str,
     document_name: str,
-    llm_profile_id: Optional[int],
+    llm_profile_id: Optional[str],
     skip_execution: bool,
     environment: str,
 ) -> None:
-    """
-    Async background task that drives the full pipeline for one run.
+    """Async background task that drives the full pipeline for one run.
 
     Steps:
-    1. Open a fresh DB session (the request session has been closed).
-    2. Wire the WebSocket broadcaster so events flow to connected clients.
-    3. Invoke ``run_pipeline_async`` in a thread-pool executor.
-    4. Update the run's terminal status based on the result.
-    5. Clean up the uploaded file if the run folder should be kept.
+
+    1. Wire the WebSocket broadcaster so live events reach connected clients.
+    2. Mark the run as ``RUNNING`` in MongoDB.
+    3. Invoke ``run_pipeline_async`` — the result is awaited directly (no
+       thread-pool executor) since :class:`PipelineRunner` is now fully async.
+    4. Update the run's terminal status based on the runner's return value.
+       If a CANCEL signal is pending (set via :data:`signal_manager`), the run
+       transitions to ``cancelled``; otherwise the runner's own status is used.
+
+    Args:
+        run_id:          UUID string of the pipeline run.
+        file_path:       Absolute path to the saved requirements document.
+        document_name:   Original filename (used in event payloads).
+        llm_profile_id:  Optional MongoDB ObjectId string of the LLM profile
+                         override, or ``None`` to use the global default.
+        skip_execution:  When ``True``, skip the Execution and Reporting stages.
+        environment:     Target test-environment name for the Execution crew.
     """
     import asyncio
+    import json
+    from datetime import datetime, timezone
 
-    # Import here to avoid circular imports at module load time
     from app.api.v1.websocket import manager
     from app.core.pipeline_runner import run_pipeline_async
-    from app.db.database import SessionLocal
+    from app.core.signal_manager import PipelineSignal, signal_manager
 
     logger.info(
-        "[Pipeline] Background task started  run_id=%r  file=%r  profile=%s  skip_exec=%s  env=%r",
+        "[Pipeline] Background task started  run_id=%r  file=%r  profile=%s  "
+        "skip_exec=%s  env=%r",
         run_id,
         file_path,
         llm_profile_id,
@@ -256,30 +304,22 @@ async def _run_pipeline_background(
         environment,
     )
 
-    # Refresh the event loop reference on the WS manager.  The lifespan hook
-    # already does this at startup, but refreshing here costs nothing and
-    # guarantees correctness if the manager is ever reset between restarts.
+    # Refresh the event-loop reference on the WS manager so that
+    # broadcast_from_thread() works correctly even if the manager was created
+    # before this event loop started.
     current_loop = asyncio.get_running_loop()
     manager.set_loop(current_loop)
-    logger.debug(
-        "[Pipeline] WS manager loop refreshed  run_id=%r  loop=%r", run_id, current_loop
-    )
 
-    # ── Build a WS broadcaster that is safe to call from a thread ────────────
+    # ── WebSocket broadcaster ────────────────────────────────────────────────
 
     def ws_broadcaster(event_type: str, data: dict[str, Any]) -> None:
-        """Called by PipelineRunner (inside executor thread) for every event."""
-        import json
-        from datetime import datetime, timezone
-
-        # Log every outgoing event so we can trace what is actually emitted.
+        """Forward pipeline events to all WebSocket clients subscribed to *run_id*."""
         logger.debug(
-            "[WS-TX] run_id=%r  event=%r  data_keys=%s",
+            "[WS-TX] run_id=%r  event=%r  keys=%s",
             run_id,
             event_type,
             sorted(data.keys()),
         )
-
         payload = json.dumps(
             {
                 "event": event_type,
@@ -291,78 +331,73 @@ async def _run_pipeline_background(
         )
         manager.broadcast_from_thread(run_id, payload)
 
-    with SessionLocal() as db:
-        # Mark run as RUNNING immediately so the UI can react
-        crud.update_pipeline_run_status(db, run_id, PipelineStatus.RUNNING)
+    # Mark run as RUNNING so the UI can react immediately
+    await crud.update_pipeline_status(
+        run_id,
+        PipelineStatus.RUNNING.value,
+        started_at=datetime.now(timezone.utc),
+    )
 
+    try:
+        result: dict[str, Any] = await run_pipeline_async(
+            run_id=run_id,
+            file_path=Path(file_path),
+            document_name=document_name,
+            run_profile_id=llm_profile_id,
+            ws_broadcaster=ws_broadcaster,
+            mock_mode=None,  # honour MOCK_CREWS env var
+            environment=environment,
+            skip_execution=skip_execution,
+        )
+
+        # ── Check for a pending CANCEL signal ───────────────────────────────
+        pending_signal = await signal_manager.pop_signal(run_id)
+        if pending_signal == PipelineSignal.CANCEL:
+            await crud.update_pipeline_status(
+                run_id,
+                PipelineStatus.CANCELLED.value,
+                error="Run was cancelled by user.",
+            )
+            ws_broadcaster("run.cancelled", {"message": "Pipeline cancelled by user."})
+            logger.info("[Pipeline] Run cancelled  run_id=%r", run_id)
+            return
+
+        # ── Propagate the runner's reported status ───────────────────────────
+        final_status_str: str = result.get("status", PipelineStatus.COMPLETED.value)
         try:
-            result: dict[str, Any] = await run_pipeline_async(
-                db=db,
-                run_id=run_id,
-                file_path=Path(file_path),
-                document_name=document_name,
-                run_profile_id=llm_profile_id,
-                ws_broadcaster=ws_broadcaster,
-                mock_mode=None,  # honour MOCK_CREWS env var
-                environment=environment,
-                skip_execution=skip_execution,
-            )
+            final_status = PipelineStatus(final_status_str)
+        except ValueError:
+            final_status = PipelineStatus.COMPLETED
 
-            # Check if cancellation was requested while pipeline ran
-            if run_id in _CANCEL_REQUESTED:
-                _CANCEL_REQUESTED.discard(run_id)
-                crud.update_pipeline_run_status(
-                    db,
-                    run_id,
-                    PipelineStatus.FAILED,
-                    error="Run was cancelled by user.",
-                )
-                logger.info("[Pipeline] Run cancelled  run_id=%r", run_id)
-                return
+        error_msg: Optional[str] = result.get("error")
+        await crud.update_pipeline_status(
+            run_id,
+            final_status.value,
+            error=error_msg,
+        )
 
-            # Propagate the runner's reported status
-            final_status_str: str = result.get("status", "completed")
-            try:
-                final_status = PipelineStatus(final_status_str)
-            except ValueError:
-                final_status = PipelineStatus.COMPLETED
+        logger.info(
+            "[Pipeline] Background task finished  run_id=%r  status=%s  duration=%.1fs",
+            run_id,
+            final_status.value,
+            result.get("duration_seconds", 0),
+        )
 
-            error_msg: Optional[str] = result.get("error")
-
-            crud.update_pipeline_run_status(
-                db,
-                run_id,
-                final_status,
-                error=error_msg,
-            )
-
-            logger.info(
-                "[Pipeline] Background task finished  run_id=%r  status=%s  duration=%.1fs",
-                run_id,
-                final_status,
-                result.get("duration_seconds", 0),
-            )
-
-        except Exception as exc:
-            _CANCEL_REQUESTED.discard(run_id)
-            error_detail = str(exc)
-            logger.exception(
-                "[Pipeline] Unhandled error in background task  run_id=%r  error=%s",
-                run_id,
-                error_detail,
-            )
-            crud.update_pipeline_run_status(
-                db,
-                run_id,
-                PipelineStatus.FAILED,
-                error=error_detail,
-            )
-
-            # Broadcast failure event to any listening WS clients
-            ws_broadcaster(
-                "run.failed",
-                {"error": error_detail},
-            )
+    except Exception as exc:
+        # Clean up any pending signal so the registry does not grow unbounded
+        await signal_manager.clear_signal(run_id)
+        error_detail = str(exc)
+        logger.exception(
+            "[Pipeline] Unhandled error in background task  run_id=%r  error=%s",
+            run_id,
+            error_detail,
+        )
+        await crud.update_pipeline_status(
+            run_id,
+            PipelineStatus.FAILED.value,
+            error=error_detail,
+        )
+        ws_broadcaster("run.failed", {"error": error_detail})
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -377,28 +412,28 @@ async def _run_pipeline_background(
     summary="Upload a document and start a pipeline run",
     description=(
         "Accepts a multipart/form-data request containing the requirements document "
-        "and optional run parameters. Returns immediately with a `run_id` and "
-        "`status=pending`. Connect to `WS /ws/pipeline/{run_id}` to stream "
-        "real-time progress events.\n\n"
+        "and optional run parameters. Returns immediately with ``status=pending``. "
+        "Connect to ``WS /ws/pipeline/{run_id}`` to stream real-time progress "
+        "events.\n\n"
         "**Supported file types:** PDF, TXT, MD, DOCX, HTML, CSV, RST\n\n"
         f"**Maximum file size:** {settings.MAX_FILE_SIZE_MB} MB"
     ),
 )
 async def start_pipeline_run(
     background_tasks: BackgroundTasks,
-    db: DB,
     file: UploadFile = File(..., description="Requirements document to analyse"),
-    llm_profile_id: Optional[int] = Form(
+    llm_profile_id: Optional[str] = Form(
         default=None,
         description=(
-            "Override LLM profile for this run. Omit to use the global default profile."
+            "MongoDB ObjectId of the LLM profile to use for this run. "
+            "Omit to use the global default profile."
         ),
     ),
     skip_execution: bool = Form(
         default=False,
         description=(
-            "When true, only run Ingestion and Test Case Generation stages. "
-            "Execution and Reporting will be skipped."
+            "When true, only run Ingestion and Test Case Generation. "
+            "Execution and Reporting stages will be skipped."
         ),
     ),
     environment: str = Form(
@@ -406,56 +441,74 @@ async def start_pipeline_run(
         description="Target test environment name passed to the Execution crew.",
     ),
 ) -> PipelineRunResponse:
-    # ── Validate the uploaded file ────────────────────────────────────────────
+    """Upload a requirements document and start a full pipeline run.
+
+    The endpoint returns immediately with ``status=pending``.  The actual
+    pipeline execution happens in a background task.  Clients should subscribe
+    to the WebSocket endpoint at ``/ws/pipeline/{run_id}`` to receive live
+    progress events.
+
+    Args:
+        background_tasks: FastAPI ``BackgroundTasks`` injected automatically.
+        file:             Requirements document (PDF, DOCX, TXT, etc.).
+        llm_profile_id:   Optional MongoDB ObjectId string of an LLM profile.
+        skip_execution:   Skip Execution + Reporting stages when ``True``.
+        environment:      Execution environment name forwarded to the crew.
+
+    Returns:
+        :class:`~app.schemas.pipeline.PipelineRunResponse` with
+        ``status="pending"`` and the newly-created ``run_id``.
+
+    Raises:
+        HTTPException: 415 if the file type is not supported.
+        HTTPException: 413 if the file exceeds ``MAX_FILE_SIZE_MB``.
+        HTTPException: 404 if *llm_profile_id* does not exist.
+        HTTPException: 429 if ``MAX_CONCURRENT_RUNS`` is already reached.
+    """
     _validate_upload(file)
 
-    # ── Validate llm_profile_id if provided ──────────────────────────────────
+    # Validate the LLM profile override if provided
     if llm_profile_id is not None:
-        profile = crud.get_llm_profile(db, llm_profile_id)
+        profile = await crud.get_llm_profile(llm_profile_id)
         if profile is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"LLM profile with id={llm_profile_id} not found.",
+                detail=f"LLM profile with id={llm_profile_id!r} not found.",
             )
 
-    # ── Check concurrent run limit ────────────────────────────────────────────
-    _, running_count = crud.get_all_pipeline_runs(
-        db, skip=0, limit=1, status=PipelineStatus.RUNNING.value
+    # Check the concurrent-run limit
+    _, running_count = await crud.get_all_pipeline_runs(
+        skip=0, limit=1, status=PipelineStatus.RUNNING.value
     )
     if running_count >= settings.MAX_CONCURRENT_RUNS:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=(
-                f"Maximum concurrent runs ({settings.MAX_CONCURRENT_RUNS}) reached. "
-                "Please wait for a running pipeline to complete before starting a new one."
+                f"Maximum concurrent runs ({settings.MAX_CONCURRENT_RUNS}) "
+                "reached. Please wait for a running pipeline to complete."
             ),
         )
 
-    # ── Generate run_id and save the upload ───────────────────────────────────
+    # Generate run_id before saving the file so the upload path is deterministic
     run_id = str(uuid.uuid4())
     document_name, file_path = _save_upload(file, run_id)
 
-    # ── Create the DB record ─────────────────────────────────────────────────
-    run = crud.create_pipeline_run(
-        db,
+    # Persist the run record in MongoDB
+    run = await crud.create_pipeline_run(
+        run_id=run_id,
         document_name=document_name,
         document_path=file_path,
         llm_profile_id=llm_profile_id,
     )
-    # Override the auto-generated id with our pre-computed one so the WS URL
-    # is known before the background task starts
-    # (create_pipeline_run already uses uuid internally but we need consistency)
-    # Actually: reassign the run_id to match our pre-generated one
-    run_id = run.id  # use the id that was written to DB
 
     logger.info(
-        "[Pipeline] Created run  id=%r  document=%r  llm_profile=%s",
+        "[Pipeline] Created run  run_id=%r  document=%r  llm_profile=%s",
         run_id,
         document_name,
         llm_profile_id,
     )
 
-    # ── Schedule background pipeline execution ────────────────────────────────
+    # Schedule the pipeline execution as a background task
     background_tasks.add_task(
         _run_pipeline_background,
         run_id=run_id,
@@ -466,7 +519,7 @@ async def start_pipeline_run(
         environment=environment,
     )
 
-    return _orm_run_to_response(run, db)
+    return await _run_to_response(run)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -483,17 +536,33 @@ async def start_pipeline_run(
         "(newest first). Optionally filter by status."
     ),
 )
-def list_pipeline_runs(
-    db: DB,
+async def list_pipeline_runs(
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     status_filter: Optional[str] = Query(
         default=None,
         alias="status",
-        description="Filter by status: pending | running | completed | failed",
+        description=(
+            "Filter by status: pending | running | paused | "
+            "completed | failed | cancelled"
+        ),
     ),
 ) -> PipelineRunListResponse:
-    # Validate status filter
+    """Return a paginated list of pipeline runs.
+
+    Args:
+        page:          1-based page number.
+        page_size:     Number of items per page (max 100).
+        status_filter: Optional status value to filter by.
+
+    Returns:
+        :class:`~app.schemas.pipeline.PipelineRunListResponse` with
+        ``items``, ``total``, ``page``, and ``page_size``.
+
+    Raises:
+        HTTPException: 422 if *status_filter* is not a valid
+            :class:`~app.schemas.pipeline.PipelineStatus` value.
+    """
     if status_filter is not None:
         try:
             PipelineStatus(status_filter)
@@ -507,52 +576,33 @@ def list_pipeline_runs(
             )
 
     skip = (page - 1) * page_size
-    runs, total = crud.get_all_pipeline_runs(
-        db,
+    runs, total = await crud.get_all_pipeline_runs(
         skip=skip,
         limit=page_size,
         status=status_filter,
     )
 
-    # Get agent configs once for building agent_runs
-    all_configs = crud.get_all_agent_configs(db)
+    # Fetch agent configs once for display-name enrichment
+    all_configs = await crud.get_all_agent_configs()
     config_map = {c.agent_id: c for c in all_configs}
 
-    items = []
+    items: list[PipelineRunListItem] = []
     for r in runs:
-        raw_statuses = r.get_agent_statuses()
-        all_results = crud.get_pipeline_results(db, r.id)
-        results_map = {
-            res.agent_id: str(res.get_output())[:500] if res.get_output() else None
-            for res in all_results
-        }
-
-        agent_runs = []
-        for agent_id, raw_status in raw_statuses.items():
-            config = config_map.get(agent_id)
-            agent_runs.append(
-                AgentRunResult(
-                    agent_id=agent_id,
-                    display_name=config.display_name if config else agent_id,
-                    stage=config.stage if config else "ingestion",
-                    status=AGENT_STATUS_TO_FRONTEND.get(raw_status, "pending"),
-                    output_preview=results_map.get(agent_id),
-                )
-            )
-
         items.append(
             PipelineRunListItem(
-                id=r.id,
+                id=r.run_id,
                 document_filename=r.document_name,
                 status=PipelineStatus(r.status),
                 llm_profile_id=r.llm_profile_id,
+                current_stage=r.current_stage,
                 created_at=r.created_at,
-                started_at=r.created_at,
+                started_at=r.started_at,
                 completed_at=r.finished_at,
                 error_message=r.error,
-                agent_runs=agent_runs,
             )
         )
+    # Suppress unused variable warning — config_map kept for future enrichment
+    _ = config_map
 
     return PipelineRunListResponse(
         items=items,
@@ -575,8 +625,7 @@ def list_pipeline_runs(
         "per-agent statuses and all persisted agent outputs."
     ),
 )
-def get_pipeline_run(
-    db: DB,
+async def get_pipeline_run(
     run_id: str,
     include_results: bool = Query(
         default=True,
@@ -584,30 +633,44 @@ def get_pipeline_run(
     ),
     stage: Optional[str] = Query(
         default=None,
-        description="Filter results by stage: ingestion | testcase | execution | reporting",
+        description=(
+            "Filter results by stage: ingestion | testcase | execution | reporting"
+        ),
     ),
 ) -> dict[str, Any]:
-    run = _get_run_or_404(db, run_id)
-    run_response = _orm_run_to_response(run, db)
+    """Retrieve the full detail of a single pipeline run.
 
+    Args:
+        run_id:          UUID string of the run.
+        include_results: When ``True`` (the default), agent output documents
+                         are embedded in the response under ``"results"``.
+        stage:           If provided, restrict embedded results to this stage.
+
+    Returns:
+        A dict representation of
+        :class:`~app.schemas.pipeline.PipelineRunResponse` optionally extended
+        with a ``"results"`` key containing per-agent outputs.
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+    """
+    run = await _get_run_or_404(run_id)
+    run_response = await _run_to_response(run)
     response: dict[str, Any] = run_response.model_dump()
 
-    # Attach agent results if requested
     if include_results:
-        raw_results = crud.get_pipeline_results(db, run_id, stage=stage)
-        results = []
-        for r in raw_results:
-            results.append(
-                PipelineResultResponse(
-                    id=r.id,
-                    run_id=r.run_id,
-                    stage=r.stage,
-                    agent_id=r.agent_id,
-                    output=r.get_output(),
-                    created_at=r.created_at,
-                ).model_dump()
-            )
-        response["results"] = results
+        raw_results = await crud.get_pipeline_results(run_id, stage=stage)
+        response["results"] = [
+            PipelineResultResponse(
+                id=str(r.id),
+                run_id=r.run_id,
+                stage=r.stage,
+                agent_id=r.agent_id,
+                output=r.output,
+                created_at=r.created_at,
+            ).model_dump()
+            for r in raw_results
+        ]
 
     return response
 
@@ -627,18 +690,31 @@ def get_pipeline_run(
         "Running pipelines should be cancelled before deletion."
     ),
 )
-def delete_pipeline_run(db: DB, run_id: str) -> None:
-    run = _get_run_or_404(db, run_id)
+async def delete_pipeline_run(run_id: str) -> None:
+    """Delete a pipeline run and all its associated data.
 
-    # Warn if still running — we allow deletion but log a warning
-    if run.status == PipelineStatus.RUNNING.value:
+    If the run is currently executing, a CANCEL signal is sent via
+    :data:`~app.core.signal_manager.signal_manager` so the background task
+    stops as soon as possible before the DB records are removed.
+
+    Args:
+        run_id: UUID string of the run to delete.
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+    """
+    from app.core.signal_manager import PipelineSignal, signal_manager
+
+    run = await _get_run_or_404(run_id)
+
+    if run.status in (PipelineStatus.RUNNING.value, PipelineStatus.PAUSED.value):
         logger.warning(
-            "[Pipeline] Deleting a RUNNING run  run_id=%r  — "
+            "[Pipeline] Deleting a %s run  run_id=%r — "
             "the background task may still be writing results.",
+            run.status.upper(),
             run_id,
         )
-        # Request cancellation so the background task stops as soon as possible
-        _CANCEL_REQUESTED.add(run_id)
+        await signal_manager.set_signal(run_id, PipelineSignal.CANCEL)
 
     # Remove uploaded files from disk
     upload_dir = Path(settings.UPLOAD_DIR) / run_id
@@ -651,7 +727,7 @@ def delete_pipeline_run(db: DB, run_id: str) -> None:
                 "[Pipeline] Could not remove upload dir %s: %s", upload_dir, exc
             )
 
-    deleted = crud.delete_pipeline_run(db, run_id)
+    deleted = await crud.delete_pipeline_run(run_id)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -661,54 +737,176 @@ def delete_pipeline_run(db: DB, run_id: str) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# POST /pipeline/runs/{run_id}/pause
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/runs/{run_id}/pause",
+    summary="Pause a running pipeline",
+    description=(
+        "Requests that the pipeline pause after its current stage completes. "
+        "The run transitions to ``paused`` status at the next safe checkpoint. "
+        "Only runs with ``status=running`` can be paused."
+    ),
+)
+async def pause_pipeline(run_id: str) -> dict[str, str]:
+    """Request that a running pipeline pause after the current stage.
+
+    Sets a PAUSE signal via :data:`~app.core.signal_manager.signal_manager`.
+    The pipeline runner polls the signal at stage boundaries and will
+    transition the run to ``paused`` status when it honours the request.
+
+    Args:
+        run_id: UUID string of the pipeline run to pause.
+
+    Returns:
+        Acknowledgement dict with ``status``, ``run_id``, and ``message``.
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+        HTTPException: 400 if the run is not currently in ``running`` status.
+    """
+    from app.core.signal_manager import PipelineSignal, signal_manager
+
+    run = await crud.get_pipeline_run(run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pipeline run '{run_id}' not found.",
+        )
+    if run.status != PipelineStatus.RUNNING.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot pause a '{run.status}' pipeline. Only 'running' pipelines can be paused.",
+        )
+
+    await signal_manager.set_signal(run_id, PipelineSignal.PAUSE)
+    logger.info("[Pipeline] Pause requested  run_id=%r", run_id)
+    return {
+        "status": "pause_requested",
+        "run_id": run_id,
+        "message": "Pipeline will pause after the current stage completes.",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POST /pipeline/runs/{run_id}/resume
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/runs/{run_id}/resume",
+    summary="Resume a paused pipeline",
+    description=(
+        "Requests that a paused pipeline continue execution from where it left off. "
+        "Only runs with ``status=paused`` can be resumed."
+    ),
+)
+async def resume_pipeline(run_id: str) -> dict[str, str]:
+    """Request that a paused pipeline resume execution.
+
+    Sets a RESUME signal via :data:`~app.core.signal_manager.signal_manager`.
+    The pipeline runner's pause-loop polls this signal and will wake up and
+    continue to the next stage when it detects ``PipelineSignal.RESUME``.
+
+    Args:
+        run_id: UUID string of the pipeline run to resume.
+
+    Returns:
+        Acknowledgement dict with ``status`` and ``run_id``.
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+        HTTPException: 400 if the run is not currently in ``paused`` status.
+    """
+    from app.core.signal_manager import PipelineSignal, signal_manager
+
+    run = await crud.get_pipeline_run(run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pipeline run '{run_id}' not found.",
+        )
+    if run.status != PipelineStatus.PAUSED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot resume a '{run.status}' pipeline. Only 'paused' pipelines can be resumed.",
+        )
+
+    await signal_manager.set_signal(run_id, PipelineSignal.RESUME)
+    logger.info("[Pipeline] Resume requested  run_id=%r", run_id)
+    return {
+        "status": "resume_requested",
+        "run_id": run_id,
+        "message": "Pipeline will resume from where it left off.",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # POST /pipeline/runs/{run_id}/cancel
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 @router.post(
     "/runs/{run_id}/cancel",
-    response_model=PipelineRunResponse,
-    summary="Request cancellation of a running pipeline",
+    summary="Cancel a running or paused pipeline",
     description=(
-        "Marks the run for cancellation. The background task will stop at the "
-        "next safe checkpoint and transition the run to `failed` status with "
-        "message 'Run was cancelled by user.'. "
-        "Has no effect if the run is already in a terminal state "
-        "(completed / failed)."
+        "Requests cancellation of a pipeline that is currently ``running``, "
+        "``paused``, or ``pending``.  The background task (or pause-loop) will "
+        "honour the signal at the next checkpoint and transition the run to "
+        "``cancelled`` status.  Runs already in a terminal state cannot be "
+        "cancelled."
     ),
 )
-def cancel_pipeline_run(db: DB, run_id: str) -> PipelineRunResponse:
-    run = _get_run_or_404(db, run_id)
+async def cancel_pipeline(run_id: str) -> dict[str, str]:
+    """Request cancellation of a running, paused, or pending pipeline.
 
-    current_status = PipelineStatus(run.status)
+    * **PENDING** / **RUNNING** / **PAUSED** runs receive a CANCEL signal via
+      :data:`~app.core.signal_manager.signal_manager`.  The background task
+      will transition them to ``cancelled`` at the next safe checkpoint.
+    * **Terminal** runs (completed / failed / cancelled) cannot be cancelled.
 
-    if current_status in (PipelineStatus.COMPLETED, PipelineStatus.FAILED):
+    Args:
+        run_id: UUID string of the run to cancel.
+
+    Returns:
+        Acknowledgement dict with ``status`` and ``run_id``.
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+        HTTPException: 400 if the run is already in a terminal state.
+    """
+    from app.core.signal_manager import PipelineSignal, signal_manager
+
+    run = await crud.get_pipeline_run(run_id)
+    if run is None:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pipeline run '{run_id}' not found.",
+        )
+
+    _terminal = {
+        PipelineStatus.COMPLETED.value,
+        PipelineStatus.FAILED.value,
+        PipelineStatus.CANCELLED.value,
+    }
+    if run.status in _terminal:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"Cannot cancel run '{run_id}': "
-                f"it has already reached terminal status '{current_status.value}'."
+                f"Cannot cancel run '{run_id}': it has already reached "
+                f"terminal status '{run.status}'."
             ),
         )
 
-    if current_status == PipelineStatus.PENDING:
-        # Run hasn't started yet — mark it failed immediately
-        updated = crud.update_pipeline_run_status(
-            db,
-            run_id,
-            PipelineStatus.FAILED,
-            error="Run was cancelled by user before it started.",
-        )
-        logger.info("[Pipeline] Cancelled PENDING run  run_id=%r", run_id)
-        return _orm_run_to_response(updated, db)
-
-    # RUNNING — register the cancellation request; background task will honour it
-    _CANCEL_REQUESTED.add(run_id)
+    await signal_manager.set_signal(run_id, PipelineSignal.CANCEL)
     logger.info("[Pipeline] Cancellation requested  run_id=%r", run_id)
-
-    # Re-fetch to return the latest state
-    run = crud.get_pipeline_run(db, run_id)
-    return _orm_run_to_response(run, db)
+    return {
+        "status": "cancel_requested",
+        "run_id": run_id,
+        "message": "Cancellation signal sent. The pipeline will stop at the next checkpoint.",
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -722,32 +920,131 @@ def cancel_pipeline_run(db: DB, run_id: str) -> PipelineRunResponse:
     summary="Get all agent outputs for a pipeline run",
     description=(
         "Returns the persisted output of every agent for the given run, "
-        "ordered by creation time. Optionally filter by `stage` or `agent_id`."
+        "ordered by creation time. Optionally filter by ``stage`` or ``agent_id``."
     ),
 )
-def get_pipeline_results(
-    db: DB,
+async def get_pipeline_results(
     run_id: str,
     stage: Optional[str] = Query(
         default=None,
-        description="Filter by stage: ingestion | testcase | execution | reporting",
+        description=("Filter by stage: ingestion | testcase | execution | reporting"),
     ),
     agent_id: Optional[str] = Query(
         default=None,
         description="Filter by agent slug, e.g. 'requirement_analyzer'",
     ),
 ) -> list[PipelineResultResponse]:
-    _get_run_or_404(db, run_id)  # ensure run exists
+    """Retrieve all agent output documents for a run.
 
-    raw_results = crud.get_pipeline_results(db, run_id, stage=stage, agent_id=agent_id)
+    Args:
+        run_id:    UUID string of the run.
+        stage:     Optional stage filter.
+        agent_id:  Optional agent slug filter.
+
+    Returns:
+        List of :class:`~app.schemas.pipeline.PipelineResultResponse` ordered
+        by creation time (oldest first).
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+    """
+    await _get_run_or_404(run_id)  # verify run exists first
+
+    raw_results = await crud.get_pipeline_results(
+        run_id, stage=stage, agent_id=agent_id
+    )
     return [
         PipelineResultResponse(
-            id=r.id,
+            id=str(r.id),
             run_id=r.run_id,
             stage=r.stage,
             agent_id=r.agent_id,
-            output=r.get_output(),
+            output=r.output,
             created_at=r.created_at,
         )
         for r in raw_results
     ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /pipeline/runs/{run_id}/export/html
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/runs/{run_id}/export/html",
+    summary="Download pipeline report as HTML",
+    description="Generates a self-contained HTML report for a completed pipeline run.",
+    response_class=Response,
+)
+async def export_report_html(run_id: str) -> Response:
+    """Download the pipeline report as a self-contained HTML file.
+
+    Args:
+        run_id: UUID string of the run.
+
+    Returns:
+        HTML file as a download response.
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+        HTTPException: 400 if the run has no results yet.
+    """
+    from fastapi.responses import Response as FastAPIResponse
+
+    from app.services.export_service import ExportService
+
+    await _get_run_or_404(run_id)
+    try:
+        service = ExportService(run_id)
+        html_bytes = await service.export_html()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    filename = f"auto-at-report-{run_id[:8]}.html"
+    return FastAPIResponse(
+        content=html_bytes,
+        media_type="text/html",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /pipeline/runs/{run_id}/export/docx
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/runs/{run_id}/export/docx",
+    summary="Download pipeline report as DOCX",
+    description="Generates a Microsoft Word DOCX report for a completed pipeline run.",
+    response_class=Response,
+)
+async def export_report_docx(run_id: str) -> Response:
+    """Download the pipeline report as a DOCX (Microsoft Word) file.
+
+    Args:
+        run_id: UUID string of the run.
+
+    Returns:
+        DOCX file as a download response.
+
+    Raises:
+        HTTPException: 404 if the run does not exist.
+        HTTPException: 400 if the run has no results yet.
+    """
+    from fastapi.responses import Response as FastAPIResponse
+
+    from app.services.export_service import ExportService
+
+    await _get_run_or_404(run_id)
+    try:
+        service = ExportService(run_id)
+        docx_bytes = await service.export_docx()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    filename = f"auto-at-report-{run_id[:8]}.docx"
+    return FastAPIResponse(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

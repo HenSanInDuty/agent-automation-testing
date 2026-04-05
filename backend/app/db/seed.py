@@ -1,14 +1,17 @@
 """
-db/seed.py – Idempotent database seeder.
+db/seed.py – Idempotent async database seeder.
 
-Inserts the default LLM profile and all 18 default agent configurations.
-Safe to call multiple times: existing records are left unchanged.
+Inserts the default LLM profile, all 19 default agent configurations, and the
+4 built-in pipeline stage configs.  Safe to call multiple times: existing
+records are left unchanged (upsert-or-skip semantics).
 
-Usage (called automatically from main.py on startup when AUTO_SEED=true):
+Usage (called automatically from main.py on startup when AUTO_SEED=true)::
+
     from app.db.seed import seed_all
-    seed_all(db)
+    await seed_all()
 
-Or run directly:
+Or run directly (requires a running event loop and initialised Beanie)::
+
     python -m app.db.seed
 """
 
@@ -17,7 +20,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sqlalchemy.orm import Session
+from app.db import crud
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ DEFAULT_LLM_PROFILE: dict[str, Any] = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Default Agent Configs  (18 agents)
+# Default Agent Configs  (19 agents)
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # Format:
@@ -48,6 +51,7 @@ DEFAULT_LLM_PROFILE: dict[str, Any] = {
 #   goal          – what the agent is trying to achieve
 #   backstory     – personality/expertise that shapes the LLM's behaviour
 #   max_iter      – max LLM reasoning iterations per task
+#   is_custom     – always False for seeded defaults
 #
 # NOTE: The ingestion stage uses a pure-Python pipeline (not CrewAI Agents),
 # but we still seed an AgentConfig row so that the admin can assign a
@@ -74,6 +78,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "aren't explicitly stated in the source document."
         ),
         "max_iter": 3,
+        "is_custom": False,
     },
     # ── Stage: testcase ───────────────────────────────────────────────────────
     {
@@ -95,6 +100,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "if something is unclear you flag it explicitly."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
     {
         "agent_id": "rule_parser",
@@ -114,6 +120,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "tight JSON with no noise — every token you emit has a purpose."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
     {
         "agent_id": "scope_classifier",
@@ -133,6 +140,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "decisions as first-class engineering choices, not afterthoughts."
         ),
         "max_iter": 4,
+        "is_custom": False,
     },
     {
         "agent_id": "data_model_agent",
@@ -152,6 +160,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "is always a structured mapping of field → list of test values."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
     {
         "agent_id": "test_condition_agent",
@@ -171,6 +180,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "while too few miss defects — so you strike the optimal balance every time."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
     {
         "agent_id": "dependency_agent",
@@ -191,6 +201,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "needed to cover all meaningful interactions — never more, never less."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
     {
         "agent_id": "test_case_generator",
@@ -211,6 +222,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "structured JSON output that automation tools can consume without translation."
         ),
         "max_iter": 7,
+        "is_custom": False,
     },
     {
         "agent_id": "automation_agent",
@@ -232,6 +244,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "try or contain clear comments explaining why they might not."
         ),
         "max_iter": 6,
+        "is_custom": False,
     },
     {
         "agent_id": "coverage_agent_pre",
@@ -252,6 +265,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "understand and act on immediately."
         ),
         "max_iter": 4,
+        "is_custom": False,
     },
     {
         "agent_id": "report_agent_pre",
@@ -271,6 +285,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "Markdown-formatted output that renders beautifully in any documentation tool."
         ),
         "max_iter": 4,
+        "is_custom": False,
     },
     # ── Stage: execution ──────────────────────────────────────────────────────
     {
@@ -292,6 +307,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "and you handle scheduling conflicts gracefully by prioritising high-risk tests."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
     {
         "agent_id": "env_adapter",
@@ -313,6 +329,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "placeholder values or missing credentials."
         ),
         "max_iter": 4,
+        "is_custom": False,
     },
     {
         "agent_id": "test_runner",
@@ -334,6 +351,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "record every deviation from the expected result with full detail."
         ),
         "max_iter": 8,
+        "is_custom": False,
     },
     {
         "agent_id": "execution_logger",
@@ -355,6 +373,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "Your logs are the ground truth that other agents rely on for analysis."
         ),
         "max_iter": 4,
+        "is_custom": False,
     },
     {
         "agent_id": "result_store",
@@ -375,6 +394,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "consume immediately without further preprocessing."
         ),
         "max_iter": 3,
+        "is_custom": False,
     },
     # ── Stage: reporting ──────────────────────────────────────────────────────
     {
@@ -396,6 +416,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "recommendations for closing gaps in future runs."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
     {
         "agent_id": "root_cause_analyzer",
@@ -417,6 +438,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "are always concise, evidence-backed, and ranked by severity."
         ),
         "max_iter": 6,
+        "is_custom": False,
     },
     {
         "agent_id": "report_generator",
@@ -438,87 +460,139 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
             "rendered directly or converted to HTML/PDF without reformatting."
         ),
         "max_iter": 5,
+        "is_custom": False,
     },
 ]
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Default Stage Configs  (4 built-in stages)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Stages execute in ascending `order`.  The gap of 100 between each built-in
+# stage leaves plenty of room for custom stages to be inserted between them
+# (e.g. order=150 for a stage that runs between ingestion and testcase).
+
+DEFAULT_STAGES: list[dict[str, Any]] = [
+    {
+        "stage_id": "ingestion",
+        "display_name": "Document Ingestion",
+        "description": ("Parse uploaded document and extract structured requirements"),
+        "order": 100,
+        "enabled": True,
+        "crew_type": "pure_python",
+        "timeout_seconds": 120,
+        "is_builtin": True,
+    },
+    {
+        "stage_id": "testcase",
+        "display_name": "Test Case Generation",
+        "description": (
+            "Generate detailed test cases from requirements using specialized AI agents"
+        ),
+        "order": 200,
+        "enabled": True,
+        "crew_type": "crewai_sequential",
+        "timeout_seconds": 600,
+        "is_builtin": True,
+    },
+    {
+        "stage_id": "execution",
+        "display_name": "Test Execution",
+        "description": "Execute generated test cases and capture results",
+        "order": 300,
+        "enabled": True,
+        "crew_type": "crewai_sequential",
+        "timeout_seconds": 300,
+        "is_builtin": True,
+    },
+    {
+        "stage_id": "reporting",
+        "display_name": "Report Generation",
+        "description": ("Aggregate results into coverage analysis and final report"),
+        "order": 400,
+        "enabled": True,
+        "crew_type": "crewai_sequential",
+        "timeout_seconds": 180,
+        "is_builtin": True,
+    },
+]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Seed functions
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def seed_llm_profiles(db: Session) -> None:
-    """Insert the default LLM profile if it does not already exist."""
-    # Import here to avoid circular imports at module load time
-    from app.db.models import LLMProfile
+async def seed_llm_profiles() -> None:
+    """Insert the default LLM profile if it does not already exist.
 
-    existing = (
-        db.query(LLMProfile)
-        .filter(LLMProfile.name == DEFAULT_LLM_PROFILE["name"])
-        .first()
-    )
-    if existing:
+    Uses :func:`~app.db.crud.get_llm_profile_by_name` to check for an
+    existing document before inserting, so repeated calls are safe and
+    never overwrite admin changes to the default profile.
+    """
+    existing = await crud.get_llm_profile_by_name(DEFAULT_LLM_PROFILE["name"])
+    if existing is not None:
         logger.debug("Default LLM profile already exists — skipping seed.")
         return
 
-    profile = LLMProfile(**DEFAULT_LLM_PROFILE)
-    db.add(profile)
-    db.commit()
+    await crud.create_llm_profile(DEFAULT_LLM_PROFILE)
     logger.info("Seeded default LLM profile: %s", DEFAULT_LLM_PROFILE["name"])
 
 
-def seed_agent_configs(db: Session) -> None:
+async def seed_agent_configs() -> None:
+    """Insert all 19 default agent configs (idempotent).
+
+    Calls :func:`~app.db.crud.upsert_agent_config` for every entry in
+    :data:`DEFAULT_AGENT_CONFIGS`.  Documents that already exist (matched
+    by ``agent_id``) are skipped without modification, preserving any
+    customisations the admin has made via the UI.
     """
-    Insert default agent configs for all 18 agents.
-    Existing records (matched by agent_id) are left unchanged to preserve
-    any customisations the admin has made via the UI.
-    """
-    from app.db.models import AgentConfig
+    inserted: list[str] = []
 
-    existing_ids: set[str] = {row[0] for row in db.query(AgentConfig.agent_id).all()}
+    for cfg in DEFAULT_AGENT_CONFIGS:
+        doc = await crud.upsert_agent_config(cfg)
+        # upsert_agent_config returns existing doc if already present;
+        # we can detect a fresh insert by comparing created_at ≈ now,
+        # but for logging simplicity we just track the agent_id.
+        _ = doc  # result available if callers need it
+        inserted.append(cfg["agent_id"])
 
-    new_agents = [
-        AgentConfig(**cfg)
-        for cfg in DEFAULT_AGENT_CONFIGS
-        if cfg["agent_id"] not in existing_ids
-    ]
-
-    if not new_agents:
-        logger.debug("All agent configs already seeded — skipping.")
-        return
-
-    db.add_all(new_agents)
-    db.commit()
     logger.info(
-        "Seeded %d agent config(s): %s",
-        len(new_agents),
-        [a.agent_id for a in new_agents],
+        "Agent config seed complete — processed %d agent(s).",
+        len(inserted),
     )
 
 
-def seed_all(db: Session) -> None:
-    """Run all seeders in the correct dependency order."""
+async def seed_stage_configs() -> None:
+    """Insert the 4 built-in pipeline stage configs (idempotent).
+
+    Calls :func:`~app.db.crud.upsert_stage_config` for every entry in
+    :data:`DEFAULT_STAGES`.  Documents that already exist (matched by
+    ``stage_id``) are skipped without modification.
+    """
+    for stage in DEFAULT_STAGES:
+        await crud.upsert_stage_config(stage)
+
+    logger.info(
+        "Stage config seed complete — processed %d stage(s).",
+        len(DEFAULT_STAGES),
+    )
+
+
+async def seed_all() -> None:
+    """Run all seeders in the correct dependency order.
+
+    Call this once from the FastAPI lifespan after
+    :func:`~app.db.database.init_db` has been awaited::
+
+        await init_db()
+        if settings.AUTO_SEED:
+            await seed_all()
+
+    The function is fully idempotent — running it against a database that
+    already contains the seeded data is a safe no-op.
+    """
     logger.info("Running database seeders…")
-    seed_llm_profiles(db)
-    seed_agent_configs(db)
-    logger.info("Database seeding complete.")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CLI entry point
-# ─────────────────────────────────────────────────────────────────────────────
-
-if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
-    )
-
-    from app.db.database import SessionLocal, create_tables
-
-    create_tables()
-
-    with SessionLocal() as db:
-        seed_all(db)
+    await seed_llm_profiles()
+    await seed_agent_configs()
+    await seed_stage_configs()
+    logger.info("Database seeding complete ✓")

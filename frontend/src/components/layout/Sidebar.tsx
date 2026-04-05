@@ -11,8 +11,10 @@ import {
   ChevronRight,
   Zap,
   MessageSquare,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePipelineStore } from "@/store/pipelineStore";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Nav item definition
@@ -58,6 +60,11 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Agent Configs",
         href: "/admin/agents",
         icon: <Bot className="w-4 h-4" />,
+      },
+      {
+        label: "Stage Configs",
+        href: "/admin/stages",
+        icon: <Layers className="w-4 h-4" />,
       },
     ],
   },
@@ -186,6 +193,33 @@ function NavLink({ item, pathname, collapsed }: NavLinkProps) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PipelineStatusBadge
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PipelineStatusBadge({ collapsed }: { collapsed: boolean }) {
+  const { activeRunId, activeRunStatus, currentStage } = usePipelineStore();
+
+  if (!activeRunId || activeRunStatus !== "running") return null;
+
+  if (collapsed) {
+    return (
+      <div className="mx-auto mb-2 w-2 h-2 rounded-full bg-[#135bec] animate-pulse" />
+    );
+  }
+
+  return (
+    <div className="mx-2 mb-2 px-3 py-2 rounded-lg bg-[#135bec]/10 border border-[#135bec]/20">
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 shrink-0 rounded-full bg-[#135bec] animate-pulse" />
+        <span className="text-xs text-[#92a4c9] truncate">
+          Pipeline running{currentStage ? `: ${currentStage}` : ""}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Sidebar
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -277,6 +311,8 @@ export function Sidebar({
           </div>
         ))}
       </nav>
+
+      <PipelineStatusBadge collapsed={collapsed} />
 
       {/* ── Collapse toggle ── */}
       {onToggleCollapse && (

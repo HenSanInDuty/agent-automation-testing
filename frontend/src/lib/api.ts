@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import type {
+  AgentConfigCreate,
   AgentConfigGrouped,
   AgentConfigResponse,
   AgentConfigResetResponse,
@@ -14,6 +15,10 @@ import type {
   PaginationParams,
   PipelineRunListResponse,
   PipelineRunResponse,
+  StageConfig,
+  StageConfigCreate,
+  StageConfigUpdate,
+  StageReorderRequest,
 } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,6 +179,23 @@ export const agentConfigsApi = {
     );
     return data;
   },
+
+  /** POST /api/v1/admin/agent-configs */
+  create: async (payload: AgentConfigCreate): Promise<AgentConfigResponse> => {
+    const { data } = await apiClient.post<AgentConfigResponse>(
+      "/api/v1/admin/agent-configs",
+      payload,
+    );
+    return data;
+  },
+
+  /** DELETE /api/v1/admin/agent-configs/:agent_id */
+  delete: async (agentId: string): Promise<{ deleted: string }> => {
+    const { data } = await apiClient.delete<{ deleted: string }>(
+      `/api/v1/admin/agent-configs/${agentId}`,
+    );
+    return data;
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +255,52 @@ export const pipelineApi = {
     );
     return data;
   },
+
+  /** POST /api/v1/pipeline/runs/:run_id/pause */
+  pauseRun: async (
+    runId: string,
+  ): Promise<{ status: string; run_id: string; message?: string }> => {
+    const { data } = await apiClient.post<{
+      status: string;
+      run_id: string;
+      message?: string;
+    }>(`/api/v1/pipeline/runs/${runId}/pause`);
+    return data;
+  },
+
+  /** POST /api/v1/pipeline/runs/:run_id/resume */
+  resumeRun: async (
+    runId: string,
+  ): Promise<{ status: string; run_id: string }> => {
+    const { data } = await apiClient.post<{ status: string; run_id: string }>(
+      `/api/v1/pipeline/runs/${runId}/resume`,
+    );
+    return data;
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/export/html  (returns a URL for window.open) */
+  getExportHtmlUrl: (runId: string): string => {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    return `${base}/api/v1/pipeline/runs/${runId}/export/html`;
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/export/docx  (returns a URL for window.open) */
+  getExportDocxUrl: (runId: string): string => {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    return `${base}/api/v1/pipeline/runs/${runId}/export/docx`;
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/results?stage=xxx */
+  getStageResults: async (
+    runId: string,
+    stage?: string,
+  ): Promise<Record<string, unknown>> => {
+    const { data } = await apiClient.get<Record<string, unknown>>(
+      `/api/v1/pipeline/runs/${runId}/results`,
+      stage ? { params: { stage } } : undefined,
+    );
+    return data;
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -283,5 +351,65 @@ export const chatApi = {
         system_prompt: systemPrompt ?? null,
       }),
     });
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage Configs
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const stageConfigsApi = {
+  /** GET /api/v1/admin/stage-configs */
+  list: async (): Promise<StageConfig[]> => {
+    const { data } = await apiClient.get<StageConfig[]>(
+      "/api/v1/admin/stage-configs",
+    );
+    return data;
+  },
+
+  /** GET /api/v1/admin/stage-configs/:stage_id */
+  get: async (stageId: string): Promise<StageConfig> => {
+    const { data } = await apiClient.get<StageConfig>(
+      `/api/v1/admin/stage-configs/${stageId}`,
+    );
+    return data;
+  },
+
+  /** POST /api/v1/admin/stage-configs */
+  create: async (payload: StageConfigCreate): Promise<StageConfig> => {
+    const { data } = await apiClient.post<StageConfig>(
+      "/api/v1/admin/stage-configs",
+      payload,
+    );
+    return data;
+  },
+
+  /** PUT /api/v1/admin/stage-configs/:stage_id */
+  update: async (
+    stageId: string,
+    payload: StageConfigUpdate,
+  ): Promise<StageConfig> => {
+    const { data } = await apiClient.put<StageConfig>(
+      `/api/v1/admin/stage-configs/${stageId}`,
+      payload,
+    );
+    return data;
+  },
+
+  /** DELETE /api/v1/admin/stage-configs/:stage_id */
+  delete: async (stageId: string): Promise<{ deleted: string }> => {
+    const { data } = await apiClient.delete<{ deleted: string }>(
+      `/api/v1/admin/stage-configs/${stageId}`,
+    );
+    return data;
+  },
+
+  /** POST /api/v1/admin/stage-configs/reorder */
+  reorder: async (payload: StageReorderRequest): Promise<StageConfig[]> => {
+    const { data } = await apiClient.post<StageConfig[]>(
+      "/api/v1/admin/stage-configs/reorder",
+      payload,
+    );
+    return data;
   },
 };

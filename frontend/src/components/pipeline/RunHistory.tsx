@@ -42,7 +42,7 @@ function formatRunDate(iso: string): string {
 
 function formatDuration(
   startedAt: string | null | undefined,
-  completedAt: string | null | undefined
+  completedAt: string | null | undefined,
 ): string | null {
   if (!startedAt || !completedAt) return null;
   const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime();
@@ -61,19 +61,41 @@ function formatDuration(
 function StatusBadge({ status }: { status: PipelineStatus }) {
   switch (status) {
     case "pending":
-      return <Badge variant="info" size="xs">Pending</Badge>;
+      return (
+        <Badge variant="info" size="xs">
+          Pending
+        </Badge>
+      );
     case "running":
       return (
         <Badge variant="primary" size="xs" dot className="animate-pulse">
           Running
         </Badge>
       );
+    case "paused":
+      return (
+        <Badge variant="warning" size="xs">
+          Paused
+        </Badge>
+      );
     case "completed":
-      return <Badge variant="success" size="xs">Completed</Badge>;
+      return (
+        <Badge variant="success" size="xs">
+          Completed
+        </Badge>
+      );
     case "failed":
-      return <Badge variant="danger" size="xs">Failed</Badge>;
+      return (
+        <Badge variant="danger" size="xs">
+          Failed
+        </Badge>
+      );
     case "cancelled":
-      return <Badge variant="default" size="xs">Cancelled</Badge>;
+      return (
+        <Badge variant="default" size="xs">
+          Cancelled
+        </Badge>
+      );
   }
 }
 
@@ -88,7 +110,7 @@ function SkeletonRow() {
       className={cn(
         "flex items-center gap-3 px-4 py-3",
         "border-b border-[#2b3b55]/60 last:border-b-0",
-        "animate-pulse"
+        "animate-pulse",
       )}
     >
       {/* Icon placeholder */}
@@ -120,14 +142,16 @@ function EmptyState() {
         className={cn(
           "w-11 h-11 rounded-xl",
           "bg-[#1e2a3d] border border-[#2b3b55]",
-          "flex items-center justify-center"
+          "flex items-center justify-center",
         )}
         aria-hidden="true"
       >
         <History className="w-5 h-5 text-[#3d5070]" />
       </div>
       <div>
-        <p className="text-sm font-medium text-[#92a4c9]">No pipeline runs yet</p>
+        <p className="text-sm font-medium text-[#92a4c9]">
+          No pipeline runs yet
+        </p>
         <p className="mt-1 text-xs text-[#3d5070] leading-relaxed max-w-[22rem] mx-auto">
           Upload a document and click "Run Pipeline" to start the multi-agent
           analysis. Your run history will appear here.
@@ -148,7 +172,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
         className={cn(
           "w-11 h-11 rounded-xl",
           "bg-[#ef4444]/10 border border-[#ef4444]/20",
-          "flex items-center justify-center"
+          "flex items-center justify-center",
         )}
         aria-hidden="true"
       >
@@ -216,9 +240,7 @@ function RunRow({ run, isSelected, onSelect, onDeleteRequest }: RunRowProps) {
           "border-b border-[#2b3b55]/60 last:border-b-0",
           "transition-colors duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#135bec]",
-          isSelected
-            ? "bg-[#135bec]/10"
-            : "hover:bg-[#1e2a3d]/60"
+          isSelected ? "bg-[#135bec]/10" : "hover:bg-[#1e2a3d]/60",
         )}
       >
         {/* File icon */}
@@ -226,7 +248,7 @@ function RunRow({ run, isSelected, onSelect, onDeleteRequest }: RunRowProps) {
           className={cn(
             "shrink-0 w-7 h-7 rounded-lg",
             "bg-[#101622] border border-[#2b3b55]",
-            "flex items-center justify-center"
+            "flex items-center justify-center",
           )}
           aria-hidden="true"
         >
@@ -281,7 +303,7 @@ function RunRow({ run, isSelected, onSelect, onDeleteRequest }: RunRowProps) {
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]",
             // Only show on row hover or when selected
             "opacity-0 group-hover:opacity-100",
-            isSelected && "opacity-100"
+            isSelected && "opacity-100",
           )}
         >
           <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
@@ -297,7 +319,7 @@ function RunRow({ run, isSelected, onSelect, onDeleteRequest }: RunRowProps) {
 
 export function RunHistory({ onSelectRun, selectedRunId }: RunHistoryProps) {
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
-    null
+    null,
   );
 
   // ── Data ───────────────────────────────────────────────────────────────────
@@ -325,7 +347,7 @@ export function RunHistory({ onSelectRun, selectedRunId }: RunHistoryProps) {
     } catch {
       toast.error(
         "Delete failed",
-        "Could not delete the pipeline run. Please try again."
+        "Could not delete the pipeline run. Please try again.",
       );
     } finally {
       setDeleteConfirmId(null);
@@ -356,9 +378,7 @@ export function RunHistory({ onSelectRun, selectedRunId }: RunHistoryProps) {
           <Button
             variant="ghost"
             size="xs"
-            leftIcon={
-              <RefreshCw className="w-3 h-3" aria-hidden="true" />
-            }
+            leftIcon={<RefreshCw className="w-3 h-3" aria-hidden="true" />}
             onClick={() => refetch()}
             title="Refresh run history"
             aria-label="Refresh run history"
@@ -391,7 +411,7 @@ export function RunHistory({ onSelectRun, selectedRunId }: RunHistoryProps) {
               // Scrollbar styling
               "[&::-webkit-scrollbar]:w-1.5",
               "[&::-webkit-scrollbar-track]:bg-transparent",
-              "[&::-webkit-scrollbar-thumb]:bg-[#2b3b55] [&::-webkit-scrollbar-thumb]:rounded-full"
+              "[&::-webkit-scrollbar-thumb]:bg-[#2b3b55] [&::-webkit-scrollbar-thumb]:rounded-full",
             )}
           >
             {runs.map((run) => (

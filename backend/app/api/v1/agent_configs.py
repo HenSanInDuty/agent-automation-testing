@@ -1,15 +1,32 @@
 from __future__ import annotations
 
+"""
+api/v1/agent_configs.py – REST endpoints for CrewAI agent configuration.
+
+All route handlers are ``async`` and call Beanie CRUD functions directly —
+no SQLAlchemy session is needed.  Agent IDs are unique slug strings
+(e.g. ``"requirement_analyzer"``); document IDs are MongoDB ObjectId strings.
+
+Endpoints:
+    GET    /admin/agent-configs                      – list / grouped list
+    GET    /admin/agent-configs/{agent_id}           – get one
+    POST   /admin/agent-configs                      – create custom agent
+    PUT    /admin/agent-configs/{agent_id}           – partial update
+    DELETE /admin/agent-configs/{agent_id}           – delete custom agent
+    POST   /admin/agent-configs/{agent_id}/reset     – reset to factory defaults
+    POST   /admin/agent-configs/reset-all            – reset every agent
+"""
+
 import logging
-from typing import Annotated, Any, Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.v1.deps import get_db
 from app.db import crud
+from app.db.models import AgentConfigDocument
 from app.db.seed import DEFAULT_AGENT_CONFIGS
 from app.schemas.agent_config import (
+    AgentConfigCreate,
     AgentConfigGrouped,
     AgentConfigResetResponse,
     AgentConfigResponse,
@@ -22,76 +39,123 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/agent-configs", tags=["Admin – Agent Configs"])
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Dependency alias
-# ─────────────────────────────────────────────────────────────────────────────
-
-DB = Annotated[Session, Depends(get_db)]
-
-# Pre-build a lookup map of defaults keyed by agent_id for O(1) reset access
+# Pre-build a lookup map of defaults keyed by agent_id for O(1) reset access.
 _DEFAULTS_MAP: dict[str, dict[str, Any]] = {
     d["agent_id"]: d for d in DEFAULT_AGENT_CONFIGS
 }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Helpers
+# Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _get_or_404(db: Session, agent_id: str):
-    """Return the AgentConfig ORM object or raise 404."""
-    config = crud.get_agent_config(db, agent_id)
-    if config is None:
+async def _get_or_404(agent_id: str) -> AgentConfigDocument:
+    """Fetch an agent config by slug, or raise HTTP 404.
+
+    Args:
+        agent_id: Unique agent slug (e.g. ``"requirement_analyzer"``).
+
+    Returns:
+        The matching :class:`~app.db.models.AgentConfigDocument`.
+
+    Raises:
+        HTTPException: 404 if no document exists for *agent_id*.
+    """
+    doc = await crud.get_agent_config(agent_id)
+    if doc is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Agent config with agent_id={agent_id!r} not found.",
         )
-    return config
+    return doc
 
 
-def _orm_to_summary(config) -> AgentConfigSummary:
-    """Convert an AgentConfig ORM instance to AgentConfigSummary."""
-    llm_name: Optional[str] = None
-    if config.llm_profile is not None:
-        llm_name = config.llm_profile.name
+def _doc_to_summary(doc: AgentConfigDocument) -> AgentConfigSummary:
+    """Convert a Beanie document to the lightweight summary schema.
 
+    The ``llm_profile_name`` field is not populated here (it would require a
+    separate DB query per agent); callers that need it should fetch the profile
+    separately and pass the name in.
+
+    Args:
+        doc: Beanie document from the ``agent_configs`` collection.
+
+    Returns:
+        An :class:`~app.schemas.agent_config.AgentConfigSummary` instance.
+    """
     return AgentConfigSummary(
-        id=config.id,
-        agent_id=config.agent_id,
-        display_name=config.display_name,
-        stage=config.stage,
-        llm_profile_id=config.llm_profile_id,
-        llm_profile_name=llm_name,
-        enabled=config.enabled,
-        verbose=config.verbose,
-        max_iter=config.max_iter,
-        updated_at=config.updated_at,
+        id=str(doc.id),
+        agent_id=doc.agent_id,
+        display_name=doc.display_name,
+        stage=doc.stage,
+        llm_profile_id=doc.llm_profile_id,
+        llm_profile_name=None,  # populated lazily in _enrich_summaries if needed
+        enabled=doc.enabled,
+        verbose=doc.verbose,
+        max_iter=doc.max_iter,
+        is_custom=doc.is_custom,
+        updated_at=doc.updated_at,
     )
 
 
-def _orm_to_response(config) -> AgentConfigResponse:
-    """Convert an AgentConfig ORM instance to full AgentConfigResponse."""
-    llm_profile_resp: Optional[LLMProfileResponse] = None
-    if config.llm_profile is not None:
-        llm_profile_resp = LLMProfileResponse.model_validate(config.llm_profile)
+def _doc_to_response(doc: AgentConfigDocument) -> AgentConfigResponse:
+    """Convert a Beanie document to the full response schema.
 
+    The ``llm_profile`` field is left as ``None`` because Beanie does not
+    perform automatic JOIN-style eager loading.  Callers that need the nested
+    profile should fetch it with :func:`~app.db.crud.get_llm_profile`.
+
+    Args:
+        doc: Beanie document from the ``agent_configs`` collection.
+
+    Returns:
+        An :class:`~app.schemas.agent_config.AgentConfigResponse` instance.
+    """
     return AgentConfigResponse(
-        id=config.id,
-        agent_id=config.agent_id,
-        display_name=config.display_name,
-        stage=config.stage,
-        role=config.role,
-        goal=config.goal,
-        backstory=config.backstory,
-        llm_profile_id=config.llm_profile_id,
-        llm_profile=llm_profile_resp,
-        enabled=config.enabled,
-        verbose=config.verbose,
-        max_iter=config.max_iter,
-        created_at=config.created_at,
-        updated_at=config.updated_at,
+        id=str(doc.id),
+        agent_id=doc.agent_id,
+        display_name=doc.display_name,
+        stage=doc.stage,
+        role=doc.role,
+        goal=doc.goal,
+        backstory=doc.backstory,
+        llm_profile_id=doc.llm_profile_id,
+        llm_profile=None,
+        enabled=doc.enabled,
+        verbose=doc.verbose,
+        max_iter=doc.max_iter,
+        is_custom=doc.is_custom,
+        created_at=doc.created_at,
+        updated_at=doc.updated_at,
     )
+
+
+async def _enrich_response_with_profile(
+    doc: AgentConfigDocument,
+) -> AgentConfigResponse:
+    """Build an :class:`AgentConfigResponse` with the nested LLM profile populated.
+
+    Fetches the linked :class:`~app.db.models.LLMProfileDocument` (if any) and
+    embeds a masked :class:`~app.schemas.llm_profile.LLMProfileResponse` in the
+    result.  Avoids N+1 queries by only making a second DB call when
+    ``llm_profile_id`` is set.
+
+    Args:
+        doc: Agent config document whose profile should be resolved.
+
+    Returns:
+        A fully-populated :class:`~app.schemas.agent_config.AgentConfigResponse`.
+    """
+    llm_profile_resp: Optional[LLMProfileResponse] = None
+    if doc.llm_profile_id is not None:
+        profile_doc = await crud.get_llm_profile(doc.llm_profile_id)
+        if profile_doc is not None:
+            llm_profile_resp = LLMProfileResponse.model_validate(profile_doc)
+
+    resp = _doc_to_response(doc)
+    resp.llm_profile = llm_profile_resp
+    return resp
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -104,14 +168,12 @@ def _orm_to_response(config) -> AgentConfigResponse:
     summary="List all agent configs",
     description=(
         "Returns all agent configurations. "
-        "Pass `grouped=true` to receive results grouped by pipeline stage "
-        "(ingestion / testcase / execution / reporting). "
-        "Pass `stage=<name>` to filter by a specific stage. "
-        "Pass `enabled_only=true` to include only enabled agents."
+        "Pass ``grouped=true`` to receive results grouped by pipeline stage. "
+        "Pass ``stage=<name>`` to filter by a specific stage. "
+        "Pass ``enabled_only=true`` to include only enabled agents."
     ),
 )
-def list_agent_configs(
-    db: DB,
+async def list_agent_configs(
     grouped: bool = Query(
         default=False,
         description="Group results by pipeline stage",
@@ -125,8 +187,20 @@ def list_agent_configs(
         description="Return only agents that are currently enabled",
     ),
 ) -> AgentConfigGrouped | list[AgentConfigSummary]:
-    configs = crud.get_all_agent_configs(db, stage=stage, enabled_only=enabled_only)
-    summaries = [_orm_to_summary(c) for c in configs]
+    """Return all agent configs, optionally filtered and/or grouped by stage.
+
+    Args:
+        grouped: When ``True``, return a :class:`AgentConfigGrouped` dict
+            keyed by stage name.
+        stage: If provided, only return agents for this stage.
+        enabled_only: When ``True``, exclude disabled agents.
+
+    Returns:
+        Either a flat :class:`list[AgentConfigSummary]` or an
+        :class:`AgentConfigGrouped` depending on *grouped*.
+    """
+    docs = await crud.get_all_agent_configs(stage=stage, enabled_only=enabled_only)
+    summaries = [_doc_to_summary(d) for d in docs]
 
     if grouped:
         return AgentConfigGrouped.from_list(summaries)
@@ -143,13 +217,86 @@ def list_agent_configs(
     response_model=AgentConfigResponse,
     summary="Get a single agent config",
     description=(
-        "Returns the full configuration for a single agent, including its "
-        "role, goal, backstory, and associated LLM profile (if any)."
+        "Returns the full configuration for a single agent including its "
+        "role, goal, backstory, and the associated LLM profile (if any)."
     ),
 )
-def get_agent_config(db: DB, agent_id: str) -> AgentConfigResponse:
-    config = _get_or_404(db, agent_id)
-    return _orm_to_response(config)
+async def get_agent_config(agent_id: str) -> AgentConfigResponse:
+    """Retrieve one agent config by its unique slug.
+
+    Args:
+        agent_id: Agent slug such as ``"requirement_analyzer"``.
+
+    Returns:
+        Full :class:`AgentConfigResponse` with nested LLM profile.
+
+    Raises:
+        HTTPException: 404 if the agent does not exist.
+    """
+    doc = await _get_or_404(agent_id)
+    return await _enrich_response_with_profile(doc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POST /admin/agent-configs
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "",
+    response_model=AgentConfigResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new custom agent config",
+    description=(
+        "Creates a new custom agent configuration (``is_custom=true``). "
+        "The ``agent_id`` must be a unique snake_case slug. "
+        "Builtin agents cannot be created via this endpoint — they are seeded "
+        "automatically at startup."
+    ),
+)
+async def create_agent_config(
+    payload: AgentConfigCreate,
+) -> AgentConfigResponse:
+    """Create a new custom (user-defined) agent config.
+
+    Args:
+        payload: Creation payload validated by
+            :class:`~app.schemas.agent_config.AgentConfigCreate`.
+
+    Returns:
+        The newly-created agent config.
+
+    Raises:
+        HTTPException: 409 Conflict if an agent with the same ``agent_id``
+            already exists.
+        HTTPException: 404 if the referenced ``llm_profile_id`` does not exist.
+    """
+    # Ensure agent_id is unique
+    existing = await crud.get_agent_config(payload.agent_id)
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"An agent config with agent_id={payload.agent_id!r} already "
+                f"exists (id={str(existing.id)})."
+            ),
+        )
+
+    # Validate the LLM profile override if supplied
+    if payload.llm_profile_id is not None:
+        profile = await crud.get_llm_profile(payload.llm_profile_id)
+        if profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"LLM profile with id={payload.llm_profile_id!r} not found. "
+                    "Create the profile first before assigning it to an agent."
+                ),
+            )
+
+    doc = await crud.create_agent_config(payload.model_dump())
+    logger.info("[AgentConfig] Created agent_id=%r id=%s", doc.agent_id, str(doc.id))
+    return await _enrich_response_with_profile(doc)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,37 +310,91 @@ def get_agent_config(db: DB, agent_id: str) -> AgentConfigResponse:
     summary="Update an agent config (partial update supported)",
     description=(
         "Updates the configuration for a single agent. Only fields present "
-        "in the request body are modified — omitted fields keep their current values. "
-        "To assign a per-agent LLM profile override, set `llm_profile_id`. "
-        "To fall back to the global default, set `llm_profile_id` to `null`."
+        "in the request body are modified — omitted fields keep their current "
+        "values. To assign a per-agent LLM profile override, set "
+        "``llm_profile_id``. To fall back to the global default, set it to "
+        "``null``."
     ),
 )
-def update_agent_config(
-    db: DB,
+async def update_agent_config(
     agent_id: str,
     payload: AgentConfigUpdate,
 ) -> AgentConfigResponse:
-    # Validate llm_profile_id exists if provided
+    """Partially update an agent config by its slug.
+
+    Args:
+        agent_id: Unique agent slug to update.
+        payload: Partial update payload; only set fields are written.
+
+    Returns:
+        The updated agent config with nested LLM profile.
+
+    Raises:
+        HTTPException: 404 if the agent does not exist.
+        HTTPException: 404 if the referenced ``llm_profile_id`` does not exist.
+    """
+    # Validate the LLM profile override if it is being changed
     if payload.llm_profile_id is not None:
-        profile = crud.get_llm_profile(db, payload.llm_profile_id)
+        profile = await crud.get_llm_profile(payload.llm_profile_id)
         if profile is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=(
-                    f"LLM profile with id={payload.llm_profile_id} not found. "
+                    f"LLM profile with id={payload.llm_profile_id!r} not found. "
                     "Create the profile first before assigning it to an agent."
                 ),
             )
 
-    config = crud.update_agent_config(db, agent_id, payload)
-    if config is None:
+    update_data = payload.model_dump(exclude_unset=True)
+    doc = await crud.update_agent_config(agent_id, update_data)
+    if doc is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Agent config with agent_id={agent_id!r} not found.",
         )
 
     logger.info("[AgentConfig] Updated agent_id=%r", agent_id)
-    return _orm_to_response(config)
+    return await _enrich_response_with_profile(doc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DELETE /admin/agent-configs/{agent_id}
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.delete(
+    "/{agent_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a custom agent config",
+    description=(
+        "Deletes a custom (user-created) agent config.  "
+        "Built-in seeded agents cannot be deleted via this endpoint."
+    ),
+)
+async def delete_agent_config(agent_id: str) -> None:
+    """Delete a custom agent config.
+
+    Args:
+        agent_id: Unique agent slug to delete.
+
+    Raises:
+        HTTPException: 404 if the agent does not exist.
+        HTTPException: 422 if the agent is a built-in seeded agent.
+    """
+    try:
+        deleted = await crud.delete_agent_config(agent_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent config with agent_id={agent_id!r} not found.",
+        )
+    logger.info("[AgentConfig] Deleted agent_id=%r", agent_id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -206,13 +407,26 @@ def update_agent_config(
     response_model=AgentConfigResetResponse,
     summary="Reset a single agent config to factory defaults",
     description=(
-        "Restores the agent's role, goal, backstory, and behaviour flags to their "
-        "original shipped values. Also clears any per-agent LLM profile override "
-        "so the agent inherits the global default. "
-        "Custom `display_name` changes are also reverted."
+        "Restores the agent's role, goal, backstory, and behaviour flags to "
+        "their original shipped values. Also clears any per-agent LLM profile "
+        "override so the agent inherits the global default. "
+        "Custom ``display_name`` changes are also reverted."
     ),
 )
-def reset_agent_config(db: DB, agent_id: str) -> AgentConfigResetResponse:
+async def reset_agent_config(agent_id: str) -> AgentConfigResetResponse:
+    """Reset one agent config to its seeded factory defaults.
+
+    Args:
+        agent_id: Unique agent slug to reset.
+
+    Returns:
+        :class:`~app.schemas.agent_config.AgentConfigResetResponse` containing
+        the restored config.
+
+    Raises:
+        HTTPException: 404 if no factory defaults exist for the agent, or if
+            the agent does not exist in the DB.
+    """
     defaults = _DEFAULTS_MAP.get(agent_id)
     if defaults is None:
         raise HTTPException(
@@ -223,8 +437,8 @@ def reset_agent_config(db: DB, agent_id: str) -> AgentConfigResetResponse:
             ),
         )
 
-    config = crud.reset_agent_config(db, agent_id, defaults)
-    if config is None:
+    doc = await crud.reset_agent_config(agent_id, defaults)
+    if doc is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Agent config with agent_id={agent_id!r} not found.",
@@ -234,7 +448,7 @@ def reset_agent_config(db: DB, agent_id: str) -> AgentConfigResetResponse:
     return AgentConfigResetResponse(
         agent_id=agent_id,
         message="Agent config has been reset to default values.",
-        config=_orm_to_response(config),
+        config=_doc_to_response(doc),
     )
 
 
@@ -247,18 +461,25 @@ def reset_agent_config(db: DB, agent_id: str) -> AgentConfigResetResponse:
     "/reset-all",
     summary="Reset ALL agent configs to factory defaults",
     description=(
-        "Restores every agent's role, goal, backstory, and behaviour flags to their "
-        "original shipped values. Clears all per-agent LLM profile overrides. "
-        "**This action cannot be undone.**"
+        "Restores every agent's role, goal, backstory, and behaviour flags to "
+        "their original shipped values. Clears all per-agent LLM profile "
+        "overrides. **This action cannot be undone.**"
     ),
 )
-def reset_all_agent_configs(db: DB) -> dict[str, Any]:
-    configs = crud.reset_all_agent_configs(db, DEFAULT_AGENT_CONFIGS)
+async def reset_all_agent_configs() -> dict[str, Any]:
+    """Reset every agent config to its seeded factory defaults.
+
+    Returns:
+        A summary dict with ``message``, ``reset_count``, and ``agent_ids``.
+    """
+    docs = await crud.reset_all_agent_configs(DEFAULT_AGENT_CONFIGS)
     logger.info(
-        "[AgentConfig] Reset ALL %d agent configs to factory defaults", len(configs)
+        "[AgentConfig] Reset ALL %d agent configs to factory defaults", len(docs)
     )
     return {
-        "message": f"All {len(configs)} agent configs have been reset to factory defaults.",
-        "reset_count": len(configs),
-        "agent_ids": [c.agent_id for c in configs],
+        "message": (
+            f"All {len(docs)} agent configs have been reset to factory defaults."
+        ),
+        "reset_count": len(docs),
+        "agent_ids": [d.agent_id for d in docs],
     }
