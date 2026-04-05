@@ -60,8 +60,10 @@ try:
     from crewai import Agent, Crew, Process, Task  # type: ignore[import-untyped]
 
     _CREWAI_AVAILABLE = True
+    print("===============================checking from crew AI true")
 except ImportError:
     _CREWAI_AVAILABLE = False
+    print("===============================checking from crew AI false")
 
 # Agent display names (used in progress events)
 _DISPLAY_NAMES: dict[str, str] = {
@@ -158,7 +160,6 @@ class ExecutionCrew(BaseCrew):
             )
             use_mock = True
 
-        self._emit_stage_started(agent_count=len(self.agent_ids))
         self._emit_log(
             f"Starting execution of {len(test_cases)} test case(s) "
             f"on environment '{environment}' "
@@ -176,11 +177,9 @@ class ExecutionCrew(BaseCrew):
                 "[ExecutionCrew][%s] Unexpected error: %s", self._run_id, exc
             )
             self._emit_log(error_msg, level="error")
-            self._emit_stage_completed()
             # Return a minimal failed output so the pipeline can continue to reporting
             return self._error_output(test_cases, environment, error_msg)
 
-        self._emit_stage_completed()
         return result
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -217,7 +216,7 @@ class ExecutionCrew(BaseCrew):
         }
 
         for agent_id in self.agent_ids:
-            self._emit_agent_started(agent_id, _DISPLAY_NAMES.get(agent_id, agent_id))
+            # agent.started is emitted via task_callback during kickoff, not here
             try:
                 agent = factory.build(agent_id)
                 # Inject tools after building (crewai Agent supports `tools` attr)
@@ -270,17 +269,52 @@ class ExecutionCrew(BaseCrew):
             context_tasks=[t_orchestrator, t_env, t_runner, t_logger],
         )
 
+        # ── Task callback: relay per-task completion as agent events ──────────
+        # self.agent_ids and the tasks list are in the same sequential order.
+        _ordered_ids = list(self.agent_ids)
+        _task_idx: list[int] = [0]
+
+        def _on_task_done(task_output: Any) -> None:  # noqa: ANN001
+            idx = _task_idx[0]
+            if idx < len(_ordered_ids):
+                agent_id = _ordered_ids[idx]
+                preview = str(getattr(task_output, "raw", task_output))[:200]
+                self._emit_agent_completed(agent_id, output_preview=preview)
+                self._emit_log(
+                    f"[{_DISPLAY_NAMES.get(agent_id, agent_id)}] completed"
+                    f" ({idx + 1}/{len(_ordered_ids)})"
+                )
+            _task_idx[0] += 1
+            nxt = _task_idx[0]
+            if nxt < len(_ordered_ids):
+                nid = _ordered_ids[nxt]
+                self._emit_agent_started(nid, _DISPLAY_NAMES.get(nid, nid))
+                self._emit_log(f"[{_DISPLAY_NAMES.get(nid, nid)}] started …")
+
         # ── Assemble and run crew ────────────────────────────────────────────
         self._emit_log("Launching CrewAI execution crew (sequential process)…")
+
+        # Emit started for the first agent — subsequent ones fire via callback
+        first_id = _ordered_ids[0]
+        self._emit_agent_started(first_id, _DISPLAY_NAMES.get(first_id, first_id))
+        self._emit_log(f"[{_DISPLAY_NAMES.get(first_id, first_id)}] started …")
+
         crew = Crew(
             agents=list(agent_objects.values()),
             tasks=[t_orchestrator, t_env, t_runner, t_logger, t_store],
             process=Process.sequential,
             verbose=False,
+            task_callback=_on_task_done,
         )
 
         t0 = time.monotonic()
-        raw_output = crew.kickoff()
+        try:
+            raw_output = crew.kickoff()
+        except Exception as exc:
+            idx = _task_idx[0]
+            if idx < len(_ordered_ids):
+                self._emit_agent_failed(_ordered_ids[idx], str(exc))
+            raise
         duration = time.monotonic() - t0
 
         self._emit_log(f"Crew kickoff completed in {duration:.1f}s — parsing output…")

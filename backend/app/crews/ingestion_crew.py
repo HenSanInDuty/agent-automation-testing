@@ -179,14 +179,6 @@ class IngestionCrew(BaseCrew):
         chunk_overlap = int(input_data.get("chunk_overlap", self._chunk_overlap))
 
         self._emit(
-            "stage.started",
-            {
-                "stage": "ingestion",
-                "document_name": document_name,
-                "mock_mode": mock_mode,
-            },
-        )
-        self._emit(
             "log",
             {"message": f"Starting ingestion for '{document_name}'", "level": "info"},
         )
@@ -219,19 +211,17 @@ class IngestionCrew(BaseCrew):
         # Filter out chunks that are too short to contain useful information
         chunks = [c for c in chunks if len(c.strip()) >= self._min_chunk_size]
 
+        self._emit_agent_started("ingestion_pipeline", "Document Ingestion")
+
         if not chunks:
             logger.warning(
                 "[Ingestion][%s] Document '%s' produced no processable chunks.",
                 self._run_id,
                 document_name,
             )
-            self._emit(
-                "stage.completed",
-                {
-                    "stage": "ingestion",
-                    "requirements_count": 0,
-                    "chunks_processed": 0,
-                },
+            self._emit_agent_completed(
+                "ingestion_pipeline",
+                output_preview="Document appears empty — no processable chunks",
             )
             return IngestionOutput(
                 requirements=[],
@@ -266,6 +256,14 @@ class IngestionCrew(BaseCrew):
                 {
                     "message": f"Analyzing chunk {chunk_idx}/{len(chunks)} ({len(chunk):,} chars)",
                     "level": "info",
+                },
+            )
+            self._emit(
+                "agent.progress",
+                {
+                    "agent_id": "ingestion_pipeline",
+                    "message": f"Chunk {chunk_idx}/{len(chunks)}",
+                    "progress": round(chunk_idx / len(chunks) * 100),
                 },
             )
 
@@ -309,6 +307,10 @@ class IngestionCrew(BaseCrew):
             req.id = f"REQ-{seq:03d}"
 
         # ── Build output ─────────────────────────────────────────────────────
+        self._emit_agent_completed(
+            "ingestion_pipeline",
+            output_preview=f"Extracted {len(all_requirements)} requirement(s) from {len(chunks)} chunk(s)",
+        )
         output = IngestionOutput(
             requirements=all_requirements,
             document_name=document_name,
@@ -317,14 +319,6 @@ class IngestionCrew(BaseCrew):
             processing_notes=processing_notes,
         )
 
-        self._emit(
-            "stage.completed",
-            {
-                "stage": "ingestion",
-                "requirements_count": len(all_requirements),
-                "chunks_processed": len(chunks),
-            },
-        )
         self._emit(
             "log",
             {

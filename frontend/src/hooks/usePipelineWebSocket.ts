@@ -6,11 +6,13 @@ import type { AgentRunStatus, WSEvent } from "@/types";
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WS_BASE_URL =
-  process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000";
+const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000";
 
 const MAX_EVENTS = 500;
 const MAX_RETRIES = 3;
+
+/** Events that carry no useful information for the UI — filter from event list */
+const NOISE_EVENTS = new Set(["connected", "ping", "pong"]);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public types
@@ -26,8 +28,10 @@ export interface UsePipelineWebSocketReturn {
   status: "connecting" | "connected" | "disconnected" | "error";
   events: WSEvent[];
   agentStatuses: Record<string, AgentRunStatus>;
+  agentProgress: Record<string, { pct: number; message: string }>;
   currentStage: string | null;
   isTerminal: boolean;
+  logMessages: string[];
   disconnect: () => void;
 }
 
@@ -36,7 +40,7 @@ export interface UsePipelineWebSocketReturn {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function usePipelineWebSocket(
-  options: UsePipelineWebSocketOptions
+  options: UsePipelineWebSocketOptions,
 ): UsePipelineWebSocketReturn {
   const { runId, enabled = true, onEvent } = options;
 
@@ -48,8 +52,12 @@ export function usePipelineWebSocket(
   const [agentStatuses, setAgentStatuses] = useState<
     Record<string, AgentRunStatus>
   >({});
+  const [agentProgress, setAgentProgress] = useState<
+    Record<string, { pct: number; message: string }>
+  >({});
   const [currentStage, setCurrentStage] = useState<string | null>(null);
   const [isTerminal, setIsTerminal] = useState(false);
+  const [logMessages, setLogMessages] = useState<string[]>([]);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const wsRef = useRef<WebSocket | null>(null);
@@ -116,11 +124,13 @@ export function usePipelineWebSocket(
           return;
         }
 
-        // Append to events (bounded)
-        setEvents((prev) => {
-          const next = [...prev, parsed];
-          return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
-        });
+        // Only add meaningful events to the event list; skip noise
+        if (!NOISE_EVENTS.has(parsed.event)) {
+          setEvents((prev) => {
+            const next = [...prev, parsed];
+            return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
+          });
+        }
 
         // Update derived state
         switch (parsed.event) {
@@ -131,11 +141,27 @@ export function usePipelineWebSocket(
             }));
             break;
 
+          case "agent.progress":
+            setAgentProgress((prev) => ({
+              ...prev,
+              [parsed.data.agent_id as string]: {
+                pct: (parsed.data.progress as number) ?? 0,
+                message: (parsed.data.message as string) ?? "",
+              },
+            }));
+            break;
+
           case "agent.completed":
             setAgentStatuses((prev) => ({
               ...prev,
               [parsed.data.agent_id as string]: "completed",
             }));
+            // Clear progress entry once the agent finishes
+            setAgentProgress((prev) => {
+              const next = { ...prev };
+              delete next[parsed.data.agent_id as string];
+              return next;
+            });
             break;
 
           case "agent.failed":
@@ -143,11 +169,27 @@ export function usePipelineWebSocket(
               ...prev,
               [parsed.data.agent_id as string]: "failed",
             }));
+            setAgentProgress((prev) => {
+              const next = { ...prev };
+              delete next[parsed.data.agent_id as string];
+              return next;
+            });
             break;
 
           case "stage.started":
             setCurrentStage(parsed.data.stage as string);
             break;
+
+          case "log": {
+            const msg = parsed.data.message as string;
+            if (msg) {
+              setLogMessages((prev) => {
+                const next = [...prev, msg];
+                return next.length > 100 ? next.slice(-100) : next;
+              });
+            }
+            break;
+          }
 
           case "run.completed":
           case "run.failed":
@@ -203,7 +245,7 @@ export function usePipelineWebSocket(
     // `connect` is only stable within the effect scope below — we do NOT list
     // `connect` itself to avoid infinite loops; the effect manages lifecycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [],
   );
 
   // ── Effect: manage connection lifecycle ───────────────────────────────────
@@ -221,7 +263,9 @@ export function usePipelineWebSocket(
     setIsTerminal(false);
     setEvents([]);
     setAgentStatuses({});
+    setAgentProgress({});
     setCurrentStage(null);
+    setLogMessages([]);
 
     connect(runId);
 
@@ -248,8 +292,10 @@ export function usePipelineWebSocket(
     status,
     events,
     agentStatuses,
+    agentProgress,
     currentStage,
     isTerminal,
+    logMessages,
     disconnect,
   };
 }

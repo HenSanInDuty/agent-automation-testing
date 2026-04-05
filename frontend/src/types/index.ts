@@ -37,7 +37,12 @@ export const PROVIDERS_REQUIRING_BASE_URL: LLMProvider[] = [
 
 /** Common model suggestions per provider */
 export const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
-  [LLMProvider.OPENAI]: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
+  [LLMProvider.OPENAI]: [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo",
+    "gpt-3.5-turbo",
+  ],
   [LLMProvider.ANTHROPIC]: [
     "claude-opus-4-5",
     "claude-sonnet-4-5",
@@ -45,10 +50,20 @@ export const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
     "claude-3-5-haiku-20241022",
     "claude-3-opus-20240229",
   ],
-  [LLMProvider.OLLAMA]: ["llama3.2", "llama3.1", "granite3.1-dense", "mistral", "qwen2.5"],
+  [LLMProvider.OLLAMA]: [
+    "llama3.2",
+    "llama3.1",
+    "granite3.1-dense",
+    "mistral",
+    "qwen2.5",
+  ],
   [LLMProvider.HUGGINGFACE]: ["meta-llama/Llama-3.1-8B-Instruct"],
   [LLMProvider.AZURE]: ["gpt-4o", "gpt-4-turbo"],
-  [LLMProvider.GROQ]: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+  [LLMProvider.GROQ]: [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "mixtral-8x7b-32768",
+  ],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -239,9 +254,13 @@ export interface PipelineRunListResponse {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type WSEventType =
+  | "connected"
+  | "ping"
+  | "pong"
   | "run.started"
   | "stage.started"
   | "agent.started"
+  | "agent.progress"
   | "agent.completed"
   | "agent.failed"
   | "stage.completed"
@@ -267,4 +286,32 @@ export interface ApiError {
 export interface PaginationParams {
   skip?: number;
   limit?: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ChatRole = "user" | "assistant" | "system";
+
+export interface ChatMessage {
+  id: string;
+  role: ChatRole;
+  content: string;
+  timestamp: Date;
+  streaming?: boolean;
+}
+
+export interface ChatRequest {
+  messages: { role: ChatRole; content: string }[];
+  llm_profile_id?: number | null;
+  system_prompt?: string | null;
+}
+
+export interface ChatProfileItem {
+  id: number;
+  name: string;
+  provider: string;
+  model: string;
+  is_default: boolean;
 }

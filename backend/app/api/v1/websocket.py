@@ -32,18 +32,29 @@ class ConnectionManager:
     def __init__(self) -> None:
         # run_id → set of active WebSocket connections
         self._connections: dict[str, set[WebSocket]] = defaultdict(set)
-        # Reference to the running event loop (set lazily on first use)
+        # Reference to the running event loop.
+        # Set eagerly via set_loop() at app startup AND lazily in connect().
         self._loop: asyncio.AbstractEventLoop | None = None
 
     # ── Connection lifecycle ──────────────────────────────────────────────────
+
+    def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        """
+        Eagerly store the event loop reference.
+
+        Call this once at application startup (e.g. inside the lifespan
+        context) so that ``broadcast_from_thread`` works even before the
+        first WebSocket client connects.
+        """
+        self._loop = loop
+        logger.debug("[WS] Event loop registered on ConnectionManager")
 
     async def connect(self, websocket: WebSocket, run_id: str) -> None:
         """Accept a new WebSocket connection and register it for *run_id*."""
         await websocket.accept()
         self._connections[run_id].add(websocket)
-        # Cache the loop so we can schedule coroutines from non-async contexts
-        if self._loop is None:
-            self._loop = asyncio.get_event_loop()
+        # Keep the loop reference up-to-date (also covers the eager set_loop path)
+        self._loop = asyncio.get_running_loop()
         logger.info(
             "[WS] Client connected  run_id=%r  total_for_run=%d",
             run_id,
@@ -68,12 +79,26 @@ class ConnectionManager:
         Send *message* (JSON string) to every connected client for *run_id*.
         Dead connections are silently removed.
         """
+        targets = list(self._connections.get(run_id, set()))
+        if not targets:
+            logger.debug(
+                "[WS] broadcast: no clients for run_id=%r — message dropped", run_id
+            )
+            return
+
         dead: set[WebSocket] = set()
-        for ws in list(self._connections.get(run_id, set())):
+        sent = 0
+        for ws in targets:
             try:
                 await ws.send_text(message)
-            except Exception:
+                sent += 1
+            except Exception as exc:
+                logger.debug("[WS] send_text failed for run_id=%r: %s", run_id, exc)
                 dead.add(ws)
+
+        logger.debug(
+            "[WS] broadcast run_id=%r  sent=%d  dead=%d", run_id, sent, len(dead)
+        )
 
         for ws in dead:
             self._connections[run_id].discard(ws)
@@ -94,13 +119,42 @@ class ConnectionManager:
         (e.g. the PipelineRunner background task).
         """
         loop = self._loop
-        if loop is None or not loop.is_running():
-            # No clients connected yet or loop not started — silently discard
-            logger.debug(
-                "[WS] broadcast_from_thread: no active loop for run_id=%r", run_id
+        if loop is None:
+            logger.warning(
+                "[WS] broadcast_from_thread: _loop is None — event dropped for run_id=%r. "
+                "WebSocket manager was not initialised with an event loop before the pipeline started. "
+                "Call manager.set_loop() at app startup to fix this.",
+                run_id,
             )
             return
-        asyncio.run_coroutine_threadsafe(self.broadcast(run_id, message), loop)
+        if not loop.is_running():
+            logger.warning(
+                "[WS] broadcast_from_thread: event loop is NOT running — event dropped for run_id=%r.",
+                run_id,
+            )
+            return
+
+        clients = len(self._connections.get(run_id, set()))
+        logger.debug(
+            "[WS] broadcast_from_thread run_id=%r clients=%d msg_len=%d",
+            run_id,
+            clients,
+            len(message),
+        )
+
+        future = asyncio.run_coroutine_threadsafe(self.broadcast(run_id, message), loop)
+
+        def _on_done(fut: "asyncio.Future[None]") -> None:
+            exc = fut.exception()
+            if exc is not None:
+                logger.warning(
+                    "[WS] broadcast coroutine raised an exception for run_id=%r: %s",
+                    run_id,
+                    exc,
+                    exc_info=exc,
+                )
+
+        future.add_done_callback(_on_done)
 
     # ── Introspection ─────────────────────────────────────────────────────────
 

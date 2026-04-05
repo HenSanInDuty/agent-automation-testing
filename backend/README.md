@@ -32,7 +32,14 @@ The REST API exposes pipeline management, real-time WebSocket progress streaming
 | [uv](https://github.com/astral-sh/uv) | 0.4+ | Fast Python package manager |
 | SQLite | bundled with Python | Default database; swap for Postgres in prod |
 
-> **Windows note:** `crewai` depends on `lancedb`, which has no Windows wheels. For full pipeline execution on Windows, use **Docker** or **WSL2**. The `MOCK_CREWS=true` env var lets you develop the full UI/API surface without running real crews.
+> **Windows note:** `crewai` depends on `lancedb`. From version `0.30.1` onward, `lancedb`
+> dropped Windows (`win_amd64`) wheels — only Linux/macOS builds are published.
+> The project therefore pins `lancedb==0.30.0`, which **does** ship a Windows wheel and
+> installs cleanly with `uv add "crewai>=1.0.0" "lancedb==0.30.0"`.
+> If you upgrade `lancedb` in the future, check the
+> [lancedb releases](https://github.com/lancedb/lancedb/releases) page first to confirm
+> a Windows wheel is available.
+> The `MOCK_CREWS=true` env var is still useful for offline / CI development without a live LLM.
 
 ---
 
@@ -43,6 +50,7 @@ The REST API exposes pipeline management, real-time WebSocket progress streaming
 cd auto-at/backend
 
 # 2. Install all dependencies (including dev tools)
+#    crewai + lancedb==0.30.0 are bundled in the core deps — no extra step needed.
 uv sync --group dev
 
 # 3. Copy and configure environment variables
@@ -111,7 +119,7 @@ Used when no LLM profile is marked `is_default=true` in the database.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MOCK_CREWS` | `false` | When `true`, all crews return deterministic mock output without calling any LLM — ideal for Windows dev and CI |
+| `MOCK_CREWS` | `false` | When `true`, all crews return deterministic mock output without calling any LLM — useful for CI or offline development |
 | `MAX_CONCURRENT_RUNS` | `3` | Maximum number of pipeline runs that may execute simultaneously |
 | `INGESTION_TIMEOUT_SECONDS` | `120` | Per-stage timeout for the Ingestion crew |
 | `TESTCASE_TIMEOUT_SECONDS` | `600` | Per-stage timeout for the Test-Case crew |
@@ -177,12 +185,20 @@ All pipeline routes are mounted under `/api/v1`.
 | `PUT` | `/api/v1/admin/agent-configs/{id}` | Update an agent's role, goal, backstory, or LLM override |
 | `POST` | `/api/v1/admin/agent-configs/reset` | Reset all agent configs to factory defaults |
 
+### Chat
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/chat/profiles` | List available LLM profiles for the chat UI |
+| `POST` | `/api/v1/chat/send` | Send a message list and stream the response as SSE (`text/event-stream`) |
+
 ---
 
 ## Development Commands
 
 ```bash
 # Install all deps including dev group
+# (crewai + lancedb==0.30.0 are included — works on Windows, Linux, and macOS)
 uv sync --group dev
 
 # Run dev server with hot-reload
@@ -318,6 +334,34 @@ When a pipeline run is in progress, the frontend connects to `WS /ws/pipeline/{r
   "timestamp": "2025-01-15T10:30:00Z"
 }
 ```
+
+---
+
+## Dependency Notes
+
+### crewAI on Windows
+
+`crewai` pulls in `lancedb` as a transitive dependency (via `chromadb`).
+`lancedb >= 0.30.1` **only** publishes Linux/macOS wheels, so naively running
+`uv add crewai` on Windows fails with a platform-compatibility error.
+
+**Fix already applied in `pyproject.toml`:**
+
+```toml
+"crewai>=1.0.0",
+"lancedb==0.30.0",   # 0.30.0 is the last release with a win_amd64 wheel
+```
+
+To re-install from scratch on Windows:
+
+```bash
+uv add "crewai>=1.0.0" "lancedb==0.30.0"
+# or with plain pip inside the venv:
+pip install "crewai>=1.0.0" "lancedb==0.30.0"
+```
+
+When `lancedb` publishes a new Windows-compatible release, update the pin and run
+`uv sync` again.
 
 ---
 

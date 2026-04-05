@@ -240,12 +240,30 @@ async def _run_pipeline_background(
     4. Update the run's terminal status based on the result.
     5. Clean up the uploaded file if the run folder should be kept.
     """
+    import asyncio
+
     # Import here to avoid circular imports at module load time
     from app.api.v1.websocket import manager
     from app.core.pipeline_runner import run_pipeline_async
     from app.db.database import SessionLocal
 
-    logger.info("[Pipeline] Background task started  run_id=%r", run_id)
+    logger.info(
+        "[Pipeline] Background task started  run_id=%r  file=%r  profile=%s  skip_exec=%s  env=%r",
+        run_id,
+        file_path,
+        llm_profile_id,
+        skip_execution,
+        environment,
+    )
+
+    # Refresh the event loop reference on the WS manager.  The lifespan hook
+    # already does this at startup, but refreshing here costs nothing and
+    # guarantees correctness if the manager is ever reset between restarts.
+    current_loop = asyncio.get_running_loop()
+    manager.set_loop(current_loop)
+    logger.debug(
+        "[Pipeline] WS manager loop refreshed  run_id=%r  loop=%r", run_id, current_loop
+    )
 
     # ── Build a WS broadcaster that is safe to call from a thread ────────────
 
@@ -253,6 +271,14 @@ async def _run_pipeline_background(
         """Called by PipelineRunner (inside executor thread) for every event."""
         import json
         from datetime import datetime, timezone
+
+        # Log every outgoing event so we can trace what is actually emitted.
+        logger.debug(
+            "[WS-TX] run_id=%r  event=%r  data_keys=%s",
+            run_id,
+            event_type,
+            sorted(data.keys()),
+        )
 
         payload = json.dumps(
             {

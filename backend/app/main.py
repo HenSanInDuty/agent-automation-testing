@@ -32,7 +32,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - Creates all DB tables (idempotent).
     - Seeds default data if AUTO_SEED=true.
     - Creates the upload directory if it does not exist.
+    - Registers the running event loop on the WebSocket manager so that
+      broadcast_from_thread() works even before the first client connects.
     """
+    import asyncio
+
+    from app.api.v1.websocket import manager as ws_manager
+
     logger.info("Starting Auto-AT backend (env=%s)", settings.APP_ENV)
 
     # Ensure upload directory exists
@@ -48,6 +54,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.AUTO_SEED:
         with SessionLocal() as db:
             seed_all(db)
+
+    # Register the event loop on the WebSocket manager BEFORE any pipeline
+    # background tasks start.  Without this, broadcast_from_thread() drops
+    # every event if the pipeline thread fires before the first WS client
+    # connects (which sets _loop lazily).
+    ws_manager.set_loop(asyncio.get_running_loop())
+    logger.info("WebSocket manager event loop registered ✓")
 
     logger.info("Auto-AT backend ready ✓")
 
@@ -84,7 +97,7 @@ def create_app() -> FastAPI:
     )
 
     # ── Routers ───────────────────────────────────────────────────────────────
-    from app.api.v1 import agent_configs, llm_profiles, pipeline, websocket
+    from app.api.v1 import agent_configs, chat, llm_profiles, pipeline, websocket
 
     # REST API routers – all mounted under /api/v1
     app.include_router(pipeline.router, prefix="/api/v1", tags=["Pipeline"])
@@ -94,6 +107,8 @@ def create_app() -> FastAPI:
     app.include_router(
         agent_configs.router, prefix="/api/v1", tags=["Admin – Agent Configs"]
     )
+
+    app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
 
     # WebSocket router – mounted at root (the route itself defines /ws/pipeline/{run_id})
     app.include_router(websocket.router, tags=["WebSocket"])

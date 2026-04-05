@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ChevronRight,
   Zap,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,11 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
+      {
+        label: "Chat",
+        href: "/chat",
+        icon: <MessageSquare className="w-4 h-4" />,
+      },
       {
         label: "Pipeline",
         href: "/pipeline",
@@ -93,7 +99,7 @@ function NavLink({ item, pathname, collapsed }: NavLinkProps) {
     // Active vs idle
     isActive
       ? "bg-[#135bec]/15 text-white"
-      : "text-[#92a4c9] hover:bg-[#1e2a3d] hover:text-white"
+      : "text-[#92a4c9] hover:bg-[#1e2a3d] hover:text-white",
   );
 
   const content = (
@@ -110,7 +116,7 @@ function NavLink({ item, pathname, collapsed }: NavLinkProps) {
       <span
         className={cn(
           "shrink-0 transition-colors duration-150",
-          isActive ? "text-[#5b9eff]" : "text-[#92a4c9] group-hover:text-white"
+          isActive ? "text-[#5b9eff]" : "text-[#92a4c9] group-hover:text-white",
         )}
       >
         {item.icon}
@@ -143,7 +149,7 @@ function NavLink({ item, pathname, collapsed }: NavLinkProps) {
             "whitespace-nowrap shadow-xl",
             "opacity-0 pointer-events-none",
             "group-hover:opacity-100 group-hover:pointer-events-auto",
-            "transition-opacity duration-150 z-50"
+            "transition-opacity duration-150 z-50",
           )}
           role="tooltip"
         >
@@ -207,7 +213,7 @@ export function Sidebar({
         "transition-[width] duration-200 ease-in-out",
         // Width
         collapsed ? "w-16" : "w-56",
-        className
+        className,
       )}
       aria-label="Main navigation"
     >
@@ -216,7 +222,7 @@ export function Sidebar({
         className={cn(
           "flex items-center gap-3 border-b border-[#2b3b55]",
           "shrink-0",
-          collapsed ? "px-2.5 py-4 justify-center" : "px-4 py-4"
+          collapsed ? "px-2.5 py-4 justify-center" : "px-4 py-4",
         )}
       >
         {/* Icon mark */}
@@ -284,13 +290,13 @@ export function Sidebar({
               "text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d]",
               "transition-colors duration-150",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]",
-              collapsed ? "justify-center" : "justify-start"
+              collapsed ? "justify-center" : "justify-start",
             )}
           >
             <ChevronRight
               className={cn(
                 "w-4 h-4 transition-transform duration-200",
-                !collapsed && "rotate-180"
+                !collapsed && "rotate-180",
               )}
               aria-hidden="true"
             />

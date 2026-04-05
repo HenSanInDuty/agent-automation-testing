@@ -132,7 +132,7 @@ class PipelineRunner:
     # Public entry point
     # ─────────────────────────────────────────────────────────────────────────
 
-    def run(
+    def run(  # noqa: C901  (complexity is intentional — it's the main orchestration method)
         self,
         file_path: str | Path,
         document_name: Optional[str] = None,
@@ -164,10 +164,25 @@ class PipelineRunner:
         """
         file_path = Path(file_path)
         if not file_path.exists():
+            logger.error(
+                "[Runner][%s] Document file not found: %r",
+                self._run_id[:8],
+                str(file_path),
+            )
             raise FileNotFoundError(f"Document not found: {file_path}")
 
         doc_name = document_name or file_path.name
         t_start = time.monotonic()
+
+        logger.info(
+            "[Runner][%s] ════ PIPELINE START  doc=%r  profile=%s  mock=%s  skip_exec=%s  ws=%s",
+            self._run_id[:8],
+            doc_name,
+            self._run_profile_id,
+            self._mock_mode,
+            skip_execution,
+            "yes" if self._ws_broadcaster else "NO ← events will not be sent",
+        )
 
         # Mark run as running
         self._update_db_status("running")
@@ -209,7 +224,11 @@ class PipelineRunner:
                 )
             except Exception as exc:
                 error = f"Ingestion stage failed: {exc}"
-                logger.exception("[PipelineRunner][%s] Ingestion failed", self._run_id)
+                logger.exception(
+                    "[Runner][%s] ── INGESTION FAILED (aborting pipeline): %s",
+                    self._run_id[:8],
+                    exc,
+                )
                 self._emit("log", {"message": error, "level": "error"})
                 # Cannot continue without requirements
                 self._update_db_status("failed", error=error)
@@ -239,7 +258,11 @@ class PipelineRunner:
                 )
             except Exception as exc:
                 error = f"Test case generation failed: {exc}"
-                logger.exception("[PipelineRunner][%s] Testcase failed", self._run_id)
+                logger.exception(
+                    "[Runner][%s] ── TESTCASE FAILED (continuing with empty test cases): %s",
+                    self._run_id[:8],
+                    exc,
+                )
                 self._emit("log", {"message": error, "level": "error"})
                 self._testcase_output = {"test_cases": [], "error": str(exc)}
                 # Continue to reporting with partial data
@@ -289,7 +312,11 @@ class PipelineRunner:
                 )
             except Exception as exc:
                 error = f"Execution stage failed: {exc}"
-                logger.exception("[PipelineRunner][%s] Execution failed", self._run_id)
+                logger.exception(
+                    "[Runner][%s] ── EXECUTION FAILED (continuing with empty results): %s",
+                    self._run_id[:8],
+                    exc,
+                )
                 self._emit("log", {"message": error, "level": "error"})
                 # Build minimal error output so reporting can still run
                 self._execution_output = {
@@ -339,7 +366,11 @@ class PipelineRunner:
                 )
             except Exception as exc:
                 report_error = f"Reporting stage failed: {exc}"
-                logger.exception("[PipelineRunner][%s] Reporting failed", self._run_id)
+                logger.exception(
+                    "[Runner][%s] ── REPORTING FAILED (pipeline still marked completed): %s",
+                    self._run_id[:8],
+                    exc,
+                )
                 self._emit("log", {"message": report_error, "level": "error"})
                 # Build minimal report
                 self._report_output = {
@@ -356,9 +387,13 @@ class PipelineRunner:
                 # Reporting failure is non-fatal — pipeline is still "completed"
 
         except Exception as exc:
-            # Unexpected top-level error
+            # Unexpected top-level error (should rarely happen — each stage has its own try/except)
             error = f"Pipeline runner unexpected error: {exc}"
-            logger.exception("[PipelineRunner][%s] Unexpected failure", self._run_id)
+            logger.exception(
+                "[Runner][%s] ════ PIPELINE UNEXPECTED FAILURE: %s",
+                self._run_id[:8],
+                exc,
+            )
             self._update_db_status("failed", error=error)
             self._emit("run.failed", {"error": error})
             return self._build_result(doc_name, "failed", t_start, error=error)
@@ -375,9 +410,13 @@ class PipelineRunner:
             },
         )
         logger.info(
-            "[PipelineRunner][%s] Pipeline completed in %.1fs",
-            self._run_id,
+            "[Runner][%s] ════ PIPELINE COMPLETED  duration=%.1fs  "
+            "requirements=%d  test_cases=%d  pass_rate=%s%%",
+            self._run_id[:8],
             duration,
+            len((self._ingestion_output or {}).get("requirements", [])),
+            len((self._testcase_output or {}).get("test_cases", [])),
+            (self._execution_output or {}).get("summary", {}).get("pass_rate", "n/a"),
         )
 
         return self._build_result(doc_name, "completed", t_start)
@@ -403,30 +442,60 @@ class PipelineRunner:
         Returns:
             IngestionOutput.model_dump() dict.
         """
-        from app.crews.ingestion_crew import IngestionCrew
-
-        crew = IngestionCrew(
-            db=self._db,
-            run_id=self._run_id,
-            run_profile_id=self._run_profile_id,
-            progress_callback=self._progress_callback,
-            chunk_size=int(options.get("chunk_size", settings.INGESTION_CHUNK_SIZE)),
-            chunk_overlap=int(
-                options.get("chunk_overlap", settings.INGESTION_CHUNK_OVERLAP)
-            ),
+        t0 = time.monotonic()
+        logger.info(
+            "[Runner][%s] ── INGESTION START  file=%r  mock=%s  chunk_size=%s  chunk_overlap=%s",
+            self._run_id[:8],
+            str(file_path),
+            options.get("mock_mode", self._mock_mode),
+            options.get("chunk_size", settings.INGESTION_CHUNK_SIZE),
+            options.get("chunk_overlap", settings.INGESTION_CHUNK_OVERLAP),
         )
 
-        input_data: dict[str, Any] = {
-            "file_path": str(file_path),
-            "document_name": document_name,
-            "mock_mode": options.get("mock_mode", self._mock_mode),
-        }
-        if "chunk_size" in options:
-            input_data["chunk_size"] = options["chunk_size"]
-        if "chunk_overlap" in options:
-            input_data["chunk_overlap"] = options["chunk_overlap"]
+        try:
+            from app.crews.ingestion_crew import IngestionCrew
 
-        return crew.run(input_data)
+            crew = IngestionCrew(
+                db=self._db,
+                run_id=self._run_id,
+                run_profile_id=self._run_profile_id,
+                progress_callback=self._progress_callback,
+                chunk_size=int(
+                    options.get("chunk_size", settings.INGESTION_CHUNK_SIZE)
+                ),
+                chunk_overlap=int(
+                    options.get("chunk_overlap", settings.INGESTION_CHUNK_OVERLAP)
+                ),
+            )
+
+            input_data: dict[str, Any] = {
+                "file_path": str(file_path),
+                "document_name": document_name,
+                "mock_mode": options.get("mock_mode", self._mock_mode),
+            }
+            if "chunk_size" in options:
+                input_data["chunk_size"] = options["chunk_size"]
+            if "chunk_overlap" in options:
+                input_data["chunk_overlap"] = options["chunk_overlap"]
+
+            result = crew.run(input_data)
+
+            req_count = len(result.get("requirements", []))
+            logger.info(
+                "[Runner][%s] ── INGESTION DONE  elapsed=%.2fs  requirements=%d",
+                self._run_id[:8],
+                time.monotonic() - t0,
+                req_count,
+            )
+            return result
+
+        except Exception:
+            logger.exception(
+                "[Runner][%s] ── INGESTION FAILED  elapsed=%.2fs",
+                self._run_id[:8],
+                time.monotonic() - t0,
+            )
+            raise
 
     def _run_testcase(
         self,
@@ -443,22 +512,48 @@ class PipelineRunner:
         Returns:
             TestCaseOutput.model_dump() dict.
         """
-        from app.crews.testcase_crew import TestcaseCrew
-
-        crew = TestcaseCrew(
-            db=self._db,
-            run_id=self._run_id,
-            run_profile_id=self._run_profile_id,
-            progress_callback=self._progress_callback,
-            mock_mode=self._mock_mode,
+        t0 = time.monotonic()
+        logger.info(
+            "[Runner][%s] ── TESTCASE START  requirements=%d  mock=%s",
+            self._run_id[:8],
+            len(requirements),
+            self._mock_mode,
         )
 
-        return crew.run(
-            {
-                "requirements": requirements,
-                "document_name": document_name,
-            }
-        )
+        try:
+            from app.crews.testcase_crew import TestcaseCrew
+
+            crew = TestcaseCrew(
+                db=self._db,
+                run_id=self._run_id,
+                run_profile_id=self._run_profile_id,
+                progress_callback=self._progress_callback,
+                mock_mode=self._mock_mode,
+            )
+
+            result = crew.run(
+                {
+                    "requirements": requirements,
+                    "document_name": document_name,
+                }
+            )
+
+            tc_count = len(result.get("test_cases", []))
+            logger.info(
+                "[Runner][%s] ── TESTCASE DONE  elapsed=%.2fs  test_cases=%d",
+                self._run_id[:8],
+                time.monotonic() - t0,
+                tc_count,
+            )
+            return result
+
+        except Exception:
+            logger.exception(
+                "[Runner][%s] ── TESTCASE FAILED  elapsed=%.2fs",
+                self._run_id[:8],
+                time.monotonic() - t0,
+            )
+            raise
 
     def _run_execution(
         self,
@@ -477,24 +572,53 @@ class PipelineRunner:
         Returns:
             ExecutionOutput.model_dump() dict.
         """
-        from app.crews.execution_crew import ExecutionCrew
-
-        crew = ExecutionCrew(
-            db=self._db,
-            run_id=self._run_id,
-            run_profile_id=self._run_profile_id,
-            progress_callback=self._progress_callback,
-            mock_mode=self._mock_mode,
-            environment=environment,
+        t0 = time.monotonic()
+        logger.info(
+            "[Runner][%s] ── EXECUTION START  test_cases=%d  env=%r  mock=%s",
+            self._run_id[:8],
+            len(test_cases),
+            environment,
+            self._mock_mode,
         )
 
-        return crew.run(
-            {
-                "test_cases": test_cases,
-                "environment": environment,
-                "execution_config": execution_config,
-            }
-        )
+        try:
+            from app.crews.execution_crew import ExecutionCrew
+
+            crew = ExecutionCrew(
+                db=self._db,
+                run_id=self._run_id,
+                run_profile_id=self._run_profile_id,
+                progress_callback=self._progress_callback,
+                mock_mode=self._mock_mode,
+                environment=environment,
+            )
+
+            result = crew.run(
+                {
+                    "test_cases": test_cases,
+                    "environment": environment,
+                    "execution_config": execution_config,
+                }
+            )
+
+            summary = result.get("summary", {})
+            logger.info(
+                "[Runner][%s] ── EXECUTION DONE  elapsed=%.2fs  total=%s  passed=%s  pass_rate=%s%%",
+                self._run_id[:8],
+                time.monotonic() - t0,
+                summary.get("total", "?"),
+                summary.get("passed", "?"),
+                summary.get("pass_rate", "?"),
+            )
+            return result
+
+        except Exception:
+            logger.exception(
+                "[Runner][%s] ── EXECUTION FAILED  elapsed=%.2fs",
+                self._run_id[:8],
+                time.monotonic() - t0,
+            )
+            raise
 
     def _run_reporting(
         self,
@@ -517,25 +641,51 @@ class PipelineRunner:
         Returns:
             PipelineReport-compatible dict.
         """
-        from app.crews.reporting_crew import ReportingCrew
-
-        crew = ReportingCrew(
-            db=self._db,
-            run_id=self._run_id,
-            run_profile_id=self._run_profile_id,
-            progress_callback=self._progress_callback,
-            mock_mode=self._mock_mode,
+        t0 = time.monotonic()
+        logger.info(
+            "[Runner][%s] ── REPORTING START  test_cases=%d  exec_results=%d  pass_rate=%s%%",
+            self._run_id[:8],
+            len(test_cases),
+            len(exec_results),
+            exec_summary.get("pass_rate", "?"),
         )
 
-        return crew.run(
-            {
-                "test_cases_json": test_cases,
-                "execution_results_json": exec_results,
-                "requirements_json": requirements,
-                "execution_summary": exec_summary,
-                "document_name": document_name,
-            }
-        )
+        try:
+            from app.crews.reporting_crew import ReportingCrew
+
+            crew = ReportingCrew(
+                db=self._db,
+                run_id=self._run_id,
+                run_profile_id=self._run_profile_id,
+                progress_callback=self._progress_callback,
+                mock_mode=self._mock_mode,
+            )
+
+            result = crew.run(
+                {
+                    "test_cases_json": test_cases,
+                    "execution_results_json": exec_results,
+                    "requirements_json": requirements,
+                    "execution_summary": exec_summary,
+                    "document_name": document_name,
+                }
+            )
+
+            logger.info(
+                "[Runner][%s] ── REPORTING DONE  elapsed=%.2fs  coverage=%.1f%%",
+                self._run_id[:8],
+                time.monotonic() - t0,
+                result.get("coverage_percentage", 0.0),
+            )
+            return result
+
+        except Exception:
+            logger.exception(
+                "[Runner][%s] ── REPORTING FAILED  elapsed=%.2fs",
+                self._run_id[:8],
+                time.monotonic() - t0,
+            )
+            raise
 
     # ─────────────────────────────────────────────────────────────────────────
     # Progress event emission
@@ -546,19 +696,33 @@ class PipelineRunner:
         Internal progress callback passed to each crew.
 
         Relays all crew events to the WebSocket broadcaster (if configured)
-        and logs them at DEBUG level.  Also handles ``agent.started`` and
+        and logs them.  Also handles ``agent.started`` and
         ``agent.completed`` events to update the DB agent_statuses field.
 
         Args:
             event_type: Dot-separated event name (e.g. "agent.started").
             data:       Event payload dict (always includes run_id).
         """
-        logger.debug(
-            "[PipelineRunner][%s] event=%r  data=%r",
-            self._run_id[:8],
-            event_type,
-            data,
-        )
+        _info_cb_events = {"agent.started", "agent.completed", "agent.failed"}
+        if event_type in _info_cb_events:
+            agent_id = data.get("agent_id", "?")
+            extra = data.get("error", data.get("output_preview", ""))
+            logger.info(
+                "[Runner][%s] %-18s  agent=%-35s  %s",
+                self._run_id[:8],
+                event_type,
+                agent_id,
+                f"error={extra!r}"
+                if event_type == "agent.failed"
+                else (f"preview={str(extra)[:80]!r}" if extra else ""),
+            )
+        else:
+            logger.debug(
+                "[Runner][%s] callback event=%r  data_keys=%s",
+                self._run_id[:8],
+                event_type,
+                sorted(data.keys()),
+            )
 
         # Update per-agent DB status
         if event_type == "agent.started":
@@ -590,23 +754,46 @@ class PipelineRunner:
             event_type: Event name string.
             data:       Event payload dict.
         """
+        # Log important lifecycle events at INFO, everything else at DEBUG
+        _info_events = {
+            "run.started",
+            "run.completed",
+            "run.failed",
+            "stage.started",
+            "stage.completed",
+        }
+        if event_type in _info_events:
+            logger.info(
+                "[Runner][%s] EMIT %-20s  data=%s",
+                self._run_id[:8],
+                event_type,
+                {k: v for k, v in data.items() if k not in ("run_id", "timestamp")},
+            )
+        else:
+            logger.debug(
+                "[Runner][%s] emit %-20s  data_keys=%s",
+                self._run_id[:8],
+                event_type,
+                sorted(data.keys()),
+            )
+
         if self._ws_broadcaster is None:
+            logger.debug(
+                "[Runner][%s] emit %r — no ws_broadcaster registered, event not sent",
+                self._run_id[:8],
+                event_type,
+            )
             return
 
-        payload = {
-            "event": event_type,
-            "run_id": self._run_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            **data,
-        }
-
         try:
-            self._ws_broadcaster(event_type, payload)
+            self._ws_broadcaster(event_type, data)
         except Exception as exc:
-            logger.debug(
-                "[PipelineRunner][%s] ws_broadcaster raised (ignored): %s",
-                self._run_id,
+            logger.warning(
+                "[Runner][%s] ws_broadcaster raised for event %r: %s",
+                self._run_id[:8],
+                event_type,
                 exc,
+                exc_info=True,
             )
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -625,12 +812,19 @@ class PipelineRunner:
             status: "pending" | "running" | "completed" | "failed"
             error:  Optional error message (set when status == "failed").
         """
+        logger.info(
+            "[Runner][%s] DB status → %s%s",
+            self._run_id[:8],
+            status.upper(),
+            f"  error={error[:120]!r}" if error else "",
+        )
         try:
             run = self._db.get(PipelineRun, self._run_id)
             if run is None:
                 logger.warning(
-                    "[PipelineRunner][%s] PipelineRun not found in DB — cannot update status.",
-                    self._run_id,
+                    "[Runner][%s] PipelineRun not found in DB — cannot update status to %r.",
+                    self._run_id[:8],
+                    status,
                 )
                 return
 
@@ -642,11 +836,15 @@ class PipelineRunner:
 
             self._db.add(run)
             self._db.commit()
+            logger.debug(
+                "[Runner][%s] DB commit OK  status=%s", self._run_id[:8], status
+            )
 
         except Exception as exc:
-            logger.warning(
-                "[PipelineRunner][%s] Failed to update run status: %s",
-                self._run_id,
+            logger.exception(
+                "[Runner][%s] Failed to update run status to %r: %s",
+                self._run_id[:8],
+                status,
                 exc,
             )
             try:

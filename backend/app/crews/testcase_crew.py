@@ -131,7 +131,6 @@ class TestcaseCrew(BaseCrew):
         # Resolve mock mode (per-call arg wins over constructor setting)
         use_mock = per_call_mock if per_call_mock is not None else self._is_mock_mode()
 
-        self._emit_stage_started(agent_count=len(self.agent_ids))
         self._emit_log(
             f"Starting Test Case Generation for '{document_name}' "
             f"({len(requirements_json)} requirement(s), mock={use_mock})"
@@ -159,7 +158,6 @@ class TestcaseCrew(BaseCrew):
             self._emit_log(error_msg, level="error")
             raise
 
-        self._emit_stage_completed()
         return result
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -204,7 +202,7 @@ class TestcaseCrew(BaseCrew):
 
         agents = {}
         for agent_id in _AGENT_IDS:
-            self._emit_agent_started(agent_id)
+            # agent.started is emitted via task_callback during kickoff, not here
             try:
                 agents[agent_id] = factory.build(agent_id)
                 logger.debug("[TestcaseCrew] Built agent: %s", agent_id)
@@ -236,19 +234,47 @@ class TestcaseCrew(BaseCrew):
 
         tasks = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10]
 
+        # ── Task callback: relay per-task completion as agent events ──────────
+        # tasks and _AGENT_IDS are in the same sequential order, so we can use
+        # a simple counter to know which agent just finished.
+        _task_idx: list[int] = [0]
+
+        def _on_task_done(task_output: Any) -> None:  # noqa: ANN001
+            idx = _task_idx[0]
+            if idx < len(_AGENT_IDS):
+                preview = str(getattr(task_output, "raw", task_output))[:200]
+                self._emit_agent_completed(_AGENT_IDS[idx], output_preview=preview)
+                self._emit_log(
+                    f"[{_AGENT_IDS[idx]}] completed ({idx + 1}/{len(_AGENT_IDS)})"
+                )
+            _task_idx[0] += 1
+            nxt = _task_idx[0]
+            if nxt < len(_AGENT_IDS):
+                self._emit_agent_started(_AGENT_IDS[nxt])
+                self._emit_log(f"[{_AGENT_IDS[nxt]}] started …")
+
         # ── Assemble and run the Crew ─────────────────────────────────────────
         self._emit_log(f"Kicking off CrewAI Sequential crew with {len(tasks)} tasks …")
+
+        # Emit started for the first agent — subsequent ones fire via callback
+        self._emit_agent_started(_AGENT_IDS[0])
+        self._emit_log(f"[{_AGENT_IDS[0]}] started …")
 
         crew = Crew(
             agents=list(agents.values()),
             tasks=tasks,
             process=Process.sequential,
             verbose=False,  # per-agent verbosity controlled by AgentConfig.verbose
+            task_callback=_on_task_done,
         )
 
         try:
             crew_output = crew.kickoff()
         except Exception as exc:
+            # Mark the in-flight agent as failed
+            idx = _task_idx[0]
+            if idx < len(_AGENT_IDS):
+                self._emit_agent_failed(_AGENT_IDS[idx], str(exc))
             logger.exception("[TestcaseCrew][%s] Crew kickoff failed", self._run_id)
             raise RuntimeError(f"Crew kickoff failed: {exc}") from exc
 
@@ -283,7 +309,7 @@ class TestcaseCrew(BaseCrew):
         test_cases: list[TestCase] = []
         tc_counter = 1
 
-        for req in requirements_json:
+        for req_idx, req in enumerate(requirements_json, start=1):
             req_id = str(req.get("id", "REQ-001"))
             title = str(req.get("title", "Untitled requirement"))
             priority = str(req.get("priority", "medium")).lower()
@@ -384,6 +410,15 @@ class TestcaseCrew(BaseCrew):
                     output_preview=f"Generated {neg_tc.id}: {neg_tc.title}",
                 )
                 tc_counter += 1
+
+            self._emit(
+                "agent.progress",
+                {
+                    "agent_id": "test_case_generator",
+                    "message": f"Requirement {req_idx}/{len(requirements_json)} processed",
+                    "progress": round(req_idx / len(requirements_json) * 100),
+                },
+            )
 
         # ── Emit remaining agent started/completed events ─────────────────────
         for agent_id in ["automation_agent", "coverage_agent_pre", "report_agent_pre"]:

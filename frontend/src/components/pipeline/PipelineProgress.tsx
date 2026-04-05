@@ -32,8 +32,10 @@ export interface PipelineProgressProps {
   run: PipelineRunResponse | null;
   wsEvents: WSEvent[];
   agentStatuses: Record<string, AgentRunStatus>;
+  agentProgress: Record<string, { pct: number; message: string }>;
   currentStage: string | null;
   wsConnected: boolean;
+  logMessages: string[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,9 +196,11 @@ interface AgentRowProps {
   agent: AgentRunResult;
   /** Live status override from WebSocket events, takes precedence over agent.status */
   liveStatus?: AgentRunStatus;
+  /** Live progress data from agent.progress WebSocket events */
+  progress?: { pct: number; message: string };
 }
 
-function AgentRow({ agent, liveStatus }: AgentRowProps) {
+function AgentRow({ agent, liveStatus, progress }: AgentRowProps) {
   const effectiveStatus = liveStatus ?? agent.status;
   const cfg = getAgentStatusConfig(effectiveStatus);
 
@@ -249,6 +253,21 @@ function AgentRow({ agent, liveStatus }: AgentRowProps) {
               : agent.error_message}
           </p>
         )}
+
+        {/* Mini progress bar — only while the agent is actively running */}
+        {effectiveStatus === "running" && progress && (
+          <div className="mt-1.5">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[10px] text-[#5b9eff] truncate pr-2">
+                {progress.message}
+              </span>
+              <span className="text-[10px] text-[#3d5070] tabular-nums shrink-0">
+                {progress.pct}%
+              </span>
+            </div>
+            <ProgressBar value={progress.pct} className="h-0.5" />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -262,6 +281,7 @@ interface StageBlockProps {
   stage: AgentStage;
   agents: AgentRunResult[];
   agentStatuses: Record<string, AgentRunStatus>;
+  agentProgress: Record<string, { pct: number; message: string }>;
   isCurrentStage: boolean;
 }
 
@@ -269,6 +289,7 @@ function StageBlock({
   stage,
   agents,
   agentStatuses,
+  agentProgress,
   isCurrentStage,
 }: StageBlockProps) {
   const label = STAGE_LABELS[stage];
@@ -368,6 +389,7 @@ function StageBlock({
               <AgentRow
                 agent={agent}
                 liveStatus={agentStatuses[agent.agent_id]}
+                progress={agentProgress[agent.agent_id]}
               />
             </div>
           ))}
@@ -384,6 +406,57 @@ function StageBlock({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// LiveLogFeed
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface LiveLogFeedProps {
+  messages: string[];
+  isRunning: boolean;
+}
+
+function LiveLogFeed({ messages, isRunning }: LiveLogFeedProps) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  if (!isRunning || messages.length === 0) return null;
+
+  const recent = messages.slice(-6);
+
+  return (
+    <div className="rounded-xl border border-[#2b3b55] bg-[#0d1424] overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#2b3b55]/60">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-[#5b9eff] animate-pulse"
+          aria-hidden="true"
+        />
+        <span className="text-xs font-semibold text-[#5b9eff]">Live Log</span>
+      </div>
+      <div
+        ref={scrollRef}
+        className="px-3 py-2 flex flex-col gap-0.5 max-h-32 overflow-y-auto"
+      >
+        {recent.map((msg, i) => (
+          <p
+            key={i}
+            className={cn(
+              "text-[11px] font-mono leading-relaxed",
+              i === recent.length - 1 ? "text-[#92a4c9]" : "text-[#3d5070]",
+            )}
+          >
+            {msg}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PipelineProgress
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -391,8 +464,10 @@ export function PipelineProgress({
   run,
   wsEvents,
   agentStatuses,
+  agentProgress,
   currentStage,
   wsConnected,
+  logMessages,
 }: PipelineProgressProps) {
   // ── Always group agents before any conditional returns (hooks rules) ──────
   const agentsByStage = React.useMemo<
@@ -437,6 +512,9 @@ export function PipelineProgress({
       </div>
     );
   }
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const isRunning = run.status === "running";
 
   // ── Resolve overall status badge config ───────────────────────────────────
   const statusCfg =
@@ -508,6 +586,9 @@ export function PipelineProgress({
         </div>
       )}
 
+      {/* ── Live log feed (visible only while running) ────────────────────── */}
+      <LiveLogFeed messages={logMessages} isRunning={isRunning} />
+
       {/* ── Stage blocks ─────────────────────────────────────────────────── */}
       {STAGE_ORDER.map((stage) => (
         <StageBlock
@@ -515,6 +596,7 @@ export function PipelineProgress({
           stage={stage}
           agents={agentsByStage[stage]}
           agentStatuses={agentStatuses}
+          agentProgress={agentProgress}
           isCurrentStage={currentStage === stage}
         />
       ))}
@@ -529,25 +611,39 @@ export function PipelineProgress({
               "transition-colors duration-150 py-1 w-fit",
             )}
           >
-            {wsEvents.length} live event
-            {wsEvents.length !== 1 ? "s" : ""} received
+            {wsEvents.length} event{wsEvents.length !== 1 ? "s" : ""} received
           </summary>
 
-          <ul className="mt-2 flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+          <ul className="mt-2 flex flex-col gap-1 max-h-64 overflow-y-auto pr-1">
             {wsEvents.slice(-20).map((ev, i) => (
               <li
                 key={i}
                 className={cn(
-                  "flex items-center gap-2 px-2.5 py-1.5 rounded-lg",
+                  "flex items-start gap-2 px-2.5 py-1.5 rounded-lg",
                   "text-[11px] font-mono",
                   "bg-[#1e2a3d] border border-[#2b3b55]/60",
                 )}
               >
-                <span className="text-[#92a4c9] shrink-0">{ev.event}</span>
+                <span className="text-[#92a4c9] shrink-0 mt-0.5">
+                  {ev.event}
+                </span>
                 <span className="text-[#2b3b55]" aria-hidden="true">
                   ·
                 </span>
-                <span className="text-[#3d5070]">
+                {ev.event === "log" && ev.data.message ? (
+                  <span className="text-[#5b9eff] flex-1 break-all">
+                    {ev.data.message as string}
+                  </span>
+                ) : ev.data.agent_id ? (
+                  <span className="text-[#92a4c9] flex-1">
+                    {ev.data.agent_id as string}
+                  </span>
+                ) : ev.data.stage ? (
+                  <span className="text-[#92a4c9] flex-1">
+                    {ev.data.stage as string}
+                  </span>
+                ) : null}
+                <span className="text-[#2b3b55] shrink-0">
                   {new Date(ev.timestamp).toLocaleTimeString()}
                 </span>
               </li>
@@ -558,5 +654,3 @@ export function PipelineProgress({
     </div>
   );
 }
-
-export default PipelineProgress;

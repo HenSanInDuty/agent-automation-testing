@@ -135,7 +135,6 @@ class ReportingCrew(BaseCrew):
         # Allow per-call mock_mode override
         mock_mode: bool = bool(input_data.get("mock_mode", self._is_mock_mode()))
 
-        self._emit_stage_started(agent_count=len(self.agent_ids))
         self._emit_log(f"Starting reporting crew for '{document_name}'")
 
         if mock_mode:
@@ -163,7 +162,6 @@ class ReportingCrew(BaseCrew):
                 document_name=document_name,
             )
 
-        self._emit_stage_completed()
         self._emit_log(
             f"Reporting complete — coverage {result.get('coverage_percentage', 0):.1f}%"
         )
@@ -226,16 +224,13 @@ class ReportingCrew(BaseCrew):
             )
 
         # ── Build tasks ───────────────────────────────────────────────────────
-        self._emit_agent_started("coverage_analyzer", "Coverage Analyzer")
-
+        # agent.started is emitted via task_callback during kickoff, not here
         t_coverage = make_coverage_analyzer_task(
             agent=coverage_agent,
             test_cases_json=test_cases,
             execution_results_json=exec_results,
             requirements_json=requirements if requirements else None,
         )
-
-        self._emit_agent_started("root_cause_analyzer", "Root Cause Analyzer")
 
         t_root_cause = make_root_cause_task(
             agent=root_cause_agent,
@@ -244,8 +239,6 @@ class ReportingCrew(BaseCrew):
             context_tasks=[t_coverage],
         )
 
-        self._emit_agent_started("report_generator", "Report Generator")
-
         t_report = make_report_generator_task(
             agent=report_agent,
             context_tasks=[t_coverage, t_root_cause],
@@ -253,19 +246,55 @@ class ReportingCrew(BaseCrew):
             document_name=document_name,
         )
 
+        # ── Task callback: relay per-task completion as agent events ──────────
+        # self.agent_ids and the tasks list share the same sequential order.
+        _agent_ids = list(self.agent_ids)
+        _agent_display: dict[str, str] = {
+            "coverage_analyzer": "Coverage Analyzer",
+            "root_cause_analyzer": "Root Cause Analyzer",
+            "report_generator": "Report Generator",
+        }
+        _task_idx: list[int] = [0]
+
+        def _on_task_done(task_output: Any) -> None:  # noqa: ANN001
+            idx = _task_idx[0]
+            if idx < len(_agent_ids):
+                agent_id = _agent_ids[idx]
+                preview = str(getattr(task_output, "raw", task_output))[:200]
+                self._emit_agent_completed(agent_id, output_preview=preview)
+                self._emit_log(
+                    f"[{_agent_display.get(agent_id, agent_id)}] completed"
+                    f" ({idx + 1}/{len(_agent_ids)})"
+                )
+            _task_idx[0] += 1
+            nxt = _task_idx[0]
+            if nxt < len(_agent_ids):
+                nid = _agent_ids[nxt]
+                self._emit_agent_started(nid, _agent_display.get(nid, nid))
+                self._emit_log(f"[{_agent_display.get(nid, nid)}] started …")
+
         # ── Assemble and kick off crew ────────────────────────────────────────
         self._emit_log("Kicking off reporting crew (sequential process)")
+
+        # Emit started for the first agent — subsequent ones fire via callback
+        first_id = _agent_ids[0]
+        self._emit_agent_started(first_id, _agent_display[first_id])
+        self._emit_log(f"[{_agent_display[first_id]}] started …")
 
         crew = Crew(
             agents=[coverage_agent, root_cause_agent, report_agent],
             tasks=[t_coverage, t_root_cause, t_report],
             process=Process.sequential,
             verbose=False,
+            task_callback=_on_task_done,
         )
 
         try:
             crew_output = crew.kickoff()
         except Exception as exc:
+            idx = _task_idx[0]
+            if idx < len(_agent_ids):
+                self._emit_agent_failed(_agent_ids[idx], str(exc))
             logger.error(
                 "[ReportingCrew][%s] crew.kickoff() failed: %s",
                 self._run_id,
@@ -276,10 +305,6 @@ class ReportingCrew(BaseCrew):
 
         # ── Parse output ──────────────────────────────────────────────────────
         parsed = self._parse_json_output(crew_output)
-        self._emit_agent_completed(
-            "report_generator",
-            output_preview=str(parsed.get("executive_summary", ""))[:200],
-        )
 
         return self._normalise_report(parsed, exec_results, exec_summary)
 

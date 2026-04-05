@@ -96,8 +96,10 @@ export function PipelinePage() {
     status: wsStatus,
     events,
     agentStatuses,
+    agentProgress,
     currentStage,
     isTerminal,
+    logMessages,
   } = usePipelineWebSocket({
     runId: activeRunId ?? undefined,
     enabled: !!activeRunId,
@@ -309,8 +311,10 @@ export function PipelinePage() {
               run={activeRun ?? null}
               wsEvents={events}
               agentStatuses={agentStatuses}
+              agentProgress={agentProgress}
               currentStage={currentStage}
               wsConnected={wsStatus === "connected"}
+              logMessages={logMessages}
             />
           )}
 
