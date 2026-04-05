@@ -42,8 +42,10 @@ class SignalManager:
         async with self._lock:
             self._signals[run_id] = signal
             logger.info("[SignalManager] run_id=%r signal=%s", run_id[:8], signal)
-            # If RESUME, unblock any waiting coroutine
-            if signal == PipelineSignal.RESUME:
+            # Unblock any coroutine waiting in wait_for_resume().
+            # Both RESUME and CANCEL must wake up a blocked pipeline so it can
+            # react immediately instead of waiting for the full pause timeout.
+            if signal in (PipelineSignal.RESUME, PipelineSignal.CANCEL):
                 event = self._resume_events.get(run_id)
                 if event:
                     event.set()

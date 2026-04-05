@@ -59,6 +59,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.AUTO_SEED:
         await seed_all()
 
+    # ── Recover orphaned runs from previous sessions ───────────────────────
+    from app.db.crud import recover_orphaned_runs
+
+    recovered = await recover_orphaned_runs()
+    if recovered > 0:
+        logger.warning(
+            "Recovered %d orphaned pipeline run(s) from the previous session.",
+            recovered,
+        )
+    else:
+        logger.info("No orphaned runs found.")
+
     # ── WebSocket event-loop registration ─────────────────────────────────
     # Register the event loop on the WebSocket manager BEFORE any pipeline
     # background tasks start.  Without this, broadcast_from_thread() drops

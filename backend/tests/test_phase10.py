@@ -922,6 +922,9 @@ def client():
         patch("app.db.database.init_db", new_callable=AsyncMock),
         patch("app.db.database.close_db", new_callable=AsyncMock),
         patch("app.db.seed.seed_all", new_callable=AsyncMock),
+        patch(
+            "app.db.crud.recover_orphaned_runs", new_callable=AsyncMock, return_value=0
+        ),
     ):
         from app.main import app
 

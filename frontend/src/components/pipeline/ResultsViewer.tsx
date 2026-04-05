@@ -25,6 +25,7 @@ import type {
   AgentRunStatus,
   PipelineStatus,
 } from "@/types";
+import { toast } from "@/components/ui/Toast";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -271,15 +272,63 @@ const statusTextColor: Record<PipelineStatus, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ExportButtons({ runId }: { runId: string }) {
+  const [htmlLoading, setHtmlLoading] = React.useState(false);
+  const [docxLoading, setDocxLoading] = React.useState(false);
+
+  const handleDownload = async (type: "html" | "docx") => {
+    const url =
+      type === "html"
+        ? pipelineApi.getExportHtmlUrl(runId)
+        : pipelineApi.getExportDocxUrl(runId);
+    const setLoading = type === "html" ? setHtmlLoading : setDocxLoading;
+
+    setLoading(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        const detail = await response
+          .text()
+          .catch(() => `HTTP ${response.status}`);
+        throw new Error(detail || `Server returned ${response.status}`);
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `report-${runId.slice(0, 8)}.${type}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+      toast.success(
+        "Report downloaded",
+        `The ${type.toUpperCase()} report has been saved to your downloads folder.`,
+      );
+    } catch (err) {
+      toast.error(
+        "Export failed",
+        err instanceof Error
+          ? err.message
+          : `Could not download the ${type.toUpperCase()} report. Please try again.`,
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Button
         variant="outline"
         size="sm"
-        leftIcon={<FileDown className="w-3.5 h-3.5" aria-hidden="true" />}
-        onClick={() =>
-          window.open(pipelineApi.getExportHtmlUrl(runId), "_blank")
+        loading={htmlLoading}
+        disabled={htmlLoading || docxLoading}
+        leftIcon={
+          !htmlLoading ? (
+            <FileDown className="w-3.5 h-3.5" aria-hidden="true" />
+          ) : undefined
         }
+        onClick={() => handleDownload("html")}
         title="Download self-contained HTML report"
       >
         HTML
@@ -287,10 +336,14 @@ function ExportButtons({ runId }: { runId: string }) {
       <Button
         variant="outline"
         size="sm"
-        leftIcon={<FileText className="w-3.5 h-3.5" aria-hidden="true" />}
-        onClick={() =>
-          window.open(pipelineApi.getExportDocxUrl(runId), "_blank")
+        loading={docxLoading}
+        disabled={htmlLoading || docxLoading}
+        leftIcon={
+          !docxLoading ? (
+            <FileText className="w-3.5 h-3.5" aria-hidden="true" />
+          ) : undefined
         }
+        onClick={() => handleDownload("docx")}
         title="Download Microsoft Word report"
       >
         DOCX

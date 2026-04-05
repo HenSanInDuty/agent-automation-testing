@@ -874,3 +874,45 @@ async def get_latest_agent_result(
         .to_list()
     )
     return results[0] if results else None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Startup Recovery
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def recover_orphaned_runs() -> int:
+    """Mark any pipeline run stuck in ``running`` or ``pending`` as ``failed``.
+
+    Called once on application startup to clean up runs that were in-progress
+    when the server was last shut down or crashed unexpectedly.
+
+    A run is considered "orphaned" if it has ``status="running"`` or
+    ``status="pending"`` — meaning it was started but never reached a terminal
+    state before the process exited.
+
+    Returns:
+        The number of runs that were recovered (transitioned to ``failed``).
+    """
+    _stale = {"running", "pending"}
+    stale_runs = await PipelineRunDocument.find(
+        {"status": {"$in": list(_stale)}}
+    ).to_list()
+
+    count = 0
+    for run in stale_runs:
+        run.status = PipelineStatus.FAILED.value
+        run.error = (
+            "Server restarted while this pipeline was active. "
+            "The run was automatically marked as failed."
+        )
+        run.finished_at = _now()
+        await run.save()
+        logger.warning(
+            "[CRUD] Recovered orphaned run  run_id=%r  old_status=%r",
+            run.run_id,
+            _stale,
+        )
+        count += 1
+
+    return count

@@ -1,0 +1,40 @@
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.so
+*.pyd
+
+# Local database (V1 leftover)
+auto_at.db
+*.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment
+.env
+.env.*
+
+# Uploaded files (mounted as a volume in production)
+uploads/
+
+# Build artefacts
+*.egg-info/
+dist/
+build/
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Docs / scripts (not needed in image)
+scripts/
+tests/
