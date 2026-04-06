@@ -6,6 +6,7 @@ import type {
   AgentConfigResetResponse,
   AgentConfigSummary,
   AgentConfigUpdate,
+  DAGValidationResult,
   LLMProfileCreate,
   LLMProfileListResponse,
   LLMProfileResponse,
@@ -15,6 +16,10 @@ import type {
   PaginationParams,
   PipelineRunListResponse,
   PipelineRunResponse,
+  PipelineTemplate,
+  PipelineTemplateCreate,
+  PipelineTemplateListResponse,
+  PipelineTemplateUpdate,
   StageConfig,
   StageConfigCreate,
   StageConfigUpdate,
@@ -409,6 +414,109 @@ export const stageConfigsApi = {
     const { data } = await apiClient.post<StageConfig[]>(
       "/api/v1/admin/stage-configs/reorder",
       payload,
+    );
+    return data;
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pipeline Templates (V3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const pipelineTemplatesApi = {
+  /** GET /api/v1/pipeline/templates */
+  list: async (params?: {
+    skip?: number;
+    limit?: number;
+    include_archived?: boolean;
+    tag?: string;
+  }): Promise<PipelineTemplateListResponse> => {
+    const { data } = await apiClient.get<PipelineTemplateListResponse>(
+      "/api/v1/pipeline/templates",
+      { params },
+    );
+    return data;
+  },
+
+  /** POST /api/v1/pipeline/templates */
+  create: async (
+    payload: PipelineTemplateCreate,
+  ): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.post<PipelineTemplate>(
+      "/api/v1/pipeline/templates",
+      payload,
+    );
+    return data;
+  },
+
+  /** GET /api/v1/pipeline/templates/:template_id */
+  get: async (templateId: string): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.get<PipelineTemplate>(
+      `/api/v1/pipeline/templates/${templateId}`,
+    );
+    return data;
+  },
+
+  /** PUT /api/v1/pipeline/templates/:template_id */
+  update: async (
+    templateId: string,
+    payload: PipelineTemplateUpdate,
+  ): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.put<PipelineTemplate>(
+      `/api/v1/pipeline/templates/${templateId}`,
+      payload,
+    );
+    return data;
+  },
+
+  /** DELETE /api/v1/pipeline/templates/:template_id */
+  delete: async (templateId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/pipeline/templates/${templateId}`);
+  },
+
+  /** POST /api/v1/pipeline/templates/:template_id/clone */
+  clone: async (
+    templateId: string,
+    newName?: string,
+  ): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.post<PipelineTemplate>(
+      `/api/v1/pipeline/templates/${templateId}/clone`,
+      newName ? { name: newName } : {},
+    );
+    return data;
+  },
+
+  /** POST /api/v1/pipeline/templates/:template_id/archive */
+  archive: async (templateId: string): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.post<PipelineTemplate>(
+      `/api/v1/pipeline/templates/${templateId}/archive`,
+    );
+    return data;
+  },
+
+  /** POST /api/v1/pipeline/templates/:template_id/validate */
+  validate: async (templateId: string): Promise<DAGValidationResult> => {
+    const { data } = await apiClient.post<DAGValidationResult>(
+      `/api/v1/pipeline/templates/${templateId}/validate`,
+    );
+    return data;
+  },
+
+  /** GET /api/v1/pipeline/templates/:template_id/export */
+  exportTemplate: async (templateId: string): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.get<PipelineTemplate>(
+      `/api/v1/pipeline/templates/${templateId}/export`,
+    );
+    return data;
+  },
+
+  /** POST /api/v1/pipeline/templates/import */
+  importTemplate: async (
+    templateData: PipelineTemplate,
+  ): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.post<PipelineTemplate>(
+      "/api/v1/pipeline/templates/import",
+      templateData,
     );
     return data;
   },

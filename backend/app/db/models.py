@@ -131,7 +131,7 @@ class AgentConfigDocument(Document):
 
     agent_id: Indexed(str, unique=True)  # type: ignore[valid-type]
     display_name: str
-    stage: Indexed(str)  # type: ignore[valid-type]
+    stage: Indexed(str) = "custom"  # type: ignore[valid-type]
     role: str
     goal: str
     backstory: str

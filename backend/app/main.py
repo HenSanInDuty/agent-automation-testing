@@ -130,12 +130,18 @@ def create_app() -> FastAPI:
         chat,
         llm_profiles,
         pipeline,
+        pipeline_templates,
         stage_configs,
         websocket,
     )
 
     # REST API routers – all mounted under /api/v1
     app.include_router(pipeline.router, prefix="/api/v1", tags=["Pipeline"])
+    app.include_router(
+        pipeline_templates.router,
+        prefix="/api/v1",
+        tags=["Pipeline Templates"],
+    )
     app.include_router(
         llm_profiles.router, prefix="/api/v1", tags=["Admin – LLM Profiles"]
     )

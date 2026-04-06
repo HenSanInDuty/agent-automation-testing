@@ -3924,56 +3924,59 @@ mkdir -p src/components/pipeline-builder/nodes
 - [x] Update `db/seed.py` — seed default "auto-testing" pipeline template
 - [x] Tests: DAG validation (cycles, orphans, missing INPUT/OUTPUT), topological sort, layer computation
 
-### Phase 16 – DAG Pipeline Runner `~2.5 ngày`
+### Phase 16 – DAG Pipeline Runner `~2.5 ngày` ✅
 
-- [ ] Create `core/dag_pipeline_runner.py` — DAGPipelineRunner class
-- [ ] Implement layer-by-layer parallel execution (`asyncio.gather`)
-- [ ] Implement input merging strategy (single parent pass-through, multi-parent namespace merge)
-- [ ] Integrate signal checking (pause/resume/cancel) between layers
-- [ ] Implement node retry logic
-- [ ] Update `api/v1/pipeline.py` — require template_id, use DAGPipelineRunner
-- [ ] Update WebSocket handler — emit node.* and layer.* events
-- [ ] Deprecate `core/pipeline_runner.py` (keep for reference)
-- [ ] Tests: simple DAG execution, parallel execution, failure handling, pause between layers
+- [x] Create `core/dag_pipeline_runner.py` — DAGPipelineRunner class
+- [x] Implement layer-by-layer parallel execution (`asyncio.gather`)
+- [x] Implement input merging strategy (single parent pass-through, multi-parent namespace merge)
+- [x] Integrate signal checking (pause/resume/cancel) between layers
+- [x] Implement node retry logic (exponential back-off, retry_count per node)
+- [x] Update `api/v1/pipeline.py` — add `POST /pipeline/runs` V3 endpoint using DAGPipelineRunner
+- [x] Update WebSocket handler — emit node.* and layer.* events via progress_callback
+- [x] Deprecate `core/pipeline_runner.py` (kept for reference, deprecation comment added)
+- [x] Update `db/crud.py` — add `update_pipeline_run`, `save_node_result`, `create_dag_run` V3 helpers
+- [x] Tests: simple DAG execution, parallel execution, failure handling, cancel signal, pause/resume, retry logic (70 tests, all passing)
 
-### Phase 17 – Pipeline Template CRUD API `~1.5 ngày`
+### Phase 17 – Pipeline Template CRUD API `~1.5 ngày` ✅
 
-- [ ] Create `api/v1/pipeline_templates.py` — full CRUD router
-- [ ] Implement clone, archive, validate endpoints
-- [ ] Implement export/import (JSON) endpoints
-- [ ] Deprecate `api/v1/stage_configs.py` — return 410 Gone
-- [ ] Update `agent_configs.py` — stage field optional
-- [ ] Register new router in `main.py`
-- [ ] Tests: template CRUD, clone, validate, export/import
+- [x] Create `api/v1/pipeline_templates.py` — full CRUD router
+- [x] Implement clone, archive, validate endpoints
+- [x] Implement export/import (JSON) endpoints
+- [x] Deprecate `api/v1/stage_configs.py` — return 410 Gone
+- [x] Update `agent_configs.py` — stage field optional
+- [x] Register new router in `main.py`
+- [x] Tests: template CRUD, clone, validate, export/import (31 tests, all passing)
 
-### Phase 18 – Frontend: Pipeline List & Builder Setup `~2 ngày`
+### Phase 18 – Frontend: Pipeline List & Builder Setup `~2 ngày` ✅
 
-- [ ] Install `@xyflow/react`, uninstall `@dnd-kit/*`
-- [ ] Create `/pipelines` route + `PipelineListPage` component
-- [ ] Create `PipelineTemplateCard` component
-- [ ] Create `CreatePipelineDialog` component
-- [ ] Create `hooks/usePipelineTemplates.ts`
-- [ ] Update `lib/api.ts` — add `pipelineTemplatesApi` namespace
-- [ ] Update `Sidebar.tsx` — "Pipelines" link, remove "Stages"
-- [ ] Update root redirect to `/pipelines`
-- [ ] Update `types/index.ts` — new types
+- [x] Install `@xyflow/react`, uninstall `@dnd-kit/*`
+- [x] Create `/pipelines` route + `PipelineListPage` component
+- [x] Create `PipelineTemplateCard` component
+- [x] Create `CreatePipelineDialog` component
+- [x] Create `hooks/usePipelineTemplates.ts`
+- [x] Update `lib/api.ts` — add `pipelineTemplatesApi` namespace
+- [x] Update `Sidebar.tsx` — "Pipelines" link, remove "Stages"
+- [x] Update root redirect to `/pipelines`
+- [x] Update `types/index.ts` — new types
 
-### Phase 19 – Frontend: Visual Pipeline Builder `~3 ngày`
+### Phase 19 – Frontend: Visual Pipeline Builder `~3 ngày` ✅
 
-- [ ] Create `store/builderStore.ts` — Zustand store for builder state
-- [ ] Create `PipelineBuilder.tsx` — main React Flow component
-- [ ] Create `AgentCatalogSidebar.tsx` — draggable agent list
-- [ ] Create `nodes/AgentNode.tsx` — custom agent node with handles
-- [ ] Create `nodes/InputNode.tsx` — input source node
-- [ ] Create `nodes/OutputNode.tsx` — output sink node
-- [ ] Create `NodePropertiesPanel.tsx` — right panel for node config
-- [ ] Create `BuilderToolbar.tsx` — save, run, undo, redo, validate
-- [ ] Create `ValidationPanel.tsx` — DAG validation status
-- [ ] Implement drag-from-catalog-to-canvas functionality
-- [ ] Implement edge drawing (drag from output handle to input handle)
-- [ ] Implement undo/redo
-- [ ] Implement client-side cycle detection
-- [ ] Create `/pipelines/new/page.tsx` and `/pipelines/[templateId]/page.tsx`
+- [x] Create `store/builderStore.ts` — Zustand store for builder state
+- [x] Create `PipelineBuilder.tsx` — main React Flow component
+- [x] Create `AgentCatalogSidebar.tsx` — draggable agent list
+- [x] Create `nodes/AgentNode.tsx` — custom agent node with handles
+- [x] Create `nodes/InputNode.tsx` — input source node
+- [x] Create `nodes/OutputNode.tsx` — output sink node
+- [x] Create `NodePropertiesPanel.tsx` — right panel for node config
+- [x] Create `BuilderToolbar.tsx` — save, run, undo, redo, validate
+- [x] Create `ValidationPanel.tsx` — DAG validation status
+- [x] Implement drag-from-catalog-to-canvas functionality
+- [x] Implement edge drawing (drag from output handle to input handle)
+- [x] Implement undo/redo
+- [x] Implement client-side cycle detection
+- [x] Create `/pipelines/new/page.tsx` and `/pipelines/[templateId]/page.tsx`
+- [x] Create `components/pipeline/PipelineRunView.tsx` — live read-only DAG visualization
+- [x] Update `store/pipelineStore.ts` — add `nodeStatuses` + WS node event handlers
 
 ### Phase 20 – Frontend: Pipeline Run with DAG Visualization `~2 ngày`
 

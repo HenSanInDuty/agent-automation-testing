@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# DEPRECATED (V3): Use app.core.dag_pipeline_runner.DAGPipelineRunner instead.
+# This file is kept for backward compatibility with V2 stage-based pipeline runs.
+
 """
 core/pipeline_runner.py
 ───────────────────────

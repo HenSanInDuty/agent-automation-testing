@@ -9,9 +9,8 @@ import {
   FlaskConical,
   LayoutDashboard,
   ChevronRight,
-  Zap,
+  GitBranch,
   MessageSquare,
-  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePipelineStore } from "@/store/pipelineStore";
@@ -42,9 +41,9 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <MessageSquare className="w-4 h-4" />,
       },
       {
-        label: "Pipeline",
-        href: "/pipeline",
-        icon: <Zap className="w-4 h-4" />,
+        label: "Pipelines",
+        href: "/pipelines",
+        icon: <GitBranch className="w-4 h-4" />,
       },
     ],
   },
@@ -60,11 +59,6 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Agent Configs",
         href: "/admin/agents",
         icon: <Bot className="w-4 h-4" />,
-      },
-      {
-        label: "Stage Configs",
-        href: "/admin/stages",
-        icon: <Layers className="w-4 h-4" />,
       },
     ],
   },

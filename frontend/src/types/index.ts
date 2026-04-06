@@ -271,6 +271,13 @@ export type WSEventType =
   | "run.paused"
   | "run.resumed"
   | "run.cancelled"
+  | "layer.started"
+  | "layer.completed"
+  | "node.started"
+  | "node.completed"
+  | "node.failed"
+  | "node.skipped"
+  | "node.progress"
   | "log";
 
 export interface WSEvent {
@@ -387,4 +394,100 @@ export interface AgentConfigCreate {
   enabled?: boolean;
   verbose?: boolean;
   max_iter?: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pipeline Template (V3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type NodeType = "input" | "output" | "agent" | "pure_python";
+
+export interface PipelineNodeConfig {
+  node_id: string;
+  node_type: NodeType;
+  agent_id?: string;
+  label: string;
+  description: string;
+  position_x: number;
+  position_y: number;
+  timeout_seconds: number;
+  retry_count: number;
+  enabled: boolean;
+  config_overrides: Record<string, unknown>;
+}
+
+export interface PipelineEdgeConfig {
+  edge_id: string;
+  source_node_id: string;
+  target_node_id: string;
+  source_handle?: string;
+  target_handle?: string;
+  label?: string;
+  animated: boolean;
+}
+
+export interface PipelineTemplate {
+  id: string;
+  template_id: string;
+  name: string;
+  description: string;
+  version: number;
+  nodes: PipelineNodeConfig[];
+  edges: PipelineEdgeConfig[];
+  is_builtin: boolean;
+  is_archived: boolean;
+  tags: string[];
+  node_count: number;
+  edge_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PipelineTemplateListItem {
+  id: string;
+  template_id: string;
+  name: string;
+  description: string;
+  version: number;
+  is_builtin: boolean;
+  is_archived: boolean;
+  tags: string[];
+  node_count: number;
+  edge_count: number;
+  last_run_at?: string;
+  last_run_status?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PipelineTemplateCreate {
+  template_id: string;
+  name: string;
+  description?: string;
+  nodes?: PipelineNodeConfig[];
+  edges?: PipelineEdgeConfig[];
+  tags?: string[];
+}
+
+export interface PipelineTemplateUpdate {
+  name?: string;
+  description?: string;
+  nodes?: PipelineNodeConfig[];
+  edges?: PipelineEdgeConfig[];
+  tags?: string[];
+}
+
+export interface DAGValidationResult {
+  is_valid: boolean;
+  errors: string[];
+  warnings: string[];
+  execution_layers: string[][];
+  total_layers: number;
+  total_nodes: number;
+  estimated_parallel_speedup?: number;
+}
+
+export interface PipelineTemplateListResponse {
+  items: PipelineTemplateListItem[];
+  total: number;
 }

@@ -32,7 +32,10 @@ class AgentConfigCreate(BaseModel):
         description="Unique snake_case identifier (3-50 chars, must start with a letter)",
     )
     display_name: str = Field(..., min_length=2, max_length=150)
-    stage: str = Field(..., description="stage_id of an existing stage config")
+    stage: str = Field(
+        default="custom",
+        description="stage_id of a stage config. Defaults to 'custom' in V3 DAG mode.",
+    )
 
     # CrewAI prompts
     role: str = Field(..., min_length=10)

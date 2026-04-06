@@ -1136,3 +1136,145 @@ async def get_latest_run_for_template(
         .to_list()
     )
     return results[0] if results else None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# V3 DAG Pipeline Run helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def update_pipeline_run(
+    run_id: str,
+    **kwargs: Any,
+) -> Optional[PipelineRunDocument]:
+    """V3 flexible pipeline run updater.
+
+    Supports atomic per-node status updates via MongoDB dot-notation paths.
+    Terminal statuses (completed/failed/cancelled) auto-set completed_at/finished_at.
+
+    Args:
+        run_id: UUID string of the pipeline run.
+        **kwargs: Fields to update. Special key: ``node_statuses`` (dict[str,str])
+            triggers dot-notation $set per node (e.g. ``node_statuses.agent_a = "running"``).
+
+    Returns:
+        The refreshed document, or None if run_id does not exist.
+    """
+    doc = await get_pipeline_run(run_id)
+    if doc is None:
+        return None
+
+    set_ops: dict[str, Any] = {}
+
+    # Special: node_statuses → atomic per-node update with dot-notation
+    if "node_statuses" in kwargs:
+        node_statuses: dict[str, str] = kwargs.pop("node_statuses")
+        for nid, nstatus in node_statuses.items():
+            set_ops[f"node_statuses.{nid}"] = nstatus
+
+    # Auto-set terminal timestamps
+    status = kwargs.get("status")
+    if status in {
+        PipelineStatus.COMPLETED.value,
+        PipelineStatus.FAILED.value,
+        PipelineStatus.CANCELLED.value,
+    }:
+        kwargs.setdefault("completed_at", _now())
+        kwargs.setdefault("finished_at", _now())
+
+    set_ops.update(kwargs)
+
+    if set_ops:
+        await doc.update({"$set": set_ops})
+        await doc.sync()
+
+    logger.debug("Updated pipeline run: %s  fields=%s", run_id, list(set_ops.keys()))
+    return doc
+
+
+async def save_node_result(
+    run_id: str,
+    node_id: str,
+    status: str = "completed",
+    agent_id: Optional[str] = None,
+    output: Any = None,
+    input_data: Optional[dict] = None,  # type: ignore[type-arg]
+    error_message: Optional[str] = None,
+    duration_seconds: Optional[float] = None,
+) -> PipelineResultDocument:
+    """Persist the output of a single DAG node execution (V3).
+
+    Args:
+        run_id: UUID string of the parent pipeline run.
+        node_id: DAG node_id that produced this result.
+        status: "completed" | "failed" | "skipped".
+        agent_id: Agent config slug used by this node (if AGENT type).
+        output: The raw output value (any JSON-serialisable value).
+        input_data: What the node received as input (for debugging/replay).
+        error_message: Error string if status="failed".
+        duration_seconds: Execution time in seconds.
+
+    Returns:
+        The newly-inserted PipelineResultDocument.
+    """
+    now = _now()
+    doc = PipelineResultDocument(
+        run_id=run_id,
+        node_id=node_id,
+        agent_id=agent_id,
+        stage=node_id,  # V2 compat alias
+        result_type="node_output",
+        output=output,
+        input_data=input_data or {},
+        status=status,
+        error_message=error_message,
+        duration_seconds=duration_seconds,
+        completed_at=now if status in ("completed", "failed") else None,
+    )
+    await doc.insert()
+    logger.info(
+        "Saved node result: run_id=%s node_id=%s status=%s", run_id, node_id, status
+    )
+    return doc
+
+
+async def create_dag_run(
+    run_id: str,
+    template_id: str,
+    template_snapshot: dict,  # type: ignore[type-arg]
+    document_name: str = "",
+    file_path: Optional[str] = None,
+    llm_profile_id: Optional[str] = None,
+    run_params: Optional[dict] = None,  # type: ignore[type-arg]
+) -> PipelineRunDocument:
+    """Create a new V3 DAG pipeline run in PENDING state.
+
+    Args:
+        run_id: Caller-supplied UUID string.
+        template_id: Slug of the pipeline template to run.
+        template_snapshot: Snapshot of template nodes+edges at run time.
+        document_name: Original filename of uploaded document (if any).
+        file_path: Absolute path to uploaded file (if any).
+        llm_profile_id: Optional LLM profile override.
+        run_params: Extra run parameters dict.
+
+    Returns:
+        The newly-created PipelineRunDocument.
+    """
+    doc = PipelineRunDocument(
+        run_id=run_id,
+        template_id=template_id,
+        template_snapshot=template_snapshot,
+        document_name=document_name,
+        document_path=file_path,
+        file_path=file_path,
+        llm_profile_id=llm_profile_id,
+        run_params=run_params or {},
+        status=PipelineStatus.PENDING.value,
+        agent_statuses={},
+        completed_stages=[],
+        stage_results_summary={},
+    )
+    await doc.insert()
+    logger.info("Created DAG run: %s for template: %s", run_id, template_id)
+    return doc

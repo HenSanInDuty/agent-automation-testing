@@ -18,6 +18,8 @@ Endpoints:
     GET    /pipeline/runs/{run_id}/results        – all agent outputs
 """
 
+import asyncio
+import json as _json
 import logging
 import shutil
 import uuid
@@ -43,6 +45,7 @@ from app.schemas.pipeline import (
     AGENT_STATUS_TO_FRONTEND,
     AgentRunResult,
     PipelineResultResponse,
+    PipelineRunCreate,
     PipelineRunListItem,
     PipelineRunListResponse,
     PipelineRunResponse,
@@ -158,6 +161,33 @@ async def _run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
         created_at=run.created_at,
         started_at=run.started_at,
         completed_at=run.finished_at,
+    )
+
+
+async def _dag_run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
+    """Convert a V3 PipelineRunDocument to PipelineRunResponse."""
+    return PipelineRunResponse(
+        id=run.run_id,
+        run_id=run.run_id,
+        status=PipelineStatus(run.status),
+        template_id=run.template_id,
+        llm_profile_id=run.llm_profile_id,
+        document_filename=run.document_name,
+        current_node=run.current_node,
+        completed_nodes=run.completed_nodes,
+        failed_nodes=run.failed_nodes,
+        node_statuses=run.node_statuses,
+        execution_layers=run.execution_layers,
+        duration_seconds=run.duration_seconds,
+        current_stage=run.current_stage,
+        completed_stages=run.completed_stages,
+        created_at=run.created_at,
+        started_at=run.started_at,
+        completed_at=run.completed_at,
+        paused_at=run.paused_at,
+        resumed_at=run.resumed_at,
+        error_message=run.error_message or run.error,
+        agent_runs=[],
     )
 
 
@@ -401,6 +431,97 @@ async def _run_pipeline_background(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Background task (V3 – DAG runner)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _run_dag_pipeline_background(
+    run_id: str,
+    template_id: str,
+    file_path: Optional[str],
+    document_name: str,
+    llm_profile_id: Optional[str],
+    run_params: dict,
+) -> None:
+    """Background task for the V3 DAG pipeline runner.
+
+    Args:
+        run_id:          UUID string of the pipeline run.
+        template_id:     Slug of the pipeline template to execute.
+        file_path:       Absolute path to the uploaded file (or None).
+        document_name:   Original filename (used in event payloads).
+        llm_profile_id:  Optional LLM profile override.
+        run_params:      Extra run parameters from the request.
+    """
+    import json
+    from datetime import datetime, timezone
+
+    from app.api.v1.websocket import manager
+    from app.core.dag_pipeline_runner import DAGPipelineRunner
+    from app.core.dag_resolver import DAGValidationError
+    from app.db import crud
+
+    logger.info(
+        "[V3-Pipeline] Background task started  run_id=%r  template=%r",
+        run_id,
+        template_id,
+    )
+
+    current_loop = asyncio.get_running_loop()
+    manager.set_loop(current_loop)
+
+    def ws_broadcaster(event_type: str, data: dict) -> None:
+        """Forward pipeline events to WebSocket clients."""
+        logger.debug("[WS-V3-TX] run_id=%r  event=%r", run_id, event_type)
+        payload = json.dumps(
+            {
+                "event": event_type,
+                "run_id": run_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "data": data,
+            },
+            default=str,
+        )
+        manager.broadcast_from_thread(run_id, payload)
+
+    try:
+        # Load template (might have been updated between request and execution)
+        template = await crud.get_pipeline_template(template_id)
+        if template is None:
+            raise ValueError(f"Pipeline template '{template_id}' not found")
+
+        runner = DAGPipelineRunner(
+            run_id=run_id,
+            template=template,
+            llm_profile_id=llm_profile_id,
+            progress_callback=ws_broadcaster,
+            mock_mode=getattr(settings, "MOCK_PIPELINE", False),
+        )
+
+        initial_input = {
+            "file_path": file_path,
+            "document_name": document_name,
+            **run_params,
+        }
+        await runner.run(initial_input)
+
+    except DAGValidationError as exc:
+        logger.error("[V3-Pipeline] DAG validation error  run_id=%r: %s", run_id, exc)
+        await crud.update_pipeline_run(run_id, status="failed", error_message=str(exc))
+        ws_broadcaster("run.failed", {"error": str(exc)})
+
+    except Exception as exc:
+        error_detail = str(exc)
+        logger.exception(
+            "[V3-Pipeline] Unhandled error  run_id=%r  error=%s", run_id, error_detail
+        )
+        await crud.update_pipeline_run(
+            run_id, status="failed", error_message=error_detail
+        )
+        ws_broadcaster("run.failed", {"error": error_detail})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # POST /pipeline/run
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -520,6 +641,166 @@ async def start_pipeline_run(
     )
 
     return await _run_to_response(run)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POST /pipeline/runs  (V3 – DAG runner)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/runs",
+    response_model=PipelineRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="[V3] Start a DAG pipeline run from a template",
+    description=(
+        "Creates a new pipeline run based on a saved PipelineTemplate and starts "
+        "DAG execution in the background.  Connect to "
+        "``WS /ws/pipeline/{run_id}`` for real-time node/layer events.\n\n"
+        "The template's DAG is validated before the run is created.  If validation "
+        "fails, HTTP 422 is returned immediately.\n\n"
+        "**V3 endpoint** — requires ``template_id``."
+    ),
+)
+async def create_pipeline_run(
+    background_tasks: BackgroundTasks,
+    template_id: str = Form(
+        ..., description="Slug of the pipeline template to execute"
+    ),
+    file: Optional[UploadFile] = File(
+        default=None,
+        description="Optional requirements document to inject as INPUT node seed",
+    ),
+    llm_profile_id: Optional[str] = Form(
+        default=None,
+        description="MongoDB ObjectId of an LLM profile override. Omit for global default.",
+    ),
+    run_params: str = Form(
+        default="{}",
+        description="JSON-encoded extra run parameters forwarded to the runner.",
+    ),
+) -> PipelineRunResponse:
+    """Create and start a V3 DAG pipeline run.
+
+    Returns immediately with ``status=pending``.  Execution happens in the
+    background.  Listen on the WebSocket endpoint for live events.
+
+    Args:
+        background_tasks: FastAPI injected background task queue.
+        template_id:      Slug of the target pipeline template.
+        file:             Optional uploaded requirements document.
+        llm_profile_id:   Optional LLM profile ObjectId string.
+        run_params:       JSON-encoded dict of extra run parameters.
+
+    Returns:
+        PipelineRunResponse with ``status="pending"`` and the new ``run_id``.
+
+    Raises:
+        HTTPException 404: Template not found.
+        HTTPException 400: Template is archived.
+        HTTPException 422: DAG validation failed or run_params not valid JSON.
+        HTTPException 404: llm_profile_id not found.
+        HTTPException 429: Maximum concurrent runs reached.
+    """
+    from app.core.dag_resolver import DAGResolver, DAGValidationError
+    from app.db import crud as _crud
+
+    # ── Validate JSON run_params ─────────────────────────────────────────────
+    try:
+        parsed_run_params: dict = _json.loads(run_params)
+    except _json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"run_params is not valid JSON: {exc}",
+        )
+
+    # ── Load and check template ──────────────────────────────────────────────
+    template = await _crud.get_pipeline_template(template_id)
+    if template is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pipeline template '{template_id}' not found.",
+        )
+    if template.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Pipeline template '{template_id}' is archived and cannot be run.",
+        )
+
+    # ── Validate the DAG eagerly (fail fast before creating any DB records) ──
+    resolver = DAGResolver(template.nodes, template.edges)
+    try:
+        resolver.validate()
+    except DAGValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Pipeline DAG is invalid: {exc}",
+        )
+
+    # ── Validate LLM profile override (if provided) ──────────────────────────
+    if llm_profile_id is not None:
+        profile = await _crud.get_llm_profile(llm_profile_id)
+        if profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"LLM profile '{llm_profile_id}' not found.",
+            )
+
+    # ── Check concurrent-run limit ────────────────────────────────────────────
+    _, running_count = await _crud.get_all_pipeline_runs(
+        skip=0, limit=1, status=PipelineStatus.RUNNING.value
+    )
+    if running_count >= settings.MAX_CONCURRENT_RUNS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                f"Maximum concurrent runs ({settings.MAX_CONCURRENT_RUNS}) reached. "
+                "Please wait for a running pipeline to complete."
+            ),
+        )
+
+    # ── Handle optional file upload ───────────────────────────────────────────
+    run_id = str(uuid.uuid4())
+    file_path: Optional[str] = None
+    document_name: str = ""
+
+    if file and file.filename:
+        _validate_upload(file)
+        document_name, file_path = _save_upload(file, run_id)
+
+    # ── Persist run record ────────────────────────────────────────────────────
+    run = await _crud.create_dag_run(
+        run_id=run_id,
+        template_id=template_id,
+        template_snapshot={
+            "nodes": [n.model_dump() for n in template.nodes],
+            "edges": [e.model_dump() for e in template.edges],
+        },
+        document_name=document_name,
+        file_path=file_path,
+        llm_profile_id=llm_profile_id,
+        run_params=parsed_run_params,
+    )
+
+    logger.info(
+        "[V3-Pipeline] Created run  run_id=%r  template=%r  document=%r",
+        run_id,
+        template_id,
+        document_name or "(none)",
+    )
+
+    # ── Schedule DAG execution ────────────────────────────────────────────────
+    background_tasks.add_task(
+        _run_dag_pipeline_background,
+        run_id=run_id,
+        template_id=template_id,
+        file_path=file_path,
+        document_name=document_name,
+        llm_profile_id=llm_profile_id,
+        run_params=parsed_run_params,
+    )
+
+    return await _dag_run_to_response(run)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

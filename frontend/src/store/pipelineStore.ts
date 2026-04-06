@@ -13,6 +13,7 @@ interface PipelineSession {
   activeRunStatus: PipelineStatus | null;
   agentStatuses: Record<string, AgentRunStatus>;
   agentProgress: Record<string, { pct: number; message: string }>;
+  nodeStatuses: Record<string, string>;
   currentStage: string | null;
   completedStages: string[];
   stageResults: Record<string, Record<string, unknown>>;
@@ -49,6 +50,7 @@ const INITIAL_SESSION: PipelineSession = {
   activeRunStatus: null,
   agentStatuses: {},
   agentProgress: {},
+  nodeStatuses: {},
   currentStage: null,
   completedStages: [],
   stageResults: {},
@@ -103,6 +105,47 @@ export const usePipelineStore = create<PipelineStoreState>()(
         }
 
         switch (event.event) {
+          case "node.started":
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [event.data.node_id as string]: "running",
+              },
+            }));
+            break;
+
+          case "node.completed":
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [event.data.node_id as string]: "completed",
+              },
+            }));
+            break;
+
+          case "node.failed":
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [event.data.node_id as string]: "failed",
+              },
+            }));
+            break;
+
+          case "node.skipped":
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [event.data.node_id as string]: "skipped",
+              },
+            }));
+            break;
+
+          case "node.progress":
+            // node.progress doesn't change the status string, only agentProgress-like tracking
+            // We keep nodeStatuses as "running" while progress events arrive
+            break;
+
           case "agent.started":
             set((s) => ({
               agentStatuses: {
@@ -302,6 +345,7 @@ export const usePipelineStore = create<PipelineStoreState>()(
         activeRunId: state.activeRunId,
         activeRunStatus: state.activeRunStatus,
         agentStatuses: state.agentStatuses,
+        nodeStatuses: state.nodeStatuses,
         currentStage: state.currentStage,
         completedStages: state.completedStages,
         isTerminal: state.isTerminal,
