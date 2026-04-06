@@ -14,6 +14,7 @@ import type {
   LLMTestRequest,
   LLMTestResponse,
   PaginationParams,
+  PipelineNodeResult,
   PipelineRunListResponse,
   PipelineRunResponse,
   PipelineTemplate,
@@ -229,9 +230,38 @@ export const pipelineApi = {
     return data;
   },
 
+  /**
+   * POST /api/v1/pipeline/runs   (V3 — DAG runner)
+   * Start a pipeline run based on a template. File is optional.
+   */
+  createRun: async (
+    templateId: string,
+    file?: File | null,
+    llmProfileId?: number | null,
+    runParams?: Record<string, unknown>,
+  ): Promise<PipelineRunResponse> => {
+    const form = new FormData();
+    form.append("template_id", templateId);
+    if (file) form.append("file", file);
+    if (llmProfileId != null)
+      form.append("llm_profile_id", String(llmProfileId));
+    if (runParams) form.append("run_params", JSON.stringify(runParams));
+    const { data } = await apiClient.post<PipelineRunResponse>(
+      "/api/v1/pipeline/runs",
+      form,
+      { headers: { "Content-Type": "multipart/form-data" }, timeout: 60_000 },
+    );
+    return data;
+  },
+
   /** GET /api/v1/pipeline/runs */
   listRuns: async (
-    params?: PaginationParams,
+    params?: PaginationParams & {
+      template_id?: string;
+      status?: string;
+      page?: number;
+      page_size?: number;
+    },
   ): Promise<PipelineRunListResponse> => {
     const { data } = await apiClient.get<PipelineRunListResponse>(
       "/api/v1/pipeline/runs",
@@ -303,6 +333,17 @@ export const pipelineApi = {
     const { data } = await apiClient.get<Record<string, unknown>>(
       `/api/v1/pipeline/runs/${runId}/results`,
       stage ? { params: { stage } } : undefined,
+    );
+    return data;
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/results/:node_id */
+  getNodeResult: async (
+    runId: string,
+    nodeId: string,
+  ): Promise<PipelineNodeResult> => {
+    const { data } = await apiClient.get<PipelineNodeResult>(
+      `/api/v1/pipeline/runs/${runId}/results/${nodeId}`,
     );
     return data;
   },

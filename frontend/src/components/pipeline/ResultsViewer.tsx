@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Loader2,
   SkipForward,
+  Network,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/Select";
@@ -33,13 +34,20 @@ import { toast } from "@/components/ui/Toast";
 
 export interface ResultsViewerProps {
   run: PipelineRunResponse;
+  // V3 DAG fields (optional — from template)
+  templateNodes?: Array<{
+    node_id: string;
+    label: string;
+    node_type: string;
+    enabled: boolean;
+  }>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TabId = "testcases" | "coverage" | "report";
+type TabId = "testcases" | "coverage" | "report" | "nodes";
 
 interface TabDef {
   id: TabId;
@@ -62,6 +70,11 @@ const TABS: TabDef[] = [
     id: "report",
     label: "Report",
     icon: <BookOpen className="w-3.5 h-3.5" aria-hidden="true" />,
+  },
+  {
+    id: "nodes",
+    label: "Nodes",
+    icon: <Network className="w-3.5 h-3.5" aria-hidden="true" />,
   },
 ];
 
@@ -353,6 +366,64 @@ function ExportButtons({ runId }: { runId: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NodeResultCard
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface NodeResultCardProps {
+  nodeId: string;
+  label: string;
+  nodeType: string;
+  status: string;
+}
+
+function NodeResultCard({
+  nodeId,
+  label,
+  nodeType,
+  status,
+}: NodeResultCardProps) {
+  const statusColors: Record<string, string> = {
+    idle: "text-zinc-500",
+    running: "text-blue-400",
+    completed: "text-green-400",
+    failed: "text-red-400",
+    skipped: "text-zinc-400",
+  };
+  const nodeIcons: Record<string, string> = {
+    input: "📥",
+    output: "📤",
+    agent: "🤖",
+    pure_python: "🐍",
+  };
+
+  return (
+    <div className="rounded-xl border border-[#2b3b55] bg-[#18202F] p-4">
+      <div className="flex items-center gap-3">
+        <span className="text-xl">{nodeIcons[nodeType] ?? "🤖"}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-white truncate">
+              {label}
+            </span>
+            <code className="text-[10px] font-mono text-[#3d5070] bg-[#1e2a3d] px-1.5 py-0.5 rounded border border-[#2b3b55]">
+              {nodeId.slice(0, 12)}…
+            </code>
+          </div>
+          <span
+            className={cn(
+              "text-xs capitalize mt-0.5 block",
+              statusColors[status] ?? "text-zinc-500",
+            )}
+          >
+            {status}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RunSummaryCard
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -469,7 +540,7 @@ function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
 // ResultsViewer
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function ResultsViewer({ run }: ResultsViewerProps) {
+export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
   const [activeTab, setActiveTab] = React.useState<TabId>("testcases");
 
   // ── Filter agents by stage ────────────────────────────────────────────────
@@ -480,6 +551,11 @@ export function ResultsViewer({ run }: ResultsViewerProps) {
   const isCompleted = run.status === "completed";
   const canExport = run.status === "completed" || run.status === "paused";
 
+  // ── V3 DAG ────────────────────────────────────────────────────────────────
+  const isV3Run =
+    !!run.node_statuses && Object.keys(run.node_statuses).length > 0;
+  const visibleTabs = isV3Run ? TABS : TABS.filter((t) => t.id !== "nodes");
+
   return (
     <div className="rounded-2xl border border-[#2b3b55] bg-[#18202F] overflow-hidden">
       {/* ── Tab bar + Export buttons ──────────────────────────────────────── */}
@@ -489,7 +565,7 @@ export function ResultsViewer({ run }: ResultsViewerProps) {
           role="tablist"
           aria-label="Results sections"
         >
-          {TABS.map((tab) => {
+          {visibleTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -585,6 +661,39 @@ export function ResultsViewer({ run }: ResultsViewerProps) {
                 ))
               ) : (
                 <EmptyStage message="Report output will appear here after the reporting stage completes." />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Nodes (V3 DAG) ──────────────────────────────────────────────── */}
+        <div
+          id="results-panel-nodes"
+          role="tabpanel"
+          aria-labelledby="results-tab-nodes"
+          hidden={activeTab !== "nodes"}
+        >
+          {activeTab === "nodes" && (
+            <div className="space-y-3">
+              {isV3Run && run.node_statuses ? (
+                Object.entries(run.node_statuses).map(([nodeId, status]) => {
+                  const tmplNode = templateNodes?.find(
+                    (n) => n.node_id === nodeId,
+                  );
+                  return (
+                    <NodeResultCard
+                      key={nodeId}
+                      nodeId={nodeId}
+                      label={tmplNode?.label ?? nodeId}
+                      nodeType={tmplNode?.node_type ?? "agent"}
+                      status={status}
+                    />
+                  );
+                })
+              ) : (
+                <div className="py-8 text-center text-sm text-[#3d5070]">
+                  No node results available.
+                </div>
               )}
             </div>
           )}

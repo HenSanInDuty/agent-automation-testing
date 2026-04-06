@@ -40,6 +40,16 @@ export interface PipelineProgressProps {
   wsConnected: boolean;
   logMessages: string[];
   stageLogMessages: Record<string, string[]>;
+  // V3 DAG execution props (optional — present only when a DAG run is active)
+  nodeStatuses?: Record<string, string>;
+  currentNode?: string | null;
+  executionLayers?: string[][];
+  templateNodes?: Array<{
+    node_id: string;
+    label: string;
+    node_type: string;
+    enabled: boolean;
+  }>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -538,6 +548,207 @@ function StageBlock({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NodeLayerProgress — V3 DAG execution layer progress
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface NodeLayerProgressProps {
+  executionLayers: string[][];
+  nodeStatuses: Record<string, string>;
+  currentNode: string | null | undefined;
+  templateNodes: Array<{
+    node_id: string;
+    label: string;
+    node_type: string;
+    enabled: boolean;
+  }>;
+  wsConnected: boolean;
+}
+
+function getNodeTypeIcon(nodeType: string): string {
+  switch (nodeType) {
+    case "input":
+      return "📥";
+    case "output":
+      return "📤";
+    case "pure_python":
+      return "🐍";
+    default:
+      return "🤖";
+  }
+}
+
+function NodeStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case "running":
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[#5b9eff]">
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-[#5b9eff] animate-pulse shrink-0"
+            aria-hidden="true"
+          />
+          <span className="text-xs font-medium">Running</span>
+        </span>
+      );
+    case "completed":
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[#4ade80]">
+          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <span className="text-xs font-medium">Done</span>
+        </span>
+      );
+    case "failed":
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[#f87171]">
+          <XCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <span className="text-xs font-medium">Failed</span>
+        </span>
+      );
+    case "skipped":
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[#3d5070]">
+          <MinusCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <span className="text-xs font-medium line-through">Skipped</span>
+        </span>
+      );
+    default:
+      // idle
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[#3d5070]">
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-[#3d5070] shrink-0"
+            aria-hidden="true"
+          />
+          <span className="text-xs font-medium">Pending</span>
+        </span>
+      );
+  }
+}
+
+export function NodeLayerProgress({
+  executionLayers,
+  nodeStatuses,
+  currentNode,
+  templateNodes,
+  wsConnected,
+}: NodeLayerProgressProps) {
+  // Build a fast lookup map: node_id → node metadata
+  const nodeMap = React.useMemo(() => {
+    const map: Record<
+      string,
+      { label: string; node_type: string; enabled: boolean }
+    > = {};
+    for (const n of templateNodes) {
+      map[n.node_id] = {
+        label: n.label,
+        node_type: n.node_type,
+        enabled: n.enabled,
+      };
+    }
+    return map;
+  }, [templateNodes]);
+
+  return (
+    <div className="rounded-xl border border-[#2b3b55] bg-[#18202F] overflow-hidden">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[#2b3b55]">
+        <span className="text-sm font-semibold text-white">DAG Execution</span>
+
+        {/* Wifi status indicator */}
+        <div
+          className={cn(
+            "flex items-center gap-1.5 text-xs font-medium transition-colors duration-300",
+            wsConnected ? "text-[#4ade80]" : "text-[#3d5070]",
+          )}
+          title={
+            wsConnected
+              ? "Live updates active"
+              : "Not connected to live updates"
+          }
+          aria-label={
+            wsConnected ? "Live updates active" : "Live updates offline"
+          }
+        >
+          {wsConnected ? (
+            <Wifi className="w-3.5 h-3.5" aria-hidden="true" />
+          ) : (
+            <WifiOff className="w-3.5 h-3.5" aria-hidden="true" />
+          )}
+          <span>{wsConnected ? "Live" : "Offline"}</span>
+        </div>
+      </div>
+
+      {/* ── Empty state — execution plan not yet computed ────────────────── */}
+      {executionLayers.length === 0 && (
+        <div className="flex items-center gap-2.5 px-4 py-5">
+          <Loader2
+            className="w-4 h-4 animate-spin shrink-0 text-[#5b9eff]"
+            aria-hidden="true"
+          />
+          <span className="text-sm text-[#92a4c9]">
+            Preparing execution plan…
+          </span>
+        </div>
+      )}
+
+      {/* ── Execution layers ────────────────────────────────────────────── */}
+      {executionLayers.length > 0 && (
+        <div className="flex flex-col divide-y divide-[#2b3b55]/60">
+          {executionLayers.map((layer, layerIdx) => (
+            <div key={layerIdx}>
+              {/* Layer header */}
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#111827]/60">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-[#3d5070]">
+                  Layer {layerIdx + 1}
+                </span>
+                <span className="text-[11px] text-[#2b3b55] tabular-nums">
+                  {layer.length} node{layer.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {/* Node rows */}
+              {layer.map((nodeId) => {
+                const info = nodeMap[nodeId];
+                const status = nodeStatuses[nodeId] ?? "idle";
+                const isCurrent = currentNode === nodeId;
+
+                return (
+                  <div
+                    key={nodeId}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-2.5",
+                      "border-b border-[#2b3b55]/40 last:border-0",
+                      isCurrent &&
+                        "ring-1 ring-inset ring-[#135bec]/50 bg-[#135bec]/5",
+                      status === "running" && !isCurrent && "bg-[#135bec]/3",
+                    )}
+                  >
+                    {/* Node type icon */}
+                    <span
+                      className="text-base shrink-0 leading-none"
+                      aria-hidden="true"
+                    >
+                      {info ? getNodeTypeIcon(info.node_type) : "🔷"}
+                    </span>
+
+                    {/* Node label */}
+                    <span className="flex-1 min-w-0 text-sm text-white truncate">
+                      {info?.label ?? nodeId}
+                    </span>
+
+                    {/* Status badge */}
+                    <NodeStatusBadge status={status} />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PipelineProgress
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -551,6 +762,11 @@ export function PipelineProgress({
   wsConnected,
   logMessages,
   stageLogMessages,
+  // V3 DAG props
+  nodeStatuses,
+  currentNode,
+  executionLayers,
+  templateNodes,
 }: PipelineProgressProps) {
   // ── Always group agents before any conditional returns (hooks rules) ──────
   const agentsByStage = React.useMemo<
@@ -682,6 +898,17 @@ export function PipelineProgress({
             from the next stage.
           </p>
         </div>
+      )}
+
+      {/* ── V3 Node layer progress (shown when DAG execution data exists) ──── */}
+      {executionLayers && executionLayers.length > 0 && nodeStatuses && (
+        <NodeLayerProgress
+          executionLayers={executionLayers}
+          nodeStatuses={nodeStatuses}
+          currentNode={currentNode}
+          templateNodes={templateNodes ?? []}
+          wsConnected={wsConnected}
+        />
       )}
 
       {/* ── Stage blocks ─────────────────────────────────────────────────── */}

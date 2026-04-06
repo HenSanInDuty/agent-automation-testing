@@ -244,11 +244,40 @@ export interface PipelineRunResponse {
   completed_at?: string | null;
   error_message?: string | null;
   agent_runs: AgentRunResult[];
+  // V3 DAG fields
+  run_id?: string;
+  template_id?: string | null;
+  current_node?: string | null;
+  completed_nodes?: string[];
+  failed_nodes?: string[];
+  node_statuses?: Record<string, string>;
+  execution_layers?: string[][];
+  duration_seconds?: number | null;
+  current_stage?: string | null;
+  completed_stages?: string[];
+  paused_at?: string | null;
+  resumed_at?: string | null;
 }
 
 export interface PipelineRunListResponse {
   items: PipelineRunResponse[];
   total: number;
+  page?: number;
+  page_size?: number;
+}
+
+// Per-node result (V3)
+export interface PipelineNodeResult {
+  run_id: string;
+  node_id: string;
+  node_type: string;
+  label: string;
+  output?: unknown;
+  output_preview?: string | null;
+  error_message?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  duration_seconds?: number | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

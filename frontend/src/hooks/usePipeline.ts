@@ -12,7 +12,14 @@ import type { PipelineRunResponse } from "@/types";
  * Fetch all pipeline runs (paginated).
  * Defaults to fetching up to 100 runs.
  */
-export function usePipelineRuns(params?: { skip?: number; limit?: number }) {
+export function usePipelineRuns(params?: {
+  skip?: number;
+  limit?: number;
+  template_id?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}) {
   return useQuery({
     queryKey: queryKeys.pipelineRuns.list(params),
     queryFn: () => pipelineApi.listRuns(params),
@@ -51,6 +58,32 @@ export function useStartPipeline() {
       file: File;
       llmProfileId?: number | null;
     }) => pipelineApi.run(file, llmProfileId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.lists() });
+    },
+  });
+}
+
+/**
+ * Start a V3 DAG pipeline run from a template.
+ * Accepts an optional file and LLM profile override.
+ * Invalidates the pipeline runs list on success.
+ */
+export function useStartDagPipeline() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      templateId,
+      file,
+      llmProfileId,
+      runParams,
+    }: {
+      templateId: string;
+      file?: File | null;
+      llmProfileId?: number | null;
+      runParams?: Record<string, unknown>;
+    }) => pipelineApi.createRun(templateId, file, llmProfileId, runParams),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.lists() });
     },
@@ -140,5 +173,23 @@ export function useStageResults(
     queryFn: () => pipelineApi.getStageResults(runId!, stage),
     enabled: !!runId && !!stage,
     staleTime: 5 * 60_000, // stage results don't change once saved
+  });
+}
+
+/**
+ * Fetch the result for a specific node in a V3 pipeline run.
+ */
+export function useNodeResult(
+  runId: string | undefined,
+  nodeId: string | undefined,
+) {
+  return useQuery({
+    queryKey:
+      runId && nodeId
+        ? ["node-result", runId, nodeId]
+        : ["node-result", "disabled"],
+    queryFn: () => pipelineApi.getNodeResult(runId!, nodeId!),
+    enabled: !!runId && !!nodeId,
+    staleTime: 5 * 60_000,
   });
 }

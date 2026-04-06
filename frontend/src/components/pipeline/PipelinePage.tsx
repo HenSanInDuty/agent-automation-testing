@@ -21,6 +21,8 @@ import { PipelineProgress } from "./PipelineProgress";
 import { ResultsViewer } from "./ResultsViewer";
 import { RunHistory } from "./RunHistory";
 import { StageResultsPanel } from "./StageResultsPanel";
+import { PipelineRunView } from "./PipelineRunView";
+import { usePipelineTemplate } from "@/hooks/usePipelineTemplates";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -179,6 +181,12 @@ export function PipelinePage() {
     syncRunStatus,
   } = usePipelineStore();
 
+  // ── V3 DAG store values ────────────────────────────────────────────────────
+  const nodeStatuses = usePipelineStore((s) => s.nodeStatuses);
+  const executionLayers = usePipelineStore((s) => s.executionLayers);
+  const currentNode = usePipelineStore((s) => s.currentNode);
+  const activeTemplateId = usePipelineStore((s) => s.activeTemplateId);
+
   // ── Rehydration: reconnect WS if returning to page with an active session ──
   React.useEffect(() => {
     if (activeRunId && !isTerminal && wsStatus === "disconnected") {
@@ -189,6 +197,7 @@ export function PipelinePage() {
   // ── Data / mutations ───────────────────────────────────────────────────────
   const startMutation = useStartPipeline();
   const pauseMutation = usePausePipeline();
+  const { data: activeTemplate } = usePipelineTemplate(activeTemplateId);
 
   const { data: activeRun, refetch: refetchActiveRun } = usePipelineRun(
     activeRunId ?? undefined,
@@ -278,6 +287,10 @@ export function PipelinePage() {
 
   // Whether the pipeline is actively in-progress (disable mode toggle)
   const pipelineActive = isRunning || isPaused;
+
+  // Whether this is a V3 DAG-based run (node-level tracking active)
+  const isV3Run =
+    Object.keys(nodeStatuses).length > 0 || executionLayers.length > 0;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -414,17 +427,39 @@ export function PipelinePage() {
         <div className="flex flex-col gap-4">
           {/* Live progress panel (running or paused) */}
           {showProgress && (
-            <PipelineProgress
-              run={activeRun ?? null}
-              wsEvents={events}
-              agentStatuses={agentStatuses}
-              agentProgress={agentProgress}
-              currentStage={currentStage}
-              completedStages={completedStages}
-              wsConnected={wsStatus === "connected"}
-              logMessages={logMessages}
-              stageLogMessages={stageLogMessages}
-            />
+            <>
+              {/* V3 DAG visualization — shown when a DAG run is active */}
+              {isV3Run &&
+                activeTemplate?.nodes &&
+                activeTemplate.nodes.length > 0 && (
+                  <div className="rounded-2xl border border-[#2b3b55] overflow-hidden h-105">
+                    <PipelineRunView
+                      templateNodes={activeTemplate.nodes}
+                      templateEdges={activeTemplate.edges}
+                    />
+                  </div>
+                )}
+              <PipelineProgress
+                run={activeRun ?? null}
+                wsEvents={events}
+                agentStatuses={agentStatuses}
+                agentProgress={agentProgress}
+                currentStage={currentStage}
+                completedStages={completedStages}
+                wsConnected={wsStatus === "connected"}
+                logMessages={logMessages}
+                stageLogMessages={stageLogMessages}
+                nodeStatuses={nodeStatuses}
+                currentNode={currentNode}
+                executionLayers={executionLayers}
+                templateNodes={activeTemplate?.nodes?.map((n) => ({
+                  node_id: n.node_id,
+                  label: n.label,
+                  node_type: n.node_type,
+                  enabled: n.enabled,
+                }))}
+              />
+            </>
           )}
 
           {/* Per-stage progressive results */}

@@ -3978,16 +3978,23 @@ mkdir -p src/components/pipeline-builder/nodes
 - [x] Create `components/pipeline/PipelineRunView.tsx` — live read-only DAG visualization
 - [x] Update `store/pipelineStore.ts` — add `nodeStatuses` + WS node event handlers
 
-### Phase 20 – Frontend: Pipeline Run with DAG Visualization `~2 ngày`
+### Phase 20 – Frontend: Pipeline Run with DAG Visualization `~2 ngày` ✅
 
-- [ ] Create `PipelineRunView.tsx` — live DAG visualization during run
-- [ ] Update `pipelineStore.ts` — nodeStatuses, currentNode, executionLayers
-- [ ] Update `wsManager.ts` — handle node.* and layer.* events
-- [ ] Update `PipelinePage.tsx` — show PipelineRunView
-- [ ] Update `PipelineProgress.tsx` — node-based progress
-- [ ] Update `ResultsViewer.tsx` — per-node results display
-- [ ] Create `/pipelines/[templateId]/run/page.tsx`
-- [ ] Create `/pipelines/[templateId]/runs/page.tsx` — run history
+- [x] Create `PipelineRunView.tsx` — live DAG visualization during run
+- [x] Update `pipelineStore.ts` — nodeStatuses, currentNode, executionLayers, activeTemplateId; handle layer.started/layer.completed events
+- [x] Update `wsManager.ts` — handle node.* and layer.* events; mark run.cancelled as terminal
+- [x] Update `PipelinePage.tsx` — show PipelineRunView when V3 DAG run is active (isV3Run flag); load activeTemplate via usePipelineTemplate
+- [x] Update `PipelineProgress.tsx` — added NodeLayerProgress component for node-based progress with execution layers; V3 props optional (backward compat)
+- [x] Update `ResultsViewer.tsx` — per-node results display via new "Nodes" tab (V3 only); NodeResultCard component; visibleTabs logic
+- [x] Create `/pipelines/[templateId]/run/page.tsx` — PipelineRunPage with DAG view, node progress, log panel, WS rehydration
+- [x] Create `/pipelines/[templateId]/runs/page.tsx` — PipelineRunHistoryPage with paginated run list, status badges
+- [x] Add `useStartDagPipeline` hook in `usePipeline.ts` — V3 template-based run mutation
+- [x] Add `pipelineApi.createRun` in `api.ts` — POST /pipeline/runs (V3)
+- [x] Add `pipelineApi.getNodeResult` in `api.ts` — GET /pipeline/runs/:id/results/:nodeId
+- [x] Extend `PipelineRunResponse` type with V3 DAG fields (node_statuses, execution_layers, current_node, etc.)
+- [x] Add `PipelineNodeResult` interface to `types/index.ts`
+- [x] Create `components/pipeline/PipelineRunPage.tsx` — full V3 run page component
+- [x] Create `components/pipeline/PipelineRunHistoryPage.tsx` — run history component
 
 ### Phase 21 – Migration & Polish `~1.5 ngày`
 

@@ -80,7 +80,11 @@ class WSManager {
         const event = JSON.parse(e.data as string) as WSEvent;
         this.onEvent?.(event);
 
-        if (event.event === "run.completed" || event.event === "run.failed") {
+        if (
+          event.event === "run.completed" ||
+          event.event === "run.failed" ||
+          event.event === "run.cancelled"
+        ) {
           this.isTerminal = true;
           ws.onclose = null;
           ws.close();

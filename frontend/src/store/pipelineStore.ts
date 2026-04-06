@@ -14,6 +14,9 @@ interface PipelineSession {
   agentStatuses: Record<string, AgentRunStatus>;
   agentProgress: Record<string, { pct: number; message: string }>;
   nodeStatuses: Record<string, string>;
+  currentNode: string | null;
+  executionLayers: string[][];
+  activeTemplateId: string | null;
   currentStage: string | null;
   completedStages: string[];
   stageResults: Record<string, Record<string, unknown>>;
@@ -26,7 +29,7 @@ interface PipelineSession {
 
 interface PipelineStoreState extends PipelineSession {
   // Actions
-  startSession: (runId: string) => void;
+  startSession: (runId: string, templateId?: string | null) => void;
   clearSession: () => void;
   updateFromWSEvent: (event: WSEvent) => void;
   setStageResult: (stage: string, data: Record<string, unknown>) => void;
@@ -51,6 +54,9 @@ const INITIAL_SESSION: PipelineSession = {
   agentStatuses: {},
   agentProgress: {},
   nodeStatuses: {},
+  currentNode: null,
+  executionLayers: [],
+  activeTemplateId: null,
   currentStage: null,
   completedStages: [],
   stageResults: {},
@@ -78,11 +84,12 @@ export const usePipelineStore = create<PipelineStoreState>()(
       wsStatus: "disconnected",
 
       // ── Session lifecycle ──────────────────────────────────────────────────
-      startSession: (runId) => {
+      startSession: (runId, templateId) => {
         set({
           ...INITIAL_SESSION,
           activeRunId: runId,
           activeRunStatus: "running",
+          activeTemplateId: templateId ?? null,
         });
         get().connectWebSocket(runId);
       },
@@ -111,26 +118,35 @@ export const usePipelineStore = create<PipelineStoreState>()(
                 ...s.nodeStatuses,
                 [event.data.node_id as string]: "running",
               },
+              currentNode: event.data.node_id as string,
             }));
             break;
 
-          case "node.completed":
+          case "node.completed": {
+            const completedNodeId = event.data.node_id as string;
             set((s) => ({
               nodeStatuses: {
                 ...s.nodeStatuses,
-                [event.data.node_id as string]: "completed",
+                [completedNodeId]: "completed",
               },
+              currentNode:
+                s.currentNode === completedNodeId ? null : s.currentNode,
             }));
             break;
+          }
 
-          case "node.failed":
+          case "node.failed": {
+            const failedNodeId = event.data.node_id as string;
             set((s) => ({
               nodeStatuses: {
                 ...s.nodeStatuses,
-                [event.data.node_id as string]: "failed",
+                [failedNodeId]: "failed",
               },
+              currentNode:
+                s.currentNode === failedNodeId ? null : s.currentNode,
             }));
             break;
+          }
 
           case "node.skipped":
             set((s) => ({
@@ -144,6 +160,21 @@ export const usePipelineStore = create<PipelineStoreState>()(
           case "node.progress":
             // node.progress doesn't change the status string, only agentProgress-like tracking
             // We keep nodeStatuses as "running" while progress events arrive
+            break;
+
+          case "layer.started": {
+            const layerIndex = event.data.layer_index as number;
+            const layerNodes = event.data.nodes as string[];
+            set((s) => {
+              const nextLayers = [...s.executionLayers];
+              nextLayers[layerIndex] = layerNodes;
+              return { executionLayers: nextLayers };
+            });
+            break;
+          }
+
+          case "layer.completed":
+            // Node statuses already reflect completion; nothing extra needed here.
             break;
 
           case "agent.started":
@@ -346,6 +377,9 @@ export const usePipelineStore = create<PipelineStoreState>()(
         activeRunStatus: state.activeRunStatus,
         agentStatuses: state.agentStatuses,
         nodeStatuses: state.nodeStatuses,
+        currentNode: state.currentNode,
+        executionLayers: state.executionLayers,
+        activeTemplateId: state.activeTemplateId,
         currentStage: state.currentStage,
         completedStages: state.completedStages,
         isTerminal: state.isTerminal,
