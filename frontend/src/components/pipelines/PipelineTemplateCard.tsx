@@ -21,6 +21,7 @@ import {
   useDeleteTemplate,
   useArchiveTemplate,
 } from "@/hooks/usePipelineTemplates";
+import { toast } from "@/components/ui/Toast";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Status badge
@@ -67,15 +68,37 @@ function CardMenu({ template, onClose }: CardMenuProps) {
 
   const handleClone = async () => {
     try {
-      await cloneMutation.mutateAsync({ templateId: template.template_id });
+      const cloned = await cloneMutation.mutateAsync({
+        templateId: template.template_id,
+      });
+      toast.success(
+        "Pipeline cloned",
+        `"${cloned.name}" has been created as a copy.`,
+      );
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ?? (err instanceof Error ? err.message : "Clone failed.");
+      toast.error("Clone failed", detail);
     } finally {
       onClose();
     }
   };
 
   const handleArchive = async () => {
+    const isArchived = template.is_archived;
     try {
       await archiveMutation.mutateAsync(template.template_id);
+      toast.success(
+        isArchived ? "Pipeline unarchived" : "Pipeline archived",
+        `"${template.name}" has been ${isArchived ? "restored" : "archived"}.`,
+      );
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ??
+        (err instanceof Error ? err.message : "Operation failed.");
+      toast.error(isArchived ? "Unarchive failed" : "Archive failed", detail);
     } finally {
       onClose();
     }
@@ -88,6 +111,15 @@ function CardMenu({ template, onClose }: CardMenuProps) {
     }
     try {
       await deleteMutation.mutateAsync(template.template_id);
+      toast.success(
+        "Pipeline deleted",
+        `"${template.name}" has been permanently removed.`,
+      );
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ?? (err instanceof Error ? err.message : "Delete failed.");
+      toast.error("Delete failed", detail);
     } finally {
       onClose();
     }

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     APP_PORT: int = 8000
     APP_HOST: str = "0.0.0.0"
     APP_TITLE: str = "Auto-AT API"
-    APP_VERSION: str = "2.0.0"
+    APP_VERSION: str = "3.0.0"
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
 
     # ── Database (V2 — MongoDB) ───────────────────────────────────

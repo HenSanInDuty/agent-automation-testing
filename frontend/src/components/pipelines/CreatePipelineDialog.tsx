@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { X, GitBranch, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCreateTemplate } from "@/hooks/usePipelineTemplates";
+import { toast } from "@/components/ui/Toast";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schema
@@ -35,7 +36,10 @@ interface CreatePipelineDialogProps {
   onClose: () => void;
 }
 
-export function CreatePipelineDialog({ open, onClose }: CreatePipelineDialogProps) {
+export function CreatePipelineDialog({
+  open,
+  onClose,
+}: CreatePipelineDialogProps) {
   const router = useRouter();
   const createMutation = useCreateTemplate();
 
@@ -89,17 +93,29 @@ export function CreatePipelineDialog({ open, onClose }: CreatePipelineDialogProp
           .filter(Boolean)
       : [];
 
-    const created = await createMutation.mutateAsync({
-      name: values.name,
-      template_id: values.template_id,
-      description: values.description ?? "",
-      tags,
-      nodes: [],
-      edges: [],
-    });
+    try {
+      const created = await createMutation.mutateAsync({
+        name: values.name,
+        template_id: values.template_id,
+        description: values.description ?? "",
+        tags,
+        nodes: [],
+        edges: [],
+      });
 
-    onClose();
-    router.push(`/pipelines/${created.template_id}`);
+      toast.success(
+        "Pipeline created",
+        `"${created.name}" is ready — opening the builder.`,
+      );
+      onClose();
+      router.push(`/pipelines/${created.template_id}`);
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ??
+        (err instanceof Error ? err.message : "Failed to create pipeline.");
+      toast.error("Create failed", detail, 8000);
+    }
   };
 
   if (!open) return null;
@@ -136,7 +152,10 @@ export function CreatePipelineDialog({ open, onClose }: CreatePipelineDialogProp
             <div className="w-8 h-8 rounded-lg bg-[#135bec]/15 flex items-center justify-center shrink-0">
               <GitBranch className="w-4 h-4 text-[#5b9eff]" />
             </div>
-            <h2 id="create-pipeline-title" className="text-sm font-semibold text-white">
+            <h2
+              id="create-pipeline-title"
+              className="text-sm font-semibold text-white"
+            >
               New Pipeline Template
             </h2>
             <button
@@ -192,7 +211,9 @@ export function CreatePipelineDialog({ open, onClose }: CreatePipelineDialogProp
                 )}
               />
               {errors.template_id ? (
-                <p className="text-xs text-red-400">{errors.template_id.message}</p>
+                <p className="text-xs text-red-400">
+                  {errors.template_id.message}
+                </p>
               ) : (
                 <p className="text-xs text-[#3d5070]">
                   Unique identifier — auto-generated from name
@@ -217,15 +238,15 @@ export function CreatePipelineDialog({ open, onClose }: CreatePipelineDialogProp
                 )}
               />
               {errors.description && (
-                <p className="text-xs text-red-400">{errors.description.message}</p>
+                <p className="text-xs text-red-400">
+                  {errors.description.message}
+                </p>
               )}
             </div>
 
             {/* Tags */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#92a4c9]">
-                Tags
-              </label>
+              <label className="text-xs font-medium text-[#92a4c9]">Tags</label>
               <input
                 {...register("tags")}
                 placeholder="testing, automation, v3  (comma-separated)"
@@ -236,7 +257,9 @@ export function CreatePipelineDialog({ open, onClose }: CreatePipelineDialogProp
                   "transition-colors duration-150",
                 )}
               />
-              <p className="text-xs text-[#3d5070]">Separate multiple tags with commas</p>
+              <p className="text-xs text-[#3d5070]">
+                Separate multiple tags with commas
+              </p>
             </div>
 
             {/* Error from mutation */}

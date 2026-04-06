@@ -3996,17 +3996,17 @@ mkdir -p src/components/pipeline-builder/nodes
 - [x] Create `components/pipeline/PipelineRunPage.tsx` — full V3 run page component
 - [x] Create `components/pipeline/PipelineRunHistoryPage.tsx` — run history component
 
-### Phase 21 – Migration & Polish `~1.5 ngày`
+### Phase 21 – Migration & Polish `~1.5 ngày` ✅
 
-- [ ] Create `scripts/migrate_v2_to_v3.py`
-- [ ] Run migration on dev data
-- [ ] Deprecate `/admin/stages` page → show migration notice
-- [ ] Deprecate `/pipeline` route → redirect to `/pipelines`
-- [ ] Update `backend/README.md` and `frontend/README.md` for V3
-- [ ] Update Docker files if needed
-- [ ] Smoke test: create template → build DAG → run → view live progress → export report
-- [ ] Error handling: invalid DAG save, orphan nodes warning, concurrent runs limit
-- [ ] Loading states and toast notifications for new actions
+- [x] Create `scripts/migrate_v2_to_v3.py`
+- [x] Run migration on dev data
+- [x] Deprecate `/admin/stages` page → show migration notice
+- [x] Deprecate `/pipeline` route → redirect to `/pipelines`
+- [x] Update `backend/README.md` and `frontend/README.md` for V3
+- [x] Update Docker files if needed
+- [x] Smoke test: create template → build DAG → run → view live progress → export report
+- [x] Error handling: invalid DAG save, orphan nodes warning, concurrent runs limit
+- [x] Loading states and toast notifications for new actions
 
 ---
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useEffect, useState } from "react";
+import { toast } from "@/components/ui/Toast";
 import {
   ReactFlow,
   MiniMap,
@@ -151,15 +152,41 @@ function PipelineBuilderInner({ templateId }: { templateId: string }) {
 
   // ── Save handler ──
   const handleSave = useCallback(async () => {
-    const { nodes: currentNodes, edges: currentEdges } =
-      useBuilderStore.getState();
-    await updateTemplateMutation.mutateAsync({
-      nodes: currentNodes.map(flowNodeToTemplateNode),
-      edges: currentEdges.map(flowEdgeToTemplateEdge),
-      name: useBuilderStore.getState().templateName,
-      description: useBuilderStore.getState().templateDescription,
-    });
-    useBuilderStore.setState({ isDirty: false });
+    const state = useBuilderStore.getState();
+
+    // Guard: warn but still allow saving an invalid DAG (warn only)
+    if (!state.isValid && state.nodes.length > 0) {
+      toast.warning(
+        "DAG has validation errors",
+        `Saving anyway — fix ${state.validationErrors.length} error(s) before running.`,
+        6000,
+      );
+    }
+
+    useBuilderStore.setState({ isSaving: true });
+    try {
+      await updateTemplateMutation.mutateAsync({
+        nodes: state.nodes.map(flowNodeToTemplateNode),
+        edges: state.edges.map(flowEdgeToTemplateEdge),
+        name: state.templateName,
+        description: state.templateDescription,
+      });
+      useBuilderStore.setState({ isDirty: false });
+      toast.success(
+        "Pipeline saved",
+        `"${state.templateName}" has been saved.`,
+      );
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "An unexpected error occurred.";
+      // Surface DAG validation detail from the backend (HTTP 422)
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ?? message;
+      toast.error("Save failed", detail, 8000);
+    } finally {
+      useBuilderStore.setState({ isSaving: false });
+    }
   }, [updateTemplateMutation]);
 
   // ── Drag-over handler ──
