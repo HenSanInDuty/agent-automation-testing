@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Pause, Play, XCircle } from "lucide-react";
+import { Pause, Play, XCircle, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
@@ -19,6 +19,7 @@ import type { PipelineStatus } from "@/types";
 interface PipelineControlsProps {
   runId: string;
   status: PipelineStatus;
+  stageMode?: "auto" | "manual";
   onPaused?: () => void;
   onResumed?: () => void;
   onCancelled?: () => void;
@@ -31,6 +32,7 @@ interface PipelineControlsProps {
 export function PipelineControls({
   runId,
   status,
+  stageMode = "auto",
   onPaused,
   onResumed,
   onCancelled,
@@ -121,6 +123,7 @@ export function PipelineControls({
   }
 
   if (status === "paused") {
+    const isManual = stageMode === "manual";
     return (
       <div className="flex items-center gap-2">
         <Button
@@ -129,13 +132,17 @@ export function PipelineControls({
           loading={resumeMutation.isPending}
           leftIcon={
             !resumeMutation.isPending ? (
-              <Play className="w-3.5 h-3.5" aria-hidden="true" />
+              isManual ? (
+                <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+              ) : (
+                <Play className="w-3.5 h-3.5" aria-hidden="true" />
+              )
             ) : undefined
           }
           onClick={handleResume}
-          aria-label="Resume pipeline"
+          aria-label={isManual ? "Start next stage" : "Resume pipeline"}
         >
-          Resume
+          {isManual ? "Start Next Stage" : "Resume"}
         </Button>
         <Button
           variant="danger"

@@ -1,11 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Zap, History, PlayCircle } from "lucide-react";
+import { Zap, History, PlayCircle, Hand } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
-import { useStartPipeline, usePipelineRun } from "@/hooks/usePipeline";
+import {
+  useStartPipeline,
+  usePipelineRun,
+  usePausePipeline,
+} from "@/hooks/usePipeline";
 import { usePipelineStore } from "@/store/pipelineStore";
 import { cn } from "@/lib/utils";
 import type { PipelineRunResponse, PipelineStatus } from "@/types";
@@ -27,6 +31,81 @@ const TERMINAL_STATUSES: PipelineStatus[] = [
   "failed",
   "cancelled",
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StageModeToggle
+// ─────────────────────────────────────────────────────────────────────────────
+
+type StageMode = "auto" | "manual";
+
+interface StageModeToggleProps {
+  value: StageMode;
+  onChange: (mode: StageMode) => void;
+  disabled?: boolean;
+}
+
+function StageModeToggle({ value, onChange, disabled }: StageModeToggleProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-[#92a4c9]">Stage Mode</span>
+      <div
+        className={cn(
+          "inline-flex rounded-lg border border-[#2b3b55] bg-[#111827] p-0.5 gap-0.5",
+          disabled && "opacity-50 pointer-events-none",
+        )}
+        role="radiogroup"
+        aria-label="Stage execution mode"
+      >
+        {/* Auto button */}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={value === "auto"}
+          onClick={() => onChange("auto")}
+          disabled={disabled}
+          className={cn(
+            "flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md",
+            "text-xs font-medium transition-all duration-150",
+            value === "auto"
+              ? "bg-[#135bec] text-white shadow-sm"
+              : "text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d]",
+          )}
+          title="Run all stages automatically without stopping"
+        >
+          <Zap className="w-3 h-3" aria-hidden="true" />
+          Auto
+        </button>
+
+        {/* Manual button */}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={value === "manual"}
+          onClick={() => onChange("manual")}
+          disabled={disabled}
+          className={cn(
+            "flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md",
+            "text-xs font-medium transition-all duration-150",
+            value === "manual"
+              ? "bg-[#1e2a3d] text-white border border-[#2b3b55] shadow-sm"
+              : "text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d]",
+          )}
+          title="Pause between stages and advance manually"
+        >
+          <Hand className="w-3 h-3" aria-hidden="true" />
+          Manual
+        </button>
+      </div>
+
+      {/* Helper text */}
+      <p className="text-[11px] text-[#3d5070] leading-relaxed">
+        {value === "auto"
+          ? "All stages run automatically end-to-end."
+          : "Pipeline pauses after each stage — you advance manually."}
+      </p>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Empty right-panel placeholder
@@ -73,8 +152,12 @@ export function PipelinePage() {
   const [selectedHistoryRun, setSelectedHistoryRun] =
     React.useState<PipelineRunResponse | null>(null);
   const [showHistory, setShowHistory] = React.useState(false);
+  const [stageMode, setStageMode] = React.useState<StageMode>("auto");
 
   const resultsRef = React.useRef<HTMLDivElement>(null);
+
+  // Tracks the number of events already processed for auto-pause logic
+  const lastEventsLenRef = React.useRef(0);
 
   // ── Global pipeline store ──────────────────────────────────────────────────
   const {
@@ -86,12 +169,14 @@ export function PipelinePage() {
     completedStages,
     stageSummaries,
     logMessages,
+    stageLogMessages,
     events,
     isTerminal,
     wsStatus,
     startSession,
     clearSession,
     connectWebSocket,
+    syncRunStatus,
   } = usePipelineStore();
 
   // ── Rehydration: reconnect WS if returning to page with an active session ──
@@ -103,6 +188,7 @@ export function PipelinePage() {
 
   // ── Data / mutations ───────────────────────────────────────────────────────
   const startMutation = useStartPipeline();
+  const pauseMutation = usePausePipeline();
 
   const { data: activeRun, refetch: refetchActiveRun } = usePipelineRun(
     activeRunId ?? undefined,
@@ -118,19 +204,53 @@ export function PipelinePage() {
     }
   }, [activeRunStatus, refetchActiveRun]);
 
-  // Sync store terminal status from polled run data; auto-scroll to results
+  // Sync store status from polled run data; auto-scroll to results
   React.useEffect(() => {
-    if (activeRun && TERMINAL_STATUSES.includes(activeRun.status)) {
-      if (!isTerminal) {
-        setTimeout(() => {
-          resultsRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }, 400);
-      }
+    if (!activeRun) return;
+    const isNowTerminal = TERMINAL_STATUSES.includes(activeRun.status);
+    if (isNowTerminal && !isTerminal) {
+      syncRunStatus(activeRun.status, undefined);
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 400);
     }
-  }, [activeRun, isTerminal]);
+  }, [activeRun, isTerminal, syncRunStatus]);
+
+  // ── Auto-pause logic (manual mode) ────────────────────────────────────────
+  // When manual mode is active, automatically request a pause whenever a new
+  // stage.completed event arrives (so the pipeline halts before the next stage).
+  React.useEffect(() => {
+    // Keep the ref in sync even when mode is "auto" so we don't re-process
+    // old events if the user switches to manual mid-run.
+    if (stageMode !== "manual") {
+      lastEventsLenRef.current = events.length;
+      return;
+    }
+
+    if (events.length <= lastEventsLenRef.current) return;
+
+    const newEvents = events.slice(lastEventsLenRef.current);
+    lastEventsLenRef.current = events.length;
+
+    const hasStageCompleted = newEvents.some(
+      (e) => e.event === "stage.completed",
+    );
+
+    if (
+      hasStageCompleted &&
+      activeRunId &&
+      activeRunStatus === "running" &&
+      !pauseMutation.isPending
+    ) {
+      pauseMutation.mutateAsync(activeRunId).catch(() => {
+        // Silently ignore — the stage may have been the last one and the run
+        // might have already transitioned to "completed" before we could pause.
+      });
+    }
+  }, [events, stageMode, activeRunId, activeRunStatus, pauseMutation]);
 
   // ── Derived state ──────────────────────────────────────────────────────────
   const effectiveStatus = activeRun?.status ?? activeRunStatus;
@@ -156,6 +276,9 @@ export function PipelinePage() {
     !!activeRunId && completedStages.length > 0 && !isActiveRunTerminal;
   const showResults = displayRun !== null;
 
+  // Whether the pipeline is actively in-progress (disable mode toggle)
+  const pipelineActive = isRunning || isPaused;
+
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   /** Called by PipelineControls after a successful cancel. */
@@ -168,6 +291,9 @@ export function PipelinePage() {
 
     try {
       const run = await startMutation.mutateAsync({ file, llmProfileId });
+
+      // Reset event counter so auto-pause logic starts fresh
+      lastEventsLenRef.current = 0;
 
       // Start global session (resets state + connects WS)
       startSession(run.id);
@@ -238,6 +364,13 @@ export function PipelinePage() {
           <DocumentUpload file={file} onChange={setFile} />
           <LLMProfileSelector value={llmProfileId} onChange={setLlmProfileId} />
 
+          {/* Stage mode toggle */}
+          <StageModeToggle
+            value={stageMode}
+            onChange={setStageMode}
+            disabled={pipelineActive}
+          />
+
           {/* Run button */}
           <Button
             variant="primary"
@@ -260,6 +393,7 @@ export function PipelinePage() {
             <PipelineControls
               runId={activeRunId}
               status={effectiveStatus as PipelineStatus}
+              stageMode={stageMode}
               onCancelled={handleCancelled}
             />
           )}
@@ -286,8 +420,10 @@ export function PipelinePage() {
               agentStatuses={agentStatuses}
               agentProgress={agentProgress}
               currentStage={currentStage}
+              completedStages={completedStages}
               wsConnected={wsStatus === "connected"}
               logMessages={logMessages}
+              stageLogMessages={stageLogMessages}
             />
           )}
 

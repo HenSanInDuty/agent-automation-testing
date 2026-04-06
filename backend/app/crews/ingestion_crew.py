@@ -628,20 +628,9 @@ class IngestionCrew(BaseCrew):
             An :class:`~app.db.models.LLMProfileDocument` instance, or ``None``
             if no profile is found.
         """
-        import asyncio
-
         coro = self._llm_factory._load_default_profile()
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        try:
-            if loop is not None and loop.is_running():
-                fut = asyncio.run_coroutine_threadsafe(coro, loop)
-                return fut.result(timeout=30)
-            else:
-                return asyncio.run(coro)
+            return self._run_async_from_thread(coro, timeout=30)
         except Exception as exc:
             logger.warning(
                 "[Ingestion][%s] Failed to resolve LLM profile: %s — falling back to mock",

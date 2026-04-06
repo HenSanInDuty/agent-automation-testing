@@ -202,8 +202,6 @@ class ExecutionCrew(BaseCrew):
 
         # ── Build agents ─────────────────────────────────────────────────────
         self._emit_log("Building execution agents from database configuration…")
-        import asyncio as _asyncio
-
         factory = AgentFactory(run_profile_id=self._run_profile_id)
 
         # Tool injection map — applied after async build completes
@@ -214,17 +212,9 @@ class ExecutionCrew(BaseCrew):
 
         # Build all agents via the async factory, bridging into the sync context
         try:
-            try:
-                _loop = _asyncio.get_running_loop()
-            except RuntimeError:
-                _loop = None
-            if _loop is not None and _loop.is_running():
-                _fut = _asyncio.run_coroutine_threadsafe(
-                    factory.build_many(list(self.agent_ids)), _loop
-                )
-                agent_objects: dict[str, Any] = _fut.result(timeout=60)
-            else:
-                agent_objects = _asyncio.run(factory.build_many(list(self.agent_ids)))
+            agent_objects: dict[str, Any] = self._run_async_from_thread(
+                factory.build_many(list(self.agent_ids)), timeout=60
+            )
         except Exception as exc:
             for agent_id in self.agent_ids:
                 self._emit_agent_failed(agent_id, str(exc))

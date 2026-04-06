@@ -374,8 +374,14 @@ class PipelineRunnerV2:
             else None
         )
 
+        # Capture the running event loop so crews can use run_coroutine_threadsafe
+        # instead of asyncio.run() (which would create a different event loop and
+        # break the AsyncMongoClient binding).
+        current_loop = asyncio.get_running_loop()
+
         if stage_config.crew_type == "pure_python":
             crew = self._get_builtin_crew(stage_config.stage_id)
+            crew._event_loop = current_loop
             if asyncio.iscoroutinefunction(crew.run):
                 coro = crew.run(input_data)
             else:
@@ -385,6 +391,7 @@ class PipelineRunnerV2:
         elif stage_config.crew_type in ("crewai_sequential", "crewai_hierarchical"):
             builtin_crew = self._try_get_builtin_crew(stage_config.stage_id)
             if builtin_crew is not None:
+                builtin_crew._event_loop = current_loop
                 coro = asyncio.to_thread(builtin_crew.run, input_data)
                 return await asyncio.wait_for(coro, timeout=timeout)
 
@@ -408,6 +415,7 @@ class PipelineRunnerV2:
                 mock_mode=self._mock_mode,
                 process=process,
             )
+            crew._event_loop = current_loop
             coro = asyncio.to_thread(crew.run, input_data)
             return await asyncio.wait_for(coro, timeout=timeout)
 

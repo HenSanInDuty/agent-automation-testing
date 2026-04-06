@@ -9,6 +9,8 @@ import {
   MinusCircle,
   Wifi,
   WifiOff,
+  Terminal,
+  Hourglass,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/Select";
@@ -34,8 +36,10 @@ export interface PipelineProgressProps {
   agentStatuses: Record<string, AgentRunStatus>;
   agentProgress: Record<string, { pct: number; message: string }>;
   currentStage: string | null;
+  completedStages: string[];
   wsConnected: boolean;
   logMessages: string[];
+  stageLogMessages: Record<string, string[]>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -275,6 +279,83 @@ function AgentRow({ agent, liveStatus, progress }: AgentRowProps) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// StageLiveLog — compact per-stage log feed (rendered inside a StageBlock)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface StageLiveLogProps {
+  messages: string[];
+  /** When true renders the "Starting…" spinner instead of blank */
+  isStarting?: boolean;
+}
+
+function StageLiveLog({ messages, isStarting }: StageLiveLogProps) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Nothing to show yet and not in "starting" state
+  if (!isStarting && messages.length === 0) return null;
+
+  const recent = messages.slice(-8);
+
+  return (
+    <div className="border-t border-[#2b3b55]/60 bg-[#0d1424]/80">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#2b3b55]/40">
+        <Terminal
+          className="w-3 h-3 text-[#5b9eff] shrink-0"
+          aria-hidden="true"
+        />
+        <span className="text-[10px] font-semibold text-[#5b9eff] tracking-wide uppercase">
+          Live Log
+        </span>
+        {isStarting && messages.length === 0 && (
+          <Loader2
+            className="w-3 h-3 text-[#5b9eff] animate-spin ml-auto"
+            aria-hidden="true"
+          />
+        )}
+        {messages.length > 0 && (
+          <span className="ml-auto text-[10px] text-[#3d5070] tabular-nums">
+            {messages.length} line{messages.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Log lines */}
+      {messages.length > 0 ? (
+        <div
+          ref={scrollRef}
+          className="px-3 py-2 flex flex-col gap-0.5 max-h-36 overflow-y-auto"
+        >
+          {recent.map((msg, i) => (
+            <p
+              key={i}
+              className={cn(
+                "text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-all",
+                i === recent.length - 1 ? "text-[#c8d8f0]" : "text-[#4d6080]",
+              )}
+            >
+              {msg}
+            </p>
+          ))}
+        </div>
+      ) : (
+        <div className="px-3 py-2">
+          <p className="text-[11px] font-mono text-[#3d5070] italic">
+            Initializing stage…
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // StageBlock
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -284,6 +365,8 @@ interface StageBlockProps {
   agentStatuses: Record<string, AgentRunStatus>;
   agentProgress: Record<string, { pct: number; message: string }>;
   isCurrentStage: boolean;
+  isCompletedStage: boolean;
+  logMessages: string[];
 }
 
 function StageBlock({
@@ -292,6 +375,8 @@ function StageBlock({
   agentStatuses,
   agentProgress,
   isCurrentStage,
+  isCompletedStage,
+  logMessages,
 }: StageBlockProps) {
   const label = STAGE_LABELS[stage];
   const totalExpected = STAGE_AGENT_COUNTS[stage] ?? agents.length;
@@ -313,18 +398,34 @@ function StageBlock({
   const stageCompleted =
     completedCount >= totalExpected && totalExpected > 0 && !hasFailed;
 
+  // Whether to show the live log section
+  const showLog = isCurrentStage;
+  // Show "Starting…" spinner when current stage has no agents yet and no logs
+  const isStarting = isCurrentStage && agents.length === 0;
+
+  // Determine border/bg style
+  const borderClass = isCurrentStage
+    ? "border-[#135bec]/40 shadow-[0_0_0_1px_rgba(19,91,236,0.08)]"
+    : isCompletedStage || stageCompleted
+      ? "border-[#22c55e]/25"
+      : hasFailed
+        ? "border-[#ef4444]/25"
+        : "border-[#2b3b55]";
+
+  const headerBg = isCurrentStage
+    ? "border-[#135bec]/20 bg-[#135bec]/5"
+    : isCompletedStage || stageCompleted
+      ? "border-[#22c55e]/15 bg-[#22c55e]/5"
+      : hasFailed
+        ? "border-[#ef4444]/15 bg-[#ef4444]/5"
+        : "border-[#2b3b55]/60";
+
   return (
     <div
       className={cn(
         "rounded-xl border overflow-hidden",
         "bg-[#18202F]",
-        isCurrentStage
-          ? "border-[#135bec]/40 shadow-[0_0_0_1px_rgba(19,91,236,0.08)]"
-          : stageCompleted
-            ? "border-[#22c55e]/25"
-            : hasFailed
-              ? "border-[#ef4444]/25"
-              : "border-[#2b3b55]",
+        borderClass,
       )}
     >
       {/* ── Stage header ────────────────────────────────────────────────── */}
@@ -332,13 +433,7 @@ function StageBlock({
         className={cn(
           "flex items-center gap-3 px-4 py-3",
           "border-b",
-          isCurrentStage
-            ? "border-[#135bec]/20 bg-[#135bec]/5"
-            : stageCompleted
-              ? "border-[#22c55e]/15 bg-[#22c55e]/5"
-              : hasFailed
-                ? "border-[#ef4444]/15 bg-[#ef4444]/5"
-                : "border-[#2b3b55]/60",
+          headerBg,
         )}
       >
         {/* Stage label */}
@@ -346,10 +441,12 @@ function StageBlock({
           {label}
         </span>
 
-        {/* Progress fraction */}
-        <span className="shrink-0 text-xs text-[#92a4c9] tabular-nums">
-          {completedCount}/{totalExpected}
-        </span>
+        {/* Progress fraction — only show when there are agents or it's active */}
+        {(agents.length > 0 || isCurrentStage) && (
+          <span className="shrink-0 text-xs text-[#92a4c9] tabular-nums">
+            {completedCount}/{totalExpected}
+          </span>
+        )}
 
         {/* Running indicator */}
         {isCurrentStage && hasRunning && (
@@ -362,8 +459,16 @@ function StageBlock({
           </span>
         )}
 
+        {/* Starting indicator — stage is active but no agents yet */}
+        {isCurrentStage && !hasRunning && agents.length === 0 && (
+          <span className="shrink-0 inline-flex items-center gap-1.5 text-xs text-[#5b9eff]">
+            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+            Starting
+          </span>
+        )}
+
         {/* Status badges */}
-        {stageCompleted && (
+        {(isCompletedStage || stageCompleted) && (
           <Badge variant="success" size="xs">
             Done
           </Badge>
@@ -373,17 +478,31 @@ function StageBlock({
             Failed
           </Badge>
         )}
+
+        {/* Pending badge — upcoming stages that haven't started */}
+        {!isCurrentStage &&
+          !isCompletedStage &&
+          !stageCompleted &&
+          !hasFailed &&
+          agents.length === 0 && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-[#3d5070]">
+              <Hourglass className="w-3 h-3" aria-hidden="true" />
+              Pending
+            </span>
+          )}
       </div>
 
       {/* ── Progress bar ────────────────────────────────────────────────── */}
-      <ProgressBar
-        value={progressPct}
-        completed={stageCompleted}
-        className="rounded-none h-1"
-      />
+      {(agents.length > 0 || isCurrentStage) && (
+        <ProgressBar
+          value={isCurrentStage && agents.length === 0 ? 0 : progressPct}
+          completed={isCompletedStage || stageCompleted}
+          className="rounded-none h-1"
+        />
+      )}
 
       {/* ── Agent rows ──────────────────────────────────────────────────── */}
-      {agents.length > 0 ? (
+      {agents.length > 0 && (
         <div role="list" aria-label={`Agents in ${label}`}>
           {agents.map((agent) => (
             <div key={agent.agent_id} role="listitem">
@@ -395,64 +514,25 @@ function StageBlock({
             </div>
           ))}
         </div>
-      ) : (
-        <div className="flex items-center justify-center py-6 px-4">
-          <p className="text-xs text-[#3d5070] italic">
-            Waiting for agents in this stage…
+      )}
+
+      {/* ── Pending placeholder — future stage, not yet started ─────────── */}
+      {agents.length === 0 && !isCurrentStage && (
+        <div className="flex items-center gap-2 px-4 py-4">
+          <Hourglass
+            className="w-3.5 h-3.5 text-[#2b3b55] shrink-0"
+            aria-hidden="true"
+          />
+          <p className="text-xs text-[#2b3b55] italic">
+            Waiting for previous stages to complete…
           </p>
         </div>
       )}
-    </div>
-  );
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LiveLogFeed
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface LiveLogFeedProps {
-  messages: string[];
-  isRunning: boolean;
-}
-
-function LiveLogFeed({ messages, isRunning }: LiveLogFeedProps) {
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  if (!isRunning || messages.length === 0) return null;
-
-  const recent = messages.slice(-6);
-
-  return (
-    <div className="rounded-xl border border-[#2b3b55] bg-[#0d1424] overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#2b3b55]/60">
-        <span
-          className="w-1.5 h-1.5 rounded-full bg-[#5b9eff] animate-pulse"
-          aria-hidden="true"
-        />
-        <span className="text-xs font-semibold text-[#5b9eff]">Live Log</span>
-      </div>
-      <div
-        ref={scrollRef}
-        className="px-3 py-2 flex flex-col gap-0.5 max-h-32 overflow-y-auto"
-      >
-        {recent.map((msg, i) => (
-          <p
-            key={i}
-            className={cn(
-              "text-[11px] font-mono leading-relaxed",
-              i === recent.length - 1 ? "text-[#92a4c9]" : "text-[#3d5070]",
-            )}
-          >
-            {msg}
-          </p>
-        ))}
-      </div>
+      {/* ── Per-stage live log ───────────────────────────────────────────── */}
+      {showLog && (
+        <StageLiveLog messages={logMessages} isStarting={isStarting} />
+      )}
     </div>
   );
 }
@@ -467,8 +547,10 @@ export function PipelineProgress({
   agentStatuses,
   agentProgress,
   currentStage,
+  completedStages,
   wsConnected,
   logMessages,
+  stageLogMessages,
 }: PipelineProgressProps) {
   // ── Always group agents before any conditional returns (hooks rules) ──────
   const agentsByStage = React.useMemo<
@@ -595,14 +677,12 @@ export function PipelineProgress({
             aria-hidden="true"
           />
           <p className="text-xs text-[#fbbf24] leading-relaxed">
-            Pipeline is paused. It will resume from the next stage when you
-            click Resume.
+            Pipeline is paused. Click{" "}
+            <span className="font-semibold">Start Next Stage</span> to continue
+            from the next stage.
           </p>
         </div>
       )}
-
-      {/* ── Live log feed (visible only while running) ────────────────────── */}
-      <LiveLogFeed messages={logMessages} isRunning={isRunning} />
 
       {/* ── Stage blocks ─────────────────────────────────────────────────── */}
       {STAGE_ORDER.map((stage) => (
@@ -613,10 +693,12 @@ export function PipelineProgress({
           agentStatuses={agentStatuses}
           agentProgress={agentProgress}
           isCurrentStage={currentStage === stage}
+          isCompletedStage={completedStages.includes(stage)}
+          logMessages={stageLogMessages[stage] ?? []}
         />
       ))}
 
-      {/* ── Live event log (collapsible, last 20 events) ─────────────────── */}
+      {/* ── Collapsible raw event log ─────────────────────────────────────── */}
       {wsEvents.length > 0 && (
         <details className="group">
           <summary
@@ -664,6 +746,42 @@ export function PipelineProgress({
               </li>
             ))}
           </ul>
+        </details>
+      )}
+
+      {/* ── Fallback global log (hidden when running — logs live in stages) ── */}
+      {!isRunning && logMessages.length > 0 && (
+        <details>
+          <summary
+            className={cn(
+              "cursor-pointer select-none",
+              "text-xs text-[#3d5070] hover:text-[#92a4c9]",
+              "transition-colors duration-150 py-1 w-fit",
+            )}
+          >
+            {logMessages.length} log line{logMessages.length !== 1 ? "s" : ""}
+          </summary>
+          <div className="mt-2 rounded-xl border border-[#2b3b55] bg-[#0d1424] overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-[#2b3b55]/60">
+              <Terminal
+                className="w-3.5 h-3.5 text-[#5b9eff]"
+                aria-hidden="true"
+              />
+              <span className="text-xs font-semibold text-[#5b9eff]">
+                Full Log
+              </span>
+            </div>
+            <div className="px-3 py-2 flex flex-col gap-0.5 max-h-48 overflow-y-auto">
+              {logMessages.map((msg, i) => (
+                <p
+                  key={i}
+                  className="text-[11px] font-mono text-[#4d6080] leading-relaxed"
+                >
+                  {msg}
+                </p>
+              ))}
+            </div>
+          </div>
         </details>
       )}
     </div>

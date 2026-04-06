@@ -5,20 +5,27 @@ These replace the V1 SQLAlchemy ORM models.  Each Document IS a Pydantic
 BaseModel — no separate schema layer is needed for internal operations.
 
 Documents:
-    LLMProfileDocument    – LLM provider/model profiles
-    AgentConfigDocument   – CrewAI agent configurations
-    StageConfigDocument   – Pipeline stage configurations
-    PipelineRunDocument   – Pipeline run records (one per upload + run)
-    PipelineResultDocument – Per-agent/per-stage output blobs
+    LLMProfileDocument        – LLM provider/model profiles
+    AgentConfigDocument       – CrewAI agent configurations
+    StageConfigDocument       – Pipeline stage configurations
+    NodeType                  – Enum of DAG node types (V3)
+    PipelineNodeConfig        – Embedded node definition in a pipeline DAG (V3)
+    PipelineEdgeConfig        – Embedded edge definition in a pipeline DAG (V3)
+    PipelineTemplateDocument  – Reusable pipeline DAG definition (V3)
+    PipelineRunDocument       – Pipeline run records (V3, backward-compat with V2)
+    PipelineResultDocument    – Per-node/per-agent output blobs (V3, backward-compat with V2)
 """
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Optional
 
 from beanie import Document, Indexed
-from pydantic import Field
+from pydantic import BaseModel, Field
+from pymongo import IndexModel
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -210,115 +217,232 @@ class StageConfigDocument(Document):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PipelineRunDocument
+# V3 Pipeline DAG – Enums & Embedded Models
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class PipelineRunDocument(Document):
-    """MongoDB document tracking one end-to-end pipeline execution.
+class NodeType(str, Enum):
+    """Types of nodes in a pipeline DAG."""
 
-    A new :class:`PipelineRunDocument` is created each time a user uploads a
-    requirements document and triggers a run.  It acts as the single source of
-    truth for the run's lifecycle, storing the overall status, per-agent
-    statuses, and lightweight summaries of each stage's output.
+    INPUT = "input"
+    OUTPUT = "output"
+    AGENT = "agent"
+    PURE_PYTHON = "pure_python"
 
-    Full per-agent output blobs are stored separately in
-    :class:`PipelineResultDocument` and referenced by ``run_id``.
 
-    Attributes:
-        run_id:                 UUID string that uniquely identifies this run.
-        document_name:          Original filename of the uploaded document.
-        document_path:          Server-side path where the file was saved.
-        llm_profile_id:         ObjectId string of the LLM profile override for
-                                this run, or ``None`` to use the global default.
-        status:                 Lifecycle state — ``pending`` | ``running`` |
-                                ``paused`` | ``completed`` | ``failed`` |
-                                ``cancelled``.
-        current_stage:          ``stage_id`` of the stage currently executing,
-                                or ``None`` when the run is not active.
-        completed_stages:       Ordered list of ``stage_id`` values that have
-                                finished successfully.
-        agent_statuses:         Mapping of ``agent_id`` → status string
-                                (waiting | running | done | skipped | error).
-        stage_results_summary:  Shallow per-stage summary dicts (e.g. counts,
-                                headline metrics) for quick display in the UI
-                                without fetching full result documents.
-        error:                  Human-readable error message if the run failed.
-        pause_reason:           Why the run was paused (set by the pipeline
-                                runner when transitioning to ``paused``).
-        created_at:             UTC timestamp set when the record is inserted.
-        started_at:             UTC timestamp set when execution begins.
-        paused_at:              UTC timestamp set when the run enters ``paused``.
-        resumed_at:             UTC timestamp set when the run is resumed.
-        finished_at:            UTC timestamp set when the run reaches a
-                                terminal state (completed / failed / cancelled).
+class PipelineNodeConfig(BaseModel):
+    """A single node in the pipeline DAG (embedded in PipelineTemplateDocument)."""
+
+    node_id: str = Field(
+        ...,
+        pattern=r"^[a-z][a-z0-9_-]{2,49}$",
+        description="Unique within this pipeline template",
+    )
+    node_type: NodeType = NodeType.AGENT
+    agent_id: Optional[str] = Field(
+        None,
+        description="Reference to agent_configs.agent_id. Required for AGENT/PURE_PYTHON types.",
+    )
+    label: str = Field(
+        ..., min_length=1, max_length=200, description="Display name on canvas"
+    )
+    description: str = ""
+
+    # Visual position on canvas
+    position_x: float = 0.0
+    position_y: float = 0.0
+
+    # Execution config
+    timeout_seconds: int = Field(default=300, ge=10, le=7200)
+    retry_count: int = Field(default=0, ge=0, le=5)
+    enabled: bool = True
+
+    # Custom data (agent overrides, etc.)
+    config_overrides: dict = Field(
+        default_factory=dict,
+        description="Override agent config fields: llm_profile_id, max_iter, etc.",
+    )
+
+
+class PipelineEdgeConfig(BaseModel):
+    """A directed edge connecting two nodes (embedded in PipelineTemplateDocument)."""
+
+    edge_id: str = Field(..., description="Unique within this pipeline")
+    source_node_id: str = Field(..., description="Output from this node")
+    target_node_id: str = Field(..., description="Input to this node")
+    source_handle: Optional[str] = Field(
+        None,
+        description="Named output port. Default: 'default'",
+    )
+    target_handle: Optional[str] = Field(
+        None,
+        description="Named input port. Default: 'default'",
+    )
+    label: Optional[str] = Field(None, description="Optional label on the edge")
+    animated: bool = False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PipelineTemplateDocument  (V3 NEW)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PipelineTemplateDocument(Document):
+    """
+    A reusable pipeline definition containing a DAG of agent nodes and edges.
+    Each template can be run multiple times. V3 NEW.
     """
 
-    run_id: Indexed(str, unique=True)  # type: ignore[valid-type]  # UUID string
-    document_name: str
-    document_path: str
-    llm_profile_id: Optional[str] = None
-    status: Indexed(str) = "pending"  # type: ignore[valid-type]
-    current_stage: Optional[str] = None
-    completed_stages: list[str] = Field(default_factory=list)
-    agent_statuses: dict[str, str] = Field(default_factory=dict)
-    stage_results_summary: dict[str, dict] = Field(default_factory=dict)  # type: ignore[type-arg]
-    error: Optional[str] = None
-    pause_reason: Optional[str] = None
+    template_id: str = Field(
+        ...,
+        pattern=r"^[a-z][a-z0-9_-]{2,49}$",
+        description="Unique identifier, URL-safe",
+    )
+    name: str = Field(..., min_length=2, max_length=200)
+    description: str = ""
+    version: int = Field(default=1, description="Auto-incremented on each save")
+
+    # DAG Definition
+    nodes: list[PipelineNodeConfig] = Field(default_factory=list)
+    edges: list[PipelineEdgeConfig] = Field(default_factory=list)
+
+    # Metadata
+    is_builtin: bool = False
+    is_archived: bool = False
+    tags: list[str] = Field(default_factory=list)
+    thumbnail: Optional[str] = None  # Base64 or URL
+
+    # Timestamps
     created_at: datetime = Field(default_factory=_now)
-    started_at: Optional[datetime] = None
-    paused_at: Optional[datetime] = None
-    resumed_at: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=_now)
 
     class Settings:
-        """Beanie collection settings."""
-
-        name = "pipeline_runs"
+        name = "pipeline_templates"
         indexes = [
-            "status",
-            [("created_at", -1)],
+            IndexModel([("template_id", 1)], unique=True),
+            IndexModel([("is_archived", 1)]),
+            IndexModel([("tags", 1)]),
+            IndexModel([("created_at", -1)]),
         ]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PipelineResultDocument
+# PipelineRunDocument  (V3 – backward-compatible with V2)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PipelineRunDocument(Document):
+    """
+    A single execution of a pipeline.
+    V3: References a template_id, tracks node-level statuses.
+    Backward-compatible with V2 runs (template_id optional).
+    """
+
+    run_id: Indexed(str, unique=True)  # type: ignore[valid-type]
+    template_id: Optional[str] = Field(
+        None,
+        description="Which pipeline template to run (None = V2 legacy run)",
+    )
+    template_snapshot: Optional[dict] = Field(  # type: ignore[type-arg]
+        None,
+        description="Snapshot of template nodes+edges at run time (for reproducibility)",
+    )
+
+    # Run config
+    document_name: str = ""
+    document_path: Optional[str] = None  # V2 compat
+    file_path: Optional[str] = None  # V3 alias
+    llm_profile_id: Optional[str] = None
+    run_params: dict = Field(default_factory=dict)  # type: ignore[type-arg]
+
+    # Status
+    status: Indexed(str) = "pending"  # type: ignore[valid-type]
+    current_node: Optional[str] = None  # V3 (replaces current_stage)
+    current_stage: Optional[str] = None  # V2 compat alias
+    completed_nodes: list[str] = Field(default_factory=list)  # V3
+    completed_stages: list[str] = Field(default_factory=list)  # V2 compat
+    failed_nodes: list[str] = Field(default_factory=list)
+    node_statuses: dict[str, str] = Field(
+        default_factory=dict,
+        description="{ node_id: 'pending'|'running'|'completed'|'failed'|'skipped' }",
+    )
+    agent_statuses: dict[str, str] = Field(default_factory=dict)  # V2 compat
+    stage_results_summary: dict[str, dict] = Field(default_factory=dict)  # type: ignore[type-arg] # V2 compat
+
+    # V3 fields
+    execution_layers: list[list[str]] = Field(
+        default_factory=list,
+        description="Computed DAG layers: [[nodeA, nodeB], [nodeC], ...]",
+    )
+    duration_seconds: Optional[float] = None
+
+    # Error
+    error_message: Optional[str] = None
+    error: Optional[str] = None  # V2 compat
+    pause_reason: Optional[str] = None  # V2 compat
+
+    # Timing
+    created_at: datetime = Field(default_factory=_now)
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None  # V3 (replaces finished_at)
+    finished_at: Optional[datetime] = None  # V2 compat
+    paused_at: Optional[datetime] = None
+    resumed_at: Optional[datetime] = None
+
+    class Settings:
+        name = "pipeline_runs"
+        indexes = [
+            IndexModel([("run_id", 1)], unique=True),
+            IndexModel([("template_id", 1)]),
+            IndexModel([("status", 1)]),
+            IndexModel([("created_at", -1)]),
+        ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PipelineResultDocument  (V3 – backward-compatible with V2)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class PipelineResultDocument(Document):
-    """MongoDB document storing the full output of a single agent within a run.
-
-    One :class:`PipelineResultDocument` is inserted for each agent that
-    completes successfully.  The ``output`` field accepts any JSON-serialisable
-    Python value — dicts, lists, and strings are all valid — and is stored as
-    native BSON, so no ``json.dumps`` / ``json.loads`` round-trip is required.
-
-    Documents are linked back to their parent run through ``run_id`` (a UUID
-    string, not an ObjectId), and can be queried efficiently by the compound
-    indexes on ``(run_id, stage)`` and ``(run_id, agent_id)``.
-
-    Attributes:
-        run_id:     UUID string matching :attr:`PipelineRunDocument.run_id`.
-        stage:      Stage slug this output belongs to, e.g. ``"testcase"``.
-        agent_id:   Agent slug that produced the output, e.g.
-                    ``"requirement_analyzer"``.
-        output:     Raw agent output — stored as native BSON (dict, list, or
-                    scalar).  No serialisation needed on read.
-        created_at: UTC timestamp set when the document is inserted.
+    """
+    Output from a single node/agent execution within a pipeline run.
+    V3: Uses node_id (replaces stage). V2 stage field kept for compatibility.
     """
 
     run_id: Indexed(str)  # type: ignore[valid-type]
-    stage: str
-    agent_id: str
-    output: Any  # stored as native BSON — no json.dumps needed
+    node_id: Optional[str] = Field(
+        None,
+        description="Which DAG node produced this result (V3)",
+    )
+    agent_id: Optional[str] = Field(
+        None,
+        description="Which agent config was used (if AGENT type)",
+    )
+    stage: Optional[str] = None  # V2 compat (deprecated, use node_id in V3)
+    result_type: str = "node_output"  # node_output | error | metadata
+    output: Any = None  # stored as native BSON
+    input_data: dict = Field(  # type: ignore[type-arg]
+        default_factory=dict,
+        description="What input this node received (for debugging/replay)",
+    )
+
+    # Timing
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    duration_seconds: Optional[float] = None
+
+    # Status
+    status: str = "completed"  # completed | failed | skipped
+    error_message: Optional[str] = None
+
     created_at: datetime = Field(default_factory=_now)
 
     class Settings:
-        """Beanie collection settings."""
-
         name = "pipeline_results"
         indexes = [
-            [("run_id", 1), ("stage", 1)],
-            [("run_id", 1), ("agent_id", 1)],
+            IndexModel([("run_id", 1), ("node_id", 1)]),
+            IndexModel([("run_id", 1), ("stage", 1)]),
+            IndexModel([("run_id", 1), ("agent_id", 1)]),
+            IndexModel([("run_id", 1)]),
         ]

@@ -25,6 +25,7 @@ from app.db.models import (
     LLMProfileDocument,
     PipelineResultDocument,
     PipelineRunDocument,
+    PipelineTemplateDocument,
     StageConfigDocument,
 )
 from app.schemas.pipeline import AgentRunStatus, PipelineStatus
@@ -916,3 +917,222 @@ async def recover_orphaned_runs() -> int:
         count += 1
 
     return count
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pipeline Templates  (V3 NEW)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def get_pipeline_template(
+    template_id: str,
+) -> Optional[PipelineTemplateDocument]:
+    """Get a pipeline template by its unique ``template_id`` slug.
+
+    Args:
+        template_id: The URL-safe slug identifier (e.g. ``"auto-testing"``).
+
+    Returns:
+        The matching :class:`~app.db.models.PipelineTemplateDocument`, or
+        ``None`` if not found.
+    """
+    return await PipelineTemplateDocument.find_one(
+        PipelineTemplateDocument.template_id == template_id
+    )
+
+
+async def get_all_pipeline_templates(
+    include_archived: bool = False,
+    tag: Optional[str] = None,
+) -> list[PipelineTemplateDocument]:
+    """Return all pipeline templates, sorted by updated_at descending.
+
+    Args:
+        include_archived: When ``True``, include archived templates.
+        tag: Optional tag to filter by (exact match).
+
+    Returns:
+        List of :class:`~app.db.models.PipelineTemplateDocument`.
+    """
+    conditions = []
+    if not include_archived:
+        conditions.append(PipelineTemplateDocument.is_archived == False)  # noqa: E712
+    if tag:
+        conditions.append(PipelineTemplateDocument.tags == tag)
+
+    if conditions:
+        query = PipelineTemplateDocument.find(*conditions)
+    else:
+        query = PipelineTemplateDocument.find_all()
+
+    return await query.sort("-updated_at").to_list()
+
+
+async def create_pipeline_template(
+    data: dict,  # type: ignore[type-arg]
+) -> PipelineTemplateDocument:
+    """Create a new pipeline template document.
+
+    Args:
+        data: Dict matching the :class:`~app.db.models.PipelineTemplateDocument`
+            schema.  ``template_id`` must be unique.
+
+    Returns:
+        The newly-created :class:`~app.db.models.PipelineTemplateDocument`.
+    """
+    from app.db.models import PipelineEdgeConfig, PipelineNodeConfig
+
+    # Ensure nodes and edges are the correct embedded types
+    nodes_data = data.pop("nodes", [])
+    edges_data = data.pop("edges", [])
+    nodes = [PipelineNodeConfig(**n) if isinstance(n, dict) else n for n in nodes_data]
+    edges = [PipelineEdgeConfig(**e) if isinstance(e, dict) else e for e in edges_data]
+
+    doc = PipelineTemplateDocument(
+        **data,
+        nodes=nodes,
+        edges=edges,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    await doc.insert()
+    logger.info("Created pipeline template: %s", doc.template_id)
+    return doc
+
+
+async def update_pipeline_template(
+    template_id: str,
+    update_data: dict,  # type: ignore[type-arg]
+) -> Optional[PipelineTemplateDocument]:
+    """Update a pipeline template and auto-increment version.
+
+    Args:
+        template_id: The slug of the template to update.
+        update_data: Dict of fields to update.  Only provided keys are changed.
+            If ``nodes`` or ``edges`` are provided they must be dicts or
+            ``PipelineNodeConfig`` / ``PipelineEdgeConfig`` objects.
+
+    Returns:
+        The refreshed document, or ``None`` if *template_id* does not exist.
+    """
+    from app.db.models import PipelineEdgeConfig, PipelineNodeConfig
+
+    doc = await get_pipeline_template(template_id)
+    if doc is None:
+        return None
+
+    # Handle nodes / edges if provided (convert dicts → embedded models)
+    if "nodes" in update_data:
+        raw = update_data.pop("nodes")
+        update_data["nodes"] = [
+            PipelineNodeConfig(**n) if isinstance(n, dict) else n for n in raw
+        ]
+    if "edges" in update_data:
+        raw = update_data.pop("edges")
+        update_data["edges"] = [
+            PipelineEdgeConfig(**e) if isinstance(e, dict) else e for e in raw
+        ]
+
+    # Auto-increment version whenever the template content changes
+    update_data["version"] = doc.version + 1
+    update_data["updated_at"] = _now()
+
+    for key, value in update_data.items():
+        setattr(doc, key, value)
+
+    await doc.save()
+    logger.info("Updated pipeline template: %s (version %d)", template_id, doc.version)
+    return doc
+
+
+async def delete_pipeline_template(template_id: str) -> bool:
+    """Hard-delete a pipeline template.
+
+    Should only be called after confirming there are no runs for this template.
+    Built-in templates should be archived instead.
+
+    Args:
+        template_id: Slug of the template to delete.
+
+    Returns:
+        ``True`` if deleted, ``False`` if not found.
+    """
+    doc = await get_pipeline_template(template_id)
+    if doc is None:
+        return False
+    await doc.delete()
+    logger.info("Deleted pipeline template: %s", template_id)
+    return True
+
+
+async def clone_pipeline_template(
+    original: PipelineTemplateDocument,
+    new_template_id: str,
+    new_name: str,
+) -> PipelineTemplateDocument:
+    """Clone an existing pipeline template into a new one.
+
+    The cloned template starts at version 1, is not built-in, and is not archived.
+
+    Args:
+        original: The source template document.
+        new_template_id: URL-safe slug for the new template.
+        new_name: Display name for the new template.
+
+    Returns:
+        The newly-created cloned :class:`~app.db.models.PipelineTemplateDocument`.
+    """
+    clone_data = {
+        "template_id": new_template_id,
+        "name": new_name,
+        "description": original.description,
+        "version": 1,
+        "nodes": [n.model_dump() for n in original.nodes],
+        "edges": [e.model_dump() for e in original.edges],
+        "is_builtin": False,
+        "is_archived": False,
+        "tags": list(original.tags),
+    }
+    cloned = await create_pipeline_template(clone_data)
+    logger.info("Cloned template '%s' → '%s'", original.template_id, new_template_id)
+    return cloned
+
+
+async def count_runs_for_template(template_id: str) -> int:
+    """Return the number of pipeline runs associated with a template.
+
+    Used before deletion to enforce the "no runs" constraint.
+
+    Args:
+        template_id: The slug of the template.
+
+    Returns:
+        Integer count of matching :class:`~app.db.models.PipelineRunDocument`
+        records.
+    """
+    return await PipelineRunDocument.find(
+        PipelineRunDocument.template_id == template_id
+    ).count()
+
+
+async def get_latest_run_for_template(
+    template_id: str,
+) -> Optional[PipelineRunDocument]:
+    """Return the most recently created run for a given template.
+
+    Used by the template list endpoint to show the last-run status badge.
+
+    Args:
+        template_id: The slug of the template.
+
+    Returns:
+        The most recent :class:`~app.db.models.PipelineRunDocument`, or
+        ``None`` if no runs exist.
+    """
+    results = (
+        await PipelineRunDocument.find(PipelineRunDocument.template_id == template_id)
+        .sort("-created_at")
+        .limit(1)
+        .to_list()
+    )
+    return results[0] if results else None

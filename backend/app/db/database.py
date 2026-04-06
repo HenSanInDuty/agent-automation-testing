@@ -59,6 +59,7 @@ async def init_db() -> None:
         LLMProfileDocument,
         PipelineResultDocument,
         PipelineRunDocument,
+        PipelineTemplateDocument,
         StageConfigDocument,
     )
 
@@ -79,6 +80,7 @@ async def init_db() -> None:
             StageConfigDocument,
             PipelineRunDocument,
             PipelineResultDocument,
+            PipelineTemplateDocument,  # NEW V3
         ],
     )
 

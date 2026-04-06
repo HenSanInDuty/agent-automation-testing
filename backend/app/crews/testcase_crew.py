@@ -195,22 +195,12 @@ class TestcaseCrew(BaseCrew):
 
         # ── Build agents ──────────────────────────────────────────────────────
         self._emit_log("Building agents from database configuration …")
-        import asyncio as _asyncio
-
         factory = AgentFactory(run_profile_id=self._run_profile_id)
 
         try:
-            try:
-                _loop = _asyncio.get_running_loop()
-            except RuntimeError:
-                _loop = None
-            if _loop is not None and _loop.is_running():
-                _fut = _asyncio.run_coroutine_threadsafe(
-                    factory.build_many(_AGENT_IDS), _loop
-                )
-                agents = _fut.result(timeout=60)
-            else:
-                agents = _asyncio.run(factory.build_many(_AGENT_IDS))
+            agents = self._run_async_from_thread(
+                factory.build_many(_AGENT_IDS), timeout=60
+            )
         except Exception as exc:
             for agent_id in _AGENT_IDS:
                 self._emit_agent_failed(agent_id, str(exc))

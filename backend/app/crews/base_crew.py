@@ -32,6 +32,7 @@ Usage::
             return {"result": "..."}
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -109,6 +110,10 @@ class BaseCrew(ABC):
             self._mock_mode: bool = bool(getattr(settings, "MOCK_CREWS", False))
         else:
             self._mock_mode = mock_mode
+
+        # Event loop reference — set by the pipeline runner before spawning
+        # asyncio.to_thread so that _run_async_from_thread can use it.
+        self._event_loop: Optional[asyncio.AbstractEventLoop] = None
 
     # ─────────────────────────────────────────────────────────────────────────
     # Abstract interface
@@ -348,6 +353,35 @@ class BaseCrew(ABC):
     def _is_mock_mode(self) -> bool:
         """Return True when mock mode is active for this crew."""
         return self._mock_mode
+
+    def _run_async_from_thread(self, coro: Any, timeout: float = 60.0) -> Any:
+        """Run an async coroutine from within a synchronous thread context.
+
+        Uses the event loop stored in ``self._event_loop`` (injected by the
+        pipeline runner before the thread is spawned) so the coroutine runs on
+        the **same** event loop that owns the ``AsyncMongoClient`` instance.
+
+        This avoids the "Cannot use AsyncMongoClient in different event loop"
+        error that occurs when ``asyncio.run()`` creates a brand-new event loop
+        while the MongoDB client is bound to the original FastAPI event loop.
+
+        Args:
+            coro:    Awaitable / coroutine to execute.
+            timeout: Maximum seconds to wait for the result (default 60 s).
+
+        Returns:
+            Whatever the coroutine returns.
+
+        Raises:
+            concurrent.futures.TimeoutError: If *timeout* elapses.
+            Any exception raised by the coroutine itself.
+        """
+        loop = self._event_loop
+        if loop is not None and loop.is_running():
+            fut = asyncio.run_coroutine_threadsafe(coro, loop)
+            return fut.result(timeout=timeout)
+        # Fallback – used in unit tests / sync contexts where no loop is stored.
+        return asyncio.run(coro)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Repr

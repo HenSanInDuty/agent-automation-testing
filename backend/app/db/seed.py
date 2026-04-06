@@ -518,6 +518,451 @@ DEFAULT_STAGES: list[dict[str, Any]] = [
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Default Pipeline Template  (V3 NEW)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The "auto-testing" template mirrors the V2 sequential pipeline:
+# INPUT → Ingestion → [10 TestCase agents] → [5 Execution agents] →
+# [3 Reporting agents] → OUTPUT
+#
+# All nodes are connected sequentially for V3 initial seed.
+# Users can modify the DAG through the Visual Builder.
+
+DEFAULT_PIPELINE_TEMPLATE: dict[str, Any] = {
+    "template_id": "auto-testing",
+    "name": "Auto Testing",
+    "description": (
+        "Default automated testing pipeline: "
+        "Ingestion → Test Cases → Execution → Reporting"
+    ),
+    "version": 1,
+    "is_builtin": True,
+    "is_archived": False,
+    "tags": ["default", "testing", "builtin"],
+    "nodes": [
+        # ── Entry/Exit ────────────────────────────────────────────────────────
+        {
+            "node_id": "inp-node",
+            "node_type": "input",
+            "label": "📥 Input",
+            "description": "Upload requirements document",
+            "position_x": 400.0,
+            "position_y": 0.0,
+            "timeout_seconds": 30,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        # ── Ingestion ─────────────────────────────────────────────────────────
+        {
+            "node_id": "ingestion-1",
+            "node_type": "pure_python",
+            "agent_id": "ingestion_pipeline",
+            "label": "Document Ingestion",
+            "description": "Parse and extract requirements from uploaded document",
+            "position_x": 400.0,
+            "position_y": 150.0,
+            "timeout_seconds": 120,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        # ── Test Case Generation ──────────────────────────────────────────────
+        {
+            "node_id": "req-analyzer",
+            "node_type": "agent",
+            "agent_id": "requirement_analyzer",
+            "label": "Requirement Analyzer",
+            "description": "Analyze requirements for business intent and context",
+            "position_x": 400.0,
+            "position_y": 300.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "rule-parser",
+            "node_type": "agent",
+            "agent_id": "rule_parser",
+            "label": "Rule Parser",
+            "description": "Extract validation rules from requirements",
+            "position_x": 400.0,
+            "position_y": 450.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "scope-classifier",
+            "node_type": "agent",
+            "agent_id": "scope_classifier",
+            "label": "Scope Classifier",
+            "description": "Classify requirements by test type and risk level",
+            "position_x": 400.0,
+            "position_y": 600.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "data-model",
+            "node_type": "agent",
+            "agent_id": "data_model_agent",
+            "label": "Data Model Agent",
+            "description": "Build comprehensive test data model",
+            "position_x": 400.0,
+            "position_y": 750.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "test-conditions",
+            "node_type": "agent",
+            "agent_id": "test_condition_agent",
+            "label": "Test Conditions",
+            "description": "Apply equivalence partitioning and boundary value analysis",
+            "position_x": 400.0,
+            "position_y": 900.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "dependency-agent",
+            "node_type": "agent",
+            "agent_id": "dependency_agent",
+            "label": "Dependency Agent",
+            "description": "Detect dependencies and optimize test combinations",
+            "position_x": 400.0,
+            "position_y": 1050.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "tc-generator",
+            "node_type": "agent",
+            "agent_id": "test_case_generator",
+            "label": "Test Case Generator",
+            "description": "Generate fully-specified test cases",
+            "position_x": 400.0,
+            "position_y": 1200.0,
+            "timeout_seconds": 600,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "automation-agent",
+            "node_type": "agent",
+            "agent_id": "automation_agent",
+            "label": "Automation Agent",
+            "description": "Convert test cases to automation scripts",
+            "position_x": 400.0,
+            "position_y": 1350.0,
+            "timeout_seconds": 600,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "coverage-pre",
+            "node_type": "agent",
+            "agent_id": "coverage_agent_pre",
+            "label": "Coverage (Pre-Exec)",
+            "description": "Compute pre-execution test coverage",
+            "position_x": 400.0,
+            "position_y": 1500.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "report-pre",
+            "node_type": "agent",
+            "agent_id": "report_agent_pre",
+            "label": "Pre-Exec Report",
+            "description": "Generate pre-execution test design report",
+            "position_x": 400.0,
+            "position_y": 1650.0,
+            "timeout_seconds": 300,
+            "retry_count": 1,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        # ── Execution ─────────────────────────────────────────────────────────
+        {
+            "node_id": "exec-orchestrator",
+            "node_type": "agent",
+            "agent_id": "execution_orchestrator",
+            "label": "Execution Orchestrator",
+            "description": "Schedule and coordinate test execution",
+            "position_x": 400.0,
+            "position_y": 1800.0,
+            "timeout_seconds": 300,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "env-adapter",
+            "node_type": "agent",
+            "agent_id": "env_adapter",
+            "label": "Environment Adapter",
+            "description": "Validate and configure test environment",
+            "position_x": 400.0,
+            "position_y": 1950.0,
+            "timeout_seconds": 300,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "test-runner",
+            "node_type": "agent",
+            "agent_id": "test_runner",
+            "label": "Test Runner",
+            "description": "Execute tests against the system under test",
+            "position_x": 400.0,
+            "position_y": 2100.0,
+            "timeout_seconds": 600,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "exec-logger",
+            "node_type": "agent",
+            "agent_id": "execution_logger",
+            "label": "Execution Logger",
+            "description": "Capture and normalize execution events",
+            "position_x": 400.0,
+            "position_y": 2250.0,
+            "timeout_seconds": 300,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "result-store",
+            "node_type": "agent",
+            "agent_id": "result_store",
+            "label": "Result Store",
+            "description": "Persist execution results",
+            "position_x": 400.0,
+            "position_y": 2400.0,
+            "timeout_seconds": 300,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        # ── Reporting ─────────────────────────────────────────────────────────
+        {
+            "node_id": "coverage-analyzer",
+            "node_type": "agent",
+            "agent_id": "coverage_analyzer",
+            "label": "Coverage Analyzer",
+            "description": "Recompute coverage from execution results",
+            "position_x": 400.0,
+            "position_y": 2550.0,
+            "timeout_seconds": 300,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "root-cause",
+            "node_type": "agent",
+            "agent_id": "root_cause_analyzer",
+            "label": "Root Cause Analyzer",
+            "description": "Analyze failed tests and identify root causes",
+            "position_x": 400.0,
+            "position_y": 2700.0,
+            "timeout_seconds": 300,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        {
+            "node_id": "report-gen",
+            "node_type": "agent",
+            "agent_id": "report_generator",
+            "label": "Report Generator",
+            "description": "Generate final comprehensive test report",
+            "position_x": 400.0,
+            "position_y": 2850.0,
+            "timeout_seconds": 600,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+        # ── Exit ──────────────────────────────────────────────────────────────
+        {
+            "node_id": "out-node",
+            "node_type": "output",
+            "label": "📤 Output",
+            "description": "Final test report output",
+            "position_x": 400.0,
+            "position_y": 3000.0,
+            "timeout_seconds": 30,
+            "retry_count": 0,
+            "enabled": True,
+            "config_overrides": {},
+        },
+    ],
+    "edges": [
+        # Input → Ingestion
+        {
+            "edge_id": "e-inp-ingest",
+            "source_node_id": "inp-node",
+            "target_node_id": "ingestion-1",
+            "animated": False,
+        },
+        # Ingestion → Req Analyzer
+        {
+            "edge_id": "e-ingest-req",
+            "source_node_id": "ingestion-1",
+            "target_node_id": "req-analyzer",
+            "animated": False,
+        },
+        # Req Analyzer → Rule Parser
+        {
+            "edge_id": "e-req-rule",
+            "source_node_id": "req-analyzer",
+            "target_node_id": "rule-parser",
+            "animated": False,
+        },
+        # Rule Parser → Scope Classifier
+        {
+            "edge_id": "e-rule-scope",
+            "source_node_id": "rule-parser",
+            "target_node_id": "scope-classifier",
+            "animated": False,
+        },
+        # Scope → Data Model
+        {
+            "edge_id": "e-scope-data",
+            "source_node_id": "scope-classifier",
+            "target_node_id": "data-model",
+            "animated": False,
+        },
+        # Data Model → Test Conditions
+        {
+            "edge_id": "e-data-cond",
+            "source_node_id": "data-model",
+            "target_node_id": "test-conditions",
+            "animated": False,
+        },
+        # Test Conditions → Dependency Agent
+        {
+            "edge_id": "e-cond-dep",
+            "source_node_id": "test-conditions",
+            "target_node_id": "dependency-agent",
+            "animated": False,
+        },
+        # Dependency → TC Generator
+        {
+            "edge_id": "e-dep-gen",
+            "source_node_id": "dependency-agent",
+            "target_node_id": "tc-generator",
+            "animated": False,
+        },
+        # TC Generator → Automation Agent
+        {
+            "edge_id": "e-gen-auto",
+            "source_node_id": "tc-generator",
+            "target_node_id": "automation-agent",
+            "animated": False,
+        },
+        # Automation → Coverage Pre
+        {
+            "edge_id": "e-auto-cov",
+            "source_node_id": "automation-agent",
+            "target_node_id": "coverage-pre",
+            "animated": False,
+        },
+        # Coverage Pre → Report Pre
+        {
+            "edge_id": "e-cov-rep",
+            "source_node_id": "coverage-pre",
+            "target_node_id": "report-pre",
+            "animated": False,
+        },
+        # Report Pre → Exec Orchestrator
+        {
+            "edge_id": "e-rep-orch",
+            "source_node_id": "report-pre",
+            "target_node_id": "exec-orchestrator",
+            "animated": False,
+        },
+        # Exec Orchestrator → Env Adapter
+        {
+            "edge_id": "e-orch-env",
+            "source_node_id": "exec-orchestrator",
+            "target_node_id": "env-adapter",
+            "animated": False,
+        },
+        # Env Adapter → Test Runner
+        {
+            "edge_id": "e-env-run",
+            "source_node_id": "env-adapter",
+            "target_node_id": "test-runner",
+            "animated": False,
+        },
+        # Test Runner → Exec Logger
+        {
+            "edge_id": "e-run-log",
+            "source_node_id": "test-runner",
+            "target_node_id": "exec-logger",
+            "animated": False,
+        },
+        # Exec Logger → Result Store
+        {
+            "edge_id": "e-log-store",
+            "source_node_id": "exec-logger",
+            "target_node_id": "result-store",
+            "animated": False,
+        },
+        # Result Store → Coverage Analyzer
+        {
+            "edge_id": "e-store-cov",
+            "source_node_id": "result-store",
+            "target_node_id": "coverage-analyzer",
+            "animated": False,
+        },
+        # Coverage Analyzer → Root Cause
+        {
+            "edge_id": "e-cov-root",
+            "source_node_id": "coverage-analyzer",
+            "target_node_id": "root-cause",
+            "animated": False,
+        },
+        # Root Cause → Report Gen
+        {
+            "edge_id": "e-root-gen",
+            "source_node_id": "root-cause",
+            "target_node_id": "report-gen",
+            "animated": False,
+        },
+        # Report Gen → Output
+        {
+            "edge_id": "e-gen-out",
+            "source_node_id": "report-gen",
+            "target_node_id": "out-node",
+            "animated": False,
+        },
+    ],
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Seed functions
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -578,6 +1023,26 @@ async def seed_stage_configs() -> None:
     )
 
 
+async def seed_pipeline_templates() -> None:
+    """Insert the default 'auto-testing' pipeline template (idempotent).
+
+    Uses :func:`~app.db.crud.get_pipeline_template` to check for an existing
+    document before inserting, so repeated calls are safe.
+    """
+    existing = await crud.get_pipeline_template(
+        DEFAULT_PIPELINE_TEMPLATE["template_id"]
+    )
+    if existing is not None:
+        logger.debug("Default pipeline template already exists — skipping seed.")
+        return
+
+    await crud.create_pipeline_template(dict(DEFAULT_PIPELINE_TEMPLATE))
+    logger.info(
+        "Seeded default pipeline template: %s",
+        DEFAULT_PIPELINE_TEMPLATE["template_id"],
+    )
+
+
 async def seed_all() -> None:
     """Run all seeders in the correct dependency order.
 
@@ -595,4 +1060,5 @@ async def seed_all() -> None:
     await seed_llm_profiles()
     await seed_agent_configs()
     await seed_stage_configs()
+    await seed_pipeline_templates()  # NEW V3
     logger.info("Database seeding complete ✓")

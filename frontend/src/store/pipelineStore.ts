@@ -18,6 +18,7 @@ interface PipelineSession {
   stageResults: Record<string, Record<string, unknown>>;
   stageSummaries: Record<string, Record<string, unknown>>;
   logMessages: string[];
+  stageLogMessages: Record<string, string[]>;
   events: WSEvent[];
   isTerminal: boolean;
 }
@@ -30,6 +31,8 @@ interface PipelineStoreState extends PipelineSession {
   setStageResult: (stage: string, data: Record<string, unknown>) => void;
   setStageSummary: (stage: string, summary: Record<string, unknown>) => void;
   clearStageResults: () => void;
+  // Sync run status from HTTP polling (fallback when WS events are missed)
+  syncRunStatus: (status: PipelineStatus, completedStages?: string[]) => void;
 
   // WebSocket
   wsStatus: "disconnected" | "connecting" | "connected" | "error";
@@ -51,12 +54,14 @@ const INITIAL_SESSION: PipelineSession = {
   stageResults: {},
   stageSummaries: {},
   logMessages: [],
+  stageLogMessages: {},
   events: [],
   isTerminal: false,
 };
 
 const MAX_EVENTS = 500;
 const MAX_LOGS = 100;
+const MAX_STAGE_LOGS = 50;
 const NOISE_EVENTS = new Set(["connected", "ping", "pong"]);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,9 +181,21 @@ export const usePipelineStore = create<PipelineStoreState>()(
             if (msg) {
               set((s) => {
                 const next = [...s.logMessages, msg];
+                const stage = s.currentStage;
+                const prevStageLogs = stage
+                  ? (s.stageLogMessages[stage] ?? [])
+                  : null;
+                const nextStageLogs =
+                  stage && prevStageLogs !== null
+                    ? {
+                        ...s.stageLogMessages,
+                        [stage]: [...prevStageLogs, msg].slice(-MAX_STAGE_LOGS),
+                      }
+                    : s.stageLogMessages;
                 return {
                   logMessages:
                     next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next,
+                  stageLogMessages: nextStageLogs,
                 };
               });
             }
@@ -240,6 +257,24 @@ export const usePipelineStore = create<PipelineStoreState>()(
 
       clearStageResults: () => {
         set({ stageResults: {}, stageSummaries: {} });
+      },
+
+      syncRunStatus: (status, completedStages) => {
+        const isNowTerminal = ["completed", "failed", "cancelled"].includes(
+          status,
+        );
+        set((s) => ({
+          activeRunStatus: status,
+          isTerminal: isNowTerminal,
+          ...(completedStages !== undefined
+            ? {
+                completedStages:
+                  completedStages.length > s.completedStages.length
+                    ? completedStages
+                    : s.completedStages,
+              }
+            : {}),
+        }));
       },
 
       // ── WebSocket ──────────────────────────────────────────────────────────

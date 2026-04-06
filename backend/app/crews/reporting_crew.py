@@ -182,8 +182,6 @@ class ReportingCrew(BaseCrew):
         The crew uses ``Process.sequential`` — each agent's output is automatically
         made available as context to the next agent by CrewAI's context injection.
         """
-        import asyncio as _asyncio
-
         from app.core.agent_factory import AgentFactory
         from app.tasks.reporting_tasks import (
             make_coverage_analyzer_task,
@@ -196,17 +194,9 @@ class ReportingCrew(BaseCrew):
         # ── Build agents ──────────────────────────────────────────────────────
         self._emit_log("Building reporting agents from DB configuration")
         try:
-            try:
-                _loop = _asyncio.get_running_loop()
-            except RuntimeError:
-                _loop = None
-            if _loop is not None and _loop.is_running():
-                _fut = _asyncio.run_coroutine_threadsafe(
-                    factory.build_for_stage("reporting"), _loop
-                )
-                agents = _fut.result(timeout=60)
-            else:
-                agents = _asyncio.run(factory.build_for_stage("reporting"))
+            agents = self._run_async_from_thread(
+                factory.build_for_stage("reporting"), timeout=60
+            )
         except Exception as exc:
             logger.error(
                 "[ReportingCrew][%s] Failed to build agents: %s", self._run_id, exc
