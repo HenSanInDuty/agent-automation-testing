@@ -159,50 +159,33 @@ class AgentConfigDocument(Document):
 
 
 class StageConfigDocument(Document):
-    """MongoDB document that stores the configuration for one pipeline stage.
+    """Organizational stage — used for agent grouping and categorization.
 
-    The four built-in stages (ingestion, testcase, execution, reporting) are
-    seeded on startup.  Admins may reorder or disable stages, or create
-    entirely new custom stages (``is_builtin=False``).
-
-    Stages execute in ascending ``order`` — the four seeded stages use orders
-    100, 200, 300, and 400, leaving plenty of room for custom stages to be
-    inserted between or after them.
+    NOT used for pipeline execution order (that's handled by DAG templates).
+    Used by: Admin Agent UI grouping, Agent Catalog sidebar in Builder.
 
     Attributes:
-        stage_id:        Unique slug, e.g. ``"testcase"``.
-        display_name:    Human-readable stage name shown in the UI.
-        description:     Optional longer description of what this stage does.
-        order:           Ascending execution order; lower values run first.
-        enabled:         When ``False`` the entire stage is skipped.
-        crew_type:       Execution strategy —
-                         ``"pure_python"`` | ``"crewai_sequential"`` |
-                         ``"crewai_hierarchical"``.
-        timeout_seconds: Maximum wall-clock seconds allowed for this stage
-                         (0 = no timeout).
-        is_builtin:      ``True`` for the four seeded stages; ``False`` for
-                         admin-created stages.  Builtin stages cannot be
-                         deleted.
-        input_schema:    Optional JSON-Schema dict describing expected stage
-                         inputs (informational / validation use).
-        output_schema:   Optional JSON-Schema dict describing expected stage
-                         outputs.
-        created_at:      UTC timestamp set once on insert.
-        updated_at:      UTC timestamp refreshed on every update.
+        stage_id:     URL-safe slug, e.g. "testcase", "my-custom-stage".
+        display_name: Human-readable, e.g. "Test Case Generation".
+        description:  Optional description.
+        order:        Sort order in UI.
+        color:        Hex color for UI accent, e.g. "#3B82F6".
+        icon:         Lucide icon name, e.g. "flask-conical".
+        enabled:      Whether to show in UI.
+        is_builtin:   True for 5 default stages — cannot delete.
+        created_at:   UTC timestamp set once on insert.
+        updated_at:   UTC timestamp refreshed on every update.
     """
 
-    stage_id: Indexed(str, unique=True)  # type: ignore[valid-type]
+    stage_id: str
     display_name: str
-    description: str = ""
-    order: int  # execution order; stages run ascending
+    description: Optional[str] = None
+    order: int = 0
+    color: Optional[str] = None
+    icon: Optional[str] = None
     enabled: bool = True
-    crew_type: str = (
-        "crewai_sequential"  # pure_python | crewai_sequential | crewai_hierarchical
-    )
-    timeout_seconds: int = 300
-    is_builtin: bool = True  # True for 4 default stages, False for user-created
-    input_schema: Optional[dict] = None  # type: ignore[type-arg]
-    output_schema: Optional[dict] = None  # type: ignore[type-arg]
+    is_builtin: bool = False
+
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 
@@ -211,8 +194,8 @@ class StageConfigDocument(Document):
 
         name = "stage_configs"
         indexes = [
-            [("order", 1)],
-            [("enabled", 1), ("order", 1)],
+            IndexModel([("stage_id", 1)], unique=True),
+            IndexModel([("order", 1), ("enabled", 1)]),
         ]
 
 

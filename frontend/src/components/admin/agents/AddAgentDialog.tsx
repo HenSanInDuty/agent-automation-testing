@@ -40,7 +40,7 @@ const createAgentSchema = z.object({
   role: z.string().min(10, "Role must be at least 10 characters"),
   goal: z.string().min(10, "Goal must be at least 10 characters"),
   backstory: z.string().min(10, "Backstory must be at least 10 characters"),
-  llm_profile_id: z.number().nullable().optional(),
+  llm_profile_id: z.string().nullable().optional(),
   max_iter: z
     .number({ invalid_type_error: "Must be a number" })
     .int()
@@ -229,7 +229,7 @@ export function AddAgentDialog({ open, onClose }: AddAgentDialogProps) {
                 }
                 onChange={(e) => {
                   const v = e.target.value;
-                  field.onChange(v === "" ? null : Number(v));
+                  field.onChange(v === "" ? null : v);
                 }}
               />
             )}

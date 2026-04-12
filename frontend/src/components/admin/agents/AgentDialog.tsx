@@ -36,7 +36,7 @@ const schema = z.object({
     .string()
     .min(1, "Display name is required")
     .max(150, "Must be 150 characters or less"),
-  llm_profile_id: z.number().nullable().optional(),
+  llm_profile_id: z.string().nullable().optional(),
   role: z.string().min(1, "Role is required"),
   goal: z.string().min(1, "Goal is required"),
   backstory: z.string().min(1, "Backstory is required"),
@@ -330,7 +330,7 @@ export function AgentDialog({ open, onClose, agentId }: AgentDialogProps) {
                     }
                     onChange={(e) => {
                       const val = e.target.value;
-                      field.onChange(val === "" ? null : Number(val));
+                      field.onChange(val === "" ? null : val);
                     }}
                     error={errors.llm_profile_id?.message}
                   />

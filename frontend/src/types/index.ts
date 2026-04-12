@@ -71,7 +71,7 @@ export const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface LLMProfileResponse {
-  id: number;
+  id: string;
   name: string;
   provider: LLMProvider;
   model: string;
@@ -128,28 +128,14 @@ export interface LLMTestResponse {
 // Agent Config
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type AgentStage = "ingestion" | "testcase" | "execution" | "reporting";
-
-export const STAGE_LABELS: Record<AgentStage, string> = {
-  ingestion: "Stage 1 – Ingestion & Analysis",
-  testcase: "Stage 2 – Test Case Generation",
-  execution: "Stage 3 – Execution",
-  reporting: "Stage 4 – Reporting",
-};
-
-export const STAGE_ORDER: AgentStage[] = [
-  "ingestion",
-  "testcase",
-  "execution",
-  "reporting",
-];
+export type AgentStage = string;
 
 export interface AgentConfigSummary {
-  id: number;
+  id: string;
   agent_id: string;
   display_name: string;
-  stage: AgentStage;
-  llm_profile_id: number | null;
+  stage: string;
+  llm_profile_id: string | null;
   llm_profile_name: string | null;
   enabled: boolean;
   verbose: boolean;
@@ -158,15 +144,31 @@ export interface AgentConfigSummary {
   updated_at: string;
 }
 
+export interface AgentGroupEntry {
+  stage_id: string;
+  display_name: string;
+  description?: string | null;
+  order: number;
+  color?: string | null;
+  icon?: string | null;
+  is_builtin: boolean;
+  agents: AgentConfigSummary[];
+}
+
+export interface AgentConfigGroupedResponse {
+  groups: AgentGroupEntry[];
+  total_agents: number;
+}
+
 export interface AgentConfigResponse {
-  id: number;
+  id: string;
   agent_id: string;
   display_name: string;
-  stage: AgentStage;
+  stage: string;
   role: string;
   goal: string;
   backstory: string;
-  llm_profile_id: number | null;
+  llm_profile_id: string | null;
   llm_profile: LLMProfileResponse | null;
   enabled: boolean;
   verbose: boolean;
@@ -175,20 +177,13 @@ export interface AgentConfigResponse {
   updated_at: string;
 }
 
-export interface AgentConfigGrouped {
-  ingestion: AgentConfigSummary[];
-  testcase: AgentConfigSummary[];
-  execution: AgentConfigSummary[];
-  reporting: AgentConfigSummary[];
-}
-
 export interface AgentConfigUpdate {
   display_name?: string;
-  stage?: AgentStage;
+  stage?: string;
   role?: string;
   goal?: string;
   backstory?: string;
-  llm_profile_id?: number | null;
+  llm_profile_id?: string | null;
   enabled?: boolean;
   verbose?: boolean;
   max_iter?: number;
@@ -220,13 +215,13 @@ export type AgentRunStatus =
   | "skipped";
 
 export interface PipelineRunCreate {
-  llm_profile_id?: number | null;
+  llm_profile_id?: string | null;
 }
 
 export interface AgentRunResult {
   agent_id: string;
   display_name: string;
-  stage: AgentStage;
+  stage: string;
   status: AgentRunStatus;
   output_preview?: string | null;
   error_message?: string | null;
@@ -264,6 +259,18 @@ export interface PipelineRunListResponse {
   total: number;
   page?: number;
   page_size?: number;
+}
+
+export interface PipelineActionResponse {
+  status: string;
+  run_id: string;
+  message: string;
+}
+
+export interface TemplateExportEnvelope {
+  auto_at_version: string;
+  export_type: "pipeline_template";
+  template: PipelineTemplate;
 }
 
 // Per-node result (V3)
@@ -345,12 +352,12 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   messages: { role: ChatRole; content: string }[];
-  llm_profile_id?: number | null;
+  llm_profile_id?: string | null;
   system_prompt?: string | null;
 }
 
 export interface ChatProfileItem {
-  id: number;
+  id: string;
   name: string;
   provider: string;
   model: string;
@@ -361,26 +368,17 @@ export interface ChatProfileItem {
 // Stage Config
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type StageCrewType =
-  | "pure_python"
-  | "crewai_sequential"
-  | "crewai_hierarchical";
-
-export const CREW_TYPE_LABELS: Record<StageCrewType, string> = {
-  pure_python: "Pure Python",
-  crewai_sequential: "CrewAI Sequential",
-  crewai_hierarchical: "CrewAI Hierarchical",
-};
-
 export interface StageConfig {
+  id: string;
   stage_id: string;
   display_name: string;
-  description: string;
+  description?: string | null;
   order: number;
+  color?: string | null;
+  icon?: string | null;
   enabled: boolean;
-  crew_type: StageCrewType;
-  timeout_seconds: number;
   is_builtin: boolean;
+  agent_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -388,24 +386,20 @@ export interface StageConfig {
 export interface StageConfigCreate {
   stage_id: string;
   display_name: string;
-  description?: string;
-  order: number;
-  enabled: boolean;
-  crew_type: StageCrewType;
-  timeout_seconds: number;
+  description?: string | null;
+  order?: number;
+  color?: string | null;
+  icon?: string | null;
+  enabled?: boolean;
 }
 
 export interface StageConfigUpdate {
   display_name?: string;
-  description?: string;
+  description?: string | null;
   order?: number;
+  color?: string | null;
+  icon?: string | null;
   enabled?: boolean;
-  crew_type?: StageCrewType;
-  timeout_seconds?: number;
-}
-
-export interface StageReorderRequest {
-  stages: { stage_id: string; order: number }[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -419,7 +413,7 @@ export interface AgentConfigCreate {
   role: string;
   goal: string;
   backstory: string;
-  llm_profile_id?: number | null;
+  llm_profile_id?: string | null;
   enabled?: boolean;
   verbose?: boolean;
   max_iter?: number;
@@ -519,4 +513,6 @@ export interface DAGValidationResult {
 export interface PipelineTemplateListResponse {
   items: PipelineTemplateListItem[];
   total: number;
+  page?: number;
+  page_size?: number;
 }

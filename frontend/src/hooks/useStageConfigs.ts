@@ -1,46 +1,39 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { stageConfigsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
-import type { StageConfigCreate, StageConfigUpdate, StageReorderRequest } from "@/types";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Queries
-// ─────────────────────────────────────────────────────────────────────────────
+import type {
+  StageConfig,
+  StageConfigCreate,
+  StageConfigUpdate,
+} from "@/types";
 
 /** Fetch all stage configs sorted by order. */
-export function useStageConfigs() {
-  return useQuery({
-    queryKey: queryKeys.stageConfigs.list(),
-    queryFn: () => stageConfigsApi.list(),
+export function useStageConfigs(enabledOnly = false) {
+  return useQuery<StageConfig[]>({
+    queryKey: queryKeys.stageConfigs.list({ enabled_only: enabledOnly }),
+    queryFn: () => stageConfigsApi.list(enabledOnly),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
 /** Fetch a single stage config by stage_id. */
 export function useStageConfig(stageId: string | undefined) {
-  return useQuery({
+  return useQuery<StageConfig>({
     queryKey: queryKeys.stageConfigs.detail(stageId!),
     queryFn: () => stageConfigsApi.get(stageId!),
     enabled: !!stageId,
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mutations
-// ─────────────────────────────────────────────────────────────────────────────
-
 /** Create a new (custom) stage config. */
 export function useCreateStageConfig() {
   const qc = useQueryClient();
-
   return useMutation({
-    mutationFn: (payload: StageConfigCreate) => stageConfigsApi.create(payload),
+    mutationFn: (data: StageConfigCreate) => stageConfigsApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.all });
     },
   });
 }
@@ -48,43 +41,41 @@ export function useCreateStageConfig() {
 /** Update an existing stage config. */
 export function useUpdateStageConfig() {
   const qc = useQueryClient();
-
   return useMutation({
     mutationFn: ({
       stageId,
-      payload,
+      data,
     }: {
       stageId: string;
-      payload: StageConfigUpdate;
-    }) => stageConfigsApi.update(stageId, payload),
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.list() });
-      qc.setQueryData(queryKeys.stageConfigs.detail(data.stage_id), data);
+      data: StageConfigUpdate;
+    }) => stageConfigsApi.update(stageId, data),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.all });
+      qc.setQueryData(queryKeys.stageConfigs.detail(result.stage_id), result);
     },
   });
 }
 
-/** Delete a custom stage config. */
+/** Delete a custom stage config. Agents are reassigned to "custom". */
 export function useDeleteStageConfig() {
   const qc = useQueryClient();
-
   return useMutation({
     mutationFn: (stageId: string) => stageConfigsApi.delete(stageId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.all });
     },
   });
 }
 
-/** Reorder stages (batch update). */
+/** Reorder stages by providing an ordered list of stage_ids. */
 export function useReorderStages() {
   const qc = useQueryClient();
-
   return useMutation({
-    mutationFn: (payload: StageReorderRequest) =>
-      stageConfigsApi.reorder(payload),
+    mutationFn: (stageIds: string[]) => stageConfigsApi.reorder(stageIds),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.list() });
+      qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
     },
   });
 }

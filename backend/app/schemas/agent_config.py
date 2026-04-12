@@ -7,6 +7,12 @@ Changes in V2 (Phase 7-9):
 - VALID_STAGES validation removed — stages are now dynamic, stored in MongoDB
 - is_custom field added to distinguish built-in vs user-created agents
 - AgentConfigGrouped includes a `custom` bucket for non-standard stages
+
+Changes in V4:
+- AgentGroupEntry added: represents a single stage group with its DB metadata and agents
+- AgentConfigGroupedResponse added: dynamic grouping response driven by StageConfigDocument
+  records from MongoDB (replaces static AgentConfigGrouped for the main list endpoint)
+- AgentConfigGrouped retained for backward compatibility with existing imports
 """
 
 from __future__ import annotations
@@ -180,6 +186,81 @@ class AgentConfigGrouped(BaseModel):
             else:
                 grouped["custom"].append(agent)
         return cls(**grouped)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dynamic grouped response — V4, driven by StageConfigDocument in MongoDB
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class AgentGroupEntry(BaseModel):
+    """One stage group with its metadata and agents."""
+
+    stage_id: str
+    display_name: str
+    description: Optional[str] = None
+    order: int = 0
+    color: Optional[str] = None
+    icon: Optional[str] = None
+    is_builtin: bool = False
+    agents: list[AgentConfigSummary] = []
+
+
+class AgentConfigGroupedResponse(BaseModel):
+    """Dynamic agent grouping response — groups loaded from DB stage configs."""
+
+    groups: list[AgentGroupEntry]
+    total_agents: int
+
+    @classmethod
+    async def from_list(
+        cls, agents: list[AgentConfigSummary]
+    ) -> "AgentConfigGroupedResponse":
+        """Group agents by their stage, using stage configs from DB.
+
+        Args:
+            agents: Flat list of agent summaries.
+
+        Returns:
+            An :class:`AgentConfigGroupedResponse` with agents grouped by stage.
+        """
+        from app.db.models import StageConfigDocument
+
+        # Load all stages from DB, sorted by order
+        stages = await StageConfigDocument.find_all().sort("+order").to_list()
+
+        # Build a bucket for every known stage
+        groups_dict: dict[str, list[AgentConfigSummary]] = {
+            s.stage_id: [] for s in stages
+        }
+
+        # Assign agents to their stage bucket
+        for agent in agents:
+            stage_id = agent.stage or "custom"
+            if stage_id in groups_dict:
+                groups_dict[stage_id].append(agent)
+            else:
+                # Agent references a stage that no longer exists → fall into custom
+                groups_dict.setdefault("custom", [])
+                groups_dict["custom"].append(agent)
+
+        # Build the response list
+        groups: list[AgentGroupEntry] = []
+        for stage in stages:
+            groups.append(
+                AgentGroupEntry(
+                    stage_id=stage.stage_id,
+                    display_name=stage.display_name,
+                    description=stage.description,
+                    order=stage.order,
+                    color=stage.color,
+                    icon=stage.icon,
+                    is_builtin=stage.is_builtin,
+                    agents=groups_dict.get(stage.stage_id, []),
+                )
+            )
+
+        return cls(groups=groups, total_agents=len(agents))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

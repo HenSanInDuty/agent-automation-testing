@@ -13,7 +13,6 @@ import {
   Bell,
   ExternalLink,
   ChevronRight,
-  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,11 +43,6 @@ function resolveBreadcrumbs(pathname: string): BreadcrumbSegment[] {
       crumbs.push({
         label: "Agent Configs",
         icon: <Bot className="w-3.5 h-3.5" />,
-      });
-    } else if (pathname.startsWith("/admin/stages")) {
-      crumbs.push({
-        label: "Stage Configs",
-        icon: <Layers className="w-3.5 h-3.5" />,
       });
     }
   } else if (pathname.startsWith("/pipeline")) {

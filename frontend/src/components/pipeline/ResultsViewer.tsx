@@ -543,10 +543,15 @@ function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
 export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
   const [activeTab, setActiveTab] = React.useState<TabId>("testcases");
 
-  // ── Filter agents by stage ────────────────────────────────────────────────
-  const testcaseAgents = run.agent_runs.filter((a) => a.stage === "testcase");
-  const executionAgents = run.agent_runs.filter((a) => a.stage === "execution");
-  const reportingAgents = run.agent_runs.filter((a) => a.stage === "reporting");
+  // ── Group agents by stage — works with any dynamic stages ─────────────────
+  const agentsByStage = run.agent_runs.reduce<
+    Record<string, typeof run.agent_runs>
+  >((acc, agent) => {
+    (acc[agent.stage] ??= []).push(agent);
+    return acc;
+  }, {});
+  // Agents that produce viewable results (exclude ingestion which is document processing)
+  const displayAgents = run.agent_runs.filter((a) => a.stage !== "ingestion");
 
   const isCompleted = run.status === "completed";
   const canExport = run.status === "completed" || run.status === "paused";
@@ -614,8 +619,8 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
         >
           {activeTab === "testcases" && (
             <div className="space-y-4">
-              {testcaseAgents.length > 0 ? (
-                testcaseAgents.map((agent) => (
+              {displayAgents.length > 0 ? (
+                displayAgents.map((agent) => (
                   <AgentOutputCard key={agent.agent_id} agent={agent} />
                 ))
               ) : (
@@ -634,8 +639,8 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
         >
           {activeTab === "coverage" && (
             <div className="space-y-4">
-              {executionAgents.length > 0 ? (
-                executionAgents.map((agent) => (
+              {displayAgents.length > 0 ? (
+                displayAgents.map((agent) => (
                   <AgentOutputCard key={agent.agent_id} agent={agent} />
                 ))
               ) : (
@@ -655,8 +660,8 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
           {activeTab === "report" && (
             <div className="space-y-4">
               <RunSummaryCard run={run} />
-              {reportingAgents.length > 0 ? (
-                reportingAgents.map((agent) => (
+              {displayAgents.length > 0 ? (
+                displayAgents.map((agent) => (
                   <AgentOutputCard key={agent.agent_id} agent={agent} />
                 ))
               ) : (

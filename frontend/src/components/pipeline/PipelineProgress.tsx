@@ -16,12 +16,9 @@ import {
 import { Badge } from "@/components/ui/Select";
 import { cn } from "@/lib/utils";
 import {
-  STAGE_LABELS,
-  STAGE_ORDER,
   type PipelineRunResponse,
   type AgentRunStatus,
   type AgentRunResult,
-  type AgentStage,
   type WSEvent,
   type PipelineStatus,
 } from "@/types";
@@ -55,13 +52,6 @@ export interface PipelineProgressProps {
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-
-const STAGE_AGENT_COUNTS: Record<string, number> = {
-  ingestion: 1,
-  testcase: 10,
-  execution: 5,
-  reporting: 3,
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Status configuration
@@ -370,7 +360,7 @@ function StageLiveLog({ messages, isStarting }: StageLiveLogProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface StageBlockProps {
-  stage: AgentStage;
+  stage: string;
   agents: AgentRunResult[];
   agentStatuses: Record<string, AgentRunStatus>;
   agentProgress: Record<string, { pct: number; message: string }>;
@@ -388,8 +378,8 @@ function StageBlock({
   isCompletedStage,
   logMessages,
 }: StageBlockProps) {
-  const label = STAGE_LABELS[stage];
-  const totalExpected = STAGE_AGENT_COUNTS[stage] ?? agents.length;
+  const label = stage;
+  const totalExpected = agents.length;
 
   const completedCount = agents.filter((a) => {
     const s = agentStatuses[a.agent_id] ?? a.status;
@@ -769,20 +759,12 @@ export function PipelineProgress({
   templateNodes,
 }: PipelineProgressProps) {
   // ── Always group agents before any conditional returns (hooks rules) ──────
-  const agentsByStage = React.useMemo<
-    Record<AgentStage, AgentRunResult[]>
-  >(() => {
-    const groups: Record<AgentStage, AgentRunResult[]> = {
-      ingestion: [],
-      testcase: [],
-      execution: [],
-      reporting: [],
-    };
+  const agentsByStage = React.useMemo<Record<string, AgentRunResult[]>>(() => {
+    const groups: Record<string, AgentRunResult[]> = {};
     if (!run) return groups;
     for (const agent of run.agent_runs) {
-      if (agent.stage in groups) {
-        groups[agent.stage].push(agent);
-      }
+      if (!groups[agent.stage]) groups[agent.stage] = [];
+      groups[agent.stage].push(agent);
     }
     return groups;
   }, [run]);
@@ -912,11 +894,18 @@ export function PipelineProgress({
       )}
 
       {/* ── Stage blocks ─────────────────────────────────────────────────── */}
-      {STAGE_ORDER.map((stage) => (
+      {/* Derive stage display order from run agent_runs, completed and current stages */}
+      {Array.from(
+        new Set([
+          ...run.agent_runs.map((a) => a.stage),
+          ...(completedStages ?? []),
+          ...(currentStage ? [currentStage] : []),
+        ]),
+      ).map((stage) => (
         <StageBlock
           key={stage}
           stage={stage}
-          agents={agentsByStage[stage]}
+          agents={agentsByStage[stage] ?? []}
           agentStatuses={agentStatuses}
           agentProgress={agentProgress}
           isCurrentStage={currentStage === stage}

@@ -27,7 +27,7 @@ from app.db.models import AgentConfigDocument
 from app.db.seed import DEFAULT_AGENT_CONFIGS
 from app.schemas.agent_config import (
     AgentConfigCreate,
-    AgentConfigGrouped,
+    AgentConfigGroupedResponse,
     AgentConfigResetResponse,
     AgentConfigResponse,
     AgentConfigSummary,
@@ -186,24 +186,24 @@ async def list_agent_configs(
         default=False,
         description="Return only agents that are currently enabled",
     ),
-) -> AgentConfigGrouped | list[AgentConfigSummary]:
+) -> AgentConfigGroupedResponse | list[AgentConfigSummary]:
     """Return all agent configs, optionally filtered and/or grouped by stage.
 
     Args:
-        grouped: When ``True``, return a :class:`AgentConfigGrouped` dict
+        grouped: When ``True``, return a :class:`AgentConfigGroupedResponse` dict
             keyed by stage name.
         stage: If provided, only return agents for this stage.
         enabled_only: When ``True``, exclude disabled agents.
 
     Returns:
         Either a flat :class:`list[AgentConfigSummary]` or an
-        :class:`AgentConfigGrouped` depending on *grouped*.
+        :class:`AgentConfigGroupedResponse` depending on *grouped*.
     """
     docs = await crud.get_all_agent_configs(stage=stage, enabled_only=enabled_only)
     summaries = [_doc_to_summary(d) for d in docs]
 
     if grouped:
-        return AgentConfigGrouped.from_list(summaries)
+        return await AgentConfigGroupedResponse.from_list(summaries)
     return summaries
 
 

@@ -13,6 +13,7 @@ import type {
   PipelineTemplateUpdate,
   PipelineTemplateListResponse,
   DAGValidationResult,
+  TemplateExportEnvelope,
 } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,11 +80,7 @@ export function useCreateTemplate() {
 
 export function useUpdateTemplate(templateId: string) {
   const queryClient = useQueryClient();
-  return useMutation<
-    PipelineTemplate,
-    Error,
-    PipelineTemplateUpdate
-  >({
+  return useMutation<PipelineTemplate, Error, PipelineTemplateUpdate>({
     mutationFn: (payload) => pipelineTemplatesApi.update(templateId, payload),
     onSuccess: (updated) => {
       queryClient.setQueryData(templateKeys.detail(templateId), updated);
@@ -101,10 +98,10 @@ export function useCloneTemplate() {
   return useMutation<
     PipelineTemplate,
     Error,
-    { templateId: string; newName?: string }
+    { templateId: string; newTemplateId: string; newName: string }
   >({
-    mutationFn: ({ templateId, newName }) =>
-      pipelineTemplatesApi.clone(templateId, newName),
+    mutationFn: ({ templateId, newTemplateId, newName }) =>
+      pipelineTemplatesApi.clone(templateId, newTemplateId, newName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
     },
@@ -159,7 +156,7 @@ export function useValidateTemplate() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useExportTemplate() {
-  return useMutation<PipelineTemplate, Error, string>({
+  return useMutation<TemplateExportEnvelope, Error, string>({
     mutationFn: (templateId) => pipelineTemplatesApi.exportTemplate(templateId),
   });
 }

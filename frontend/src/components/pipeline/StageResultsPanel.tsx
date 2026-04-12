@@ -9,15 +9,6 @@ import { useStageResults } from "@/hooks/usePipeline";
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DEFAULT_STAGES = ["ingestion", "testcase", "execution", "reporting"];
-
-const STAGE_LABELS: Record<string, string> = {
-  ingestion: "Stage 1 – Ingestion & Analysis",
-  testcase: "Stage 2 – Test Case Generation",
-  execution: "Stage 3 – Test Execution",
-  reporting: "Stage 4 – Reporting",
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Types from API responses
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,8 +118,12 @@ function RequirementsTable({ requirements }: { requirements: Requirement[] }) {
       <table className="w-full text-xs text-[#92a4c9] border-collapse">
         <thead>
           <tr className="border-b border-[#2b3b55]">
-            <th className="text-left py-1.5 pr-3 font-medium text-[#5b9eff]">#</th>
-            <th className="text-left py-1.5 font-medium text-[#5b9eff]">Requirement</th>
+            <th className="text-left py-1.5 pr-3 font-medium text-[#5b9eff]">
+              #
+            </th>
+            <th className="text-left py-1.5 font-medium text-[#5b9eff]">
+              Requirement
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -136,7 +131,10 @@ function RequirementsTable({ requirements }: { requirements: Requirement[] }) {
             <tr key={req.id ?? i} className="border-b border-[#1e2a3d]">
               <td className="py-1.5 pr-3 text-[#3d5070] font-mono">{i + 1}</td>
               <td className="py-1.5 text-[#92a4c9]">
-                {req.text ?? req.title ?? req.description ?? JSON.stringify(req)}
+                {req.text ??
+                  req.title ??
+                  req.description ??
+                  JSON.stringify(req)}
               </td>
             </tr>
           ))}
@@ -161,7 +159,10 @@ function IngestionResults({ data }: { data: IngestionOutput }) {
   return (
     <div>
       <div className="grid grid-cols-3 gap-3 mb-3">
-        <MetricCard label="Requirements Found" value={data.total_requirements} />
+        <MetricCard
+          label="Requirements Found"
+          value={data.total_requirements}
+        />
         <MetricCard label="Chunks Processed" value={data.chunks_processed} />
         <MetricCard label="Processing Notes" value={notes.length} />
       </div>
@@ -198,12 +199,13 @@ function TestCaseResults({ data }: { data: TestCaseOutput }) {
         <MetricCard
           label="Coverage"
           value={
-            coverage != null
-              ? `${Number(coverage).toFixed(1)}%`
-              : undefined
+            coverage != null ? `${Number(coverage).toFixed(1)}%` : undefined
           }
         />
-        <MetricCard label="Generated" value={cases.length || data.total_test_cases} />
+        <MetricCard
+          label="Generated"
+          value={cases.length || data.total_test_cases}
+        />
       </div>
       {cases.length > 0 && (
         <>
@@ -285,13 +287,20 @@ function ExecutionResults({ data }: { data: ExecutionOutput }) {
               <table className="w-full text-xs text-[#92a4c9] border-collapse">
                 <thead>
                   <tr className="border-b border-[#2b3b55]">
-                    <th className="text-left py-1.5 pr-3 font-medium text-[#5b9eff]">Test</th>
-                    <th className="text-left py-1.5 font-medium text-[#5b9eff]">Status</th>
+                    <th className="text-left py-1.5 pr-3 font-medium text-[#5b9eff]">
+                      Test
+                    </th>
+                    <th className="text-left py-1.5 font-medium text-[#5b9eff]">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {results.slice(0, 20).map((r, i) => (
-                    <tr key={r.test_case_id ?? i} className="border-b border-[#1e2a3d]">
+                    <tr
+                      key={r.test_case_id ?? i}
+                      className="border-b border-[#1e2a3d]"
+                    >
                       <td className="py-1.5 pr-3">
                         {r.title ?? r.test_case_id ?? `#${i + 1}`}
                       </td>
@@ -338,7 +347,9 @@ function ReportingResults({ data }: { data: ReportingOutput }) {
       </div>
       {data.executive_summary && (
         <div className="mt-3 bg-[#1e2a3d] border border-[#2b3b55] rounded-lg px-3 py-2.5">
-          <p className="text-xs font-medium text-[#5b9eff] mb-1">Executive Summary</p>
+          <p className="text-xs font-medium text-[#5b9eff] mb-1">
+            Executive Summary
+          </p>
           <p className="text-xs text-[#92a4c9] leading-relaxed">
             {data.executive_summary}
           </p>
@@ -346,10 +357,15 @@ function ReportingResults({ data }: { data: ReportingOutput }) {
       )}
       {recs.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-medium text-[#5b9eff] mb-1.5">Recommendations</p>
+          <p className="text-xs font-medium text-[#5b9eff] mb-1.5">
+            Recommendations
+          </p>
           <ul className="space-y-1">
             {recs.map((rec, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-[#92a4c9]">
+              <li
+                key={i}
+                className="flex items-start gap-2 text-xs text-[#92a4c9]"
+              >
                 <span className="mt-0.5 shrink-0 text-[#3d5070]">•</span>
                 {rec}
               </li>
@@ -385,12 +401,14 @@ function StageResultCard({
   summary?: Record<string, unknown>;
 }) {
   const { data, isLoading } = useStageResults(runId, stage);
-  const label = STAGE_LABELS[stage] ?? stage;
+  const label = stage;
 
   if (isLoading) return <SkeletonCard />;
 
   // If fetch failed or empty, show summary-only card
-  const displayData = data ?? (summary ? { ...summary } : undefined);
+  const displayData =
+    (data as unknown as Record<string, unknown>) ??
+    (summary ? { ...summary } : undefined);
 
   return (
     <div className="border border-[#2b3b55] rounded-lg p-4">
@@ -406,21 +424,21 @@ function StageResultCard({
         <p className="text-xs text-[#3d5070]">Results are being saved…</p>
       )}
 
-      {displayData && stage === "ingestion" && (
-        <IngestionResults data={displayData as IngestionOutput} />
-      )}
-      {displayData && stage === "testcase" && (
-        <TestCaseResults data={displayData as TestCaseOutput} />
-      )}
-      {displayData && stage === "execution" && (
-        <ExecutionResults data={displayData as ExecutionOutput} />
-      )}
-      {displayData && stage === "reporting" && (
-        <ReportingResults data={displayData as ReportingOutput} />
-      )}
-      {displayData && !DEFAULT_STAGES.includes(stage) && (
-        <GenericStageResults data={displayData} />
-      )}
+      {displayData &&
+        (() => {
+          switch (stage) {
+            case "ingestion":
+              return <IngestionResults data={displayData as IngestionOutput} />;
+            case "testcase":
+              return <TestCaseResults data={displayData as TestCaseOutput} />;
+            case "execution":
+              return <ExecutionResults data={displayData as ExecutionOutput} />;
+            case "reporting":
+              return <ReportingResults data={displayData as ReportingOutput} />;
+            default:
+              return <GenericStageResults data={displayData} />;
+          }
+        })()}
     </div>
   );
 }
@@ -462,9 +480,7 @@ export function StageResultsPanel({
           <div className="flex items-center gap-3">
             <Loader2 className="w-4 h-4 text-[#135bec] animate-spin shrink-0" />
             <div>
-              <p className="text-sm font-medium text-white">
-                {STAGE_LABELS[currentStage] ?? currentStage}
-              </p>
+              <p className="text-sm font-medium text-white">{currentStage}</p>
               <p className="text-xs text-[#92a4c9]">Running…</p>
             </div>
           </div>

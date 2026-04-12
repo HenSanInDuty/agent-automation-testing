@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Bot, Search, Filter, RotateCcw, RefreshCw, Plus } from "lucide-react";
+import {
+  Bot,
+  Search,
+  Filter,
+  RotateCcw,
+  RefreshCw,
+  Plus,
+  Layers,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -15,18 +23,14 @@ import {
   useUpdateAgentConfig,
   useDeleteAgentConfig,
 } from "@/hooks/useAgentConfigs";
-import {
-  STAGE_ORDER,
-  STAGE_LABELS,
-  type AgentStage,
-  type AgentConfigSummary,
-  type AgentConfigUpdate,
-} from "@/types";
+import { useStageConfigs } from "@/hooks/useStageConfigs";
+import { type AgentConfigSummary, type AgentConfigUpdate } from "@/types";
 import { cn } from "@/lib/utils";
 
 import { AgentGroupSection } from "./AgentGroupSection";
 import { AgentDialog } from "./AgentDialog";
 import { AddAgentDialog } from "./AddAgentDialog";
+import { ManageStagesDialog } from "./ManageStagesDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Loading skeleton
@@ -186,11 +190,6 @@ function EmptySearchState({
 // Stage filter options
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STAGE_FILTER_OPTIONS = [
-  { value: "all", label: "All Stages" },
-  ...STAGE_ORDER.map((s) => ({ value: s, label: STAGE_LABELS[s] })),
-];
-
 // ─────────────────────────────────────────────────────────────────────────────
 // AgentList
 // ─────────────────────────────────────────────────────────────────────────────
@@ -206,48 +205,46 @@ export function AgentList() {
   );
   const [resetAllConfirm, setResetAllConfirm] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [stageFilter, setStageFilter] = React.useState<AgentStage | "all">(
-    "all",
-  );
+  const [stageFilter, setStageFilter] = React.useState<string>("all");
   const [addAgentOpen, setAddAgentOpen] = React.useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
     null,
   );
+  const [manageStagesOpen, setManageStagesOpen] = React.useState(false);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const { data, isLoading, isError, refetch } = useAgentConfigsGrouped();
+  const { data: stagesData } = useStageConfigs();
   const resetMutation = useResetAgentConfig();
   const resetAllMutation = useResetAllAgentConfigs();
   const updateMutation = useUpdateAgentConfig();
   const deleteAgentMutation = useDeleteAgentConfig();
 
-  const grouped = data ?? {
-    ingestion: [] as AgentConfigSummary[],
-    testcase: [] as AgentConfigSummary[],
-    execution: [] as AgentConfigSummary[],
-    reporting: [] as AgentConfigSummary[],
-  };
+  // Build a map from stage_id → agents using the new dynamic response
+  const stageGroups = data?.groups ?? [];
+  const grouped: Record<string, AgentConfigSummary[]> = Object.fromEntries(
+    stageGroups.map((g) => [g.stage_id, g.agents]),
+  );
 
   // ── Derived totals ─────────────────────────────────────────────────────────
-  const totalAgents = STAGE_ORDER.reduce(
-    (sum, s) => sum + (grouped[s]?.length ?? 0),
-    0,
-  );
-  const stagesWithAgents = STAGE_ORDER.filter(
-    (s) => (grouped[s]?.length ?? 0) > 0,
-  ).length;
+  const totalAgents = data?.total_agents ?? 0;
+  const stagesWithAgents = stageGroups.map((g) => g.stage_id);
+
+  // ── Dynamic stage filter options (from API) ────────────────────────────────
+  const stageFilterOptions = React.useMemo(() => {
+    if (!stagesData) return [{ value: "all", label: "All Stages" }];
+    return [
+      { value: "all", label: "All Stages" },
+      ...stagesData.map((s) => ({ value: s.stage_id, label: s.display_name })),
+    ];
+  }, [stagesData]);
 
   // ── Filtered grouped data ──────────────────────────────────────────────────
   const filteredGrouped = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const result: Record<AgentStage, AgentConfigSummary[]> = {
-      ingestion: [],
-      testcase: [],
-      execution: [],
-      reporting: [],
-    };
+    const result: Record<string, AgentConfigSummary[]> = {};
 
-    for (const stage of STAGE_ORDER) {
+    for (const stage of Object.keys(grouped)) {
       const agents: AgentConfigSummary[] = grouped[stage] ?? [];
       result[stage] = agents.filter((agent) => {
         const matchesSearch =
@@ -264,12 +261,14 @@ export function AgentList() {
   const hasNoResults =
     !isLoading &&
     !isError &&
-    STAGE_ORDER.every((s) => filteredGrouped[s].length === 0);
+    Object.keys(filteredGrouped).every(
+      (s) => (filteredGrouped[s]?.length ?? 0) === 0,
+    );
 
   // ── Agent lookup helper (for reset confirm description) ────────────────────
   const agentToReset = React.useMemo<AgentConfigSummary | undefined>(() => {
     if (!resetConfirmId) return undefined;
-    for (const stage of STAGE_ORDER) {
+    for (const stage of Object.keys(grouped)) {
       const found = grouped[stage]?.find(
         (a: AgentConfigSummary) => a.agent_id === resetConfirmId,
       );
@@ -365,7 +364,7 @@ export function AgentList() {
     if (!deleteConfirmId) return;
     // find the agent name for toast
     let agentName = deleteConfirmId;
-    for (const stage of STAGE_ORDER) {
+    for (const stage of Object.keys(grouped)) {
       const found = grouped[stage]?.find(
         (a: AgentConfigSummary) => a.agent_id === deleteConfirmId,
       );
@@ -422,9 +421,9 @@ export function AgentList() {
                 <span className="text-white font-medium">{totalAgents}</span>
                 {" agents across "}
                 <span className="text-white font-medium">
-                  {stagesWithAgents}
+                  {stagesWithAgents.length}
                 </span>
-                {stagesWithAgents === 1 ? " stage" : " stages"}
+                {stagesWithAgents.length === 1 ? " stage" : " stages"}
               </>
             )}
           </p>
@@ -432,6 +431,17 @@ export function AgentList() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<Layers className="w-3.5 h-3.5" aria-hidden="true" />}
+            onClick={() => setManageStagesOpen(true)}
+            disabled={isLoading}
+            title="Add, edit, reorder, or delete pipeline stages"
+          >
+            Manage Stages
+          </Button>
+
           <Button
             variant="primary"
             size="sm"
@@ -479,11 +489,9 @@ export function AgentList() {
             />
             <div className="w-52">
               <Select
-                options={STAGE_FILTER_OPTIONS}
+                options={stageFilterOptions}
                 value={stageFilter}
-                onChange={(e) =>
-                  setStageFilter(e.target.value as AgentStage | "all")
-                }
+                onChange={(e) => setStageFilter(e.target.value)}
                 disabled={isLoading}
                 aria-label="Filter by stage"
               />
@@ -519,19 +527,18 @@ export function AgentList() {
         <ErrorState onRetry={refetch} />
       ) : hasNoResults ? (
         <EmptySearchState
-          query={
-            searchQuery.trim() ||
-            (STAGE_LABELS[stageFilter as AgentStage] ?? stageFilter)
-          }
+          query={searchQuery.trim() || stageFilter}
           onClear={handleClearSearch}
         />
       ) : (
         <div className="space-y-3">
-          {STAGE_ORDER.map((stage, i) => {
+          {stageGroups.map((group, i) => {
+            const stage = group.stage_id;
+
             // When stage filter is active, only render the matching stage
             if (stageFilter !== "all" && stage !== stageFilter) return null;
 
-            const agents = filteredGrouped[stage];
+            const agents = filteredGrouped[stage] ?? [];
 
             // Hide stages with zero agents only when actively searching
             if (searchQuery.trim() && agents.length === 0) return null;
@@ -539,7 +546,12 @@ export function AgentList() {
             return (
               <AgentGroupSection
                 key={stage}
-                stage={stage}
+                stageId={group.stage_id}
+                displayName={group.display_name}
+                description={group.description}
+                color={group.color}
+                icon={group.icon}
+                isBuiltin={group.is_builtin}
                 agents={agents}
                 onEditAgent={handleEditAgent}
                 onResetAgent={handleResetAgent}
@@ -592,6 +604,12 @@ export function AgentList() {
       <AddAgentDialog
         open={addAgentOpen}
         onClose={() => setAddAgentOpen(false)}
+      />
+
+      {/* ── Manage stages dialog ──────────────────────────────────────────── */}
+      <ManageStagesDialog
+        open={manageStagesOpen}
+        onClose={() => setManageStagesOpen(false)}
       />
 
       {/* ── Delete agent confirmation ─────────────────────────────────────── */}

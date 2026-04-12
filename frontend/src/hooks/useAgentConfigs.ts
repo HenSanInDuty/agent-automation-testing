@@ -2,7 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { agentConfigsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
-import type { AgentConfigCreate, AgentConfigUpdate } from "@/types";
+import type {
+  AgentConfigCreate,
+  AgentConfigUpdate,
+  AgentConfigGroupedResponse,
+} from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Queries
@@ -13,7 +17,7 @@ import type { AgentConfigCreate, AgentConfigUpdate } from "@/types";
  * Shape: { ingestion: [...], testcase: [...], execution: [...], reporting: [...] }
  */
 export function useAgentConfigsGrouped() {
-  return useQuery({
+  return useQuery<AgentConfigGroupedResponse>({
     queryKey: queryKeys.agentConfigs.grouped(),
     queryFn: () => agentConfigsApi.listGrouped(),
   });
@@ -119,7 +123,7 @@ export function useDeleteAgentConfig() {
 
   return useMutation({
     mutationFn: (agentId: string) => agentConfigsApi.delete(agentId),
-    onSuccess: (_data, agentId) => {
+    onSuccess: (_data: void, agentId: string) => {
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.grouped() });
       qc.removeQueries({ queryKey: queryKeys.agentConfigs.detail(agentId) });
     },

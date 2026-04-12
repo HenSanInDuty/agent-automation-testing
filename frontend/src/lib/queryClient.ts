@@ -34,7 +34,7 @@ export const queryKeys = {
     list: (params?: { skip?: number; limit?: number }) =>
       [...queryKeys.llmProfiles.lists(), params] as const,
     details: () => [...queryKeys.llmProfiles.all, "detail"] as const,
-    detail: (id: number) => [...queryKeys.llmProfiles.details(), id] as const,
+    detail: (id: string) => [...queryKeys.llmProfiles.details(), id] as const,
   },
 
   // Agent Configs
@@ -51,7 +51,8 @@ export const queryKeys = {
   stageConfigs: {
     all: ["stage-configs"] as const,
     lists: () => [...queryKeys.stageConfigs.all, "list"] as const,
-    list: () => [...queryKeys.stageConfigs.lists()] as const,
+    list: (params?: Record<string, unknown>) =>
+      [...queryKeys.stageConfigs.lists(), params] as const,
     details: () => [...queryKeys.stageConfigs.all, "detail"] as const,
     detail: (stageId: string) =>
       [...queryKeys.stageConfigs.details(), stageId] as const,

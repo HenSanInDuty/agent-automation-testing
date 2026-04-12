@@ -56,8 +56,8 @@ function renderText(text: string): React.ReactNode {
 
 interface ProfileSelectorProps {
   profiles: ChatProfileItem[];
-  selectedId: number | null;
-  onChange: (id: number | null) => void;
+  selectedId: string | null;
+  onChange: (id: string | null) => void;
   disabled?: boolean;
 }
 
@@ -80,7 +80,7 @@ function ProfileSelector({
           value={selectedId ?? ""}
           onChange={(e) => {
             const val = e.target.value;
-            onChange(val === "" ? null : Number(val));
+            onChange(val === "" ? null : val);
           }}
           className={cn(
             "w-full appearance-none rounded-lg px-3 py-2 pr-8 text-sm",
@@ -123,8 +123,8 @@ function ProfileSelector({
 
 interface SettingsPanelProps {
   profiles: ChatProfileItem[];
-  selectedProfileId: number | null;
-  onProfileChange: (id: number | null) => void;
+  selectedProfileId: string | null;
+  onProfileChange: (id: string | null) => void;
   systemPrompt: string;
   onSystemPromptChange: (value: string) => void;
   disabled?: boolean;
@@ -394,7 +394,7 @@ export function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(
     null,
   );
   const [profiles, setProfiles] = useState<ChatProfileItem[]>([]);

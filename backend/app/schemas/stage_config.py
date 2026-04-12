@@ -1,76 +1,74 @@
 """
 schemas/stage_config.py – Pydantic schemas for pipeline stage configurations.
 
-New in V2: stages are stored in MongoDB and can be dynamically configured.
+V4: Stages are now purely organizational (agent grouping / categorization).
+    They are NOT used for pipeline execution order — that's handled by DAG templates.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class StageConfigCreate(BaseModel):
-    """Schema for creating a new custom stage."""
+    """Create a new custom stage."""
 
     stage_id: str = Field(
         ...,
-        pattern=r"^[a-z][a-z0-9_]{2,49}$",
-        description="Unique snake_case identifier (3-50 chars)",
+        min_length=2,
+        max_length=50,
+        pattern=r"^[a-z][a-z0-9_-]{1,49}$",
+        description="URL-safe slug identifier",
+        examples=["security-testing", "performance-check"],
     )
-    display_name: str = Field(..., min_length=2, max_length=150)
-    description: str = ""
-    order: int = Field(
-        ...,
-        ge=1,
-        description=(
-            "Execution order. Stages run in ascending order. "
-            "Use gaps (100, 200) for easy insertion."
-        ),
+    display_name: str = Field(..., min_length=2, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    order: int = Field(default=500, ge=0, le=9999)
+    color: Optional[str] = Field(
+        None,
+        pattern=r"^#[0-9A-Fa-f]{6}$",
+        description="Hex color code",
+        examples=["#3B82F6"],
     )
+    icon: Optional[str] = Field(None, max_length=50)
     enabled: bool = True
-    crew_type: str = Field(
-        default="crewai_sequential",
-        description="pure_python | crewai_sequential | crewai_hierarchical",
-    )
-    timeout_seconds: int = Field(default=300, ge=30, le=3600)
 
 
 class StageConfigUpdate(BaseModel):
-    """Schema for partial update of a stage config."""
+    """Partial update for a stage."""
 
-    display_name: Optional[str] = Field(default=None, min_length=2, max_length=150)
-    description: Optional[str] = None
-    order: Optional[int] = Field(default=None, ge=1)
+    display_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    order: Optional[int] = Field(None, ge=0, le=9999)
+    color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    icon: Optional[str] = Field(None, max_length=50)
     enabled: Optional[bool] = None
-    crew_type: Optional[str] = None
-    timeout_seconds: Optional[int] = Field(default=None, ge=30, le=3600)
-
-
-class StageReorderRequest(BaseModel):
-    """Schema for batch reordering stages."""
-
-    stages: list[dict] = Field(
-        ...,
-        description='List of {"stage_id": "...", "order": N} objects',
-    )
 
 
 class StageConfigResponse(BaseModel):
-    """Full stage config returned by the API."""
+    """Stage config as returned by the API."""
 
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str  # MongoDB ObjectId string
+    id: str  # MongoDB ObjectId as string
     stage_id: str
     display_name: str
-    description: str
+    description: Optional[str] = None
     order: int
+    color: Optional[str] = None
+    icon: Optional[str] = None
     enabled: bool
-    crew_type: str
-    timeout_seconds: int
     is_builtin: bool
-    created_at: datetime
-    updated_at: datetime
+    agent_count: int = 0  # Computed: number of agents in this stage
+    created_at: str
+    updated_at: str
+
+
+class StageReorderRequest(BaseModel):
+    """Reorder stages by providing ordered list of stage_ids."""
+
+    stage_ids: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Ordered list of stage_ids. Position in list = display order.",
+    )

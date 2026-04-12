@@ -70,6 +70,8 @@ function CardMenu({ template, onClose }: CardMenuProps) {
     try {
       const cloned = await cloneMutation.mutateAsync({
         templateId: template.template_id,
+        newTemplateId: `${template.template_id}-copy`,
+        newName: `${template.name} (Copy)`,
       });
       toast.success(
         "Pipeline cloned",

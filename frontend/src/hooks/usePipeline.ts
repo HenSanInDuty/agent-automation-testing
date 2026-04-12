@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { pipelineApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
-import type { PipelineRunResponse } from "@/types";
+import type { PipelineRunResponse, PipelineActionResponse } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Queries
@@ -99,7 +99,7 @@ export function useCancelPipeline() {
 
   return useMutation({
     mutationFn: (runId: string) => pipelineApi.cancelRun(runId),
-    onSuccess: (_data: PipelineRunResponse, runId: string) => {
+    onSuccess: (_data: PipelineActionResponse, runId: string) => {
       // Refresh the run detail so the status reflects "cancelled"
       qc.invalidateQueries({
         queryKey: queryKeys.pipelineRuns.detail(runId),
@@ -170,7 +170,8 @@ export function useStageResults(
       runId && stage
         ? queryKeys.stageResults.byStage(runId, stage)
         : ["stage-results", "disabled"],
-    queryFn: () => pipelineApi.getStageResults(runId!, stage),
+    queryFn: () =>
+      pipelineApi.getRunResults(runId!, stage ? { stage } : undefined),
     enabled: !!runId && !!stage,
     staleTime: 5 * 60_000, // stage results don't change once saved
   });

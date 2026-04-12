@@ -29,6 +29,7 @@ from app.db.models import (
     StageConfigDocument,
 )
 from app.schemas.pipeline import AgentRunStatus, PipelineStatus
+from app.schemas.stage_config import StageConfigCreate, StageConfigUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -451,6 +452,37 @@ async def reset_all_agent_configs(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+async def count_agents_by_stage(stage: str) -> int:
+    """Count enabled agents belonging to a specific stage.
+
+    Args:
+        stage: The stage_id to count agents for.
+
+    Returns:
+        Number of enabled agents in that stage.
+    """
+    return await AgentConfigDocument.find(
+        AgentConfigDocument.stage == stage,
+        AgentConfigDocument.enabled == True,  # noqa: E712
+    ).count()
+
+
+async def reassign_agents_stage(from_stage: str, to_stage: str) -> int:
+    """Move all agents from one stage to another.
+
+    Args:
+        from_stage: Source stage_id.
+        to_stage: Destination stage_id.
+
+    Returns:
+        Number of agents affected.
+    """
+    result = await AgentConfigDocument.find(
+        AgentConfigDocument.stage == from_stage,
+    ).update_many({"$set": {"stage": to_stage, "updated_at": _now()}})
+    return result.modified_count if result is not None else 0  # type: ignore[union-attr]
+
+
 async def get_stage_config(stage_id: str) -> Optional[StageConfigDocument]:
     """Get a stage config by its unique ``stage_id``.
 
@@ -485,17 +517,25 @@ async def get_all_stage_configs(
     return await StageConfigDocument.find_all().sort("+order").to_list()
 
 
-async def create_stage_config(data: dict) -> StageConfigDocument:
+async def create_stage_config(data: StageConfigCreate) -> StageConfigDocument:
     """Create a new custom stage config (``is_builtin=False``).
 
     Args:
-        data: Dict of field values matching :class:`~app.db.models.StageConfigDocument`.
+        data: Validated :class:`~app.schemas.stage_config.StageConfigCreate` payload.
 
     Returns:
         The newly-inserted document.
     """
-    data["is_builtin"] = False
-    doc = StageConfigDocument(**data)
+    doc = StageConfigDocument(
+        stage_id=data.stage_id,
+        display_name=data.display_name,
+        description=data.description,
+        order=data.order,
+        color=data.color,
+        icon=data.icon,
+        enabled=data.enabled,
+        is_builtin=False,
+    )
     await doc.insert()
     return doc
 
@@ -522,13 +562,14 @@ async def upsert_stage_config(defaults: dict) -> StageConfigDocument:
 
 async def update_stage_config(
     stage_id: str,
-    data: dict,
+    data: StageConfigUpdate,
 ) -> Optional[StageConfigDocument]:
     """Partially update a stage config.
 
     Args:
         stage_id: Stage identifier to update.
-        data: Fields to update.  ``updated_at`` is set automatically.
+        data: Validated :class:`~app.schemas.stage_config.StageConfigUpdate` payload.
+              Only fields that are explicitly set are updated.
 
     Returns:
         The refreshed document, or ``None`` if *stage_id* does not exist.
@@ -536,47 +577,49 @@ async def update_stage_config(
     doc = await get_stage_config(stage_id)
     if doc is None:
         return None
-    data["updated_at"] = _now()
-    await doc.update({"$set": data})
+    update_data = data.model_dump(exclude_unset=True)
+    update_data["updated_at"] = _now()
+    await doc.update({"$set": update_data})
     await doc.sync()
     return doc
 
 
 async def delete_stage_config(stage_id: str) -> bool:
-    """Delete a custom stage config.
+    """Delete a stage config by stage_id.
 
-    Builtin stages cannot be deleted; a :class:`ValueError` is raised to
-    prevent accidental removal of core pipeline infrastructure.
+    The caller (router) is responsible for checking ``is_builtin`` before
+    calling this function.
 
     Args:
         stage_id: Stage identifier to delete.
 
     Returns:
-        ``True`` if the document was deleted.
-
-    Raises:
-        ValueError: If the stage exists but ``is_builtin=True``.
+        ``True`` if the document was deleted, ``False`` if not found.
     """
     doc = await get_stage_config(stage_id)
     if doc is None:
         return False
-    if doc.is_builtin:
-        raise ValueError(f"Cannot delete builtin stage: {stage_id}")
     await doc.delete()
     return True
 
 
-async def reorder_stages(stage_orders: list[dict]) -> None:
-    """Batch-update the ``order`` field of multiple stages in one call.
+async def reorder_stages(stage_ids: list[str]) -> list[StageConfigDocument]:
+    """Reorder stages by updating their ``order`` field.
+
+    The position of each ``stage_id`` in the list determines its new order
+    value (``index * 100``).
 
     Args:
-        stage_orders: List of ``{"stage_id": str, "order": int}`` dicts.
-            Stages not listed are left unchanged.
+        stage_ids: Ordered list of stage_ids.
+
+    Returns:
+        Full updated list of all stage configs, sorted by new order.
     """
-    for item in stage_orders:
-        doc = await get_stage_config(item["stage_id"])
+    for idx, stage_id in enumerate(stage_ids):
+        doc = await get_stage_config(stage_id)
         if doc is not None:
-            await doc.update({"$set": {"order": item["order"], "updated_at": _now()}})
+            await doc.update({"$set": {"order": idx * 100, "updated_at": _now()}})
+    return await get_all_stage_configs()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -633,6 +676,7 @@ async def get_all_pipeline_runs(
     skip: int = 0,
     limit: int = 20,
     status: Optional[str] = None,
+    template_id: Optional[str] = None,
 ) -> tuple[list[PipelineRunDocument], int]:
     """Return a paginated list of pipeline runs (newest first) and total count.
 
@@ -641,12 +685,19 @@ async def get_all_pipeline_runs(
         limit: Maximum number of documents to return.
         status: If provided, filter by this status value
             (e.g. ``"running"``, ``"completed"``).
+        template_id: If provided, filter runs belonging to this template.
 
     Returns:
         ``(items, total)`` where *total* is the count before pagination.
     """
+    conditions = []
     if status:
-        query = PipelineRunDocument.find(PipelineRunDocument.status == status)
+        conditions.append(PipelineRunDocument.status == status)
+    if template_id:
+        conditions.append(PipelineRunDocument.template_id == template_id)
+
+    if conditions:
+        query = PipelineRunDocument.find(*conditions)
     else:
         query = PipelineRunDocument.find_all()
 
@@ -875,6 +926,26 @@ async def get_latest_agent_result(
         .to_list()
     )
     return results[0] if results else None
+
+
+async def get_pipeline_result_by_node(
+    run_id: str,
+    node_id: str,
+) -> Optional[PipelineResultDocument]:
+    """Get a single pipeline result by run_id and node_id.
+
+    Args:
+        run_id: UUID string of the parent pipeline run.
+        node_id: DAG node ID whose result to retrieve.
+
+    Returns:
+        The matching :class:`~app.db.models.PipelineResultDocument`, or
+        ``None`` if no result exists for this node/run combination.
+    """
+    return await PipelineResultDocument.find_one(
+        PipelineResultDocument.run_id == run_id,
+        PipelineResultDocument.node_id == node_id,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

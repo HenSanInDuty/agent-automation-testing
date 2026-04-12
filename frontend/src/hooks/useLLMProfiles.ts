@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { llmProfilesApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
@@ -31,7 +27,7 @@ export function useLLMProfiles(params?: { skip?: number; limit?: number }) {
  * Fetch a single LLM profile by ID.
  * Only runs when `id` is defined.
  */
-export function useLLMProfile(id: number | undefined) {
+export function useLLMProfile(id: string | undefined) {
   return useQuery({
     queryKey: queryKeys.llmProfiles.detail(id!),
     queryFn: () => llmProfilesApi.get(id!),
@@ -66,7 +62,7 @@ export function useUpdateLLMProfile() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: LLMProfileUpdate }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: LLMProfileUpdate }) =>
       llmProfilesApi.update(id, payload),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: queryKeys.llmProfiles.lists() });
@@ -83,7 +79,7 @@ export function useDeleteLLMProfile() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => llmProfilesApi.delete(id),
+    mutationFn: (id: string) => llmProfilesApi.delete(id),
     onSuccess: (_data, id) => {
       qc.removeQueries({ queryKey: queryKeys.llmProfiles.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.llmProfiles.lists() });
@@ -99,7 +95,7 @@ export function useSetDefaultLLMProfile() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => llmProfilesApi.setDefault(id),
+    mutationFn: (id: string) => llmProfilesApi.setDefault(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.llmProfiles.all });
     },
@@ -112,7 +108,7 @@ export function useSetDefaultLLMProfile() {
  */
 export function useTestLLMProfile() {
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body?: LLMTestRequest }) =>
+    mutationFn: ({ id, body }: { id: string; body?: LLMTestRequest }) =>
       llmProfilesApi.test(id, body),
     // No cache invalidation needed — purely a connectivity test
     retry: 0,

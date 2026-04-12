@@ -37,6 +37,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import BaseModel as _BaseModel
 
 from app.config import settings
 from app.db import crud
@@ -55,6 +56,15 @@ from app.schemas.pipeline import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
+
+
+class PipelineActionResponse(_BaseModel):
+    """Response schema for pipeline action endpoints (pause/resume/cancel)."""
+
+    status: str
+    run_id: str
+    message: str
+
 
 # Allowed file extensions and MIME types for uploaded documents
 _ALLOWED_EXTENSIONS = {
@@ -280,6 +290,18 @@ def _save_upload(file: UploadFile, run_id: str) -> tuple[str, str]:
         bytes_written,
     )
     return document_name, str(dest_path)
+
+
+def _result_to_response(r) -> PipelineResultResponse:
+    """Convert a PipelineResultDocument to PipelineResultResponse."""
+    return PipelineResultResponse(
+        id=str(r.id),
+        run_id=r.run_id,
+        stage=r.stage or "",
+        agent_id=r.agent_id or "",
+        output=r.output,
+        created_at=r.created_at,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -828,6 +850,10 @@ async def list_pipeline_runs(
             "completed | failed | cancelled"
         ),
     ),
+    template_id: Optional[str] = Query(
+        default=None,
+        description="Filter runs by pipeline template ID",
+    ),
 ) -> PipelineRunListResponse:
     """Return a paginated list of pipeline runs.
 
@@ -861,6 +887,7 @@ async def list_pipeline_runs(
         skip=skip,
         limit=page_size,
         status=status_filter,
+        template_id=template_id,
     )
 
     # Fetch agent configs once for display-name enrichment
@@ -1024,6 +1051,7 @@ async def delete_pipeline_run(run_id: str) -> None:
 
 @router.post(
     "/runs/{run_id}/pause",
+    response_model=PipelineActionResponse,
     summary="Pause a running pipeline",
     description=(
         "Requests that the pipeline pause after its current stage completes. "
@@ -1031,7 +1059,7 @@ async def delete_pipeline_run(run_id: str) -> None:
         "Only runs with ``status=running`` can be paused."
     ),
 )
-async def pause_pipeline(run_id: str) -> dict[str, str]:
+async def pause_pipeline(run_id: str) -> PipelineActionResponse:
     """Request that a running pipeline pause after the current stage.
 
     Sets a PAUSE signal via :data:`~app.core.signal_manager.signal_manager`.
@@ -1064,11 +1092,11 @@ async def pause_pipeline(run_id: str) -> dict[str, str]:
 
     await signal_manager.set_signal(run_id, PipelineSignal.PAUSE)
     logger.info("[Pipeline] Pause requested  run_id=%r", run_id)
-    return {
-        "status": "pause_requested",
-        "run_id": run_id,
-        "message": "Pipeline will pause after the current stage completes.",
-    }
+    return PipelineActionResponse(
+        status="pause_requested",
+        run_id=run_id,
+        message="Pipeline will pause after the current stage completes.",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1078,13 +1106,14 @@ async def pause_pipeline(run_id: str) -> dict[str, str]:
 
 @router.post(
     "/runs/{run_id}/resume",
+    response_model=PipelineActionResponse,
     summary="Resume a paused pipeline",
     description=(
         "Requests that a paused pipeline continue execution from where it left off. "
         "Only runs with ``status=paused`` can be resumed."
     ),
 )
-async def resume_pipeline(run_id: str) -> dict[str, str]:
+async def resume_pipeline(run_id: str) -> PipelineActionResponse:
     """Request that a paused pipeline resume execution.
 
     Sets a RESUME signal via :data:`~app.core.signal_manager.signal_manager`.
@@ -1117,11 +1146,11 @@ async def resume_pipeline(run_id: str) -> dict[str, str]:
 
     await signal_manager.set_signal(run_id, PipelineSignal.RESUME)
     logger.info("[Pipeline] Resume requested  run_id=%r", run_id)
-    return {
-        "status": "resume_requested",
-        "run_id": run_id,
-        "message": "Pipeline will resume from where it left off.",
-    }
+    return PipelineActionResponse(
+        status="resume_requested",
+        run_id=run_id,
+        message="Pipeline will resume from where it left off.",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1131,6 +1160,7 @@ async def resume_pipeline(run_id: str) -> dict[str, str]:
 
 @router.post(
     "/runs/{run_id}/cancel",
+    response_model=PipelineActionResponse,
     summary="Cancel a running or paused pipeline",
     description=(
         "Requests cancellation of a pipeline that is currently ``running``, "
@@ -1140,7 +1170,7 @@ async def resume_pipeline(run_id: str) -> dict[str, str]:
         "cancelled."
     ),
 )
-async def cancel_pipeline(run_id: str) -> dict[str, str]:
+async def cancel_pipeline(run_id: str) -> PipelineActionResponse:
     """Request cancellation of a running, paused, or pending pipeline.
 
     * **PENDING** / **RUNNING** / **PAUSED** runs receive a CANCEL signal via
@@ -1183,11 +1213,11 @@ async def cancel_pipeline(run_id: str) -> dict[str, str]:
 
     await signal_manager.set_signal(run_id, PipelineSignal.CANCEL)
     logger.info("[Pipeline] Cancellation requested  run_id=%r", run_id)
-    return {
-        "status": "cancel_requested",
-        "run_id": run_id,
-        "message": "Cancellation signal sent. The pipeline will stop at the next checkpoint.",
-    }
+    return PipelineActionResponse(
+        status="cancel_requested",
+        run_id=run_id,
+        message="Cancellation signal sent. The pipeline will stop at the next checkpoint.",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1245,6 +1275,42 @@ async def get_pipeline_results(
         )
         for r in raw_results
     ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /pipeline/runs/{run_id}/results/{node_id}
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/runs/{run_id}/results/{node_id}",
+    response_model=PipelineResultResponse,
+    summary="Get result for a specific node in a pipeline run",
+    description=(
+        "Returns the persisted output of a single DAG node for the given run. "
+        "Uses the ``node_id`` field from the pipeline result document."
+    ),
+)
+async def get_node_result(run_id: str, node_id: str) -> PipelineResultResponse:
+    """Retrieve the output of a specific node in a pipeline run.
+
+    Args:
+        run_id:  UUID string of the run.
+        node_id: DAG node ID to retrieve the result for.
+
+    Returns:
+        A :class:`~app.schemas.pipeline.PipelineResultResponse`.
+
+    Raises:
+        HTTPException: 404 if no result exists for this node/run combination.
+    """
+    result = await crud.get_pipeline_result_by_node(run_id, node_id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No result found for node '{node_id}' in run '{run_id}'.",
+        )
+    return _result_to_response(result)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

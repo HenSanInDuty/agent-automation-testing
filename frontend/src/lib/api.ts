@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 import type {
   AgentConfigCreate,
-  AgentConfigGrouped,
+  AgentConfigGroupedResponse,
   AgentConfigResponse,
   AgentConfigResetResponse,
   AgentConfigSummary,
@@ -14,6 +14,7 @@ import type {
   LLMTestRequest,
   LLMTestResponse,
   PaginationParams,
+  PipelineActionResponse,
   PipelineNodeResult,
   PipelineRunListResponse,
   PipelineRunResponse,
@@ -24,7 +25,7 @@ import type {
   StageConfig,
   StageConfigCreate,
   StageConfigUpdate,
-  StageReorderRequest,
+  TemplateExportEnvelope,
 } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ export const llmProfilesApi = {
   },
 
   /** GET /api/v1/admin/llm-profiles/:id */
-  get: async (id: number): Promise<LLMProfileResponse> => {
+  get: async (id: string): Promise<LLMProfileResponse> => {
     const { data } = await apiClient.get<LLMProfileResponse>(
       `/api/v1/admin/llm-profiles/${id}`,
     );
@@ -84,7 +85,7 @@ export const llmProfilesApi = {
 
   /** PUT /api/v1/admin/llm-profiles/:id */
   update: async (
-    id: number,
+    id: string,
     payload: LLMProfileUpdate,
   ): Promise<LLMProfileResponse> => {
     const { data } = await apiClient.put<LLMProfileResponse>(
@@ -95,12 +96,12 @@ export const llmProfilesApi = {
   },
 
   /** DELETE /api/v1/admin/llm-profiles/:id */
-  delete: async (id: number): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/api/v1/admin/llm-profiles/${id}`);
   },
 
   /** POST /api/v1/admin/llm-profiles/:id/set-default */
-  setDefault: async (id: number): Promise<LLMProfileResponse> => {
+  setDefault: async (id: string): Promise<LLMProfileResponse> => {
     const { data } = await apiClient.post<LLMProfileResponse>(
       `/api/v1/admin/llm-profiles/${id}/set-default`,
     );
@@ -108,7 +109,7 @@ export const llmProfilesApi = {
   },
 
   /** POST /api/v1/admin/llm-profiles/:id/test */
-  test: async (id: number, body?: LLMTestRequest): Promise<LLMTestResponse> => {
+  test: async (id: string, body?: LLMTestRequest): Promise<LLMTestResponse> => {
     const { data } = await apiClient.post<LLMTestResponse>(
       `/api/v1/admin/llm-profiles/${id}/test`,
       body ?? {},
@@ -126,8 +127,8 @@ export const agentConfigsApi = {
    * GET /api/v1/admin/agent-configs?grouped=true
    * Returns agents grouped by stage.
    */
-  listGrouped: async (): Promise<AgentConfigGrouped> => {
-    const { data } = await apiClient.get<AgentConfigGrouped>(
+  listGrouped: async (): Promise<AgentConfigGroupedResponse> => {
+    const { data } = await apiClient.get<AgentConfigGroupedResponse>(
       "/api/v1/admin/agent-configs",
       { params: { grouped: true } },
     );
@@ -196,11 +197,8 @@ export const agentConfigsApi = {
   },
 
   /** DELETE /api/v1/admin/agent-configs/:agent_id */
-  delete: async (agentId: string): Promise<{ deleted: string }> => {
-    const { data } = await apiClient.delete<{ deleted: string }>(
-      `/api/v1/admin/agent-configs/${agentId}`,
-    );
-    return data;
+  delete: async (agentId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/admin/agent-configs/${agentId}`);
   },
 };
 
@@ -284,30 +282,24 @@ export const pipelineApi = {
   },
 
   /** POST /api/v1/pipeline/runs/:run_id/cancel */
-  cancelRun: async (runId: string): Promise<PipelineRunResponse> => {
-    const { data } = await apiClient.post<PipelineRunResponse>(
+  cancelRun: async (runId: string): Promise<PipelineActionResponse> => {
+    const { data } = await apiClient.post<PipelineActionResponse>(
       `/api/v1/pipeline/runs/${runId}/cancel`,
     );
     return data;
   },
 
   /** POST /api/v1/pipeline/runs/:run_id/pause */
-  pauseRun: async (
-    runId: string,
-  ): Promise<{ status: string; run_id: string; message?: string }> => {
-    const { data } = await apiClient.post<{
-      status: string;
-      run_id: string;
-      message?: string;
-    }>(`/api/v1/pipeline/runs/${runId}/pause`);
+  pauseRun: async (runId: string): Promise<PipelineActionResponse> => {
+    const { data } = await apiClient.post<PipelineActionResponse>(
+      `/api/v1/pipeline/runs/${runId}/pause`,
+    );
     return data;
   },
 
   /** POST /api/v1/pipeline/runs/:run_id/resume */
-  resumeRun: async (
-    runId: string,
-  ): Promise<{ status: string; run_id: string }> => {
-    const { data } = await apiClient.post<{ status: string; run_id: string }>(
+  resumeRun: async (runId: string): Promise<PipelineActionResponse> => {
+    const { data } = await apiClient.post<PipelineActionResponse>(
       `/api/v1/pipeline/runs/${runId}/resume`,
     );
     return data;
@@ -325,14 +317,14 @@ export const pipelineApi = {
     return `${base}/api/v1/pipeline/runs/${runId}/export/docx`;
   },
 
-  /** GET /api/v1/pipeline/runs/:run_id/results?stage=xxx */
-  getStageResults: async (
+  /** GET /api/v1/pipeline/runs/:run_id/results */
+  getRunResults: async (
     runId: string,
-    stage?: string,
-  ): Promise<Record<string, unknown>> => {
-    const { data } = await apiClient.get<Record<string, unknown>>(
+    params?: { stage?: string; agent_id?: string; node_id?: string },
+  ): Promise<PipelineNodeResult[]> => {
+    const { data } = await apiClient.get<PipelineNodeResult[]>(
       `/api/v1/pipeline/runs/${runId}/results`,
-      stage ? { params: { stage } } : undefined,
+      params ? { params } : undefined,
     );
     return data;
   },
@@ -384,7 +376,7 @@ export const chatApi = {
    */
   sendStream: (
     messages: { role: string; content: string }[],
-    llmProfileId?: number | null,
+    llmProfileId?: string | null,
     systemPrompt?: string | null,
   ): Promise<Response> => {
     const baseURL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -406,9 +398,10 @@ export const chatApi = {
 
 export const stageConfigsApi = {
   /** GET /api/v1/admin/stage-configs */
-  list: async (): Promise<StageConfig[]> => {
+  list: async (enabledOnly = false): Promise<StageConfig[]> => {
     const { data } = await apiClient.get<StageConfig[]>(
       "/api/v1/admin/stage-configs",
+      enabledOnly ? { params: { enabled_only: true } } : undefined,
     );
     return data;
   },
@@ -443,18 +436,15 @@ export const stageConfigsApi = {
   },
 
   /** DELETE /api/v1/admin/stage-configs/:stage_id */
-  delete: async (stageId: string): Promise<{ deleted: string }> => {
-    const { data } = await apiClient.delete<{ deleted: string }>(
-      `/api/v1/admin/stage-configs/${stageId}`,
-    );
-    return data;
+  delete: async (stageId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/admin/stage-configs/${stageId}`);
   },
 
   /** POST /api/v1/admin/stage-configs/reorder */
-  reorder: async (payload: StageReorderRequest): Promise<StageConfig[]> => {
+  reorder: async (stageIds: string[]): Promise<StageConfig[]> => {
     const { data } = await apiClient.post<StageConfig[]>(
       "/api/v1/admin/stage-configs/reorder",
-      payload,
+      { stage_ids: stageIds },
     );
     return data;
   },
@@ -465,99 +455,107 @@ export const stageConfigsApi = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const pipelineTemplatesApi = {
-  /** GET /api/v1/pipeline/templates */
+  /** GET /api/v1/pipeline-templates */
   list: async (params?: {
-    skip?: number;
-    limit?: number;
+    page?: number;
+    page_size?: number;
     include_archived?: boolean;
     tag?: string;
   }): Promise<PipelineTemplateListResponse> => {
     const { data } = await apiClient.get<PipelineTemplateListResponse>(
-      "/api/v1/pipeline/templates",
+      "/api/v1/pipeline-templates",
       { params },
     );
     return data;
   },
 
-  /** POST /api/v1/pipeline/templates */
+  /** POST /api/v1/pipeline-templates */
   create: async (
     payload: PipelineTemplateCreate,
   ): Promise<PipelineTemplate> => {
     const { data } = await apiClient.post<PipelineTemplate>(
-      "/api/v1/pipeline/templates",
+      "/api/v1/pipeline-templates",
       payload,
     );
     return data;
   },
 
-  /** GET /api/v1/pipeline/templates/:template_id */
+  /** GET /api/v1/pipeline-templates/:template_id */
   get: async (templateId: string): Promise<PipelineTemplate> => {
     const { data } = await apiClient.get<PipelineTemplate>(
-      `/api/v1/pipeline/templates/${templateId}`,
+      `/api/v1/pipeline-templates/${templateId}`,
     );
     return data;
   },
 
-  /** PUT /api/v1/pipeline/templates/:template_id */
+  /** PUT /api/v1/pipeline-templates/:template_id */
   update: async (
     templateId: string,
     payload: PipelineTemplateUpdate,
   ): Promise<PipelineTemplate> => {
     const { data } = await apiClient.put<PipelineTemplate>(
-      `/api/v1/pipeline/templates/${templateId}`,
+      `/api/v1/pipeline-templates/${templateId}`,
       payload,
     );
     return data;
   },
 
-  /** DELETE /api/v1/pipeline/templates/:template_id */
+  /** DELETE /api/v1/pipeline-templates/:template_id */
   delete: async (templateId: string): Promise<void> => {
-    await apiClient.delete(`/api/v1/pipeline/templates/${templateId}`);
+    await apiClient.delete(`/api/v1/pipeline-templates/${templateId}`);
   },
 
-  /** POST /api/v1/pipeline/templates/:template_id/clone */
+  /** POST /api/v1/pipeline-templates/:template_id/clone */
   clone: async (
     templateId: string,
-    newName?: string,
+    newTemplateId: string,
+    newName: string,
   ): Promise<PipelineTemplate> => {
     const { data } = await apiClient.post<PipelineTemplate>(
-      `/api/v1/pipeline/templates/${templateId}/clone`,
-      newName ? { name: newName } : {},
+      `/api/v1/pipeline-templates/${templateId}/clone`,
+      { new_template_id: newTemplateId, new_name: newName },
     );
     return data;
   },
 
-  /** POST /api/v1/pipeline/templates/:template_id/archive */
+  /** POST /api/v1/pipeline-templates/:template_id/archive */
   archive: async (templateId: string): Promise<PipelineTemplate> => {
     const { data } = await apiClient.post<PipelineTemplate>(
-      `/api/v1/pipeline/templates/${templateId}/archive`,
+      `/api/v1/pipeline-templates/${templateId}/archive`,
     );
     return data;
   },
 
-  /** POST /api/v1/pipeline/templates/:template_id/validate */
+  /** POST /api/v1/pipeline-templates/:template_id/validate */
   validate: async (templateId: string): Promise<DAGValidationResult> => {
     const { data } = await apiClient.post<DAGValidationResult>(
-      `/api/v1/pipeline/templates/${templateId}/validate`,
+      `/api/v1/pipeline-templates/${templateId}/validate`,
     );
     return data;
   },
 
-  /** GET /api/v1/pipeline/templates/:template_id/export */
-  exportTemplate: async (templateId: string): Promise<PipelineTemplate> => {
-    const { data } = await apiClient.get<PipelineTemplate>(
-      `/api/v1/pipeline/templates/${templateId}/export`,
+  /** GET /api/v1/pipeline-templates/:template_id/export */
+  exportTemplate: async (
+    templateId: string,
+  ): Promise<TemplateExportEnvelope> => {
+    const { data } = await apiClient.get<TemplateExportEnvelope>(
+      `/api/v1/pipeline-templates/${templateId}/export`,
     );
     return data;
   },
 
-  /** POST /api/v1/pipeline/templates/import */
+  /** POST /api/v1/pipeline-templates/import */
   importTemplate: async (
     templateData: PipelineTemplate,
   ): Promise<PipelineTemplate> => {
+    const envelope = {
+      auto_at_version: "3.0",
+      export_type: "pipeline_template",
+      template: templateData,
+    };
     const { data } = await apiClient.post<PipelineTemplate>(
-      "/api/v1/pipeline/templates/import",
-      templateData,
+      "/api/v1/pipeline-templates/import",
+      envelope,
     );
     return data;
   },

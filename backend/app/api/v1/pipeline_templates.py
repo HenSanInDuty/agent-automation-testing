@@ -26,6 +26,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Body, HTTPException, Query, status
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from pydantic import Field as PydanticField
 
 from app.core.dag_resolver import DAGResolver, DAGValidationError
 from app.db import crud
@@ -43,6 +45,36 @@ from app.schemas.pipeline_template import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pipeline-templates", tags=["Pipeline Templates"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Request / response models local to this router
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class CloneTemplateRequest(BaseModel):
+    """Request body for cloning a pipeline template."""
+
+    new_template_id: str = PydanticField(
+        ...,
+        pattern=r"^[a-z][a-z0-9_-]{2,49}$",
+        description="URL-safe slug for the cloned template.",
+    )
+    new_name: str = PydanticField(
+        ...,
+        min_length=2,
+        max_length=200,
+        description="Display name for the cloned template.",
+    )
+
+
+class PaginatedTemplateResponse(BaseModel):
+    """Paginated response for pipeline template list endpoint."""
+
+    items: list[PipelineTemplateListItem]
+    total: int
+    page: int
+    page_size: int
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -149,15 +181,18 @@ def _validate_dag_or_422(
 
 @router.get(
     "",
-    response_model=list[PipelineTemplateListItem],
+    response_model=PaginatedTemplateResponse,
     summary="List all pipeline templates",
     description=(
         "Return all pipeline templates sorted by ``updated_at`` descending. "
         "Pass ``include_archived=true`` to include soft-deleted templates. "
-        "Pass ``tag=<value>`` to filter by a specific tag (exact match)."
+        "Pass ``tag=<value>`` to filter by a specific tag (exact match). "
+        "Results are paginated via ``page`` and ``page_size``."
     ),
 )
 async def list_templates(
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     include_archived: bool = Query(
         False,
         description="When true, archived templates are included in the response.",
@@ -166,7 +201,7 @@ async def list_templates(
         None,
         description="Filter results to templates that carry this exact tag.",
     ),
-) -> list[PipelineTemplateListItem]:
+) -> PaginatedTemplateResponse:
     """List all pipeline templates with lightweight metadata.
 
     Each item includes the last-run timestamp and status fetched from
@@ -206,7 +241,16 @@ async def list_templates(
             )
         )
 
-    return items
+    total = len(items)
+    start = (page - 1) * page_size
+    paginated_items = items[start : start + page_size]
+
+    return PaginatedTemplateResponse(
+        items=paginated_items,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -547,25 +591,12 @@ async def archive_template(template_id: str) -> PipelineTemplateResponse:
     description=(
         "Create a new pipeline template that is an exact copy of the source "
         "template.  The clone starts at version 1, is not built-in, and is "
-        "not archived.  ``new_template_id`` and ``new_name`` are required "
-        "query parameters."
+        "not archived.  Body params: new_template_id, new_name."
     ),
 )
 async def clone_template(
     template_id: str,
-    new_template_id: str = Query(
-        ...,
-        description=(
-            "URL-safe slug for the cloned template.  Must match "
-            r"``^[a-z][a-z0-9_-]{2,49}$`` and must not already exist."
-        ),
-    ),
-    new_name: str = Query(
-        ...,
-        min_length=2,
-        max_length=200,
-        description="Display name for the cloned template.",
-    ),
+    body: CloneTemplateRequest,
 ) -> PipelineTemplateResponse:
     """Clone an existing pipeline template into a new document.
 
@@ -588,18 +619,20 @@ async def clone_template(
     source = await _get_or_404(template_id)
 
     # Ensure the target slug is available
-    existing = await crud.get_pipeline_template(new_template_id)
+    existing = await crud.get_pipeline_template(body.new_template_id)
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                f"Cannot clone: a template with template_id='{new_template_id}' "
+                f"Cannot clone: a template with template_id='{body.new_template_id}' "
                 "already exists."
             ),
         )
 
-    cloned = await crud.clone_pipeline_template(source, new_template_id, new_name)
-    logger.info("Cloned template '%s' → '%s'", template_id, new_template_id)
+    cloned = await crud.clone_pipeline_template(
+        source, body.new_template_id, body.new_name
+    )
+    logger.info("Cloned template '%s' → '%s'", template_id, body.new_template_id)
     return _to_response(cloned)
 
 

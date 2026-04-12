@@ -476,43 +476,51 @@ DEFAULT_STAGES: list[dict[str, Any]] = [
     {
         "stage_id": "ingestion",
         "display_name": "Document Ingestion",
-        "description": ("Parse uploaded document and extract structured requirements"),
+        "description": "Parse and chunk uploaded documents for downstream processing.",
         "order": 100,
+        "color": "#6366F1",  # Indigo
+        "icon": "file-input",
         "enabled": True,
-        "crew_type": "pure_python",
-        "timeout_seconds": 120,
         "is_builtin": True,
     },
     {
         "stage_id": "testcase",
         "display_name": "Test Case Generation",
-        "description": (
-            "Generate detailed test cases from requirements using specialized AI agents"
-        ),
+        "description": "Analyze requirements and generate comprehensive test cases.",
         "order": 200,
+        "color": "#8B5CF6",  # Violet
+        "icon": "flask-conical",
         "enabled": True,
-        "crew_type": "crewai_sequential",
-        "timeout_seconds": 600,
         "is_builtin": True,
     },
     {
         "stage_id": "execution",
         "display_name": "Test Execution",
-        "description": "Execute generated test cases and capture results",
+        "description": "Execute generated test cases against the target system.",
         "order": 300,
+        "color": "#F59E0B",  # Amber
+        "icon": "play",
         "enabled": True,
-        "crew_type": "crewai_sequential",
-        "timeout_seconds": 300,
         "is_builtin": True,
     },
     {
         "stage_id": "reporting",
-        "display_name": "Report Generation",
-        "description": ("Aggregate results into coverage analysis and final report"),
+        "display_name": "Reporting",
+        "description": "Analyze results, identify root causes, and generate reports.",
         "order": 400,
+        "color": "#10B981",  # Emerald
+        "icon": "file-bar-chart",
         "enabled": True,
-        "crew_type": "crewai_sequential",
-        "timeout_seconds": 180,
+        "is_builtin": True,
+    },
+    {
+        "stage_id": "custom",
+        "display_name": "Custom / Unassigned",
+        "description": "Catch-all stage for user-created agents not assigned to a specific stage.",
+        "order": 9999,
+        "color": "#6B7280",  # Gray
+        "icon": "puzzle",
+        "enabled": True,
         "is_builtin": True,
     },
 ]

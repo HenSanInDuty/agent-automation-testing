@@ -83,7 +83,7 @@ function EmptyState({ onAdd }: EmptyStateProps) {
         className={cn(
           "w-18 h-18 rounded-2xl",
           "bg-[#135bec]/10 border border-[#135bec]/20",
-          "flex items-center justify-center"
+          "flex items-center justify-center",
         )}
         style={{ width: "4.5rem", height: "4.5rem" }}
       >
@@ -126,7 +126,7 @@ function ErrorState({ onRetry }: ErrorStateProps) {
         className={cn(
           "w-14 h-14 rounded-xl",
           "bg-[#ef4444]/10 border border-[#ef4444]/20",
-          "flex items-center justify-center"
+          "flex items-center justify-center",
         )}
       >
         <Brain className="w-7 h-7 text-[#f87171]" aria-hidden="true" />
@@ -164,8 +164,8 @@ export function LLMProfileList() {
   const [editProfile, setEditProfile] = React.useState<
     LLMProfileResponse | undefined
   >(undefined);
-  const [deleteConfirmId, setDeleteConfirmId] = React.useState<number | null>(
-    null
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
+    null,
   );
 
   // ── Data fetching ──────────────────────────────────────────────────────────
@@ -210,7 +210,7 @@ export function LLMProfileList() {
     } catch {
       toast.error(
         "Delete failed",
-        "Could not delete the profile. Please try again."
+        "Could not delete the profile. Please try again.",
       );
     } finally {
       setDeleteConfirmId(null);
@@ -223,12 +223,12 @@ export function LLMProfileList() {
       await setDefaultMutation.mutateAsync(profile.id);
       toast.success(
         "Default updated",
-        `"${profile.name}" is now the default profile.`
+        `"${profile.name}" is now the default profile.`,
       );
     } catch {
       toast.error(
         "Update failed",
-        "Could not set the default profile. Please try again."
+        "Could not set the default profile. Please try again.",
       );
     }
   };
@@ -257,8 +257,7 @@ export function LLMProfileList() {
               <span className="text-[#f87171]">Could not load profiles</span>
             ) : (
               <>
-                {total}{" "}
-                <span>{total === 1 ? "profile" : "profiles"}</span>
+                {total} <span>{total === 1 ? "profile" : "profiles"}</span>
               </>
             )}
           </p>
