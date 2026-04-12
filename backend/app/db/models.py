@@ -185,6 +185,7 @@ class StageConfigDocument(Document):
     icon: Optional[str] = None
     enabled: bool = True
     is_builtin: bool = False
+    template_id: Optional[str] = None  # None = global/builtin, set = pipeline-specific
 
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
@@ -194,8 +195,9 @@ class StageConfigDocument(Document):
 
         name = "stage_configs"
         indexes = [
-            IndexModel([("stage_id", 1)], unique=True),
+            IndexModel([("stage_id", 1), ("template_id", 1)], unique=True),
             IndexModel([("order", 1), ("enabled", 1)]),
+            IndexModel([("template_id", 1), ("order", 1)]),
         ]
 
 
@@ -244,6 +246,12 @@ class PipelineNodeConfig(BaseModel):
     config_overrides: dict = Field(
         default_factory=dict,
         description="Override agent config fields: llm_profile_id, max_iter, etc.",
+    )
+
+    # Stage assignment within the pipeline
+    stage_id: Optional[str] = Field(
+        None,
+        description="stage_id of the stage this node belongs to within the pipeline.",
     )
 
 

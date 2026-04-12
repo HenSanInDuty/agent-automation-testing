@@ -483,37 +483,90 @@ async def reassign_agents_stage(from_stage: str, to_stage: str) -> int:
     return result.modified_count if result is not None else 0  # type: ignore[union-attr]
 
 
-async def get_stage_config(stage_id: str) -> Optional[StageConfigDocument]:
-    """Get a stage config by its unique ``stage_id``.
+async def get_stage_config(
+    stage_id: str,
+    template_id: Optional[str] = None,
+) -> Optional[StageConfigDocument]:
+    """Get a stage config by its ``stage_id``, optionally scoped to a pipeline template.
 
     Args:
         stage_id: Stage identifier such as ``"testcase"`` or ``"reporting"``.
+        template_id: When provided, the lookup is scoped to this pipeline template
+                     (pipeline-specific stages).  When ``None``, only global
+                     stages (``template_id IS NULL``) are searched.
 
     Returns:
         The matching document or ``None``.
     """
-    return await StageConfigDocument.find_one(StageConfigDocument.stage_id == stage_id)
+    if template_id is not None:
+        return await StageConfigDocument.find_one(
+            StageConfigDocument.stage_id == stage_id,
+            StageConfigDocument.template_id == template_id,
+        )
+    # Global stage lookup — match only documents without a template_id
+    return await StageConfigDocument.find_one(
+        StageConfigDocument.stage_id == stage_id,
+        StageConfigDocument.template_id == None,  # noqa: E711
+    )
 
 
 async def get_all_stage_configs(
     enabled_only: bool = False,
+    template_id: Optional[str] = None,
+    no_fallback: bool = False,
 ) -> list[StageConfigDocument]:
     """Get all stage configs sorted by ``order`` ascending.
 
     Args:
         enabled_only: When ``True``, exclude stages where ``enabled=False``.
+        template_id: When provided, first tries to return stages belonging to
+                     this pipeline template.  If none exist yet, falls back to
+                     global stages (``template_id IS NULL``) so that new
+                     pipelines always have a working default set.
+                     When ``None`` (default), all stages are returned.
+        no_fallback: When ``True`` and ``template_id`` is provided, skip the
+                     global-stage fallback and return an empty list if no
+                     pipeline-specific stages exist.
 
     Returns:
         List of :class:`~app.db.models.StageConfigDocument` in execution order.
     """
-    if enabled_only:
-        return (
+    enabled_filter = (
+        [StageConfigDocument.enabled == True]  # noqa: E712
+        if enabled_only
+        else []
+    )
+
+    if template_id is not None:
+        # Try pipeline-specific stages first
+        pipeline_stages = (
             await StageConfigDocument.find(
-                StageConfigDocument.enabled == True  # noqa: E712
+                StageConfigDocument.template_id == template_id,
+                *enabled_filter,
             )
             .sort("+order")
             .to_list()
         )
+
+        if pipeline_stages:
+            return pipeline_stages
+
+        if no_fallback:
+            return []  # skip fallback when caller says so
+
+        # No pipeline-specific stages → fall back to global stages
+        return (
+            await StageConfigDocument.find(
+                StageConfigDocument.template_id == None,  # noqa: E711
+                *enabled_filter,
+            )
+            .sort("+order")
+            .to_list()
+        )
+
+    # No template_id filter — return everything
+    if enabled_filter:
+        return await StageConfigDocument.find(*enabled_filter).sort("+order").to_list()
     return await StageConfigDocument.find_all().sort("+order").to_list()
 
 
@@ -535,6 +588,7 @@ async def create_stage_config(data: StageConfigCreate) -> StageConfigDocument:
         icon=data.icon,
         enabled=data.enabled,
         is_builtin=False,
+        template_id=data.template_id,
     )
     await doc.insert()
     return doc
@@ -620,6 +674,146 @@ async def reorder_stages(stage_ids: list[str]) -> list[StageConfigDocument]:
         if doc is not None:
             await doc.update({"$set": {"order": idx * 100, "updated_at": _now()}})
     return await get_all_stage_configs()
+
+
+async def get_stage_configs_for_template(
+    template_id: str,
+) -> list[StageConfigDocument]:
+    """Convenience wrapper — return all stage configs for a specific pipeline template.
+
+    Args:
+        template_id: The pipeline template whose stages should be returned.
+
+    Returns:
+        List of :class:`~app.db.models.StageConfigDocument` sorted by ``order``.
+    """
+    return await get_all_stage_configs(template_id=template_id)
+
+
+async def get_agents_by_pipeline():
+    """Return agents grouped by pipeline template → stage.
+
+    For every pipeline template in the DB the function:
+
+    1. Fetches stage configs that belong to that template (by ``template_id``).
+    2. Iterates over DAG nodes whose ``node_type`` is ``"agent"`` or
+       ``"pure_python"`` and resolves the backing
+       :class:`~app.db.models.AgentConfigDocument`.
+    3. Slots each resolved agent into its node's ``stage_id`` bucket (or
+       ``"__unassigned__"`` when the node has no stage).
+    4. Appends an *Unassigned* bucket at the end when there are any such agents.
+
+    Returns:
+        :class:`~app.schemas.agent_config.AgentConfigByPipelineResponse`
+    """
+    from app.schemas.agent_config import (
+        AgentConfigByPipelineResponse,
+        AgentConfigSummary,
+        PipelineAgentGroup,
+        PipelineStageEntry,
+    )
+
+    templates = await PipelineTemplateDocument.find_all().sort("+created_at").to_list()
+    all_agents = await AgentConfigDocument.find_all().to_list()
+    agent_map = {a.agent_id: a for a in all_agents}
+
+    pipelines: list[PipelineAgentGroup] = []
+    total_agents = 0
+
+    for template in templates:
+        # Only load stages that belong specifically to this pipeline template.
+        # No fallback to global stages — pipelines without configured stages
+        # show all their agents in the "__unassigned__" bucket.
+        pipeline_stages = (
+            await StageConfigDocument.find(
+                StageConfigDocument.template_id == template.template_id
+            )
+            .sort("+order")
+            .to_list()
+        )
+
+        # Build per-stage agent buckets
+        stage_map: dict[str, list[AgentConfigSummary]] = {
+            s.stage_id: [] for s in pipeline_stages
+        }
+        stage_map["__unassigned__"] = []
+
+        # Walk DAG nodes and slot resolved agents into their stage bucket
+        for node in template.nodes:
+            if node.node_type not in ("agent", "pure_python"):
+                continue
+            if not node.agent_id:
+                continue
+            agent_doc = agent_map.get(node.agent_id)
+            if not agent_doc:
+                continue
+
+            summary = AgentConfigSummary(
+                id=str(agent_doc.id),
+                agent_id=agent_doc.agent_id,
+                display_name=agent_doc.display_name,
+                stage=agent_doc.stage,
+                llm_profile_id=agent_doc.llm_profile_id,
+                llm_profile_name=None,
+                enabled=agent_doc.enabled,
+                verbose=agent_doc.verbose,
+                max_iter=agent_doc.max_iter,
+                is_custom=agent_doc.is_custom,
+                updated_at=agent_doc.updated_at,
+                node_id=node.node_id,
+            )
+
+            node_stage_id = node.stage_id or "__unassigned__"
+            if node_stage_id not in stage_map:
+                stage_map.setdefault(node_stage_id, [])
+            stage_map[node_stage_id].append(summary)
+
+        # Build ordered stage entries from the pipeline's stage configs
+        stage_entries: list[PipelineStageEntry] = []
+        for stage in pipeline_stages:
+            stage_entries.append(
+                PipelineStageEntry(
+                    stage_id=stage.stage_id,
+                    display_name=stage.display_name,
+                    description=stage.description,
+                    order=stage.order,
+                    color=stage.color,
+                    icon=stage.icon,
+                    is_builtin=stage.is_builtin,
+                    agents=stage_map.get(stage.stage_id, []),
+                )
+            )
+
+        # Append the unassigned bucket only when it contains agents
+        unassigned = stage_map.get("__unassigned__", [])
+        if unassigned:
+            stage_entries.append(
+                PipelineStageEntry(
+                    stage_id="__unassigned__",
+                    display_name="Unassigned",
+                    description="Agents not yet assigned to a stage",
+                    order=9999,
+                    color="#3d5070",
+                    icon=None,
+                    is_builtin=False,
+                    agents=unassigned,
+                )
+            )
+
+        pipeline_agent_count = sum(len(s.agents) for s in stage_entries)
+        total_agents += pipeline_agent_count
+
+        pipelines.append(
+            PipelineAgentGroup(
+                template_id=template.template_id,
+                name=template.name,
+                description=template.description,
+                stages=stage_entries,
+                total_agents=pipeline_agent_count,
+            )
+        )
+
+    return AgentConfigByPipelineResponse(pipelines=pipelines, total_agents=total_agents)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1207,6 +1401,42 @@ async def get_latest_run_for_template(
         .to_list()
     )
     return results[0] if results else None
+
+
+async def update_node_stage(
+    template_id: str,
+    node_id: str,
+    stage_id: Optional[str],
+) -> Optional[PipelineTemplateDocument]:
+    """Set (or clear) the stage_id on a specific node within a pipeline template.
+
+    Args:
+        template_id: The pipeline template's slug.
+        node_id:     The node's unique slug within the template.
+        stage_id:    The new stage_id to assign, or ``None`` to unassign.
+
+    Returns:
+        The updated template document, or ``None`` if not found.
+    """
+    template = await PipelineTemplateDocument.find_one(
+        PipelineTemplateDocument.template_id == template_id
+    )
+    if template is None:
+        return None
+
+    matched = False
+    for node in template.nodes:
+        if node.node_id == node_id:
+            node.stage_id = stage_id
+            matched = True
+            break
+
+    if not matched:
+        return None
+
+    template.updated_at = _now()
+    await template.save()
+    return template
 
 
 # ─────────────────────────────────────────────────────────────────────────────

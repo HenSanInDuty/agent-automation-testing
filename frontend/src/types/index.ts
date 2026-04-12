@@ -141,6 +141,7 @@ export interface AgentConfigSummary {
   verbose: boolean;
   max_iter: number;
   is_custom: boolean;
+  node_id?: string | null; // populated in pipeline-grouped view
   updated_at: string;
 }
 
@@ -378,6 +379,7 @@ export interface StageConfig {
   icon?: string | null;
   enabled: boolean;
   is_builtin: boolean;
+  template_id?: string | null;
   agent_count: number;
   created_at: string;
   updated_at: string;
@@ -391,6 +393,7 @@ export interface StageConfigCreate {
   color?: string | null;
   icon?: string | null;
   enabled?: boolean;
+  template_id?: string | null;
 }
 
 export interface StageConfigUpdate {
@@ -400,6 +403,30 @@ export interface StageConfigUpdate {
   color?: string | null;
   icon?: string | null;
   enabled?: boolean;
+}
+
+export interface PipelineStageEntry {
+  stage_id: string;
+  display_name: string;
+  description?: string | null;
+  order: number;
+  color?: string | null;
+  icon?: string | null;
+  is_builtin: boolean;
+  agents: AgentConfigSummary[];
+}
+
+export interface PipelineAgentGroup {
+  template_id: string;
+  name: string;
+  description: string;
+  stages: PipelineStageEntry[];
+  total_agents: number;
+}
+
+export interface AgentConfigByPipelineResponse {
+  pipelines: PipelineAgentGroup[];
+  total_agents: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -429,6 +456,7 @@ export interface PipelineNodeConfig {
   node_id: string;
   node_type: NodeType;
   agent_id?: string;
+  stage_id?: string | null;
   label: string;
   description: string;
   position_x: number;
@@ -515,4 +543,9 @@ export interface PipelineTemplateListResponse {
   total: number;
   page?: number;
   page_size?: number;
+}
+
+export interface NodeStageUpdate {
+  node_id: string;
+  stage_id: string | null;
 }

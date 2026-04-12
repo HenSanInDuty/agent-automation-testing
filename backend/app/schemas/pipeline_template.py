@@ -59,6 +59,12 @@ class PipelineNodeInput(BaseModel):
     # Agent config overrides (e.g. llm_profile_id, max_iter)
     config_overrides: dict = Field(default_factory=dict)  # type: ignore[type-arg]
 
+    # Stage assignment within the pipeline
+    stage_id: Optional[str] = Field(
+        None,
+        description="stage_id of the stage this node belongs to within the pipeline.",
+    )
+
 
 class PipelineEdgeInput(BaseModel):
     """Input/output schema for a directed edge between two nodes."""

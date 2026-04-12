@@ -20,12 +20,13 @@ Endpoints:
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.db import crud
 from app.db.models import AgentConfigDocument
 from app.db.seed import DEFAULT_AGENT_CONFIGS
 from app.schemas.agent_config import (
+    AgentConfigByPipelineResponse,
     AgentConfigCreate,
     AgentConfigGroupedResponse,
     AgentConfigResetResponse,
@@ -205,6 +206,32 @@ async def list_agent_configs(
     if grouped:
         return await AgentConfigGroupedResponse.from_list(summaries)
     return summaries
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /admin/agent-configs/by-pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/by-pipeline",
+    response_model=AgentConfigByPipelineResponse,
+    summary="Get agents grouped by pipeline template → stage",
+    description=(
+        "Returns all agents organised by pipeline template, then by stage "
+        "within each template.  Nodes without a stage assignment are collected "
+        "in a trailing 'Unassigned' bucket."
+    ),
+)
+async def get_agents_by_pipeline(response: Response) -> AgentConfigByPipelineResponse:
+    """Return agents grouped by pipeline template → stage.
+
+    Returns:
+        :class:`~app.schemas.agent_config.AgentConfigByPipelineResponse` with
+        every pipeline template and its stage/agent tree.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    return await crud.get_agents_by_pipeline()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

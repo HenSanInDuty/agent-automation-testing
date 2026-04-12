@@ -1,15 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Bot,
-  Search,
-  Filter,
-  RotateCcw,
-  RefreshCw,
-  Plus,
-  Layers,
-} from "lucide-react";
+import { Bot, Search, Filter, RotateCcw, RefreshCw, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -17,17 +9,16 @@ import { Select, Badge } from "@/components/ui/Select";
 import { ConfirmDialog } from "@/components/ui/Modal";
 import { toast } from "@/components/ui/Toast";
 import {
-  useAgentConfigsGrouped,
+  useAgentConfigsByPipeline,
   useResetAgentConfig,
   useResetAllAgentConfigs,
   useUpdateAgentConfig,
   useDeleteAgentConfig,
 } from "@/hooks/useAgentConfigs";
-import { useStageConfigs } from "@/hooks/useStageConfigs";
 import { type AgentConfigSummary, type AgentConfigUpdate } from "@/types";
 import { cn } from "@/lib/utils";
 
-import { AgentGroupSection } from "./AgentGroupSection";
+import { PipelineGroupSection } from "./PipelineGroupSection";
 import { AgentDialog } from "./AgentDialog";
 import { AddAgentDialog } from "./AddAgentDialog";
 import { ManageStagesDialog } from "./ManageStagesDialog";
@@ -71,16 +62,16 @@ function AgentRowSkeleton() {
   );
 }
 
-function GroupSkeleton({ rowCount = 2 }: { rowCount?: number }) {
+function StageGroupSkeleton({ rowCount = 2 }: { rowCount?: number }) {
   return (
     <div className="animate-pulse rounded-xl border border-[#2b3b55] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-[#18202F] border-b border-[#2b3b55]">
-        <div className="w-5 h-3 bg-[#2b3b55] rounded" />
-        <div className="w-2 h-2 rounded-full bg-[#2b3b55]" />
-        <div className="flex-1 h-4 bg-[#2b3b55] rounded w-1/3" />
-        <div className="h-5 w-20 bg-[#2b3b55] rounded-md" />
-        <div className="w-4 h-4 bg-[#2b3b55] rounded" />
+      {/* Stage header */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-[#18202F] border-b border-[#2b3b55]">
+        <div className="w-4 h-2.5 bg-[#2b3b55] rounded" />
+        <div className="w-1.5 h-1.5 rounded-full bg-[#2b3b55]" />
+        <div className="flex-1 h-3.5 bg-[#2b3b55] rounded w-1/4" />
+        <div className="h-4 w-16 bg-[#2b3b55] rounded-md" />
+        <div className="w-3.5 h-3.5 bg-[#2b3b55] rounded" />
       </div>
       {/* Rows */}
       <div className="bg-[#18202F]">
@@ -92,17 +83,40 @@ function GroupSkeleton({ rowCount = 2 }: { rowCount?: number }) {
   );
 }
 
+function PipelineSkeleton() {
+  return (
+    <div className="animate-pulse mb-4">
+      {/* Pipeline header */}
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0f1729] border border-[#1e2f4a]">
+        <div className="w-5 h-3 bg-[#1e2f4a] rounded" />
+        <div className="w-4 h-4 bg-[#1e2f4a] rounded" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-4 bg-[#1e2f4a] rounded w-1/3" />
+          <div className="h-2.5 bg-[#1e2f4a] rounded w-1/2" />
+        </div>
+        <div className="h-5 w-20 bg-[#1e2f4a] rounded-md" />
+        <div className="h-5 w-16 bg-[#1e2f4a] rounded-md" />
+        <div className="w-4 h-4 bg-[#1e2f4a] rounded" />
+        <div className="h-6 w-16 bg-[#1e2f4a] rounded-md" />
+      </div>
+      {/* Stage children */}
+      <div className="rounded-b-xl border-x border-b border-[#1e2f4a] bg-[#0f1729]/50 p-3 space-y-2">
+        <StageGroupSkeleton rowCount={3} />
+        <StageGroupSkeleton rowCount={2} />
+      </div>
+    </div>
+  );
+}
+
 function ListSkeleton() {
   return (
     <div
       role="status"
       aria-label="Loading agent configurations…"
-      className="space-y-3"
+      className="space-y-1"
     >
-      <GroupSkeleton rowCount={3} />
-      <GroupSkeleton rowCount={2} />
-      <GroupSkeleton rowCount={2} />
-      <GroupSkeleton rowCount={1} />
+      <PipelineSkeleton />
+      <PipelineSkeleton />
       <span className="sr-only">Loading agent configurations…</span>
     </div>
   );
@@ -187,10 +201,6 @@ function EmptySearchState({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stage filter options
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
 // AgentList
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -205,77 +215,75 @@ export function AgentList() {
   );
   const [resetAllConfirm, setResetAllConfirm] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [stageFilter, setStageFilter] = React.useState<string>("all");
+  const [pipelineFilter, setPipelineFilter] = React.useState<string>("all");
   const [addAgentOpen, setAddAgentOpen] = React.useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
     null,
   );
-  const [manageStagesOpen, setManageStagesOpen] = React.useState(false);
+  /** Which pipeline's stages dialog is open; null means closed. */
+  const [managingPipeline, setManagingPipeline] = React.useState<{
+    templateId: string;
+    templateName: string;
+  } | null>(null);
 
   // ── Data ───────────────────────────────────────────────────────────────────
-  const { data, isLoading, isError, refetch } = useAgentConfigsGrouped();
-  const { data: stagesData } = useStageConfigs();
+  const { data, isLoading, isError, refetch } = useAgentConfigsByPipeline();
   const resetMutation = useResetAgentConfig();
   const resetAllMutation = useResetAllAgentConfigs();
   const updateMutation = useUpdateAgentConfig();
   const deleteAgentMutation = useDeleteAgentConfig();
 
-  // Build a map from stage_id → agents using the new dynamic response
-  const stageGroups = data?.groups ?? [];
-  const grouped: Record<string, AgentConfigSummary[]> = Object.fromEntries(
-    stageGroups.map((g) => [g.stage_id, g.agents]),
-  );
-
   // ── Derived totals ─────────────────────────────────────────────────────────
   const totalAgents = data?.total_agents ?? 0;
-  const stagesWithAgents = stageGroups.map((g) => g.stage_id);
+  const totalPipelines = data?.pipelines.length ?? 0;
 
-  // ── Dynamic stage filter options (from API) ────────────────────────────────
-  const stageFilterOptions = React.useMemo(() => {
-    if (!stagesData) return [{ value: "all", label: "All Stages" }];
+  // ── Pipeline filter options ────────────────────────────────────────────────
+  const pipelineFilterOptions = React.useMemo(() => {
+    if (!data) return [{ value: "all", label: "All Pipelines" }];
     return [
-      { value: "all", label: "All Stages" },
-      ...stagesData.map((s) => ({ value: s.stage_id, label: s.display_name })),
+      { value: "all", label: "All Pipelines" },
+      ...data.pipelines.map((p) => ({ value: p.template_id, label: p.name })),
     ];
-  }, [stagesData]);
+  }, [data]);
 
-  // ── Filtered grouped data ──────────────────────────────────────────────────
-  const filteredGrouped = React.useMemo(() => {
+  // ── Filtered pipeline data ─────────────────────────────────────────────────
+  const filteredPipelines = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const result: Record<string, AgentConfigSummary[]> = {};
+    return (data?.pipelines ?? [])
+      .filter(
+        (pipeline) =>
+          pipelineFilter === "all" || pipeline.template_id === pipelineFilter,
+      )
+      .map((pipeline) => ({
+        ...pipeline,
+        stages: pipeline.stages.map((stage) => ({
+          ...stage,
+          agents: stage.agents.filter(
+            (agent) => q === "" || agent.display_name.toLowerCase().includes(q),
+          ),
+        })),
+      }));
+  }, [data, searchQuery, pipelineFilter]);
 
-    for (const stage of Object.keys(grouped)) {
-      const agents: AgentConfigSummary[] = grouped[stage] ?? [];
-      result[stage] = agents.filter((agent) => {
-        const matchesSearch =
-          q === "" || agent.display_name.toLowerCase().includes(q);
-        const matchesStage = stageFilter === "all" || stage === stageFilter;
-        return matchesSearch && matchesStage;
-      });
-    }
-
-    return result;
-  }, [grouped, searchQuery, stageFilter]);
-
-  // Whether the current filters yield zero results
+  // Whether the current filters yield zero matching agents
   const hasNoResults =
     !isLoading &&
     !isError &&
-    Object.keys(filteredGrouped).every(
-      (s) => (filteredGrouped[s]?.length ?? 0) === 0,
+    filteredPipelines.every((p) =>
+      p.stages.every((s) => s.agents.length === 0),
     );
 
   // ── Agent lookup helper (for reset confirm description) ────────────────────
   const agentToReset = React.useMemo<AgentConfigSummary | undefined>(() => {
     if (!resetConfirmId) return undefined;
-    for (const stage of Object.keys(grouped)) {
-      const found = grouped[stage]?.find(
-        (a: AgentConfigSummary) => a.agent_id === resetConfirmId,
-      );
-      if (found) return found;
+    for (const pipeline of data?.pipelines ?? []) {
+      for (const stage of pipeline.stages) {
+        const found = stage.agents.find((a) => a.agent_id === resetConfirmId);
+        if (found) return found;
+      }
     }
     return undefined;
-  }, [resetConfirmId, grouped]);
+  }, [resetConfirmId, data]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -353,7 +361,7 @@ export function AgentList() {
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setStageFilter("all");
+    setPipelineFilter("all");
   };
 
   const handleDeleteAgent = React.useCallback((agentId: string) => {
@@ -362,15 +370,17 @@ export function AgentList() {
 
   const handleDeleteAgentConfirm = async () => {
     if (!deleteConfirmId) return;
-    // find the agent name for toast
+    // Find the agent name for the toast message
     let agentName = deleteConfirmId;
-    for (const stage of Object.keys(grouped)) {
-      const found = grouped[stage]?.find(
-        (a: AgentConfigSummary) => a.agent_id === deleteConfirmId,
-      );
-      if (found) {
-        agentName = found.display_name;
-        break;
+    outer: for (const pipeline of data?.pipelines ?? []) {
+      for (const stage of pipeline.stages) {
+        const found = stage.agents.find(
+          (a: AgentConfigSummary) => a.agent_id === deleteConfirmId,
+        );
+        if (found) {
+          agentName = found.display_name;
+          break outer;
+        }
       }
     }
     try {
@@ -410,7 +420,7 @@ export function AgentList() {
             {isLoading ? (
               <span
                 aria-hidden="true"
-                className="inline-block h-3.5 w-40 bg-[#2b3b55] rounded animate-pulse"
+                className="inline-block h-3.5 w-48 bg-[#2b3b55] rounded animate-pulse"
               />
             ) : isError ? (
               <span className="text-[#f87171]">
@@ -420,10 +430,8 @@ export function AgentList() {
               <>
                 <span className="text-white font-medium">{totalAgents}</span>
                 {" agents across "}
-                <span className="text-white font-medium">
-                  {stagesWithAgents.length}
-                </span>
-                {stagesWithAgents.length === 1 ? " stage" : " stages"}
+                <span className="text-white font-medium">{totalPipelines}</span>
+                {totalPipelines === 1 ? " pipeline" : " pipelines"}
               </>
             )}
           </p>
@@ -431,17 +439,6 @@ export function AgentList() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            leftIcon={<Layers className="w-3.5 h-3.5" aria-hidden="true" />}
-            onClick={() => setManageStagesOpen(true)}
-            disabled={isLoading}
-            title="Add, edit, reorder, or delete pipeline stages"
-          >
-            Manage Stages
-          </Button>
-
           <Button
             variant="primary"
             size="sm"
@@ -481,7 +478,7 @@ export function AgentList() {
             />
           </div>
 
-          {/* Stage filter */}
+          {/* Pipeline filter */}
           <div className="flex items-center gap-2 shrink-0">
             <Filter
               className="w-3.5 h-3.5 text-[#92a4c9] shrink-0"
@@ -489,17 +486,17 @@ export function AgentList() {
             />
             <div className="w-52">
               <Select
-                options={stageFilterOptions}
-                value={stageFilter}
-                onChange={(e) => setStageFilter(e.target.value)}
+                options={pipelineFilterOptions}
+                value={pipelineFilter}
+                onChange={(e) => setPipelineFilter(e.target.value)}
                 disabled={isLoading}
-                aria-label="Filter by stage"
+                aria-label="Filter by pipeline"
               />
             </div>
           </div>
 
           {/* Active filter badge */}
-          {(searchQuery.trim() || stageFilter !== "all") && !isLoading && (
+          {(searchQuery.trim() || pipelineFilter !== "all") && !isLoading && (
             <div className="flex items-center gap-2">
               <Badge variant="primary" size="sm" dot>
                 Filtered
@@ -527,35 +524,34 @@ export function AgentList() {
         <ErrorState onRetry={refetch} />
       ) : hasNoResults ? (
         <EmptySearchState
-          query={searchQuery.trim() || stageFilter}
+          query={searchQuery.trim() || pipelineFilter}
           onClear={handleClearSearch}
         />
       ) : (
-        <div className="space-y-3">
-          {stageGroups.map((group, i) => {
-            const stage = group.stage_id;
-
-            // When stage filter is active, only render the matching stage
-            if (stageFilter !== "all" && stage !== stageFilter) return null;
-
-            const agents = filteredGrouped[stage] ?? [];
-
-            // Hide stages with zero agents only when actively searching
-            if (searchQuery.trim() && agents.length === 0) return null;
+        <div>
+          {filteredPipelines.map((pipeline, i) => {
+            // When searching, hide pipelines where ALL stages have 0 matching agents
+            if (
+              searchQuery.trim() &&
+              pipeline.stages.every((s) => s.agents.length === 0)
+            ) {
+              return null;
+            }
 
             return (
-              <AgentGroupSection
-                key={stage}
-                stageId={group.stage_id}
-                displayName={group.display_name}
-                description={group.description}
-                color={group.color}
-                icon={group.icon}
-                isBuiltin={group.is_builtin}
-                agents={agents}
+              <PipelineGroupSection
+                key={pipeline.template_id}
+                templateId={pipeline.template_id}
+                pipelineName={pipeline.name}
+                pipelineDescription={pipeline.description}
+                stages={pipeline.stages}
+                totalAgents={pipeline.total_agents}
                 onEditAgent={handleEditAgent}
                 onResetAgent={handleResetAgent}
                 onDeleteAgent={handleDeleteAgent}
+                onManageStages={(templateId, templateName) =>
+                  setManagingPipeline({ templateId, templateName })
+                }
                 index={i}
               />
             );
@@ -563,7 +559,7 @@ export function AgentList() {
         </div>
       )}
 
-      {/* ── Edit / create dialog ──────────────────────────────────────────── */}
+      {/* ── Edit dialog ───────────────────────────────────────────────────── */}
       <AgentDialog
         open={dialogOpen}
         onClose={handleDialogClose}
@@ -593,7 +589,7 @@ export function AgentList() {
         onClose={() => setResetAllConfirm(false)}
         onConfirm={handleResetAllConfirm}
         title="Reset All Agent Configurations"
-        description={`This will restore all ${totalAgents} agent configurations across every pipeline stage to their seeded defaults. Every custom change — including roles, goals, backstories, LLM overrides, and iteration limits — will be permanently lost. This action cannot be undone.`}
+        description={`This will restore all ${totalAgents} agent configurations across every pipeline to their seeded defaults. Every custom change — including roles, goals, backstories, LLM overrides, and iteration limits — will be permanently lost. This action cannot be undone.`}
         confirmLabel="Reset All Agents"
         cancelLabel="Cancel"
         variant="danger"
@@ -606,11 +602,15 @@ export function AgentList() {
         onClose={() => setAddAgentOpen(false)}
       />
 
-      {/* ── Manage stages dialog ──────────────────────────────────────────── */}
-      <ManageStagesDialog
-        open={manageStagesOpen}
-        onClose={() => setManageStagesOpen(false)}
-      />
+      {/* ── Manage stages dialog (per-pipeline) ──────────────────────────── */}
+      {managingPipeline && (
+        <ManageStagesDialog
+          open={managingPipeline !== null}
+          onClose={() => setManagingPipeline(null)}
+          templateId={managingPipeline.templateId}
+          templateName={managingPipeline.templateName}
+        />
+      )}
 
       {/* ── Delete agent confirmation ─────────────────────────────────────── */}
       <ConfirmDialog
@@ -627,5 +627,3 @@ export function AgentList() {
     </>
   );
 }
-
-export default AgentList;

@@ -17,8 +17,9 @@ Endpoints:
 """
 
 import logging
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.db import crud
 from app.schemas.stage_config import (
@@ -49,6 +50,7 @@ def _to_response(stage, agent_count: int = 0) -> StageConfigResponse:
     return StageConfigResponse(
         id=str(stage.id),
         stage_id=stage.stage_id,
+        template_id=getattr(stage, "template_id", None),
         display_name=stage.display_name,
         description=stage.description,
         order=stage.order,
@@ -78,13 +80,30 @@ def _to_response(stage, agent_count: int = 0) -> StageConfigResponse:
     ),
 )
 async def list_stage_configs(
+    response: Response,
     enabled_only: bool = Query(
         default=False,
         description="Return only enabled stages",
     ),
+    template_id: Optional[str] = Query(
+        default=None,
+        description=(
+            "Filter stages by pipeline template ID. "
+            "When omitted all stages are returned."
+        ),
+    ),
+    no_fallback: bool = Query(
+        default=False,
+        description="When true, return only pipeline-specific stages with no fallback to global",
+    ),
 ) -> list[StageConfigResponse]:
     """List all stage configs with agent counts."""
-    stages = await crud.get_all_stage_configs(enabled_only=enabled_only)
+    response.headers["Cache-Control"] = "no-store"
+    stages = await crud.get_all_stage_configs(
+        enabled_only=enabled_only,
+        template_id=template_id,
+        no_fallback=no_fallback,
+    )
     result = []
     for stage in stages:
         count = await crud.count_agents_by_stage(stage.stage_id)
@@ -106,8 +125,11 @@ async def list_stage_configs(
         "Position in the list determines display order."
     ),
 )
-async def reorder_stages(body: StageReorderRequest) -> list[StageConfigResponse]:
+async def reorder_stages(
+    response: Response, body: StageReorderRequest
+) -> list[StageConfigResponse]:
     """Reorder stages by position in the provided list."""
+    response.headers["Cache-Control"] = "no-store"
     stages = await crud.reorder_stages(body.stage_ids)
     result = []
     for stage in stages:
@@ -126,8 +148,9 @@ async def reorder_stages(body: StageReorderRequest) -> list[StageConfigResponse]
     response_model=StageConfigResponse,
     summary="Get a stage config by stage_id",
 )
-async def get_stage_config(stage_id: str) -> StageConfigResponse:
+async def get_stage_config(stage_id: str, response: Response) -> StageConfigResponse:
     """Get a single stage config."""
+    response.headers["Cache-Control"] = "no-store"
     stage = await crud.get_stage_config(stage_id)
     if stage is None:
         raise HTTPException(
@@ -149,19 +172,24 @@ async def get_stage_config(stage_id: str) -> StageConfigResponse:
     status_code=status.HTTP_201_CREATED,
     summary="Create a new custom stage",
 )
-async def create_stage_config(body: StageConfigCreate) -> StageConfigResponse:
+async def create_stage_config(
+    response: Response, body: StageConfigCreate
+) -> StageConfigResponse:
     """Create a new custom stage. Built-in stage IDs cannot be reused."""
-    if body.stage_id in BUILTIN_STAGE_IDS:
+    response.headers["Cache-Control"] = "no-store"
+
+    # Built-in ID protection only applies to global (non-template) stages
+    if body.template_id is None and body.stage_id in BUILTIN_STAGE_IDS:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"'{body.stage_id}' is a built-in stage ID and cannot be recreated.",
         )
 
-    existing = await crud.get_stage_config(body.stage_id)
+    existing = await crud.get_stage_config(body.stage_id, template_id=body.template_id)
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Stage '{body.stage_id}' already exists.",
+            detail=f"Stage '{body.stage_id}' already exists{' in this pipeline' if body.template_id else ''}.",
         )
 
     stage = await crud.create_stage_config(body)
@@ -183,9 +211,10 @@ async def create_stage_config(body: StageConfigCreate) -> StageConfigResponse:
     ),
 )
 async def update_stage_config(
-    stage_id: str, body: StageConfigUpdate
+    stage_id: str, body: StageConfigUpdate, response: Response
 ) -> StageConfigResponse:
     """Partially update a stage config."""
+    response.headers["Cache-Control"] = "no-store"
     stage = await crud.get_stage_config(stage_id)
     if stage is None:
         raise HTTPException(
@@ -212,8 +241,9 @@ async def update_stage_config(
         "Agents in the deleted stage are reassigned to the 'custom' stage."
     ),
 )
-async def delete_stage_config(stage_id: str) -> None:
+async def delete_stage_config(stage_id: str, response: Response) -> None:
     """Delete a custom stage and reassign its agents to 'custom'."""
+    response.headers["Cache-Control"] = "no-store"
     stage = await crud.get_stage_config(stage_id)
     if stage is None:
         raise HTTPException(

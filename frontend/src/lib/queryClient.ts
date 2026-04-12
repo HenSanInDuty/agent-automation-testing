@@ -42,6 +42,7 @@ export const queryKeys = {
     all: ["agent-configs"] as const,
     lists: () => [...queryKeys.agentConfigs.all, "list"] as const,
     grouped: () => [...queryKeys.agentConfigs.all, "grouped"] as const,
+    byPipeline: () => [...queryKeys.agentConfigs.all, "by-pipeline"] as const,
     details: () => [...queryKeys.agentConfigs.all, "detail"] as const,
     detail: (agentId: string) =>
       [...queryKeys.agentConfigs.details(), agentId] as const,
@@ -53,6 +54,8 @@ export const queryKeys = {
     lists: () => [...queryKeys.stageConfigs.all, "list"] as const,
     list: (params?: Record<string, unknown>) =>
       [...queryKeys.stageConfigs.lists(), params] as const,
+    listForTemplate: (templateId: string) =>
+      [...queryKeys.stageConfigs.lists(), { template_id: templateId }] as const,
     details: () => [...queryKeys.stageConfigs.all, "detail"] as const,
     detail: (stageId: string) =>
       [...queryKeys.stageConfigs.details(), stageId] as const,

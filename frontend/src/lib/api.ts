@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import type {
+  AgentConfigByPipelineResponse,
   AgentConfigCreate,
   AgentConfigGroupedResponse,
   AgentConfigResponse,
@@ -200,6 +201,14 @@ export const agentConfigsApi = {
   delete: async (agentId: string): Promise<void> => {
     await apiClient.delete(`/api/v1/admin/agent-configs/${agentId}`);
   },
+
+  /** GET /api/v1/admin/agent-configs/by-pipeline */
+  listByPipeline: async (): Promise<AgentConfigByPipelineResponse> => {
+    const { data } = await apiClient.get<AgentConfigByPipelineResponse>(
+      "/api/v1/admin/agent-configs/by-pipeline",
+    );
+    return data;
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -398,10 +407,20 @@ export const chatApi = {
 
 export const stageConfigsApi = {
   /** GET /api/v1/admin/stage-configs */
-  list: async (enabledOnly = false): Promise<StageConfig[]> => {
+  list: async (
+    enabledOnly = false,
+    templateId?: string,
+    noFallback = false,
+  ): Promise<StageConfig[]> => {
     const { data } = await apiClient.get<StageConfig[]>(
       "/api/v1/admin/stage-configs",
-      enabledOnly ? { params: { enabled_only: true } } : undefined,
+      {
+        params: {
+          ...(enabledOnly && { enabled_only: true }),
+          ...(templateId && { template_id: templateId }),
+          ...(noFallback && { no_fallback: true }),
+        },
+      },
     );
     return data;
   },
@@ -556,6 +575,24 @@ export const pipelineTemplatesApi = {
     const { data } = await apiClient.post<PipelineTemplate>(
       "/api/v1/pipeline-templates/import",
       envelope,
+    );
+    return data;
+  },
+
+  /** PATCH /api/v1/pipeline-templates/{template_id}/node-stage */
+  updateNodeStage: async (
+    templateId: string,
+    nodeId: string,
+    stageId: string | null,
+  ): Promise<{
+    ok: boolean;
+    template_id: string;
+    node_id: string;
+    stage_id: string | null;
+  }> => {
+    const { data } = await apiClient.patch(
+      `/api/v1/pipeline-templates/${templateId}/node-stage`,
+      { node_id: nodeId, stage_id: stageId },
     );
     return data;
   },

@@ -7,6 +7,7 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { pipelineTemplatesApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryClient";
 import type {
   PipelineTemplate,
   PipelineTemplateCreate,
@@ -14,6 +15,7 @@ import type {
   PipelineTemplateListResponse,
   DAGValidationResult,
   TemplateExportEnvelope,
+  NodeStageUpdate,
 } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -172,6 +174,33 @@ export function useImportTemplate() {
       pipelineTemplatesApi.importTemplate(templateData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Update node stage assignment
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useUpdateNodeStage() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    {
+      ok: boolean;
+      template_id: string;
+      node_id: string;
+      stage_id: string | null;
+    },
+    Error,
+    { templateId: string; nodeId: string; stageId: string | null }
+  >({
+    mutationFn: ({ templateId, nodeId, stageId }) =>
+      pipelineTemplatesApi.updateNodeStage(templateId, nodeId, stageId),
+    onSuccess: (_data, { templateId }) => {
+      // Refresh the pipeline-grouped agents view
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.agentConfigs.byPipeline(),
+      });
     },
   });
 }

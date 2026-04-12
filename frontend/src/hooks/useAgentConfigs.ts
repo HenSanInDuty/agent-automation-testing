@@ -6,6 +6,7 @@ import type {
   AgentConfigCreate,
   AgentConfigUpdate,
   AgentConfigGroupedResponse,
+  AgentConfigByPipelineResponse,
 } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -14,12 +15,23 @@ import type {
 
 /**
  * Fetch all agent configs grouped by pipeline stage.
- * Shape: { ingestion: [...], testcase: [...], execution: [...], reporting: [...] }
+ * Shape: { groups: AgentGroupEntry[], total_agents: number }
  */
 export function useAgentConfigsGrouped() {
   return useQuery<AgentConfigGroupedResponse>({
     queryKey: queryKeys.agentConfigs.grouped(),
     queryFn: () => agentConfigsApi.listGrouped(),
+  });
+}
+
+/**
+ * Fetch all agent configs grouped by pipeline → stage hierarchy.
+ * Shape: { pipelines: PipelineAgentGroup[], total_agents: number }
+ */
+export function useAgentConfigsByPipeline() {
+  return useQuery<AgentConfigByPipelineResponse>({
+    queryKey: queryKeys.agentConfigs.byPipeline(),
+    queryFn: () => agentConfigsApi.listByPipeline(),
   });
 }
 
@@ -57,6 +69,8 @@ export function useUpdateAgentConfig() {
     onSuccess: (data) => {
       // Refresh the grouped list (displayed in the main table)
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.grouped() });
+      // Refresh the by-pipeline view
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
       // Update the cached detail entry immediately so the dialog re-opens with
       // fresh data without an extra network round-trip.
       qc.setQueryData(queryKeys.agentConfigs.detail(data.agent_id), data);
@@ -75,6 +89,7 @@ export function useResetAgentConfig() {
     mutationFn: (agentId: string) => agentConfigsApi.reset(agentId),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.grouped() });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
       // Store the fresh detail returned by the reset endpoint
       qc.setQueryData(
         queryKeys.agentConfigs.detail(data.agent_id),
@@ -110,6 +125,7 @@ export function useCreateAgentConfig() {
     mutationFn: (payload: AgentConfigCreate) => agentConfigsApi.create(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.grouped() });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
     },
   });
 }
@@ -125,6 +141,7 @@ export function useDeleteAgentConfig() {
     mutationFn: (agentId: string) => agentConfigsApi.delete(agentId),
     onSuccess: (_data: void, agentId: string) => {
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.grouped() });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
       qc.removeQueries({ queryKey: queryKeys.agentConfigs.detail(agentId) });
     },
   });

@@ -8,11 +8,17 @@ import type {
   StageConfigUpdate,
 } from "@/types";
 
-/** Fetch all stage configs sorted by order. */
-export function useStageConfigs(enabledOnly = false) {
+/** Fetch all stage configs sorted by order, optionally filtered by pipeline template. */
+export function useStageConfigs(
+  enabledOnly = false,
+  templateId?: string,
+  noFallback = false,
+) {
   return useQuery<StageConfig[]>({
-    queryKey: queryKeys.stageConfigs.list({ enabled_only: enabledOnly }),
-    queryFn: () => stageConfigsApi.list(enabledOnly),
+    queryKey: templateId
+      ? queryKeys.stageConfigs.listForTemplate(templateId)
+      : queryKeys.stageConfigs.list({ enabled_only: enabledOnly }),
+    queryFn: () => stageConfigsApi.list(enabledOnly, templateId, noFallback),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -34,6 +40,7 @@ export function useCreateStageConfig() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.all });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
     },
   });
 }
@@ -52,6 +59,7 @@ export function useUpdateStageConfig() {
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.all });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
       qc.setQueryData(queryKeys.stageConfigs.detail(result.stage_id), result);
     },
   });
@@ -65,6 +73,7 @@ export function useDeleteStageConfig() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
       qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.all });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
     },
   });
 }
@@ -76,6 +85,7 @@ export function useReorderStages() {
     mutationFn: (stageIds: string[]) => stageConfigsApi.reorder(stageIds),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.stageConfigs.all });
+      qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
     },
   });
 }

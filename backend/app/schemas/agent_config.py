@@ -149,6 +149,7 @@ class AgentConfigSummary(BaseModel):
     verbose: bool
     max_iter: int
     is_custom: bool = False  # True for user-created agents, False for built-ins
+    node_id: Optional[str] = None  # Set in pipeline-grouped view; None otherwise
     updated_at: datetime
 
 
@@ -261,6 +262,41 @@ class AgentConfigGroupedResponse(BaseModel):
             )
 
         return cls(groups=groups, total_agents=len(agents))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pipeline-grouped response — agents grouped by pipeline template → stage
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PipelineStageEntry(BaseModel):
+    """One stage group within a pipeline with its metadata and agents."""
+
+    stage_id: str
+    display_name: str
+    description: Optional[str] = None
+    order: int = 0
+    color: Optional[str] = None
+    icon: Optional[str] = None
+    is_builtin: bool = False
+    agents: list[AgentConfigSummary] = []
+
+
+class PipelineAgentGroup(BaseModel):
+    """One pipeline template with its stages and agents."""
+
+    template_id: str
+    name: str
+    description: str
+    stages: list[PipelineStageEntry]
+    total_agents: int
+
+
+class AgentConfigByPipelineResponse(BaseModel):
+    """Agents grouped by pipeline template → stage."""
+
+    pipelines: list[PipelineAgentGroup]
+    total_agents: int
 
 
 # ─────────────────────────────────────────────────────────────────────────────

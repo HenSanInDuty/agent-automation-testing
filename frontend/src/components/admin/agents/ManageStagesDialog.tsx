@@ -35,6 +35,8 @@ import { AddStageForm } from "./AddStageForm";
 export interface ManageStagesDialogProps {
   open: boolean;
   onClose: () => void;
+  templateId: string;
+  templateName: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,9 +65,18 @@ function StageListSkeleton() {
 // ManageStagesDialog
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function ManageStagesDialog({ open, onClose }: ManageStagesDialogProps) {
+export function ManageStagesDialog({
+  open,
+  onClose,
+  templateId,
+  templateName,
+}: ManageStagesDialogProps) {
   // ── Server data ────────────────────────────────────────────────────────────
-  const { data: stagesData, isLoading } = useStageConfigs();
+  const { data: stagesData, isLoading } = useStageConfigs(
+    false,
+    templateId,
+    true,
+  );
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useCreateStageConfig();
@@ -147,7 +158,7 @@ export function ManageStagesDialog({ open, onClose }: ManageStagesDialogProps) {
 
   const handleCreate = async (data: StageConfigCreate) => {
     try {
-      await createMutation.mutateAsync(data);
+      await createMutation.mutateAsync({ ...data, template_id: templateId });
       toast.success(
         "Stage created",
         `"${data.display_name}" has been added to the pipeline.`,
@@ -228,8 +239,8 @@ export function ManageStagesDialog({ open, onClose }: ManageStagesDialogProps) {
     <Modal open={open} onClose={onClose} size="xl">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <ModalHeader
-        title="Manage Stages"
-        subtitle="Drag to reorder. Built-in stages cannot be deleted."
+        title={`Manage Stages — ${templateName}`}
+        subtitle="Stages for this pipeline. Drag to reorder."
         onClose={onClose}
         icon={<Layers className="w-4 h-4" aria-hidden="true" />}
       />
@@ -283,9 +294,12 @@ export function ManageStagesDialog({ open, onClose }: ManageStagesDialogProps) {
 
         {/* Empty state (loaded but no stages) */}
         {!isLoading && orderedStages.length === 0 && (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-sm text-[#3d5070] italic">
-              No stages configured yet.
+          <div className="flex flex-col items-center justify-center py-12 gap-1">
+            <p className="text-sm text-[#3d5070] italic text-center">
+              No stages yet for this pipeline.
+            </p>
+            <p className="text-xs text-[#3d5070] text-center mt-1">
+              Click "Add Stage" below to create the first stage.
             </p>
           </div>
         )}

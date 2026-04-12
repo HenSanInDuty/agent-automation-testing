@@ -72,6 +72,21 @@ async def init_db() -> None:
     _client = AsyncMongoClient(settings.MONGODB_URI)
     db = _client[settings.MONGODB_DB_NAME]
 
+    # ── Migration: replace old single-field stage_id unique index ─────────
+    # The index was changed to a compound (stage_id, template_id) unique index
+    # so that multiple pipelines can share the same stage_id slug.
+    # Beanie never drops stale indexes automatically, so we must do it here.
+    try:
+        stage_col = db["stage_configs"]
+        existing_indexes = await stage_col.index_information()
+        if "stage_id_1" in existing_indexes:
+            await stage_col.drop_index("stage_id_1")
+            logger.info(
+                "Migration: dropped stale stage_configs.stage_id_1 unique index ✓"
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Migration: could not drop stage_id_1 index: %s", exc)
+
     await init_beanie(
         database=db,
         document_models=[

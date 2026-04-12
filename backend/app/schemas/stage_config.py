@@ -15,6 +15,10 @@ from pydantic import BaseModel, Field
 class StageConfigCreate(BaseModel):
     """Create a new custom stage."""
 
+    template_id: Optional[str] = Field(
+        None,
+        description="Pipeline template this stage belongs to. None = global/builtin.",
+    )
     stage_id: str = Field(
         ...,
         min_length=2,
@@ -52,6 +56,7 @@ class StageConfigResponse(BaseModel):
 
     id: str  # MongoDB ObjectId as string
     stage_id: str
+    template_id: Optional[str] = None  # None = global/builtin, set = pipeline-specific
     display_name: str
     description: Optional[str] = None
     order: int

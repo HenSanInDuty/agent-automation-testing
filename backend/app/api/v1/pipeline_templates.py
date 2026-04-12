@@ -24,7 +24,7 @@ Endpoints:
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
+from fastapi import APIRouter, Body, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from pydantic import Field as PydanticField
@@ -75,6 +75,13 @@ class PaginatedTemplateResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class NodeStageUpdate(BaseModel):
+    """Assign or clear a stage on a single DAG node."""
+
+    node_id: str
+    stage_id: Optional[str] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -634,6 +641,36 @@ async def clone_template(
     )
     logger.info("Cloned template '%s' → '%s'", template_id, body.new_template_id)
     return _to_response(cloned)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATCH /pipeline-templates/{template_id}/node-stage  – set/clear node stage
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.patch(
+    "/{template_id}/node-stage",
+    status_code=status.HTTP_200_OK,
+    summary="Set or clear the stage on a single DAG node",
+)
+async def update_node_stage(
+    template_id: str,
+    body: NodeStageUpdate,
+    response: Response,
+) -> dict:
+    response.headers["Cache-Control"] = "no-store"
+    result = await crud.update_node_stage(template_id, body.node_id, body.stage_id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Template '{template_id}' or node '{body.node_id}' not found.",
+        )
+    return {
+        "ok": True,
+        "template_id": template_id,
+        "node_id": body.node_id,
+        "stage_id": body.stage_id,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
