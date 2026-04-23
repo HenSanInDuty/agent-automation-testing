@@ -43,6 +43,8 @@ export const queryKeys = {
     lists: () => [...queryKeys.agentConfigs.all, "list"] as const,
     grouped: () => [...queryKeys.agentConfigs.all, "grouped"] as const,
     byPipeline: () => [...queryKeys.agentConfigs.all, "by-pipeline"] as const,
+    byPipelineTemplate: (templateId: string) =>
+      [...queryKeys.agentConfigs.all, "by-pipeline", templateId] as const,
     details: () => [...queryKeys.agentConfigs.all, "detail"] as const,
     detail: (agentId: string) =>
       [...queryKeys.agentConfigs.details(), agentId] as const,

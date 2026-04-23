@@ -33,6 +33,7 @@ from app.schemas.agent_config import (
     AgentConfigResponse,
     AgentConfigSummary,
     AgentConfigUpdate,
+    PipelineAgentGroup,
 )
 from app.schemas.llm_profile import LLMProfileResponse
 
@@ -232,6 +233,45 @@ async def get_agents_by_pipeline(response: Response) -> AgentConfigByPipelineRes
     """
     response.headers["Cache-Control"] = "no-store"
     return await crud.get_agents_by_pipeline()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /admin/agent-configs/by-pipeline/{template_id}
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/by-pipeline/{template_id}",
+    response_model=PipelineAgentGroup,
+    summary="Get agents for a specific pipeline template grouped by stage",
+    description=(
+        "Returns agents for the given pipeline template organised by stage. "
+        "Agents without a stage assignment appear in a trailing 'Unassigned' bucket."
+    ),
+)
+async def get_agents_for_pipeline_template(
+    template_id: str, response: Response
+) -> PipelineAgentGroup:
+    """Return agents grouped by stage for a single pipeline template.
+
+    Args:
+        template_id: Pipeline template slug, e.g. ``"test_pipeline_01"``.
+
+    Returns:
+        :class:`~app.schemas.agent_config.PipelineAgentGroup` with the pipeline's
+        stage/agent tree.
+
+    Raises:
+        HTTPException: 404 if no template with the given ID exists.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    group = await crud.get_agents_for_pipeline_template(template_id)
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pipeline template '{template_id}' not found.",
+        )
+    return group
 
 
 # ─────────────────────────────────────────────────────────────────────────────

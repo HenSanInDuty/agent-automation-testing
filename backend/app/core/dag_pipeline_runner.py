@@ -74,6 +74,10 @@ class DAGPipelineRunner:
         # Node outputs cache: { node_id: output_dict }
         self._node_outputs: dict[str, dict] = {}  # type: ignore[type-arg]
 
+        # Original document content — injected into every agent's merged_input
+        # so all nodes in the DAG have access regardless of their depth.
+        self._document_content: str = ""
+
         # DAG resolver
         self._resolver = DAGResolver(template.nodes, template.edges)
 
@@ -132,6 +136,7 @@ class DAGPipelineRunner:
             n for n in self._template.nodes if n.node_type == NodeType.INPUT
         )
         self._node_outputs[input_node.node_id] = initial_input
+        self._document_content = initial_input.get("document_content") or ""
 
         # ── 4. Execute layer by layer ────────────────────────────────────────
         for layer_idx, layer_node_ids in enumerate(layers):
@@ -446,16 +451,76 @@ class DAGPipelineRunner:
 
         merged_input = self._merge_inputs(parent_outputs)
 
+        # Ensure every agent receives the original document content,
+        # even if it is N hops away from the INPUT node.
+        if self._document_content and "document_content" not in merged_input:
+            merged_input = {**merged_input, "document_content": self._document_content}
+
         import json
 
         from crewai import Crew, Process, Task  # type: ignore[import-untyped]
 
+
+        from app.db import crud as _crud
+
+        # Fetch agent config so the goal drives the task instruction
+        # Without this, powerful LLMs ignore role/goal/backstory and
+        # perform a generic document analysis regardless of agent config.
+        _agent_config = None
+        if node_config.agent_id:
+            _agent_config = await _crud.get_agent_config(node_config.agent_id)
+
+        # ── Build a structured task description ────────────────────────────────────
+        # Separate the full document text from other metadata so the LLM
+        # always receives the actual content rather than a path reference.
+        doc_content: str = merged_input.get("document_content") or ""
+        doc_name: str = merged_input.get("document_name") or ""
+        metadata = {
+            k: v
+            for k, v in merged_input.items()
+            if k not in ("document_content", "__sources__")
+        }
+
+        MAX_DOC_CHARS = 15_000   # characters of document body to send
+        MAX_META_CHARS = 2_000   # characters for the metadata JSON blob
+
+        desc_parts: list[str] = []
+
+        # Lead with the agent goal -- this IS the task instruction
+        if _agent_config and _agent_config.goal:
+            desc_parts.append(f"Your task:\n{_agent_config.goal}")
+
+        if doc_name:
+            desc_parts.append(f"Document: {doc_name}")
+
+        if metadata:
+            meta_str = json.dumps(metadata, default=str)
+            if len(meta_str) > MAX_META_CHARS:
+                meta_str = meta_str[:MAX_META_CHARS] + " ...[truncated]"
+            desc_parts.append(f"Context:\n{meta_str}")
+
+        if doc_content:
+            if len(doc_content) > MAX_DOC_CHARS:
+                doc_content = (
+                    doc_content[:MAX_DOC_CHARS]
+                    + "\n...[document truncated due to length]..."
+                )
+            desc_parts.append(f"Document Content:\n{doc_content}")
+        else:
+            # No parsed document content — fall back to JSON dump of full input
+            fallback = json.dumps(merged_input, default=str)[:8000]
+            desc_parts.append(f"Input Data:\n{fallback}")
+
+        task_description = "\n\n".join(desc_parts)
+
         task = Task(
-            description=(
-                f"Process the following input and produce your analysis:\n"
-                f"{json.dumps(merged_input, default=str)[:8000]}"
+            description=task_description,
+            expected_output=(
+                "A single valid JSON object containing your analysis results. "
+                "Output ONLY the JSON - no markdown fences, no explanatory prose, "
+                "no wrapper keys like 'raw_output' or 'result'. "
+                "Start your response directly with '{' and end with '}'."
             ),
-            expected_output="A structured JSON object with your analysis results.",
             agent=crewai_agent,
         )
 
@@ -599,17 +664,57 @@ class DAGPipelineRunner:
         }
 
     def _parse_crew_output(self, result: Any) -> dict:  # type: ignore[type-arg]
-        """Parse a CrewAI kickoff result into a plain dict."""
+        """Parse a CrewAI kickoff result into a plain dict.
+
+        Handles (in order):
+            1. Direct valid JSON string.
+            2. JSON wrapped in a markdown code fence (```json ... ```).
+            3. First ```{...}``` JSON block embedded anywhere in prose.
+            4. Falls back to ```{"raw_output": text}``` as a last resort.
+        """
         import json
+        import re
 
         raw: str = result.raw if hasattr(result, "raw") else str(result)
+        stripped = raw.strip()
+
+        # -- 1. Direct JSON parse ------------------------------------------------
         try:
-            parsed = json.loads(raw)
+            parsed = json.loads(stripped)
             if isinstance(parsed, dict):
                 return parsed
             return {"result": parsed}
         except (json.JSONDecodeError, TypeError):
-            return {"raw_output": raw}
+            pass
+
+        # -- 2. Markdown code fence ----------------------------------------------
+        fence_match = re.search(
+            r"^```(?:json|js|javascript|ts|typescript|text|python)?\s*\n"
+            r"([\s\S]*?)\n?```\s*$",
+            stripped,
+        )
+        if fence_match:
+            inner = fence_match.group(1).strip()
+            try:
+                parsed = json.loads(inner)
+                if isinstance(parsed, dict):
+                    return parsed
+                return {"result": parsed}
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # -- 3. First embedded JSON object in prose ------------------------------
+        obj_match = re.search(r"\{[\s\S]+\}", stripped)
+        if obj_match:
+            try:
+                parsed = json.loads(obj_match.group(0))
+                if isinstance(parsed, dict):
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # -- 4. Give up -- preserve raw text ------------------------------------
+        return {"raw_output": raw}
 
     # ─────────────────────────────────────────────────────────────────────────
     # Builtin pure-Python node handlers

@@ -166,8 +166,12 @@ export const usePipelineStore = create<PipelineStoreState>()(
             const layerIndex = event.data.layer_index as number;
             const layerNodes = event.data.nodes as string[];
             set((s) => {
-              const nextLayers = [...s.executionLayers];
-              nextLayers[layerIndex] = layerNodes;
+              const size = Math.max(s.executionLayers.length, layerIndex + 1);
+              // Array.from fills every slot explicitly — no sparse holes, no nulls
+              const nextLayers = Array.from(
+                { length: size },
+                (_, i) => (i === layerIndex ? layerNodes : (s.executionLayers[i] ?? [])),
+              );
               return { executionLayers: nextLayers };
             });
             break;
@@ -310,6 +314,19 @@ export const usePipelineStore = create<PipelineStoreState>()(
               isTerminal: true,
             });
             break;
+
+          case "run.started": {
+            const layers = event.data.layers as string[][] | undefined;
+            if (Array.isArray(layers)) {
+              // Pre-populate all execution layers at once to avoid sparse-array nulls
+              set({
+                executionLayers: layers.filter((l): l is string[] =>
+                  Array.isArray(l),
+                ),
+              });
+            }
+            break;
+          }
 
           default:
             break;

@@ -816,6 +816,112 @@ async def get_agents_by_pipeline():
     return AgentConfigByPipelineResponse(pipelines=pipelines, total_agents=total_agents)
 
 
+async def get_agents_for_pipeline_template(template_id: str):
+    """Return agents grouped by stage for a single pipeline template.
+
+    Args:
+        template_id: The unique slug of the pipeline template (e.g. "test_pipeline_01").
+
+    Returns:
+        A :class:`~app.schemas.agent_config.PipelineAgentGroup` or ``None`` if
+        the template does not exist.
+    """
+    from app.schemas.agent_config import (
+        AgentConfigSummary,
+        PipelineAgentGroup,
+        PipelineStageEntry,
+    )
+
+    template = await PipelineTemplateDocument.find_one(
+        PipelineTemplateDocument.template_id == template_id
+    )
+    if template is None:
+        return None
+
+    all_agents = await AgentConfigDocument.find_all().to_list()
+    agent_map = {a.agent_id: a for a in all_agents}
+
+    pipeline_stages = (
+        await StageConfigDocument.find(
+            StageConfigDocument.template_id == template.template_id
+        )
+        .sort("+order")
+        .to_list()
+    )
+
+    stage_map: dict[str, list[AgentConfigSummary]] = {
+        s.stage_id: [] for s in pipeline_stages
+    }
+    stage_map["__unassigned__"] = []
+
+    for node in template.nodes:
+        if node.node_type not in ("agent", "pure_python"):
+            continue
+        if not node.agent_id:
+            continue
+        agent_doc = agent_map.get(node.agent_id)
+        if not agent_doc:
+            continue
+
+        summary = AgentConfigSummary(
+            id=str(agent_doc.id),
+            agent_id=agent_doc.agent_id,
+            display_name=agent_doc.display_name,
+            stage=agent_doc.stage,
+            llm_profile_id=agent_doc.llm_profile_id,
+            llm_profile_name=None,
+            enabled=agent_doc.enabled,
+            verbose=agent_doc.verbose,
+            max_iter=agent_doc.max_iter,
+            is_custom=agent_doc.is_custom,
+            updated_at=agent_doc.updated_at,
+            node_id=node.node_id,
+        )
+
+        node_stage_id = node.stage_id or "__unassigned__"
+        if node_stage_id not in stage_map:
+            stage_map.setdefault(node_stage_id, [])
+        stage_map[node_stage_id].append(summary)
+
+    stage_entries: list[PipelineStageEntry] = []
+    for stage in pipeline_stages:
+        stage_entries.append(
+            PipelineStageEntry(
+                stage_id=stage.stage_id,
+                display_name=stage.display_name,
+                description=stage.description,
+                order=stage.order,
+                color=stage.color,
+                icon=stage.icon,
+                is_builtin=stage.is_builtin,
+                agents=stage_map.get(stage.stage_id, []),
+            )
+        )
+
+    unassigned = stage_map.get("__unassigned__", [])
+    if unassigned:
+        stage_entries.append(
+            PipelineStageEntry(
+                stage_id="__unassigned__",
+                display_name="Unassigned",
+                description="Agents not yet assigned to a stage",
+                order=9999,
+                color="#3d5070",
+                icon=None,
+                is_builtin=False,
+                agents=unassigned,
+            )
+        )
+
+    return PipelineAgentGroup(
+        template_id=template.template_id,
+        name=template.name,
+        description=template.description,
+        stages=stage_entries,
+        total_agents=sum(len(s.agents) for s in stage_entries),
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Pipeline Runs
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1307,6 +1413,55 @@ async def update_pipeline_template(
 
     await doc.save()
     logger.info("Updated pipeline template: %s (version %d)", template_id, doc.version)
+    return doc
+
+
+async def append_pipeline_node(
+    template_id: str,
+    node_data: dict,
+) -> Optional[PipelineTemplateDocument]:
+    """Append a single node to a pipeline template without DAG validation.
+
+    Used when creating an agent from the Admin UI so the node appears in the
+    pipeline's agent list immediately.  Full DAG validation is intentionally
+    skipped — the user can wire edges in the Pipeline Builder afterwards.
+
+    Args:
+        template_id: The pipeline template slug.
+        node_data: Dict matching :class:`~app.db.models.PipelineNodeConfig` fields.
+
+    Returns:
+        The updated document, or ``None`` if the template does not exist.
+
+    Raises:
+        ValueError: If a node with the same ``node_id`` already exists.
+    """
+    from app.db.models import PipelineNodeConfig
+
+    doc = await get_pipeline_template(template_id)
+    if doc is None:
+        return None
+
+    new_node = PipelineNodeConfig(**node_data)
+
+    # Guard against duplicate node IDs
+    existing_ids = {n.node_id for n in doc.nodes}
+    if new_node.node_id in existing_ids:
+        raise ValueError(
+            f"Node '{new_node.node_id}' already exists in template '{template_id}'."
+        )
+
+    doc.nodes.append(new_node)
+    doc.version += 1
+    doc.updated_at = _now()
+    await doc.save()
+
+    logger.info(
+        "Appended node '%s' to pipeline template '%s' (version %d)",
+        new_node.node_id,
+        template_id,
+        doc.version,
+    )
     return doc
 
 

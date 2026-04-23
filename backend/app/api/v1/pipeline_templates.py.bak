@@ -674,6 +674,62 @@ async def update_node_stage(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# POST /pipeline-templates/{template_id}/nodes  – append a single node
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/{template_id}/nodes",
+    response_model=PipelineTemplateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Append a node to a pipeline template",
+    description=(
+        "Adds a single node to the template's node list **without** running "
+        "full DAG validation.  Use this when creating an agent from the Admin "
+        "UI so the node appears in the pipeline immediately.  Wire it to other "
+        "nodes via the Pipeline Builder."
+    ),
+)
+async def append_node_to_template(
+    template_id: str,
+    body: PipelineNodeInput,
+    response: Response,
+) -> PipelineTemplateResponse:
+    """Append one node to the pipeline template.
+
+    Args:
+        template_id: Pipeline template slug.
+        body: The node to append.
+
+    Returns:
+        The updated :class:`~app.schemas.pipeline_template.PipelineTemplateResponse`.
+
+    Raises:
+        HTTPException: 404 if the template does not exist.
+        HTTPException: 409 if a node with the same ``node_id`` already exists.
+    """
+    await _get_or_404(template_id)
+    response.headers["Cache-Control"] = "no-store"
+
+    try:
+        updated = await crud.append_pipeline_node(template_id, body.model_dump())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
+
+    if updated is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pipeline template '{template_id}' not found.",
+        )
+
+    logger.info("Appended node '%s' to template '%s'", body.node_id, template_id)
+    return _to_response(updated)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # GET /pipeline-templates/{template_id}  – get one
 # ─────────────────────────────────────────────────────────────────────────────
 

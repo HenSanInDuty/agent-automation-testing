@@ -7,6 +7,7 @@ import type {
   AgentConfigUpdate,
   AgentConfigGroupedResponse,
   AgentConfigByPipelineResponse,
+  PipelineAgentGroup,
 } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,6 +33,18 @@ export function useAgentConfigsByPipeline() {
   return useQuery<AgentConfigByPipelineResponse>({
     queryKey: queryKeys.agentConfigs.byPipeline(),
     queryFn: () => agentConfigsApi.listByPipeline(),
+  });
+}
+
+/**
+ * Fetch agents for a specific pipeline template, grouped by stage.
+ * Shape: PipelineAgentGroup { template_id, name, stages, total_agents }
+ */
+export function useAgentConfigsByPipelineTemplate(templateId: string) {
+  return useQuery<PipelineAgentGroup>({
+    queryKey: queryKeys.agentConfigs.byPipelineTemplate(templateId),
+    queryFn: () => agentConfigsApi.listByPipelineTemplate(templateId),
+    enabled: !!templateId,
   });
 }
 

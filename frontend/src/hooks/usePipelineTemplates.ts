@@ -72,6 +72,9 @@ export function useCreateTemplate() {
     mutationFn: (payload) => pipelineTemplatesApi.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.agentConfigs.byPipeline(),
+      });
     },
   });
 }

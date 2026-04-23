@@ -276,9 +276,10 @@ function TemplateHeaderSkeleton() {
 
 interface RunRowProps {
   run: PipelineRunResponse;
+  templateId: string;
 }
 
-function RunRow({ run }: RunRowProps) {
+function RunRow({ run, templateId }: RunRowProps) {
   const duration = formatDuration(
     run.started_at,
     run.completed_at,
@@ -377,7 +378,7 @@ function RunRow({ run }: RunRowProps) {
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
           <Link
-            href={`/pipelines/${run.template_id ?? ""}/run`}
+            href={"/pipelines/" + (run.template_id ?? templateId) + "/runs/" + runId}
             title="View run"
           >
             <Button
@@ -621,7 +622,7 @@ export function PipelineRunHistoryPage({
 
                 {/* Actual rows */}
                 {!runsLoading &&
-                  runs.map((run) => <RunRow key={run.id ?? run.run_id} run={run} />)}
+                  runs.map((run) => <RunRow key={run.id ?? run.run_id} run={run} templateId={templateId} />)}
               </tbody>
             </table>
 

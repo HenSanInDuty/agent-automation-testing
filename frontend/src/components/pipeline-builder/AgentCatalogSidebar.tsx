@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Search,
   Plus,
@@ -8,7 +8,11 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { useAgentConfigsGrouped } from "@/hooks/useAgentConfigs";
+import type { Node } from "@xyflow/react";
+import { useAgentConfigsByPipelineTemplate } from "@/hooks/useAgentConfigs";
+import { AddAgentDialog } from "@/components/admin/agents/AddAgentDialog";
+import { useBuilderStore, type AgentNodeData } from "@/store/builderStore";
+import type { AgentConfigResponse } from "@/types";
 
 interface CatalogItem {
   agentId: string;
@@ -18,12 +22,47 @@ interface CatalogItem {
   stage: string;
 }
 
-export function AgentCatalogSidebar() {
+export function AgentCatalogSidebar({ templateId }: { templateId: string }) {
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     new Set(["special"]),
   );
-  const { data: groupedAgents } = useAgentConfigsGrouped();
+  const [showAddAgent, setShowAddAgent] = useState(false);
+  const { data: pipelineAgents } =
+    useAgentConfigsByPipelineTemplate(templateId);
+
+  const handleAgentCreated = useCallback((agent: AgentConfigResponse) => {
+    const nodeType: AgentNodeData["nodeType"] =
+      agent.stage === "ingestion" ? "pure_python" : "agent";
+    const newNodeId = `${agent.agent_id}_${Date.now()}`;
+
+    // Place the new node to the right of the rightmost existing node, or at a
+    // sensible default when the canvas is empty.
+    const existingNodes = useBuilderStore.getState().nodes;
+    const x =
+      existingNodes.length > 0
+        ? Math.max(...existingNodes.map((n) => n.position.x)) + 220
+        : 250;
+    const y = 250;
+
+    const newNode: Node = {
+      id: newNodeId,
+      type: "agentNode",
+      position: { x, y },
+      data: {
+        label: agent.display_name,
+        agentId: agent.agent_id,
+        nodeType,
+        description: agent.display_name,
+        enabled: agent.enabled,
+        status: "idle",
+        timeout_seconds: 300,
+        configOverrides: {},
+      } satisfies AgentNodeData,
+    };
+
+    useBuilderStore.getState().addNode(newNode);
+  }, []);
 
   // Special nodes (always available)
   const specialItems: CatalogItem[] = [
@@ -44,8 +83,8 @@ export function AgentCatalogSidebar() {
   ];
 
   // Flatten all agents from dynamic stage groups
-  const allAgents = groupedAgents
-    ? groupedAgents.groups.flatMap((g) => g.agents)
+  const allAgents = pipelineAgents
+    ? pipelineAgents.stages.flatMap((g) => g.agents)
     : [];
 
   // Agent items grouped by stage
@@ -96,7 +135,7 @@ export function AgentCatalogSidebar() {
   const stageLabelMap: Record<string, string> = {
     special: "⚡ Special",
     ...Object.fromEntries(
-      (groupedAgents?.groups ?? []).map((g) => [g.stage_id, g.display_name]),
+      (pipelineAgents?.stages ?? []).map((g) => [g.stage_id, g.display_name]),
     ),
   };
 
@@ -179,11 +218,21 @@ export function AgentCatalogSidebar() {
 
       {/* Footer */}
       <div className="p-2 border-t border-zinc-700">
-        <button className="w-full flex items-center justify-center gap-1 px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md transition-colors">
+        <button
+          onClick={() => setShowAddAgent(true)}
+          className="w-full flex items-center justify-center gap-1 px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md transition-colors"
+        >
           <Plus className="h-3 w-3" />
           New Agent
         </button>
       </div>
+
+      <AddAgentDialog
+        open={showAddAgent}
+        onClose={() => setShowAddAgent(false)}
+        templateId={templateId}
+        onCreated={handleAgentCreated}
+      />
     </div>
   );
 }

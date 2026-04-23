@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   TestTube2,
   BarChart3,
@@ -27,6 +28,7 @@ import type {
   PipelineStatus,
 } from "@/types";
 import { toast } from "@/components/ui/Toast";
+import { PrettyOutput } from "./PrettyOutput";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -210,19 +212,7 @@ function AgentOutputCard({ agent }: { agent: AgentRunResult }) {
       {/* ── Card body ────────────────────────────────────────────────────── */}
       <div className="p-4">
         {agent.output_preview ? (
-          <pre
-            className={cn(
-              "font-mono text-xs text-[#92a4c9] whitespace-pre-wrap break-words",
-              "bg-[#101622] rounded-lg p-4 border border-[#2b3b55]",
-              "max-h-64 overflow-y-auto",
-              // Scrollbar styling
-              "[&::-webkit-scrollbar]:w-1.5",
-              "[&::-webkit-scrollbar-track]:bg-transparent",
-              "[&::-webkit-scrollbar-thumb]:bg-[#2b3b55] [&::-webkit-scrollbar-thumb]:rounded-full",
-            )}
-          >
-            {agent.output_preview}
-          </pre>
+          <PrettyOutput value={agent.output_preview} />
         ) : agent.error_message ? (
           <div className="flex items-start gap-2.5 bg-[#ef4444]/5 rounded-lg p-3 border border-[#ef4444]/20">
             <XCircle
@@ -374,6 +364,7 @@ interface NodeResultCardProps {
   label: string;
   nodeType: string;
   status: string;
+  outputPreview?: string | null;
 }
 
 function NodeResultCard({
@@ -381,6 +372,7 @@ function NodeResultCard({
   label,
   nodeType,
   status,
+  outputPreview,
 }: NodeResultCardProps) {
   const statusColors: Record<string, string> = {
     idle: "text-zinc-500",
@@ -419,6 +411,9 @@ function NodeResultCard({
           </span>
         </div>
       </div>
+      {outputPreview && (
+        <PrettyOutput value={outputPreview} className="mt-3" />
+      )}
     </div>
   );
 }
@@ -541,7 +536,8 @@ function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
-  const [activeTab, setActiveTab] = React.useState<TabId>("testcases");
+  const isV3RunCheck = !!run.node_statuses && Object.keys(run.node_statuses).length > 0;
+  const [activeTab, setActiveTab] = React.useState<TabId>(isV3RunCheck ? "nodes" : "testcases");
 
   // ── Group agents by stage — works with any dynamic stages ─────────────────
   const agentsByStage = run.agent_runs.reduce<
@@ -559,6 +555,26 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
   // ── V3 DAG ────────────────────────────────────────────────────────────────
   const isV3Run =
     !!run.node_statuses && Object.keys(run.node_statuses).length > 0;
+
+  // Fetch per-node outputs for the Nodes tab (V3 only)
+  const { data: nodeResultsRaw } = useQuery({
+    queryKey: ["nodeResults", run.id],
+    queryFn: () => pipelineApi.getRunResults(run.id),
+    enabled: isV3Run,
+    staleTime: 5 * 60_000,
+  });
+  // Map: stage field = node_id for V3 results
+  const nodeOutputMap = React.useMemo(() => {
+    const map: Record<string, { output?: unknown; status?: string }> = {};
+    if (nodeResultsRaw) {
+      for (const r of nodeResultsRaw) {
+        if ((r as any).stage) {
+          map[(r as any).stage] = { output: (r as any).output, status: (r as any).status };
+        }
+      }
+    }
+    return map;
+  }, [nodeResultsRaw]);
   const visibleTabs = isV3Run ? TABS : TABS.filter((t) => t.id !== "nodes");
 
   return (
@@ -685,6 +701,11 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
                   const tmplNode = templateNodes?.find(
                     (n) => n.node_id === nodeId,
                   );
+                  const nodeData = nodeOutputMap[nodeId];
+                  const rawOutput = nodeData?.output;
+                  const outputPreview = rawOutput != null
+                    ? (typeof rawOutput === "string" ? rawOutput : JSON.stringify(rawOutput, null, 2))
+                    : null;
                   return (
                     <NodeResultCard
                       key={nodeId}
@@ -692,6 +713,7 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
                       label={tmplNode?.label ?? nodeId}
                       nodeType={tmplNode?.node_type ?? "agent"}
                       status={status}
+                      outputPreview={outputPreview}
                     />
                   );
                 })

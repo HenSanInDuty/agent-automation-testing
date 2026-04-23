@@ -140,8 +140,8 @@ async def _run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
         all_results = await crud.get_pipeline_results(run.run_id)
         results_map: dict[str, str] = {}
         for r in all_results:
-            preview = str(r.output)[:500] if r.output is not None else None
-            results_map[r.agent_id] = preview or ""
+            preview = _json.dumps(r.output, ensure_ascii=False, default=str)[:15_000] if r.output is not None else None
+            results_map[r.agent_id or ""] = preview or ""
 
         for agent_id, raw_status in raw_statuses.items():
             config = config_map.get(agent_id)
@@ -161,6 +161,7 @@ async def _run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
 
     return PipelineRunResponse(
         id=run.run_id,
+        run_id=run.run_id,
         document_filename=run.document_name,
         status=PipelineStatus(run.status),
         llm_profile_id=run.llm_profile_id,
@@ -174,8 +175,35 @@ async def _run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
     )
 
 
+_SPECIAL_AGENT_IDS = frozenset({"__input__", "__output__"})
+
+
 async def _dag_run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
     """Convert a V3 PipelineRunDocument to PipelineRunResponse."""
+    # Fetch per-node results and agent configs for display names
+    node_results = await crud.get_pipeline_results(run.run_id)
+    all_configs = await crud.get_all_agent_configs()
+    config_map = {c.agent_id: c for c in all_configs}
+
+    agent_runs: list[AgentRunResult] = []
+    for r in node_results:
+        aid = r.agent_id or ""
+        if not aid or aid in _SPECIAL_AGENT_IDS:
+            continue
+        config = config_map.get(aid)
+        agent_runs.append(
+            AgentRunResult(
+                agent_id=aid,
+                display_name=config.display_name if config else aid,
+                stage=config.stage if config else (r.stage or "agent"),
+                status=r.status,
+                output_preview=_json.dumps(r.output, ensure_ascii=False, default=str)[:15_000] if r.output is not None else None,
+                error_message=r.error_message,
+                started_at=r.started_at,
+                completed_at=r.completed_at,
+            )
+        )
+
     return PipelineRunResponse(
         id=run.run_id,
         run_id=run.run_id,
@@ -197,7 +225,7 @@ async def _dag_run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
         paused_at=run.paused_at,
         resumed_at=run.resumed_at,
         error_message=run.error_message or run.error,
-        agent_runs=[],
+        agent_runs=agent_runs,
     )
 
 
@@ -520,11 +548,30 @@ async def _run_dag_pipeline_background(
             mock_mode=getattr(settings, "MOCK_PIPELINE", False),
         )
 
-        initial_input = {
+        initial_input: dict = {
             "file_path": file_path,
             "document_name": document_name,
             **run_params,
         }
+
+        # Read actual file content so agents receive the document text, not just the path
+        if file_path:
+            try:
+                from app.tools.document_parser import parse_document
+                document_content = parse_document(file_path)
+                initial_input["document_content"] = document_content
+                logger.info(
+                    "[V3-Pipeline] Parsed document %r: %d chars",
+                    document_name,
+                    len(document_content),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[V3-Pipeline] Could not parse document %r: %s",
+                    file_path,
+                    exc,
+                )
+
         await runner.run(initial_input)
 
     except DAGValidationError as exc:
@@ -899,6 +946,7 @@ async def list_pipeline_runs(
         items.append(
             PipelineRunListItem(
                 id=r.run_id,
+                template_id=r.template_id,
                 document_filename=r.document_name,
                 status=PipelineStatus(r.status),
                 llm_profile_id=r.llm_profile_id,
@@ -963,7 +1011,10 @@ async def get_pipeline_run(
         HTTPException: 404 if the run does not exist.
     """
     run = await _get_run_or_404(run_id)
-    run_response = await _run_to_response(run)
+    if run.template_id:   # V3 DAG run
+        run_response = await _dag_run_to_response(run)
+    else:                  # V2 legacy run
+        run_response = await _run_to_response(run)
     response: dict[str, Any] = run_response.model_dump()
 
     if include_results:
@@ -972,8 +1023,8 @@ async def get_pipeline_run(
             PipelineResultResponse(
                 id=str(r.id),
                 run_id=r.run_id,
-                stage=r.stage,
-                agent_id=r.agent_id,
+                stage=r.stage or "",
+                agent_id=r.agent_id or "",
                 output=r.output,
                 created_at=r.created_at,
             ).model_dump()
@@ -1268,8 +1319,8 @@ async def get_pipeline_results(
         PipelineResultResponse(
             id=str(r.id),
             run_id=r.run_id,
-            stage=r.stage,
-            agent_id=r.agent_id,
+            stage=r.stage or "",
+            agent_id=r.agent_id or "",
             output=r.output,
             created_at=r.created_at,
         )

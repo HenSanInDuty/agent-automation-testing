@@ -188,7 +188,7 @@ function NodeProgressSection({
         </span>
       </div>
       <div className="divide-y divide-[#2b3b55]">
-        {executionLayers.map((layer, layerIdx) => (
+        {executionLayers.filter((layer): layer is string[] => Array.isArray(layer)).map((layer, layerIdx) => (
           <div key={layerIdx} className="px-4 py-3">
             <p className="mb-2 text-xs font-medium text-[#3d5070] uppercase tracking-wider">
               Layer {layerIdx + 1}

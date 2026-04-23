@@ -135,6 +135,7 @@ class PipelineRunListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    template_id: Optional[str] = None
     document_filename: str
     status: PipelineStatus
     llm_profile_id: Optional[str] = None  # MongoDB ObjectId string

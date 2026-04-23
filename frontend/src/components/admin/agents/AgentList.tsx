@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bot, Search, Filter, RotateCcw, RefreshCw, Plus } from "lucide-react";
+import { Bot, Search, Filter, RotateCcw, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 import { PipelineGroupSection } from "./PipelineGroupSection";
 import { AgentDialog } from "./AgentDialog";
-import { AddAgentDialog } from "./AddAgentDialog";
+
 import { ManageStagesDialog } from "./ManageStagesDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ export function AgentList() {
   const [resetAllConfirm, setResetAllConfirm] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [pipelineFilter, setPipelineFilter] = React.useState<string>("all");
-  const [addAgentOpen, setAddAgentOpen] = React.useState(false);
+
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
     null,
   );
@@ -440,15 +440,6 @@ export function AgentList() {
         {/* Action buttons */}
         <div className="flex items-center gap-2 shrink-0">
           <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />}
-            onClick={() => setAddAgentOpen(true)}
-          >
-            Add Agent
-          </Button>
-
-          <Button
             variant="danger"
             size="sm"
             leftIcon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}
@@ -594,12 +585,6 @@ export function AgentList() {
         cancelLabel="Cancel"
         variant="danger"
         loading={resetAllMutation.isPending}
-      />
-
-      {/* ── Add agent dialog ──────────────────────────────────────────────── */}
-      <AddAgentDialog
-        open={addAgentOpen}
-        onClose={() => setAddAgentOpen(false)}
       />
 
       {/* ── Manage stages dialog (per-pipeline) ──────────────────────────── */}

@@ -20,7 +20,7 @@ import { toast } from "@/components/ui/Toast";
 import { useCreateAgentConfig } from "@/hooks/useAgentConfigs";
 import { useLLMProfiles } from "@/hooks/useLLMProfiles";
 import { useStageConfigs } from "@/hooks/useStageConfigs";
-import type { LLMProfileResponse } from "@/types";
+import type { AgentConfigResponse, LLMProfileResponse } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Validation schema
@@ -60,16 +60,26 @@ type FormValues = z.infer<typeof createAgentSchema>;
 interface AddAgentDialogProps {
   open: boolean;
   onClose: () => void;
+  templateId?: string;
+  onCreated?: (agent: AgentConfigResponse) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AddAgentDialog
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function AddAgentDialog({ open, onClose }: AddAgentDialogProps) {
+export function AddAgentDialog({
+  open,
+  onClose,
+  templateId,
+  onCreated,
+}: AddAgentDialogProps) {
   const createMutation = useCreateAgentConfig();
   const { data: profilesData } = useLLMProfiles({ limit: 100 });
-  const { data: stages } = useStageConfigs();
+  // When scoped to a specific pipeline, suppress the global-stage fallback so
+  // a brand-new pipeline (with no configured stages) shows an empty list
+  // instead of the default ingestion/testcase/… stages.
+  const { data: stages } = useStageConfigs(false, templateId, !!templateId);
 
   const {
     register,
@@ -115,6 +125,15 @@ export function AddAgentDialog({ open, onClose }: AddAgentDialogProps) {
 
   const stageOptions = React.useMemo(() => {
     if (!stages) return [{ value: "", label: "Loading stages…" }];
+    if (stages.length === 0 && templateId) {
+      // Pipeline exists but has no configured stages yet
+      return [
+        {
+          value: "",
+          label: "No stages configured — add stages via Manage Stages",
+        },
+      ];
+    }
     return [
       { value: "", label: "Select a stage…" },
       ...stages.map((s) => ({
@@ -128,7 +147,7 @@ export function AddAgentDialog({ open, onClose }: AddAgentDialogProps) {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await createMutation.mutateAsync({
+      const result = await createMutation.mutateAsync({
         agent_id: values.agent_id,
         display_name: values.display_name,
         stage: values.stage,
@@ -140,6 +159,7 @@ export function AddAgentDialog({ open, onClose }: AddAgentDialogProps) {
         enabled: values.enabled,
         verbose: values.verbose,
       });
+      onCreated?.(result);
       toast.success(
         "Agent created",
         `"${values.display_name}" has been added to the ${values.stage} stage.`,

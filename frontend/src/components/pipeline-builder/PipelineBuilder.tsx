@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/Toast";
 import {
   ReactFlow,
@@ -23,6 +24,7 @@ import {
   usePipelineTemplate,
   useUpdateTemplate,
 } from "@/hooks/usePipelineTemplates";
+import { queryKeys } from "@/lib/queryClient";
 import { AgentNode } from "./nodes/AgentNode";
 import { InputNode } from "./nodes/InputNode";
 import { OutputNode } from "./nodes/OutputNode";
@@ -131,8 +133,22 @@ function PipelineBuilderInner({ templateId }: { templateId: string }) {
   } = useBuilderStore();
 
   // ── Load template ──
+  const qc = useQueryClient();
   const { data: template, isLoading } = usePipelineTemplate(templateId);
   const updateTemplateMutation = useUpdateTemplate(templateId);
+
+  // ── Invalidate per-pipeline caches and reset store on unmount ──
+  useEffect(() => {
+    return () => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.agentConfigs.byPipelineTemplate(templateId),
+      });
+      qc.invalidateQueries({
+        queryKey: queryKeys.stageConfigs.listForTemplate(templateId),
+      });
+      useBuilderStore.getState().resetBuilder();
+    };
+  }, [templateId, qc]);
 
   // Initialize builder when template loads
   useEffect(() => {
@@ -228,7 +244,8 @@ function PipelineBuilderInner({ templateId }: { templateId: string }) {
         y: event.clientY,
       });
 
-      const newNodeId = `${agentId}_${Date.now()}`;
+      const safeAgentId = agentId.replace(/^_+|_+$/g, '');
+      const newNodeId = `${safeAgentId}_${Date.now()}`;
 
       const newNode: Node = {
         id: newNodeId,
@@ -281,7 +298,7 @@ function PipelineBuilderInner({ templateId }: { templateId: string }) {
   return (
     <div className="flex h-full">
       {/* Left: Agent Catalog Sidebar */}
-      <AgentCatalogSidebar />
+      <AgentCatalogSidebar templateId={templateId} />
 
       {/* Center: React Flow Canvas */}
       <div ref={reactFlowWrapper} className="flex-1 h-full relative">

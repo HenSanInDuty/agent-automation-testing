@@ -16,9 +16,11 @@ import type {
   LLMTestResponse,
   PaginationParams,
   PipelineActionResponse,
+  PipelineAgentGroup,
   PipelineNodeResult,
   PipelineRunListResponse,
   PipelineRunResponse,
+  PipelineNodeConfig,
   PipelineTemplate,
   PipelineTemplateCreate,
   PipelineTemplateListResponse,
@@ -206,6 +208,16 @@ export const agentConfigsApi = {
   listByPipeline: async (): Promise<AgentConfigByPipelineResponse> => {
     const { data } = await apiClient.get<AgentConfigByPipelineResponse>(
       "/api/v1/admin/agent-configs/by-pipeline",
+    );
+    return data;
+  },
+
+  /** GET /api/v1/admin/agent-configs/by-pipeline/:templateId */
+  listByPipelineTemplate: async (
+    templateId: string,
+  ): Promise<PipelineAgentGroup> => {
+    const { data } = await apiClient.get<PipelineAgentGroup>(
+      `/api/v1/admin/agent-configs/by-pipeline/${templateId}`,
     );
     return data;
   },
@@ -593,6 +605,18 @@ export const pipelineTemplatesApi = {
     const { data } = await apiClient.patch(
       `/api/v1/pipeline-templates/${templateId}/node-stage`,
       { node_id: nodeId, stage_id: stageId },
+    );
+    return data;
+  },
+
+  /** POST /api/v1/pipeline-templates/:templateId/nodes — append one node without DAG validation */
+  appendNode: async (
+    templateId: string,
+    node: PipelineNodeConfig,
+  ): Promise<PipelineTemplate> => {
+    const { data } = await apiClient.post<PipelineTemplate>(
+      `/api/v1/pipeline-templates/${templateId}/nodes`,
+      node,
     );
     return data;
   },
