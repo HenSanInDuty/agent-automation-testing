@@ -78,6 +78,9 @@ class DAGPipelineRunner:
         # so all nodes in the DAG have access regardless of their depth.
         self._document_content: str = ""
 
+        # Document name — forwarded to Kafka pipeline_events for correlation.
+        self._document_name: str = ""
+
         # DAG resolver
         self._resolver = DAGResolver(template.nodes, template.edges)
 
@@ -136,8 +139,7 @@ class DAGPipelineRunner:
             n for n in self._template.nodes if n.node_type == NodeType.INPUT
         )
         self._node_outputs[input_node.node_id] = initial_input
-        self._document_content = initial_input.get("document_content") or ""
-
+        self._document_content = initial_input.get("document_content") or ""        self._document_name = initial_input.get("document_name") or ""
         # ── 4. Execute layer by layer ────────────────────────────────────────
         for layer_idx, layer_node_ids in enumerate(layers):
             # Skip layers that contain only the INPUT node (already seeded)
@@ -531,13 +533,62 @@ class DAGPipelineRunner:
             verbose=False,
         )
 
-        # CrewAI kickoff is synchronous — run in thread pool with timeout
-        result = await asyncio.wait_for(
-            asyncio.to_thread(crew.kickoff),
-            timeout=node_config.timeout_seconds,
-        )
+        # CrewAI kickoff is synchronous — run in thread pool with timeout.
+        # Instrument the call for LLM telemetry (latency + token usage).
+        _llm_start = time.time()
+        _llm_success = True
+        _llm_error_type = ""
+        _llm_error_msg = ""
+        _crew_result = None
 
-        return self._parse_crew_output(result)
+        try:
+            _crew_result = await asyncio.wait_for(
+                asyncio.to_thread(crew.kickoff),
+                timeout=node_config.timeout_seconds,
+            )
+        except Exception as _exc:  # noqa: BLE001
+            _llm_success = False
+            _llm_error_type = type(_exc).__name__
+            _llm_error_msg = str(_exc)
+            raise
+        finally:
+            _llm_latency_ms = int((time.time() - _llm_start) * 1000)
+
+            # Extract token usage when CrewAI exposes it (>= 0.28)
+            _prompt_tokens = _completion_tokens = _total_tokens = 0
+            if _crew_result is not None and hasattr(_crew_result, "token_usage"):
+                _usage = _crew_result.token_usage
+                if _usage:
+                    _prompt_tokens = int(getattr(_usage, "prompt_tokens", 0) or 0)
+                    _completion_tokens = int(getattr(_usage, "completion_tokens", 0) or 0)
+                    _total_tokens = int(getattr(_usage, "total_tokens", 0) or 0)
+
+            _model_str = str(
+                getattr(getattr(crewai_agent, "llm", None), "model", "") or ""
+            )
+
+            try:
+                from app.services.event_bus import event_bus
+
+                event_bus.emit_llm_call(
+                    run_id=self._run_id,
+                    node_id=node_config.node_id,
+                    agent_id=str(node_config.agent_id or ""),
+                    model=_model_str,
+                    latency_ms=_llm_latency_ms,
+                    prompt_tokens=_prompt_tokens,
+                    completion_tokens=_completion_tokens,
+                    total_tokens=_total_tokens,
+                    success=_llm_success,
+                    error_type=_llm_error_type,
+                    error_message=_llm_error_msg,
+                    task_description_len=len(task_description),
+                    task_description_preview=task_description[:200],
+                )
+            except Exception:  # noqa: BLE001
+                pass
+
+        return self._parse_crew_output(_crew_result)
 
     async def _run_pure_python_node(
         self,
@@ -628,12 +679,89 @@ class DAGPipelineRunner:
         return list(self._node_outputs.keys())
 
     def _emit(self, event: str, data: dict) -> None:  # type: ignore[type-arg]
-        """Fire a WebSocket event via the progress callback."""
+        """Fire a WebSocket event and forward to Kafka for observability."""
         if self._progress_callback is not None:
             try:
                 self._progress_callback(event, {"run_id": self._run_id, **data})
             except Exception as exc:  # noqa: BLE001
                 logger.warning("[DAGRunner] Progress callback error: %s", exc)
+        self._kafka_emit(event, data)
+
+    def _kafka_emit(self, event: str, data: dict) -> None:  # type: ignore[type-arg]
+        """
+        Route pipeline/node events to the appropriate Kafka topic.
+
+        run.*   → pipeline_events topic
+        node.*  → node_events topic
+        layer.* → skipped (too verbose; infer from node events)
+        """
+        try:
+            from app.services.event_bus import event_bus
+
+            if event.startswith("run."):
+                event_bus.emit_pipeline_event(
+                    event_type=event,
+                    run_id=self._run_id,
+                    template_id=data.get("template_id") or self._template.template_id,
+                    document_name=self._document_name,
+                    total_nodes=int(data.get("total_nodes", 0)),
+                    total_layers=int(data.get("total_layers", 0)),
+                    duration_seconds=float(data.get("duration_seconds", 0.0)),
+                    error=str(data.get("error", "")),
+                    failed_node=str(data.get("failed_node", "")),
+                    extra={
+                        k: v for k, v in data.items()
+                        if k not in (
+                            "template_id", "total_nodes", "total_layers",
+                            "duration_seconds", "error", "failed_node",
+                        )
+                    },
+                )
+
+            elif event.startswith("node."):
+                node_id = str(data.get("node_id", ""))
+                # Lookup node config for richer metadata when the event
+                # doesn't carry node_type / label (e.g. node.completed).
+                node_cfg = None
+                if node_id:
+                    try:
+                        node_cfg = self._get_node(node_id)
+                    except ValueError:
+                        pass
+
+                _STATUS_MAP: dict[str, str] = {
+                    "node.started": "running",
+                    "node.completed": "completed",
+                    "node.failed": "failed",
+                    "node.skipped": "skipped",
+                }
+
+                event_bus.emit_node_event(
+                    event_type=event,
+                    run_id=self._run_id,
+                    node_id=node_id,
+                    node_type=str(
+                        data.get("node_type")
+                        or (getattr(node_cfg, "node_type", None) if node_cfg else "")
+                        or ""
+                    ),
+                    agent_id=str(
+                        data.get("agent_id")
+                        or (getattr(node_cfg, "agent_id", None) if node_cfg else "")
+                        or ""
+                    ),
+                    label=str(getattr(node_cfg, "label", "") or ""),
+                    status=_STATUS_MAP.get(event, ""),
+                    duration_ms=int(float(data.get("duration_seconds", 0)) * 1000),
+                    retry_attempt=int(data.get("retry_attempt", 0)),
+                    will_retry=bool(data.get("will_retry", False)),
+                    error_detail=str(data.get("error", "")),
+                    output_preview=str(data.get("output_preview", "")),
+                )
+            # layer.* events: skip — too high-frequency, infer from node events
+
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[DAGRunner] Kafka emit error event=%r: %s", event, exc)
 
     async def _handle_cancel(self) -> None:
         """Transition the run to CANCELLED state and emit the event."""

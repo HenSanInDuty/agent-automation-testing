@@ -52,7 +52,7 @@ router = APIRouter()
 
 
 @router.get(
-    "",
+    "/",
     summary="List all agent configs",
     description=(
         "Returns all agent configurations. "
@@ -184,7 +184,7 @@ async def get_agent_config(agent_id: str) -> AgentConfigResponse:
 
 
 @router.post(
-    "",
+    "/",
     response_model=AgentConfigResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new custom agent config",

@@ -87,7 +87,7 @@ def _doc_to_response(doc: LLMProfileDocument) -> LLMProfileResponse:
 
 
 @router.get(
-    "",
+    "/",
     response_model=LLMProfileListResponse,
     summary="List all LLM profiles",
     description=(
@@ -122,7 +122,7 @@ async def list_llm_profiles(
 
 
 @router.post(
-    "",
+    "/",
     response_model=LLMProfileResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new LLM profile",

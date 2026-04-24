@@ -79,12 +79,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     ws_manager.set_loop(asyncio.get_running_loop())
     logger.info("WebSocket manager event loop registered ✓")
 
+    # ── Kafka EventBus ───────────────────────────────────────────────
+    from app.services.event_bus import event_bus
+
+    await event_bus.startup()
+
     logger.info("Auto-AT backend ready ✓")
 
     yield  # ← application runs here
 
     # ── Shutdown ──────────────────────────────────────────────────────────
     logger.info("Shutting down Auto-AT backend…")
+    from app.services.event_bus import event_bus
+
+    await event_bus.shutdown()
     await close_db()
     logger.info("Auto-AT backend stopped.")
 
@@ -123,7 +131,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # ── Observability middleware (HTTP request telemetry → Kafka) ───────────
+    from app.middleware.observability import ObservabilityMiddleware
 
+    app.add_middleware(ObservabilityMiddleware)
     # ── Routers ───────────────────────────────────────────────────────────
     from app.api.v1 import (
         agent_configs,

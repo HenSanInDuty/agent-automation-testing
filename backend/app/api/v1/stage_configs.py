@@ -70,7 +70,7 @@ def _to_response(stage, agent_count: int = 0) -> StageConfigResponse:
 
 
 @router.get(
-    "",
+    "/",
     response_model=list[StageConfigResponse],
     summary="List all stage configs",
     description=(
@@ -167,7 +167,7 @@ async def get_stage_config(stage_id: str, response: Response) -> StageConfigResp
 
 
 @router.post(
-    "",
+    "/",
     response_model=StageConfigResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new custom stage",

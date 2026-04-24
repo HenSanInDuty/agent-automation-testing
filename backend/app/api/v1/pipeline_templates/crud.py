@@ -38,7 +38,7 @@ router = APIRouter()
 
 
 @router.get(
-    "",
+    "/",
     response_model=PaginatedTemplateResponse,
     summary="List all pipeline templates",
     description=(
@@ -100,7 +100,7 @@ async def list_templates(
 
 
 @router.post(
-    "",
+    "/",
     response_model=PipelineTemplateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new pipeline template",

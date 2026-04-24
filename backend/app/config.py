@@ -76,6 +76,20 @@ class Settings(BaseSettings):
     INGESTION_CHUNK_SIZE: int = 2000
     INGESTION_CHUNK_OVERLAP: int = 200
 
+    # ── Kafka / Observability ────────────────────────────────────
+    # Set KAFKA_ENABLED=false to disable all Kafka emission (pipeline unaffected).
+    KAFKA_ENABLED: bool = True
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_TOPIC_PREFIX: str = "auto_at"
+    # Producer batching – linger_ms trades latency for throughput
+    KAFKA_PRODUCER_LINGER_MS: int = 50
+    KAFKA_PRODUCER_MAX_BATCH_SIZE: int = 65536  # bytes
+
+    # ── ClickHouse ────────────────────────────────────────────────
+    CLICKHOUSE_HOST: str = "localhost"
+    CLICKHOUSE_PORT: int = 8123
+    CLICKHOUSE_DB: str = "auto_at"
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_origins(cls, v: str) -> str:
