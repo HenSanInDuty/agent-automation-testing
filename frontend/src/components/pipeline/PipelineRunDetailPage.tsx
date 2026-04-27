@@ -1,13 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, FileText, Timer, Calendar } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { usePipelineRun } from "@/hooks/usePipeline";
 import { usePipelineTemplate } from "@/hooks/usePipelineTemplates";
+import { usePipelineWebSocket } from "@/hooks/usePipelineWebSocket";
 import { ResultsViewer } from "./ResultsViewer";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryClient";
 import type { PipelineStatus } from "@/types";
 
 function formatDateTime(iso?: string | null): string {
@@ -58,8 +61,25 @@ export interface PipelineRunDetailPageProps {
 }
 
 export function PipelineRunDetailPage({ templateId, runId }: PipelineRunDetailPageProps) {
+  const qc = useQueryClient();
   const { data: run, isLoading: runLoading, isError: runError } = usePipelineRun(runId);
   const { data: template } = usePipelineTemplate(templateId);
+
+  const isActive = run?.status === "running" || run?.status === "pending";
+
+  // Connect WebSocket only while the run is active so we know when it finishes.
+  const { isTerminal } = usePipelineWebSocket({
+    runId,
+    enabled: isActive,
+  });
+
+  // When the WebSocket signals the run is done, refetch the run detail so
+  // results are displayed without requiring a manual page refresh.
+  useEffect(() => {
+    if (isTerminal) {
+      qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.detail(runId) });
+    }
+  }, [isTerminal, runId, qc]);
 
   const templateNodes = template?.nodes?.map((n) => ({
     node_id: n.node_id,

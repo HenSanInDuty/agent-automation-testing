@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     DEFAULT_LLM_TEMPERATURE: float = 0.1
     DEFAULT_LLM_MAX_TOKENS: int = 2048
 
+    # ── Ollama ────────────────────────────────────────────────────
+    # Override this when running inside Docker so the backend can reach
+    # Ollama on the host.  Set to http://host.docker.internal:11434 in
+    # docker-compose.yml.  Falls back to localhost for direct (non-Docker) runs.
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+
     # ── File upload ───────────────────────────────────────────────
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE_MB: int = 50

@@ -158,9 +158,8 @@ def build_llm(profile: "LLMProfileDocument | LLMProfileInternal"):
     if base_url:
         kwargs["base_url"] = base_url
     elif provider == "ollama":
-        # Sensible default so Ollama works out of the box locally
-        kwargs["base_url"] = "http://localhost:11434"
-        logger.debug("Ollama base_url not set — using default: http://localhost:11434")
+        kwargs["base_url"] = settings.OLLAMA_BASE_URL
+        logger.debug("Ollama base_url not set — using: %s", settings.OLLAMA_BASE_URL)
 
     logger.debug(
         "Building LLM: model=%s temperature=%.2f max_tokens=%d",
@@ -203,7 +202,7 @@ def build_fallback_llm():
     if settings.DEFAULT_LLM_BASE_URL:
         kwargs["base_url"] = settings.DEFAULT_LLM_BASE_URL
     elif provider == "ollama":
-        kwargs["base_url"] = "http://localhost:11434"
+        kwargs["base_url"] = settings.OLLAMA_BASE_URL
 
     logger.info(
         "Using fallback LLM from environment: %s (temp=%.2f)",
@@ -300,7 +299,7 @@ def probe_llm_connection(
         if base_url:
             call_kwargs["api_base"] = base_url
         elif provider == "ollama":
-            call_kwargs["api_base"] = "http://localhost:11434"
+            call_kwargs["api_base"] = settings.OLLAMA_BASE_URL
 
         response = litellm.completion(**call_kwargs)
         text = response.choices[0].message.content or ""

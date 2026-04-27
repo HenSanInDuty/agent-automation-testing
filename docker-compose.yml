@@ -23,15 +23,24 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - APP_ENV=production
+      - APP_ENV=development
       - APP_VERSION=3.0.0
       - MONGODB_URI=mongodb://admin:${MONGO_PASSWORD:-changeme}@mongodb:27017/auto_at?authSource=admin
       - MONGODB_DB_NAME=auto_at
       - UPLOAD_DIR=./uploads
       - PYMONGO_LOG_HEARTBEAT=off
       - PYMONGO_LOG_TOPOLOGY=off
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      # Ollama runs on the host — use host IP to reach it from the container
+      - OLLAMA_BASE_URL=http://172.26.80.1:11434
+    extra_hosts:
+      # Required on Linux (Docker Desktop on Mac/Win adds this automatically)
+      - "host.docker.internal:host-gateway"
     volumes:
       - backend_uploads:/app/uploads
+      # Hot reload: mount source so uvicorn --reload picks up changes
+      - ./backend/app:/app/app
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       mongodb:
         condition: service_healthy
@@ -118,12 +127,19 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: dev          # use the dev stage (npm run dev)
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
-      - NEXT_PUBLIC_WS_URL=ws://backend:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
       - NEXT_PUBLIC_APP_VERSION=3.0.0
+      - WATCHPACK_POLLING=true
+      - PORT=3001
+    volumes:
+      # Hot reload: mount source; node_modules stays in the image
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
     depends_on:
       backend:
         condition: service_healthy

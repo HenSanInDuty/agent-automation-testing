@@ -10,6 +10,24 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 (dev): Hot-reload dev server  →  docker-compose uses this target
+# ─────────────────────────────────────────────────────────────────────────────
+FROM base AS dev
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+EXPOSE 3000
+# PORT can be overridden at runtime via docker-compose environment
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+# Required for file-watch to work inside Docker on Windows/Mac
+ENV WATCHPACK_POLLING=true
+
+CMD ["npm", "run", "dev"]
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Stage 2: Build the application
 # ─────────────────────────────────────────────────────────────────────────────
 FROM base AS builder
