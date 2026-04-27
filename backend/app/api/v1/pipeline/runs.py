@@ -16,7 +16,7 @@ import logging
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 from fastapi import (
     APIRouter,
@@ -75,25 +75,29 @@ router = APIRouter()
 )
 async def start_pipeline_run(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(..., description="Requirements document to analyse"),
-    llm_profile_id: Optional[str] = Form(
-        default=None,
-        description=(
-            "MongoDB ObjectId of the LLM profile to use for this run. "
-            "Omit to use the global default profile."
+    file: Annotated[UploadFile, File(description="Requirements document to analyse")],
+    llm_profile_id: Annotated[
+        Optional[str],
+        Form(
+            description=(
+                "MongoDB ObjectId of the LLM profile to use for this run. "
+                "Omit to use the global default profile."
+            ),
         ),
-    ),
-    skip_execution: bool = Form(
-        default=False,
-        description=(
-            "When true, only run Ingestion and Test Case Generation. "
-            "Execution and Reporting stages will be skipped."
+    ] = None,
+    skip_execution: Annotated[
+        bool,
+        Form(
+            description=(
+                "When true, only run Ingestion and Test Case Generation. "
+                "Execution and Reporting stages will be skipped."
+            ),
         ),
-    ),
-    environment: str = Form(
-        default="default",
-        description="Target test environment name passed to the Execution crew.",
-    ),
+    ] = False,
+    environment: Annotated[
+        str,
+        Form(description="Target test environment name passed to the Execution crew."),
+    ] = "default",
 ) -> PipelineRunResponse:
     """Upload a requirements document and start a full V2 pipeline run."""
     _validate_upload(file)
@@ -169,21 +173,19 @@ async def start_pipeline_run(
 )
 async def create_pipeline_run(
     background_tasks: BackgroundTasks,
-    template_id: str = Form(
-        ..., description="Slug of the pipeline template to execute"
-    ),
-    file: Optional[UploadFile] = File(
-        default=None,
-        description="Optional requirements document to inject as INPUT node seed",
-    ),
-    llm_profile_id: Optional[str] = Form(
-        default=None,
-        description="MongoDB ObjectId of an LLM profile override. Omit for global default.",
-    ),
-    run_params: str = Form(
-        default="{}",
-        description="JSON-encoded extra run parameters forwarded to the runner.",
-    ),
+    template_id: Annotated[str, Form(description="Slug of the pipeline template to execute")],
+    file: Annotated[
+        Optional[UploadFile],
+        File(description="Optional requirements document to inject as INPUT node seed"),
+    ] = None,
+    llm_profile_id: Annotated[
+        Optional[str],
+        Form(description="MongoDB ObjectId of an LLM profile override. Omit for global default."),
+    ] = None,
+    run_params: Annotated[
+        str,
+        Form(description="JSON-encoded extra run parameters forwarded to the runner."),
+    ] = "{}",
 ) -> PipelineRunResponse:
     """Create and start a V3 DAG pipeline run."""
     from app.core.dag_resolver import DAGResolver, DAGValidationError
@@ -294,20 +296,22 @@ async def create_pipeline_run(
     ),
 )
 async def list_pipeline_runs(
-    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
-    page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
-    status_filter: Optional[str] = Query(
-        default=None,
-        alias="status",
-        description=(
-            "Filter by status: pending | running | paused | "
-            "completed | failed | cancelled"
+    page: Annotated[int, Query(ge=1, description="Page number (1-based)")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
+    status_filter: Annotated[
+        Optional[str],
+        Query(
+            alias="status",
+            description=(
+                "Filter by status: pending | running | paused | "
+                "completed | failed | cancelled"
+            ),
         ),
-    ),
-    template_id: Optional[str] = Query(
-        default=None,
-        description="Filter runs by pipeline template ID",
-    ),
+    ] = None,
+    template_id: Annotated[
+        Optional[str],
+        Query(description="Filter runs by pipeline template ID"),
+    ] = None,
 ) -> PipelineRunListResponse:
     """Return a paginated list of pipeline runs."""
     if status_filter is not None:
@@ -374,16 +378,14 @@ async def list_pipeline_runs(
 )
 async def get_pipeline_run(
     run_id: str,
-    include_results: bool = Query(
-        default=True,
-        description="Include individual agent outputs in the response",
-    ),
-    stage: Optional[str] = Query(
-        default=None,
-        description=(
-            "Filter results by stage: ingestion | testcase | execution | reporting"
-        ),
-    ),
+    include_results: Annotated[
+        bool,
+        Query(description="Include individual agent outputs in the response"),
+    ] = True,
+    stage: Annotated[
+        Optional[str],
+        Query(description="Filter results by stage: ingestion | testcase | execution | reporting"),
+    ] = None,
 ) -> dict[str, Any]:
     """Retrieve the full detail of a single pipeline run."""
     run = await _get_run_or_404(run_id)

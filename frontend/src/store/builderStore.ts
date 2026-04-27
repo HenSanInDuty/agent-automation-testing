@@ -50,6 +50,7 @@ interface BuilderState {
 
     // Validation
     validationErrors: string[];
+    validationWarnings: string[];
     isValid: boolean;
 
     // Undo/Redo
@@ -138,6 +139,7 @@ const BLANK_STATE = {
     isDirty: false,
     isSaving: false,
     validationErrors: [] as string[],
+    validationWarnings: [] as string[],
     isValid: false,
     history: [] as HistoryEntry[],
     historyIndex: -1,
@@ -211,6 +213,7 @@ export const useBuilderStore = create<BuilderState>()((set, get) => ({
             nodes: [...s.nodes, node],
             isDirty: true,
         }));
+        get().validate();
     },
 
     removeNode: (nodeId) => {
@@ -238,6 +241,7 @@ export const useBuilderStore = create<BuilderState>()((set, get) => ({
             }),
             isDirty: true,
         }));
+        get().validate();
     },
 
     selectNode: (nodeId) => {
@@ -294,7 +298,22 @@ export const useBuilderStore = create<BuilderState>()((set, get) => ({
             }
         }
 
-        set({ validationErrors: errors, isValid: errors.length === 0 });
+        // ── Warnings (non-blocking) ──────────────────────────────────────────
+        const warnings: string[] = [];
+        for (const agentNode of agentNodes) {
+            const data = agentNode.data as AgentNodeData;
+            if (!data.enabled) continue; // skip disabled nodes
+            const overrides = data.configOverrides ?? {};
+            const label = data.label || agentNode.id;
+            if (!overrides.task_instruction) {
+                warnings.push(`"${label}": no Task Instruction set — will use agent's Goal as fallback.`);
+            }
+            if (!overrides.expected_output) {
+                warnings.push(`"${label}": no Expected Output set — will use default JSON format.`);
+            }
+        }
+
+        set({ validationErrors: errors, validationWarnings: warnings, isValid: errors.length === 0 });
         return errors;
     },
 

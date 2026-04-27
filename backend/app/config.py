@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     # ── Seed ─────────────────────────────────────────────────────
     AUTO_SEED: bool = True  # tự động seed DB khi khởi động
 
+    # ── CrewAI telemetry ──────────────────────────────────────────
+    # CrewAI sends agent configs, task descriptions, and token usage to
+    # telemetry.crewai.com:4319 by default. Set False to opt out.
+    CREWAI_TELEMETRY: bool = False
+
     # ── Crew / Pipeline ───────────────────────────────────────────
     # When True, all crews produce deterministic mock output without calling any LLM.
     # Useful for development on Windows (no crewai wheels) and CI pipelines.

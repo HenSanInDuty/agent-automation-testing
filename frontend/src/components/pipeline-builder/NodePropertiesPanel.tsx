@@ -147,6 +147,50 @@ export function NodePropertiesPanel({ nodeId }: { nodeId: string }) {
                             </select>
                         </section>
 
+                        {/* Task Instruction */}
+                        <section className="space-y-1.5">
+                            <label className="text-xs font-medium text-zinc-400">
+                                Task Instruction
+                                <span className="ml-1 text-zinc-600 font-normal">(leave blank to use agent&apos;s goal)</span>
+                            </label>
+                            <textarea
+                                value={(typedData.configOverrides?.task_instruction as string) || ''}
+                                onChange={(e) =>
+                                    updateNodeData(nodeId, {
+                                        configOverrides: {
+                                            ...(typedData.configOverrides || {}),
+                                            task_instruction: e.target.value || undefined,
+                                        },
+                                    })
+                                }
+                                rows={4}
+                                placeholder="e.g. Extract all functional requirements from the document. Return a JSON list with id, description, priority, and acceptance criteria for each."
+                                className="w-full px-3 py-1.5 text-sm bg-zinc-800 border border-zinc-600 rounded-md text-zinc-200 resize-none focus:outline-none focus:border-blue-500 placeholder:text-zinc-600"
+                            />
+                        </section>
+
+                        {/* Expected Output */}
+                        <section className="space-y-1.5">
+                            <label className="text-xs font-medium text-zinc-400">
+                                Expected Output
+                                <span className="ml-1 text-zinc-600 font-normal">(leave blank for default JSON)</span>
+                            </label>
+                            <textarea
+                                value={(typedData.configOverrides?.expected_output as string) || ''}
+                                onChange={(e) =>
+                                    updateNodeData(nodeId, {
+                                        configOverrides: {
+                                            ...(typedData.configOverrides || {}),
+                                            expected_output: e.target.value || undefined,
+                                        },
+                                    })
+                                }
+                                rows={3}
+                                placeholder="e.g. A detailed HTML report with test results..."
+                                className="w-full px-3 py-1.5 text-sm bg-zinc-800 border border-zinc-600 rounded-md text-zinc-200 resize-none focus:outline-none focus:border-blue-500 placeholder:text-zinc-600"
+                            />
+                        </section>
+
                         {/* Timeout */}
                         <section className="space-y-1.5">
                             <label className="text-xs font-medium text-zinc-400">Timeout (seconds)</label>

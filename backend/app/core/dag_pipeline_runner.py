@@ -139,7 +139,8 @@ class DAGPipelineRunner:
             n for n in self._template.nodes if n.node_type == NodeType.INPUT
         )
         self._node_outputs[input_node.node_id] = initial_input
-        self._document_content = initial_input.get("document_content") or ""        self._document_name = initial_input.get("document_name") or ""
+        self._document_content = initial_input.get("document_content") or ""
+        self._document_name = initial_input.get("document_name") or ""
         # ── 4. Execute layer by layer ────────────────────────────────────────
         for layer_idx, layer_node_ids in enumerate(layers):
             # Skip layers that contain only the INPUT node (already seeded)
@@ -451,6 +452,40 @@ class DAGPipelineRunner:
             override_profile_id=override_profile_id,
         )
 
+        # Log config_overrides for debuggability (INFO so it appears without DEBUG mode)
+        _overrides = node_config.config_overrides or {}
+        logger.info(
+            "[DAGRunner] node_id=%r  config_overrides keys=%s  task_instruction=%r",
+            node_config.node_id,
+            list(_overrides.keys()),
+            _overrides.get("task_instruction"),
+        )
+
+        # If a task_instruction override is set, completely replace the CrewAI
+        # system prompt so role/goal/backstory cannot steer the LLM elsewhere.
+        # In CrewAI >=1.0 setting system_template replaces the default template
+        # entirely; falling back to patching goal/backstory/role for older builds.
+        _node_task_instr: str = _overrides.get("task_instruction") or ""
+        if _node_task_instr:
+            _override_system = (
+                "You are a precise task executor. "
+                f"Your only job is to follow this instruction:\n\n{_node_task_instr}\n\n"
+                "Do NOT let any role, goal, or backstory override this instruction."
+            )
+            if hasattr(crewai_agent, "system_template"):
+                crewai_agent.system_template = _override_system
+            # Belt-and-suspenders: patch the underlying fields too
+            if hasattr(crewai_agent, "role"):
+                crewai_agent.role = "Precise Task Executor"
+            if hasattr(crewai_agent, "goal"):
+                crewai_agent.goal = _node_task_instr
+            if hasattr(crewai_agent, "backstory"):
+                crewai_agent.backstory = "You execute tasks exactly as instructed. You do not deviate."
+            logger.info(
+                "[DAGRunner] node_id=%r  system prompt fully overridden with task_instruction",
+                node_config.node_id,
+            )
+
         merged_input = self._merge_inputs(parent_outputs)
 
         # Ensure every agent receives the original document content,
@@ -488,9 +523,15 @@ class DAGPipelineRunner:
 
         desc_parts: list[str] = []
 
-        # Lead with the agent goal -- this IS the task instruction
-        if _agent_config and _agent_config.goal:
-            desc_parts.append(f"Your task:\n{_agent_config.goal}")
+        # Lead with the task instruction:
+        # Priority: node config_overrides.task_instruction > agent.goal (fallback)
+        _task_instr: str = (
+            _overrides.get("task_instruction")
+            or (_agent_config.goal if _agent_config else None)
+            or ""
+        )
+        if _task_instr:
+            desc_parts.append(f"Your task:\n{_task_instr}")
 
         if doc_name:
             desc_parts.append(f"Document: {doc_name}")
@@ -513,16 +554,36 @@ class DAGPipelineRunner:
             fallback = json.dumps(merged_input, default=str)[:8000]
             desc_parts.append(f"Input Data:\n{fallback}")
 
-        task_description = "\n\n".join(desc_parts)
+        # ── Bookend: repeat task instruction AFTER document content ───────────
+        # Small/local models tend to follow the LAST instruction seen in the
+        # prompt more reliably than the first, especially when there is a large
+        # document between the instruction and the end of the prompt.
+        if _node_task_instr:
+            desc_parts.append(
+                f"---\nREMINDER — Your ONLY task is:\n{_node_task_instr}\n"
+                "Ignore everything above that does not relate to this task."
+            )
 
+        task_description = "\n\n".join(desc_parts)
+        logger.debug(
+            "[DAGRunner] Built task description for node_id=%r agent_id=%r:\n%s",
+            node_config.node_id,
+            node_config.agent_id,
+            task_description,
+        )
+        _DEFAULT_EXPECTED_OUTPUT = (
+            "A single valid JSON object containing your analysis results. "
+            "Output ONLY the JSON - no markdown fences, no explanatory prose, "
+            "no wrapper keys like 'raw_output' or 'result'. "
+            "Start your response directly with '{' and end with '}'."
+        )
+        _expected_output: str = (
+            _overrides.get("expected_output")
+            or _DEFAULT_EXPECTED_OUTPUT
+        )
         task = Task(
             description=task_description,
-            expected_output=(
-                "A single valid JSON object containing your analysis results. "
-                "Output ONLY the JSON - no markdown fences, no explanatory prose, "
-                "no wrapper keys like 'raw_output' or 'result'. "
-                "Start your response directly with '{' and end with '}'."
-            ),
+            expected_output=_expected_output,
             agent=crewai_agent,
         )
 
@@ -530,7 +591,7 @@ class DAGPipelineRunner:
             agents=[crewai_agent],
             tasks=[task],
             process=Process.sequential,
-            verbose=False,
+            verbose=bool(_node_task_instr),  # verbose only when debugging override
         )
 
         # CrewAI kickoff is synchronous — run in thread pool with timeout.
@@ -545,6 +606,12 @@ class DAGPipelineRunner:
             _crew_result = await asyncio.wait_for(
                 asyncio.to_thread(crew.kickoff),
                 timeout=node_config.timeout_seconds,
+            )
+            logger.debug(
+                "[DAGRunner] CrewAI result for node_id=%r agent_id=%r:\n%s",
+                node_config.node_id,
+                node_config.agent_id,
+                _crew_result,
             )
         except Exception as _exc:  # noqa: BLE001
             _llm_success = False

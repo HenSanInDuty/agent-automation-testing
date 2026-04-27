@@ -1,8 +1,23 @@
+# Environment & secrets
 backend/.env
-backend/uploads/cf72348e-4d88-4ae1-b90a-ef92b4e51feb/api_documentation.md
+frontend/.env
+frontend/.env.*
+.env
+.env.*
+
+# Uploaded files
 backend/uploads/
-backend/app/core/__pycache__/agent_factory.cpython-313.pyc
-backend/app/api/v1/__pycache__/chat.cpython-313.pyc
+
+# Python bytecode / caches
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Database artefacts
+backend/auto_at.db
 backend/auto_at.db-shm
 backend/auto_at.db-wal
+
+# Frontend junk
 frontend/nul

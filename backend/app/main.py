@@ -12,6 +12,13 @@ from app.config import settings
 from app.db.database import check_connection, close_db, init_db
 from app.db.seed import seed_all
 
+# ── Disable CrewAI telemetry BEFORE any crewai import ────────────────────────
+# CrewAI sends agent configs + task descriptions to telemetry.crewai.com:4319
+# via OpenTelemetry. Opt out by setting the env var before the module loads.
+if not settings.CREWAI_TELEMETRY:
+    os.environ.setdefault("CREWAI_TELEMETRY_OPT_OUT", "true")
+    os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -19,6 +26,12 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+# Suppress noisy pymongo heartbeat debug logs
+class _MongoHeartbeatFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "heartbeat" not in record.getMessage().lower()
+
+logging.getLogger("pymongo.topology").addFilter(_MongoHeartbeatFilter())
 logger = logging.getLogger(__name__)
 
 

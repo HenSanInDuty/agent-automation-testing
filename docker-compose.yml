@@ -28,6 +28,8 @@ services:
       - MONGODB_URI=mongodb://admin:${MONGO_PASSWORD:-changeme}@mongodb:27017/auto_at?authSource=admin
       - MONGODB_DB_NAME=auto_at
       - UPLOAD_DIR=./uploads
+      - PYMONGO_LOG_HEARTBEAT=off
+      - PYMONGO_LOG_TOPOLOGY=off
     volumes:
       - backend_uploads:/app/uploads
     depends_on:

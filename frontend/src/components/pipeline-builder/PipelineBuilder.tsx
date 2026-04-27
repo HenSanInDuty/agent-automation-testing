@@ -124,6 +124,7 @@ function PipelineBuilderInner({ templateId }: { templateId: string }) {
     selectNode,
     selectedNodeId,
     validationErrors,
+    validationWarnings,
     isValid,
     isDirty,
     isSaving,
@@ -349,6 +350,7 @@ function PipelineBuilderInner({ templateId }: { templateId: string }) {
           <Panel position="bottom-left">
             <ValidationPanel
               errors={validationErrors}
+              warnings={validationWarnings}
               isValid={isValid}
               isDirty={isDirty}
             />
