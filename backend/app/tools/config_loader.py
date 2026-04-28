@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 tools/config_loader.py
 ──────────────────────
@@ -34,6 +32,8 @@ Usage (CrewAI tool)::
     tool = ConfigLoaderTool()
     result = tool.run({"environment": "staging"})
 """
+
+from __future__ import annotations
 
 import json
 import logging

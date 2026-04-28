@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 tasks/reporting_tasks.py
 ────────────────────────
@@ -22,6 +20,8 @@ Usage::
         make_report_generator_task,
     )
 """
+
+from __future__ import annotations
 
 import json
 import logging

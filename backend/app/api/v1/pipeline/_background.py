@@ -1,8 +1,8 @@
-from __future__ import annotations
-
 """
 pipeline/_background.py – Background task functions for pipeline execution.
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -113,7 +113,7 @@ async def _run_pipeline_background(
             result.get("duration_seconds", 0),
         )
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         await signal_manager.clear_signal(run_id)
         error_detail = str(exc)
         logger.exception(
@@ -144,7 +144,6 @@ async def _run_dag_pipeline_background(
     from app.api.v1.websocket import manager
     from app.core.dag_pipeline_runner import DAGPipelineRunner
     from app.core.dag_resolver import DAGValidationError
-    from app.db import crud as _crud
 
     logger.info(
         "[V3-Pipeline] Background task started  run_id=%r  template=%r",
@@ -170,7 +169,7 @@ async def _run_dag_pipeline_background(
         manager.broadcast_from_thread(run_id, payload)
 
     try:
-        template = await _crud.get_pipeline_template(template_id)
+        template = await crud.get_pipeline_template(template_id)
         if template is None:
             raise ValueError(f"Pipeline template '{template_id}' not found")
 
@@ -199,7 +198,7 @@ async def _run_dag_pipeline_background(
                     document_name,
                     len(document_content),
                 )
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.warning(
                     "[V3-Pipeline] Could not parse document %r: %s",
                     file_path,
@@ -210,15 +209,15 @@ async def _run_dag_pipeline_background(
 
     except DAGValidationError as exc:
         logger.error("[V3-Pipeline] DAG validation error  run_id=%r: %s", run_id, exc)
-        await _crud.update_pipeline_run(run_id, status="failed", error_message=str(exc))
+        await crud.update_pipeline_run(run_id, status="failed", error_message=str(exc))
         ws_broadcaster("run.failed", {"error": str(exc)})
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         error_detail = str(exc)
         logger.exception(
             "[V3-Pipeline] Unhandled error  run_id=%r  error=%s", run_id, error_detail
         )
-        await _crud.update_pipeline_run(
+        await crud.update_pipeline_run(
             run_id, status="failed", error_message=error_detail
         )
         ws_broadcaster("run.failed", {"error": error_detail})

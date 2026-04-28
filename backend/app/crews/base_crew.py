@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 crews/base_crew.py
 ──────────────────
@@ -31,6 +29,8 @@ Usage::
             self._emit_stage_completed()
             return {"result": "..."}
 """
+
+from __future__ import annotations
 
 import asyncio
 import json
@@ -132,7 +132,7 @@ class BaseCrew(ABC):
             Stage-specific output dict that conforms to the relevant
             ``schemas.pipeline_io`` model (e.g. IngestionOutput, TestCaseOutput).
         """
-        ...
+        raise NotImplementedError
 
     # ─────────────────────────────────────────────────────────────────────────
     # Async DB helpers (V2)
@@ -178,7 +178,7 @@ class BaseCrew(ABC):
         if self._progress_callback is not None:
             try:
                 self._progress_callback(event_type, payload)
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:  # pragma: no cover  # pylint: disable=broad-exception-caught
                 logger.warning(
                     "Progress callback raised an exception (ignored): %s", exc
                 )
@@ -299,7 +299,7 @@ class BaseCrew(ABC):
         if not isinstance(raw, str):
             try:
                 raw = str(raw)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 return {"raw_output": repr(raw)}
 
         text = raw.strip()

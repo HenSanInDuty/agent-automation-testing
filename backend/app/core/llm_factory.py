@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 core/llm_factory.py
 ───────────────────
@@ -21,6 +19,8 @@ Usage:
     llm = build_llm(profile)          # from DB profile ORM object
     llm = build_fallback_llm()        # from environment variables
 """
+
+from __future__ import annotations
 
 import logging
 import time
@@ -278,7 +278,7 @@ def probe_llm_connection(
 
     start = time.monotonic()
     try:
-        llm = build_llm(profile)  # noqa: F841 – ensures crewai is available too
+        build_llm(profile)  # side-effect: validates crewai is available
 
         provider = str(profile.provider)
         model_string = get_model_string(provider, str(profile.model))
@@ -312,7 +312,7 @@ def probe_llm_connection(
             "latency_ms": latency_ms,
         }
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         latency_ms = int((time.monotonic() - start) * 1000)
         error_msg = str(exc)
         logger.warning(

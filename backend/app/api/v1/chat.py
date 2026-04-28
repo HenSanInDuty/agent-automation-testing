@@ -176,7 +176,7 @@ async def chat_send(body: ChatRequest) -> StreamingResponse:
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.exception("Error during LLM streaming: %s", exc)
             error_data = json.dumps({"type": "error", "message": str(exc)})
             yield f"data: {error_data}\n\n"

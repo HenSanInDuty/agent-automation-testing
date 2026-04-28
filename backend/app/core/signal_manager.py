@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """
 core/signal_manager.py – In-memory signal store for pipeline pause/resume/cancel.
 
 The pipeline runner checks signals between stages. Signals are set via API endpoints.
 Thread-safe via asyncio.Lock.
 """
+
+from __future__ import annotations
 import asyncio
 import logging
 from enum import Enum

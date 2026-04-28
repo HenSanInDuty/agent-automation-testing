@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 agent_configs/routes.py – Route handlers for CrewAI agent configuration.
 
@@ -14,6 +12,8 @@ Endpoints:
     POST   /admin/agent-configs/{agent_id}/reset          – reset to factory defaults
     POST   /admin/agent-configs/reset-all                 – reset every agent
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Any, Optional

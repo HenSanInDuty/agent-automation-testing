@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 crews/ingestion_crew.py
 ───────────────────────
@@ -26,6 +24,8 @@ Usage::
     result = crew.run({"file_path": "/uploads/spec.pdf"})
     # result is an IngestionOutput.model_dump() dict
 """
+
+from __future__ import annotations
 
 import json
 import logging
@@ -269,7 +269,7 @@ class IngestionCrew(BaseCrew):
                         )
                 else:
                     chunk_reqs = self._llm_extract(chunk, chunk_idx)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 msg = f"Chunk {chunk_idx} analysis error: {exc}"
                 logger.warning("[Ingestion][%s] %s", self._run_id, msg)
                 processing_notes.append(msg)
@@ -493,7 +493,7 @@ class IngestionCrew(BaseCrew):
                     source_chunk=str(chunk_index),
                 )
                 items.append(item)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.debug(
                     "[Ingestion][%s] Chunk %d: failed to parse requirement item: %s",
                     self._run_id,
@@ -631,7 +631,7 @@ class IngestionCrew(BaseCrew):
         coro = self._llm_factory._load_default_profile()
         try:
             return self._run_async_from_thread(coro, timeout=30)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning(
                 "[Ingestion][%s] Failed to resolve LLM profile: %s — falling back to mock",
                 self._run_id,

@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """
 crews/dynamic_crew.py – Generic CrewAI crew for custom/dynamic pipeline stages.
 
 Used by PipelineRunnerV2 when a stage has crew_type="crewai_sequential" or
 "crewai_hierarchical" and is not a builtin stage.
 """
+
+from __future__ import annotations
 import logging
 from typing import Any, Optional
 

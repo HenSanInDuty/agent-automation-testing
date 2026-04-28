@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 crews/testcase_crew.py
 ──────────────────────
@@ -30,7 +28,8 @@ Usage::
     # result is a TestCaseOutput.model_dump() dict
 """
 
-import json
+from __future__ import annotations
+
 import logging
 import re
 import textwrap
@@ -532,7 +531,7 @@ class TestcaseCrew(BaseCrew):
             try:
                 tc = _coerce_test_case(tc_raw, idx)
                 test_cases.append(tc)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.debug(
                     "[TestcaseCrew][%s] Could not coerce test case #%d: %s",
                     self._run_id,
@@ -545,7 +544,7 @@ class TestcaseCrew(BaseCrew):
         if isinstance(raw_coverage, dict) and raw_coverage:
             try:
                 coverage_summary = CoverageSummary(**raw_coverage)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 coverage_summary = _build_coverage_summary(
                     test_cases, requirements_json
                 )
@@ -557,7 +556,7 @@ class TestcaseCrew(BaseCrew):
         if isinstance(raw_auto, dict) and raw_auto:
             try:
                 automation_readiness = AutomationReadiness(**raw_auto)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 automation_readiness = _build_automation_readiness(test_cases)
         else:
             automation_readiness = _build_automation_readiness(test_cases)

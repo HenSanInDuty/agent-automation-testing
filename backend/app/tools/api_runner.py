@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 tools/api_runner.py
 ───────────────────
@@ -31,6 +29,8 @@ Usage (CrewAI tool)::
     tool = APIRunnerTool()
     agent = Agent(..., tools=[tool])
 """
+
+from __future__ import annotations
 
 import json
 import logging
@@ -165,7 +165,7 @@ def run_api_request(
         if "application/json" in content_type:
             try:
                 response_body: Any = response.json()
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 response_body = response.text
         else:
             response_body = response.text
@@ -206,7 +206,7 @@ def run_api_request(
         logger.warning("API runner connect error: %s %s – %s", method, url, msg)
         return _empty_result(msg, duration_ms)
 
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # pragma: no cover  # pylint: disable=broad-exception-caught
         duration_ms = (time.monotonic() - t0) * 1000
         msg = f"Unexpected error: {type(exc).__name__}: {exc}"
         logger.exception("API runner unexpected error: %s %s", method, url)

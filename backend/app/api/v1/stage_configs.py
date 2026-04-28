@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 api/v1/stage_configs.py – Stage Config CRUD endpoints (restored in V4).
 
@@ -15,6 +13,8 @@ Endpoints:
     DELETE /admin/stage-configs/{stage_id}    – delete custom stage (reassigns agents)
     POST   /admin/stage-configs/reorder       – reorder stages
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Optional

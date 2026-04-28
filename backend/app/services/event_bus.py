@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 services/event_bus.py – Fire-and-forget Kafka event producer.
 
@@ -27,6 +25,8 @@ Usage::
     event_bus.emit_node_event("node.completed", run_id, node_id=...)
     event_bus.emit_llm_call(run_id, node_id=..., model=..., latency_ms=...)
 """
+
+from __future__ import annotations
 
 import asyncio
 import json
@@ -110,7 +110,7 @@ class EventBus:
                 "[EventBus] Kafka producer started → %s",
                 settings.KAFKA_BOOTSTRAP_SERVERS,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             self._available = False
             logger.warning(
                 "[EventBus] Kafka unavailable – observability events disabled: %s", exc
@@ -122,7 +122,7 @@ class EventBus:
             try:
                 await self._producer.stop()
                 logger.info("[EventBus] Kafka producer stopped.")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 logger.warning("[EventBus] Error stopping Kafka producer: %s", exc)
             finally:
                 self._available = False
@@ -148,7 +148,7 @@ class EventBus:
 
         try:
             await self._producer.send(full_topic, value=message)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.debug(
                 "[EventBus] Failed to emit topic=%s: %s", full_topic, exc
             )
@@ -168,7 +168,7 @@ class EventBus:
                 _task = asyncio.ensure_future(self.emit(topic_suffix, payload))
                 # Keep a reference so the task isn't GC'd before it completes
                 _task.add_done_callback(lambda _: None)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             pass
 
     # ─────────────────────────────────────────────────────────────────────

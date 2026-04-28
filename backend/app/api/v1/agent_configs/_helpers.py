@@ -1,8 +1,8 @@
-from __future__ import annotations
-
 """
 agent_configs/_helpers.py – Shared helpers and converters for agent config endpoints.
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Any, Optional

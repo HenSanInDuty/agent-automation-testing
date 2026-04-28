@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 schemas/pipeline_io.py
 ──────────────────────
@@ -12,6 +10,8 @@ Flow:
         → [Execution]  → ExecutionOutput  (list of TestExecutionResult + summary)
         → [Reporting]  → PipelineReport   (coverage + root cause + executive summary)
 """
+
+from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum

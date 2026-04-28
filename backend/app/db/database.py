@@ -84,7 +84,7 @@ async def init_db() -> None:
             logger.info(
                 "Migration: dropped stale stage_configs.stage_id_1 unique index ✓"
             )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         logger.warning("Migration: could not drop stage_id_1 index: %s", exc)
 
     await init_beanie(
@@ -139,6 +139,6 @@ async def check_connection() -> bool:
     try:
         await _client.admin.command("ping")  # type: ignore[union-attr]
         return True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         logger.warning("MongoDB health-check failed: %s", exc)
         return False

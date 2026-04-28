@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 api/v1/deps.py – Shared FastAPI dependencies.
 
@@ -23,6 +21,8 @@ Usage::
     async def create_run(_: Annotated[None, Depends(require_db)]):
         ...
 """
+
+from __future__ import annotations
 
 from typing import Annotated
 

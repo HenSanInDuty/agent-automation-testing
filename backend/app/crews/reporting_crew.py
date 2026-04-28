@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 crews/reporting_crew.py
 ───────────────────────
@@ -43,7 +41,8 @@ Usage::
     })
 """
 
-import json
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -54,13 +53,12 @@ logger = logging.getLogger(__name__)
 
 # ── Optional CrewAI imports ───────────────────────────────────────────────────
 try:
-    from crewai import Crew, Process, Task  # type: ignore[import-untyped]
+    from crewai import Crew, Process  # type: ignore[import-untyped]
 
     _CREWAI_AVAILABLE = True
 except ImportError:
     Crew = None  # type: ignore[assignment,misc]
     Process = None  # type: ignore[assignment,misc]
-    Task = None  # type: ignore[assignment,misc]
     _CREWAI_AVAILABLE = False
 
 

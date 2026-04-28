@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 pipeline/__init__.py – Combines all pipeline sub-routers into one.
 
@@ -10,6 +8,8 @@ Sub-modules:
     control  – Control endpoints (pause / resume / cancel)
     results  – Result & export endpoints
 """
+
+from __future__ import annotations
 
 from fastapi import APIRouter
 

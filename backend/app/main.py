@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup / shutdown lifecycle handler.
 
     On startup:
@@ -103,8 +103,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ── Shutdown ──────────────────────────────────────────────────────────
     logger.info("Shutting down Auto-AT backend…")
-    from app.services.event_bus import event_bus
-
     await event_bus.shutdown()
     await close_db()
     logger.info("Auto-AT backend stopped.")
@@ -122,7 +120,7 @@ def create_app() -> FastAPI:
     Returns:
         A fully-configured :class:`~fastapi.FastAPI` instance.
     """
-    app = FastAPI(
+    app = FastAPI(  # pylint: disable=redefined-outer-name
         title=settings.APP_TITLE,
         version=settings.APP_VERSION,
         description=(

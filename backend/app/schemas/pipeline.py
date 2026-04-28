@@ -179,7 +179,7 @@ class WSEventBase(BaseModel):
 
     event: WSEventType
     run_id: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now())
+    timestamp: datetime = Field(default_factory=datetime.now)
     data: dict[str, Any] = Field(default_factory=dict)
 
     def to_json(self) -> str:

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 core/dag_pipeline_runner.py – V3 DAG-based pipeline execution engine.
 
@@ -19,6 +17,8 @@ Usage::
     )
     result = await runner.run({"file_path": "/uploads/spec.pdf", "document_name": "spec.pdf"})
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -317,7 +317,7 @@ class DAGPipelineRunner:
         for attempt in range(max_retries + 1):
             try:
                 return await self._execute_node(node_config, parent_outputs)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 last_error = exc
                 if attempt < max_retries:
                     delay = 2**attempt  # 1s, 2s, 4s, …
@@ -413,10 +413,10 @@ class DAGPipelineRunner:
             )
             return output
 
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             raise TimeoutError(
                 f"Node '{node_id}' timed out after {node_config.timeout_seconds}s"
-            )
+            ) from exc
 
     # ─────────────────────────────────────────────────────────────────────────
     # Execution strategies per node type
@@ -497,15 +497,12 @@ class DAGPipelineRunner:
 
         from crewai import Crew, Process, Task  # type: ignore[import-untyped]
 
-
-        from app.db import crud as _crud
-
         # Fetch agent config so the goal drives the task instruction
         # Without this, powerful LLMs ignore role/goal/backstory and
         # perform a generic document analysis regardless of agent config.
         _agent_config = None
         if node_config.agent_id:
-            _agent_config = await _crud.get_agent_config(node_config.agent_id)
+            _agent_config = await crud.get_agent_config(node_config.agent_id)
 
         # ── Build a structured task description ────────────────────────────────────
         # Separate the full document text from other metadata so the LLM
@@ -652,7 +649,7 @@ class DAGPipelineRunner:
                     task_description_len=len(task_description),
                     task_description_preview=task_description[:200],
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 pass
 
         return self._parse_crew_output(_crew_result)
@@ -750,7 +747,7 @@ class DAGPipelineRunner:
         if self._progress_callback is not None:
             try:
                 self._progress_callback(event, {"run_id": self._run_id, **data})
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 logger.warning("[DAGRunner] Progress callback error: %s", exc)
         self._kafka_emit(event, data)
 
@@ -827,7 +824,7 @@ class DAGPipelineRunner:
                 )
             # layer.* events: skip — too high-frequency, infer from node events
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.debug("[DAGRunner] Kafka emit error event=%r: %s", event, exc)
 
     async def _handle_cancel(self) -> None:

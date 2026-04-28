@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 api/v1/llm_profiles.py – REST endpoints for LLM profile administration.
 
@@ -16,9 +14,11 @@ Endpoints:
     POST   /admin/llm-profiles/{id}/test    – test LLM connectivity
 """
 
+from __future__ import annotations
+
 import logging
 import time
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException, Query, status
 
@@ -377,7 +377,7 @@ async def test_llm_profile(
         from app.core.llm_factory import build_llm
 
         llm = build_llm(internal)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.warning(
             "[LLM] Failed to build LLM for profile id=%s: %s", profile_id, exc
         )
@@ -413,7 +413,7 @@ async def test_llm_profile(
             latency_ms=latency_ms,
         )
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         latency_ms = int(time.monotonic() * 1000) - start_ms
         logger.warning(
             "[LLM] Test FAILED profile id=%s latency=%dms error=%s",

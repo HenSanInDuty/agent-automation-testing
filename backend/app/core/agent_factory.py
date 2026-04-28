@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 core/agent_factory.py – Build CrewAI Agent instances from DB configuration.
 
@@ -21,6 +19,8 @@ Usage::
     agents = await factory.build_for_stage("testcase")
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Optional
 
@@ -30,7 +30,7 @@ except ImportError:
     Agent = None  # type: ignore[assignment,misc]
 
 from app.core.llm_factory import LLMFactory
-from app.db.models import AgentConfigDocument, LLMProfileDocument
+from app.db.models import AgentConfigDocument
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class AgentFactory:
             ValueError: If no :class:`~app.db.models.AgentConfigDocument` row
                 exists for the given *agent_id*.
         """
-        from crewai import Agent  # local import — crewai may not be installed in dev
+        # Use module-level Agent (imported at top with try/except fallback)
 
         config = await self._get_config(agent_id)
 

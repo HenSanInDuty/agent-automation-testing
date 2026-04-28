@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 # DEPRECATED (V3): Use app.core.dag_pipeline_runner.DAGPipelineRunner instead.
 # This file is kept for backward compatibility with V2 stage-based pipeline runs.
-
 """
 core/pipeline_runner.py
 ───────────────────────
@@ -50,6 +47,8 @@ Signal handling::
     # Cancel (acts immediately on next stage boundary):
     await signal_manager.set_signal(run_id, PipelineSignal.CANCEL)
 """
+
+from __future__ import annotations
 
 import asyncio
 import importlib
@@ -300,7 +299,7 @@ class PipelineRunnerV2:
                     )
                     raise
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             error = str(exc)
             logger.exception(
                 "[PipelineRunnerV2][%s] Pipeline failed: %s",
@@ -482,7 +481,7 @@ class PipelineRunnerV2:
         """
         try:
             return self._get_builtin_crew(stage_id)
-        except (ValueError, ImportError, Exception):
+        except (ValueError, ImportError, Exception):  # pylint: disable=broad-exception-caught
             return None
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -556,7 +555,7 @@ class PipelineRunnerV2:
         if self._ws_broadcaster is not None:
             try:
                 self._ws_broadcaster(event_type, payload)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.warning(
                     "[PipelineRunnerV2] Broadcaster raised an exception (event=%r): %s",
                     event_type,

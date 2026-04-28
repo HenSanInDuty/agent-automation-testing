@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 pipeline_templates/crud.py – CRUD endpoints for pipeline templates.
 
@@ -11,6 +9,8 @@ Endpoints:
     DELETE /pipeline-templates/{template_id}      – hard delete (no runs)
     POST   /pipeline-templates/{template_id}/archive – soft delete
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Optional

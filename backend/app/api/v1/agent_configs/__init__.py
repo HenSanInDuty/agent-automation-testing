@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """
 agent_configs/__init__.py – Combines all agent config sub-routers.
 
 Public surface: ``router`` (APIRouter with prefix="/admin/agent-configs")
 """
+
+from __future__ import annotations
 
 from fastapi import APIRouter
 

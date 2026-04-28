@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 pipeline/runs.py – CRUD endpoints for pipeline run management.
 
@@ -10,6 +8,8 @@ Endpoints:
     GET    /pipeline/runs/{run_id} – get one run (with results)
     DELETE /pipeline/runs/{run_id} – delete run + files
 """
+
+from __future__ import annotations
 
 import json as _json
 import logging
@@ -33,7 +33,6 @@ from app.config import settings
 from app.db import crud
 from app.schemas.pipeline import (
     PipelineResultResponse,
-    PipelineRunCreate,
     PipelineRunListItem,
     PipelineRunListResponse,
     PipelineRunResponse,
@@ -189,7 +188,6 @@ async def create_pipeline_run(
 ) -> PipelineRunResponse:
     """Create and start a V3 DAG pipeline run."""
     from app.core.dag_resolver import DAGResolver, DAGValidationError
-    from app.db import crud as _crud
 
     try:
         parsed_run_params: dict = _json.loads(run_params)
@@ -197,9 +195,9 @@ async def create_pipeline_run(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"run_params is not valid JSON: {exc}",
-        )
+        ) from exc
 
-    template = await _crud.get_pipeline_template(template_id)
+    template = await crud.get_pipeline_template(template_id)
     if template is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -218,17 +216,17 @@ async def create_pipeline_run(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Pipeline DAG is invalid: {exc}",
-        )
+        ) from exc
 
     if llm_profile_id is not None:
-        profile = await _crud.get_llm_profile(llm_profile_id)
+        profile = await crud.get_llm_profile(llm_profile_id)
         if profile is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"LLM profile '{llm_profile_id}' not found.",
             )
 
-    _, running_count = await _crud.get_all_pipeline_runs(
+    _, running_count = await crud.get_all_pipeline_runs(
         skip=0, limit=1, status=PipelineStatus.RUNNING.value
     )
     if running_count >= settings.MAX_CONCURRENT_RUNS:
@@ -248,7 +246,7 @@ async def create_pipeline_run(
         _validate_upload(file)
         document_name, file_path = _save_upload(file, run_id)
 
-    run = await _crud.create_dag_run(
+    run = await crud.create_dag_run(
         run_id=run_id,
         template_id=template_id,
         template_snapshot={
@@ -317,14 +315,14 @@ async def list_pipeline_runs(
     if status_filter is not None:
         try:
             PipelineStatus(status_filter)
-        except ValueError:
+        except ValueError as _exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=(
                     f"Invalid status filter '{status_filter}'. "
                     f"Valid values: {[s.value for s in PipelineStatus]}"
                 ),
-            )
+            ) from _exc
 
     skip = (page - 1) * page_size
     runs, total = await crud.get_all_pipeline_runs(
@@ -447,7 +445,7 @@ async def delete_pipeline_run(run_id: str) -> None:
         try:
             shutil.rmtree(upload_dir)
             logger.info("[Pipeline] Removed upload dir %s", upload_dir)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning(
                 "[Pipeline] Could not remove upload dir %s: %s", upload_dir, exc
             )

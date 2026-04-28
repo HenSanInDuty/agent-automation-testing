@@ -58,7 +58,7 @@ async def get_llm_profile(profile_id: str) -> Optional[LLMProfileDocument]:
 
     try:
         return await LLMProfileDocument.get(PydanticObjectId(profile_id))
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return None
 
 
@@ -226,7 +226,7 @@ async def get_agent_config_by_id(doc_id: str) -> Optional[AgentConfigDocument]:
 
     try:
         return await AgentConfigDocument.get(PydanticObjectId(doc_id))
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return None
 
 

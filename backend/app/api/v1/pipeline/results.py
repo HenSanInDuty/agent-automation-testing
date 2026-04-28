@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 pipeline/results.py – Result retrieval and report export endpoints.
 
@@ -9,6 +7,8 @@ Endpoints:
     GET /pipeline/runs/{run_id}/export/html         – HTML report download
     GET /pipeline/runs/{run_id}/export/docx         – DOCX report download
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Optional
@@ -100,7 +100,7 @@ async def export_report_html(run_id: str) -> Response:
         service = ExportService(run_id)
         html_bytes = await service.export_html()
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     filename = f"auto-at-report-{run_id[:8]}.html"
     return FastAPIResponse(
         content=html_bytes,
@@ -126,7 +126,7 @@ async def export_report_docx(run_id: str) -> Response:
         service = ExportService(run_id)
         docx_bytes = await service.export_docx()
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     filename = f"auto-at-report-{run_id[:8]}.docx"
     return FastAPIResponse(
         content=docx_bytes,

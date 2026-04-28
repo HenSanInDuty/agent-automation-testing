@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 services/export_service.py
 ──────────────────────────
@@ -10,6 +8,8 @@ Usage:
     html_bytes = await service.export_html()
     docx_bytes = await service.export_docx()
 """
+
+from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -158,25 +158,25 @@ class ExportService:
             if result.stage == "ingestion":
                 try:
                     ingestion = IngestionOutput.model_validate(output)
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass  # leave as None; template handles missing data gracefully
 
             elif result.stage == "testcase":
                 try:
                     testcase = TestCaseOutput.model_validate(output)
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
             elif result.stage == "execution":
                 try:
                     execution = ExecutionOutput.model_validate(output)
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
             elif result.stage == "reporting":
                 try:
                     report = PipelineReport.model_validate(output)
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
         # 4. Build and return the template context dict

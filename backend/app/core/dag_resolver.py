@@ -27,8 +27,6 @@ if TYPE_CHECKING:
 class DAGValidationError(Exception):
     """Raised when pipeline DAG is invalid."""
 
-    pass
-
 
 class DAGResolver:
     """

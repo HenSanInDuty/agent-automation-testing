@@ -92,7 +92,7 @@ class ConnectionManager:
             try:
                 await ws.send_text(message)
                 sent += 1
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.debug("[WS] send_text failed for run_id=%r: %s", run_id, exc)
                 dead.add(ws)
 
@@ -240,7 +240,7 @@ async def pipeline_ws(websocket: WebSocket, run_id: str) -> None:
                             }
                         )
                     )
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     break
                 continue
 
@@ -263,7 +263,7 @@ async def pipeline_ws(websocket: WebSocket, run_id: str) -> None:
 
     except WebSocketDisconnect:
         logger.info("[WS] WebSocketDisconnect for run_id=%r", run_id)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.warning("[WS] Unexpected error for run_id=%r: %s", run_id, exc)
     finally:
         manager.disconnect(websocket, run_id)

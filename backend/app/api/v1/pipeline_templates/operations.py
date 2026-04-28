@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 pipeline_templates/operations.py – Import/export/validate/clone and node operations.
 
@@ -11,6 +9,8 @@ Endpoints:
     PATCH  /pipeline-templates/{template_id}/node-stage  – set/clear node stage
     POST   /pipeline-templates/{template_id}/nodes       – append a node
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Optional
@@ -74,7 +74,7 @@ async def import_template(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Template data failed schema validation: {exc}",
-        )
+        ) from exc
 
     base_id = create_input.template_id
     candidate_id = base_id
@@ -276,7 +276,7 @@ async def append_node_to_template(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
-        )
+        ) from exc
 
     if updated is None:
         raise HTTPException(

@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 """
 pipeline_templates/_helpers.py – Shared helpers, models, and validators
 for pipeline template API endpoints.
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Optional
@@ -113,4 +113,4 @@ def _validate_dag_or_422(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"DAG validation failed: {exc}",
-        )
+        ) from exc

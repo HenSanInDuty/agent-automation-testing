@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 services/docx_builder.py
 ────────────────────────
@@ -14,6 +12,8 @@ Usage::
     builder.add_test_cases_table(test_cases, exec_results)
     docx_bytes = builder.build()
 """
+
+from __future__ import annotations
 
 from io import BytesIO
 from typing import Any
@@ -612,7 +612,7 @@ class DocxReportBuilder:
 
         if recommendations:
             doc.add_heading("Recommendations", level=2)
-            for i, rec in enumerate(recommendations, start=1):
+            for rec in recommendations:
                 p = doc.add_paragraph(style="List Number")
                 run = p.add_run(rec)
                 run.font.size = Pt(10)

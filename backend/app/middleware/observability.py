@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 middleware/observability.py – HTTP request telemetry → Kafka ``api_requests`` topic.
 
@@ -18,6 +16,8 @@ Fields emitted (see ClickHouse ``api_requests`` table):
     content_length  – Response Content-Length header (–1 when unknown)
     + common debug fields: timestamp, app_version, env, hostname, pid
 """
+
+from __future__ import annotations
 
 import logging
 import time
@@ -97,7 +97,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
                     "content_length": content_length,
                 },
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.debug("[Observability] Failed to emit api_request: %s", exc)
 
         # Propagate the request-id back so callers can correlate logs

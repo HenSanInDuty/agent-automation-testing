@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 pipeline/control.py – Pause / resume / cancel endpoints for pipeline runs.
 
@@ -8,6 +6,8 @@ Endpoints:
     POST /pipeline/runs/{run_id}/resume  – resume a paused pipeline
     POST /pipeline/runs/{run_id}/cancel  – request cancellation
 """
+
+from __future__ import annotations
 
 import logging
 

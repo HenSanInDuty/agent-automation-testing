@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 tasks/testcase_tasks.py
 ───────────────────────
@@ -25,6 +23,8 @@ Usage::
     from app.tasks.testcase_tasks import make_requirement_analyzer_task
     task = make_requirement_analyzer_task(agent, requirements_json)
 """
+
+from __future__ import annotations
 
 import json
 import logging

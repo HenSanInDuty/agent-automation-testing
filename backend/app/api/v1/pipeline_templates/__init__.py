@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 pipeline_templates/__init__.py – Combines all pipeline-templates sub-routers.
 
@@ -9,6 +7,8 @@ Sub-modules:
     crud        – CRUD endpoints (list, create, get, update, delete, archive)
     operations  – Special ops (import, export, validate, clone, node-stage, nodes)
 """
+
+from __future__ import annotations
 
 from fastapi import APIRouter
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 tasks/execution_tasks.py
 ────────────────────────
@@ -28,6 +26,8 @@ Usage::
         make_result_store_task,
     )
 """
+
+from __future__ import annotations
 
 import json
 import logging

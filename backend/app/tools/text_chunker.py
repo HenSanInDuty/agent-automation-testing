@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 tools/text_chunker.py
 ─────────────────────
@@ -22,6 +20,8 @@ Usage::
     for c in rich:
         print(c.chunk_index, c.char_start, c.length)
 """
+
+from __future__ import annotations
 
 import logging
 import re

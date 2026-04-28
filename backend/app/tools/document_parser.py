@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 tools/document_parser.py
 ────────────────────────
@@ -22,8 +20,9 @@ Usage::
     text = parse_document("/path/to/requirements.docx")
 """
 
+from __future__ import annotations
+
 import csv
-import io
 import logging
 from pathlib import Path
 from typing import Callable

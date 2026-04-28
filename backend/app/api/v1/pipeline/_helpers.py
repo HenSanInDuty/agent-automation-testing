@@ -1,15 +1,14 @@
-from __future__ import annotations
-
 """
 pipeline/_helpers.py – Shared helpers, constants, and response converters
 for pipeline run API endpoints.
 """
 
+from __future__ import annotations
+
 import json as _json
 import logging
-import shutil
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import HTTPException, UploadFile, status
 from pydantic import BaseModel as _BaseModel

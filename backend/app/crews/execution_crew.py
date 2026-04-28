@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 crews/execution_crew.py
 ───────────────────────
@@ -35,7 +33,8 @@ Usage::
     # result is an ExecutionOutput.model_dump() dict
 """
 
-import json
+from __future__ import annotations
+
 import logging
 import time
 from datetime import datetime, timezone
@@ -55,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 # ── Optional CrewAI import ────────────────────────────────────────────────────
 try:
-    from crewai import Agent, Crew, Process, Task  # type: ignore[import-untyped]
+    from crewai import Crew, Process  # type: ignore[import-untyped]
 
     _CREWAI_AVAILABLE = True
     print("===============================checking from crew AI true")
@@ -167,7 +166,7 @@ class ExecutionCrew(BaseCrew):
                 result = self._mock_run(test_cases, environment)
             else:
                 result = self._real_run(test_cases, environment, execution_config)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             error_msg = f"Execution crew failed: {exc}"
             logger.exception(
                 "[ExecutionCrew][%s] Unexpected error: %s", self._run_id, exc
@@ -568,7 +567,7 @@ class ExecutionCrew(BaseCrew):
         try:
             output = ExecutionOutput.model_validate(parsed)
             return output.model_dump()
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             pass
 
         # Try to extract results array from various shapes
