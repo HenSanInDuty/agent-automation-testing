@@ -1,0 +1,472 @@
+{
+  "template_id": "auto-at-flowchart",
+  "name": "Auto AT – Full Pipeline (Flowchart)",
+  "description": "Pipeline hoàn chỉnh theo FlowChart: Ingestion & Analysis → Test Case Generation (10 agents, có parallel branches) → Execution (5 agents) → Reporting (3 agents, song song).",
+  "tags": ["flowchart", "full-pipeline", "parallel"],
+  "nodes": [
+    {
+      "node_id": "inp-node",
+      "node_type": "input",
+      "agent_id": null,
+      "label": "📥 Input",
+      "description": "Upload requirements document (PDF / DOCX / Excel / Image)",
+      "position_x": 400.0,
+      "position_y": 0.0,
+      "timeout_seconds": 30,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": null
+    },
+    {
+      "node_id": "ingestion-1",
+      "node_type": "pure_python",
+      "agent_id": "ingestion_pipeline",
+      "label": "📄 Document Ingestion",
+      "description": "Parse → Chunk → Analyze tài liệu. Output: Structured Requirement JSON.",
+      "position_x": 400.0,
+      "position_y": 150.0,
+      "timeout_seconds": 120,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "ingestion"
+    },
+    {
+      "node_id": "req-analyzer",
+      "node_type": "agent",
+      "agent_id": "requirement_analyzer",
+      "label": "1️⃣ Requirement Analyzer",
+      "description": "Hiểu ý định nghiệp vụ và ngữ cảnh của requirement. Output: {requirement_id, intent, domain}",
+      "position_x": 400.0,
+      "position_y": 300.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "scope-classifier",
+      "node_type": "agent",
+      "agent_id": "scope_classifier",
+      "label": "3️⃣ Scope Classifier",
+      "description": "Xác định phạm vi kiểm thử và loại test cần sinh. Output: {test_type, categories}",
+      "position_x": 150.0,
+      "position_y": 480.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "data-model-agnt",
+      "node_type": "agent",
+      "agent_id": "data_model_agent",
+      "label": "4️⃣ Data Model Agent",
+      "description": "Xây dựng mô hình dữ liệu test dựa trên input schema. Output: {field: [valid, empty, null]}",
+      "position_x": 650.0,
+      "position_y": 480.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "rule-parser",
+      "node_type": "agent",
+      "agent_id": "rule_parser",
+      "label": "2️⃣ Rule Parser Agent",
+      "description": "Chuyển rule ngôn ngữ tự nhiên thành constraint. Output: {field, constraint}",
+      "position_x": 400.0,
+      "position_y": 660.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "test-condition",
+      "node_type": "agent",
+      "agent_id": "test_condition_agent",
+      "label": "5️⃣ Test Condition Agent",
+      "description": "Sinh các điều kiện test từ constraint (EP & BVA). Output: [\"username is null\", ...]",
+      "position_x": 400.0,
+      "position_y": 840.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "dependency-agent",
+      "node_type": "agent",
+      "agent_id": "dependency_agent",
+      "label": "6️⃣ Dependency Agent",
+      "description": "Xử lý phụ thuộc và kết hợp điều kiện test (pairwise). Output: [{username: null, password: valid}, ...]",
+      "position_x": 400.0,
+      "position_y": 1020.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "tc-generator",
+      "node_type": "agent",
+      "agent_id": "test_case_generator",
+      "label": "7️⃣ Test Case Generator",
+      "description": "Sinh test case hoàn chỉnh, có thể trace về rule. Output: {test_case_id, steps, expected_result}",
+      "position_x": 400.0,
+      "position_y": 1200.0,
+      "timeout_seconds": 600,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "automation-agent",
+      "node_type": "agent",
+      "agent_id": "automation_agent",
+      "label": "8️⃣ Automation Agent",
+      "description": "Chuyển test case thành automation script. Output: POST /login → expect 400",
+      "position_x": 50.0,
+      "position_y": 1380.0,
+      "timeout_seconds": 600,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "coverage-pre",
+      "node_type": "agent",
+      "agent_id": "coverage_agent_pre",
+      "label": "9️⃣ Coverage Agent (Pre)",
+      "description": "Đánh giá độ bao phủ kiểm thử TRƯỚC khi chạy. Output: {coverage: \"100%\"}",
+      "position_x": 400.0,
+      "position_y": 1380.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "report-pre",
+      "node_type": "agent",
+      "agent_id": "report_agent_pre",
+      "label": "🔟 Report Agent (Pre)",
+      "description": "Sinh báo cáo thiết kế test (pre-execution). Output: Test design report",
+      "position_x": 750.0,
+      "position_y": 1380.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "exec-orch",
+      "node_type": "agent",
+      "agent_id": "execution_orchestrator",
+      "label": "1️⃣1️⃣ Execution Orchestrator",
+      "description": "Điều phối việc thực thi test (scheduling + runner selection). Output: {execution_id}",
+      "position_x": 400.0,
+      "position_y": 1560.0,
+      "timeout_seconds": 300,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "execution"
+    },
+    {
+      "node_id": "env-adapter",
+      "node_type": "agent",
+      "agent_id": "env_adapter",
+      "label": "1️⃣2️⃣ Environment Adapter",
+      "description": "Chuẩn hoá cấu hình môi trường chạy test. Output: Runtime configuration",
+      "position_x": 400.0,
+      "position_y": 1740.0,
+      "timeout_seconds": 300,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "execution"
+    },
+    {
+      "node_id": "test-runner",
+      "node_type": "agent",
+      "agent_id": "test_runner",
+      "label": "1️⃣3️⃣ API / UI Test Runner",
+      "description": "Thực thi automation test trên hệ thống thật. Output: Raw execution result",
+      "position_x": 400.0,
+      "position_y": 1920.0,
+      "timeout_seconds": 600,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "execution"
+    },
+    {
+      "node_id": "exec-logger",
+      "node_type": "agent",
+      "agent_id": "execution_logger",
+      "label": "1️⃣4️⃣ Execution Logger",
+      "description": "Ghi nhận kết quả thực thi có cấu trúc. Output: {test_case_id, result: FAIL}",
+      "position_x": 400.0,
+      "position_y": 2100.0,
+      "timeout_seconds": 300,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "execution"
+    },
+    {
+      "node_id": "result-store",
+      "node_type": "agent",
+      "agent_id": "result_store",
+      "label": "1️⃣5️⃣ Result Store",
+      "description": "Lưu trữ dữ liệu thực thi để phân tích sau. Output: Execution dataset",
+      "position_x": 400.0,
+      "position_y": 2280.0,
+      "timeout_seconds": 300,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "execution"
+    },
+    {
+      "node_id": "cov-analyzer",
+      "node_type": "agent",
+      "agent_id": "coverage_analyzer",
+      "label": "1️⃣6️⃣ Coverage Analyzer (Post)",
+      "description": "Đánh giá coverage SAU khi test chạy. Output: {post_execution_coverage: \"90%\"}",
+      "position_x": 150.0,
+      "position_y": 2460.0,
+      "timeout_seconds": 300,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "reporting"
+    },
+    {
+      "node_id": "root-cause-agnt",
+      "node_type": "agent",
+      "agent_id": "root_cause_analyzer",
+      "label": "1️⃣7️⃣ Root Cause Analyzer",
+      "description": "Phân tích nguyên nhân gây lỗi test. Output: {root_cause: \"Missing backend validation\"}",
+      "position_x": 650.0,
+      "position_y": 2460.0,
+      "timeout_seconds": 300,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "reporting"
+    },
+    {
+      "node_id": "report-gen",
+      "node_type": "agent",
+      "agent_id": "report_generator",
+      "label": "1️⃣8️⃣ Report Generator",
+      "description": "Sinh báo cáo cuối cho QA/Dev. Output: Final test report (HTML/PDF)",
+      "position_x": 400.0,
+      "position_y": 2640.0,
+      "timeout_seconds": 600,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "reporting"
+    },
+    {
+      "node_id": "out-node",
+      "node_type": "output",
+      "agent_id": null,
+      "label": "📤 Output",
+      "description": "Final test report output",
+      "position_x": 400.0,
+      "position_y": 2820.0,
+      "timeout_seconds": 30,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": null
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "e-inp-ingest",
+      "source_node_id": "inp-node",
+      "target_node_id": "ingestion-1",
+      "label": "document",
+      "animated": false
+    },
+    {
+      "edge_id": "e-ingest-req",
+      "source_node_id": "ingestion-1",
+      "target_node_id": "req-analyzer",
+      "label": "Requirement JSON",
+      "animated": false
+    },
+    {
+      "edge_id": "e-req-scope",
+      "source_node_id": "req-analyzer",
+      "target_node_id": "scope-classifier",
+      "label": "requirements",
+      "animated": false
+    },
+    {
+      "edge_id": "e-req-data",
+      "source_node_id": "req-analyzer",
+      "target_node_id": "data-model-agnt",
+      "label": "requirements",
+      "animated": false
+    },
+    {
+      "edge_id": "e-scope-rule",
+      "source_node_id": "scope-classifier",
+      "target_node_id": "rule-parser",
+      "label": "scope",
+      "animated": false
+    },
+    {
+      "edge_id": "e-data-rule",
+      "source_node_id": "data-model-agnt",
+      "target_node_id": "rule-parser",
+      "label": "data model",
+      "animated": false
+    },
+    {
+      "edge_id": "e-rule-cond",
+      "source_node_id": "rule-parser",
+      "target_node_id": "test-condition",
+      "label": "constraints",
+      "animated": false
+    },
+    {
+      "edge_id": "e-cond-dep",
+      "source_node_id": "test-condition",
+      "target_node_id": "dependency-agent",
+      "label": "test conditions",
+      "animated": false
+    },
+    {
+      "edge_id": "e-dep-gen",
+      "source_node_id": "dependency-agent",
+      "target_node_id": "tc-generator",
+      "label": "combined conditions",
+      "animated": false
+    },
+    {
+      "edge_id": "e-gen-auto",
+      "source_node_id": "tc-generator",
+      "target_node_id": "automation-agent",
+      "label": "test cases",
+      "animated": false
+    },
+    {
+      "edge_id": "e-gen-cov",
+      "source_node_id": "tc-generator",
+      "target_node_id": "coverage-pre",
+      "label": "test cases",
+      "animated": false
+    },
+    {
+      "edge_id": "e-gen-rep",
+      "source_node_id": "tc-generator",
+      "target_node_id": "report-pre",
+      "label": "test cases",
+      "animated": false
+    },
+    {
+      "edge_id": "e-auto-orch",
+      "source_node_id": "automation-agent",
+      "target_node_id": "exec-orch",
+      "label": "automation scripts",
+      "animated": true
+    },
+    {
+      "edge_id": "e-cov-orch",
+      "source_node_id": "coverage-pre",
+      "target_node_id": "exec-orch",
+      "label": "coverage report",
+      "animated": true
+    },
+    {
+      "edge_id": "e-rep-orch",
+      "source_node_id": "report-pre",
+      "target_node_id": "exec-orch",
+      "label": "test design report",
+      "animated": true
+    },
+    {
+      "edge_id": "e-orch-env",
+      "source_node_id": "exec-orch",
+      "target_node_id": "env-adapter",
+      "label": "execution plan",
+      "animated": false
+    },
+    {
+      "edge_id": "e-env-run",
+      "source_node_id": "env-adapter",
+      "target_node_id": "test-runner",
+      "label": "runtime config",
+      "animated": false
+    },
+    {
+      "edge_id": "e-run-log",
+      "source_node_id": "test-runner",
+      "target_node_id": "exec-logger",
+      "label": "raw results",
+      "animated": false
+    },
+    {
+      "edge_id": "e-log-store",
+      "source_node_id": "exec-logger",
+      "target_node_id": "result-store",
+      "label": "structured logs",
+      "animated": false
+    },
+    {
+      "edge_id": "e-store-cov",
+      "source_node_id": "result-store",
+      "target_node_id": "cov-analyzer",
+      "label": "execution results + rule mapping",
+      "animated": false
+    },
+    {
+      "edge_id": "e-store-root",
+      "source_node_id": "result-store",
+      "target_node_id": "root-cause-agnt",
+      "label": "failed results + logs",
+      "animated": false
+    },
+    {
+      "edge_id": "e-cov-repgen",
+      "source_node_id": "cov-analyzer",
+      "target_node_id": "report-gen",
+      "label": "post_execution_coverage",
+      "animated": false
+    },
+    {
+      "edge_id": "e-root-repgen",
+      "source_node_id": "root-cause-agnt",
+      "target_node_id": "report-gen",
+      "label": "root_cause analysis",
+      "animated": false
+    },
+    {
+      "edge_id": "e-repgen-out",
+      "source_node_id": "report-gen",
+      "target_node_id": "out-node",
+      "label": "final report",
+      "animated": false
+    }
+  ]
+}

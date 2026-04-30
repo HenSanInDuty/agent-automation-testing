@@ -662,6 +662,7 @@ class DAGPipelineRunner:
         """Run a pure-Python processing node (no LLM)."""
         builtin_functions: dict[str, Any] = {
             "ingestion_agent": self._builtin_ingestion,
+            "ingestion_pipeline": self._builtin_ingestion,
             # Register additional builtins here
         }
 
@@ -925,4 +926,4 @@ class DAGPipelineRunner:
             progress_callback=self._progress_callback,
             mock_mode=self._mock_mode,
         )
-        return await crew.run(input_data)  # type: ignore[misc]
+        return await asyncio.to_thread(crew.run, input_data)
