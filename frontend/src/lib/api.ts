@@ -43,10 +43,33 @@ export const apiClient = axios.create({
   timeout: 30_000,
 });
 
+// Request interceptor — inject JWT token
+apiClient.interceptors.request.use((config) => {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("auto_at_token")
+      : null;
+  if (token) {
+    config.headers["Authorization"] = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Response interceptor — unwrap data and normalise errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid — clear stored credentials
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("auto_at_token");
+        localStorage.removeItem("auto_at_user");
+        // Redirect to login (avoid full reload if already there)
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login";
+        }
+      }
+    }
     const message =
       (error.response?.data as { detail?: string })?.detail ??
       error.message ??
@@ -423,15 +446,88 @@ export const chatApi = {
     systemPrompt?: string | null,
   ): Promise<Response> => {
     const baseURL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("auto_at_token")
+        : null;
     return fetch(`${baseURL}/api/v1/chat/send`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({
         messages,
         llm_profile_id: llmProfileId ?? null,
         system_prompt: systemPrompt ?? null,
       }),
     });
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth & User management
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UserResponse {
+  username: string;
+  full_name: string;
+  role: "admin" | "qa" | "dev";
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserCreateRequest {
+  username: string;
+  password: string;
+  full_name?: string;
+  role: "admin" | "qa" | "dev";
+}
+
+export interface UserUpdateRequest {
+  full_name?: string;
+  role?: "admin" | "qa" | "dev";
+  is_active?: boolean;
+  password?: string;
+}
+
+export const authApi = {
+  /** GET /api/v1/auth/me */
+  me: async (): Promise<UserResponse> => {
+    const { data } = await apiClient.get<UserResponse>("/api/v1/auth/me");
+    return data;
+  },
+
+  /** GET /api/v1/auth/users (admin only) */
+  listUsers: async (): Promise<UserResponse[]> => {
+    const { data } = await apiClient.get<UserResponse[]>("/api/v1/auth/users");
+    return data;
+  },
+
+  /** POST /api/v1/auth/users (admin only) */
+  createUser: async (payload: UserCreateRequest): Promise<UserResponse> => {
+    const { data } = await apiClient.post<UserResponse>(
+      "/api/v1/auth/users",
+      payload,
+    );
+    return data;
+  },
+
+  /** PUT /api/v1/auth/users/:username (admin only) */
+  updateUser: async (
+    username: string,
+    payload: UserUpdateRequest,
+  ): Promise<UserResponse> => {
+    const { data } = await apiClient.put<UserResponse>(
+      `/api/v1/auth/users/${username}`,
+      payload,
+    );
+    return data;
+  },
+
+  /** DELETE /api/v1/auth/users/:username (admin only) */
+  deleteUser: async (username: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/auth/users/${username}`);
   },
 };
 

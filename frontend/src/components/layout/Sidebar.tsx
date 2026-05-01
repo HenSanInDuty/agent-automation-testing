@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Brain,
   Bot,
@@ -11,9 +11,12 @@ import {
   ChevronRight,
   GitBranch,
   MessageSquare,
+  Users,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePipelineStore } from "@/store/pipelineStore";
+import { useAuth } from "@/lib/auth-context";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Nav item definition
@@ -31,49 +34,6 @@ interface NavGroup {
   groupLabel?: string;
   items: NavItem[];
 }
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    items: [
-      {
-        label: "Chat",
-        href: "/chat",
-        icon: <MessageSquare className="w-4 h-4" />,
-      },
-      {
-        label: "Pipelines",
-        href: "/pipelines",
-        icon: <GitBranch className="w-4 h-4" />,
-      },
-    ],
-  },
-  {
-    groupLabel: "Admin",
-    items: [
-      {
-        label: "LLM Profiles",
-        href: "/admin/llm",
-        icon: <Brain className="w-4 h-4" />,
-      },
-      {
-        label: "Agent Configs",
-        href: "/admin/agents",
-        icon: <Bot className="w-4 h-4" />,
-      },
-    ],
-  },
-  {
-    groupLabel: "Dev",
-    items: [
-      {
-        label: "API Docs",
-        href: "http://localhost:8000/docs",
-        icon: <FlaskConical className="w-4 h-4" />,
-        badge: "Ext",
-      },
-    ],
-  },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NavLink
@@ -229,6 +189,46 @@ export function Sidebar({
   className,
 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout, canUseChat, isAdmin } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
+
+  // Build nav groups dynamically based on role
+  const navGroups: NavGroup[] = [
+    {
+      items: [
+        ...(canUseChat
+          ? [{ label: "Chat", href: "/chat", icon: <MessageSquare className="w-4 h-4" /> }]
+          : []),
+        { label: "Pipelines", href: "/pipelines", icon: <GitBranch className="w-4 h-4" /> },
+      ],
+    },
+    {
+      groupLabel: "Admin",
+      items: [
+        { label: "LLM Profiles", href: "/admin/llm", icon: <Brain className="w-4 h-4" /> },
+        { label: "Agent Configs", href: "/admin/agents", icon: <Bot className="w-4 h-4" /> },
+        ...(isAdmin
+          ? [{ label: "Users", href: "/admin/users", icon: <Users className="w-4 h-4" /> }]
+          : []),
+      ],
+    },
+    {
+      groupLabel: "Dev",
+      items: [
+        {
+          label: "API Docs",
+          href: "http://localhost:8000/docs",
+          icon: <FlaskConical className="w-4 h-4" />,
+          badge: "Ext",
+        },
+      ],
+    },
+  ];
 
   return (
     <aside
@@ -273,7 +273,7 @@ export function Sidebar({
 
       {/* ── Navigation ── */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-5">
-        {NAV_GROUPS.map((group, gi) => (
+        {navGroups.map((group, gi) => (
           <div key={gi}>
             {/* Group label */}
             {group.groupLabel && !collapsed && (
@@ -307,6 +307,32 @@ export function Sidebar({
       </nav>
 
       <PipelineStatusBadge collapsed={collapsed} />
+
+      {/* ── User / Logout ── */}
+      {user && (
+        <div className={cn("shrink-0 border-t border-[#2b3b55] p-2", collapsed ? "flex justify-center" : "")}>
+          {!collapsed && (
+            <div className="px-2 py-1.5 mb-1">
+              <p className="text-xs font-medium text-white truncate">{user.username}</p>
+              <p className="text-[10px] text-[#3d5070] uppercase tracking-wide">{user.role}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Sign out"
+            className={cn(
+              "w-full flex items-center gap-2 rounded-lg px-2.5 py-2",
+              "text-[#92a4c9] hover:text-red-400 hover:bg-red-500/10",
+              "transition-colors duration-150",
+              collapsed ? "justify-center" : "justify-start",
+            )}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            {!collapsed && <span className="text-sm font-medium">Sign out</span>}
+          </button>
+        </div>
+      )}
 
       {/* ── Collapse toggle ── */}
       {onToggleCollapse && (

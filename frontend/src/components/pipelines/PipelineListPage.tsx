@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { usePipelineTemplates } from "@/hooks/usePipelineTemplates";
 import { PipelineTemplateCard } from "./PipelineTemplateCard";
 import { CreatePipelineDialog } from "./CreatePipelineDialog";
+import { useAuth } from "@/lib/auth-context";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PipelineListPage
@@ -23,6 +24,7 @@ export function PipelineListPage() {
   const [search, setSearch] = useState("");
   const [includeArchived, setIncludeArchived] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const { canCreatePipeline } = useAuth();
 
   const { data, isLoading, isError, refetch, isFetching } =
     usePipelineTemplates({ include_archived: includeArchived });
@@ -73,6 +75,7 @@ export function PipelineListPage() {
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
+          {canCreatePipeline && (
           <button
             type="button"
             onClick={() => setShowCreateDialog(true)}
@@ -86,6 +89,7 @@ export function PipelineListPage() {
             <Plus className="w-4 h-4" />
             New Pipeline
           </button>
+          )}
         </div>
       </div>
 
