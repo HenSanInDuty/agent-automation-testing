@@ -1011,6 +1011,10 @@ class DAGPipelineRunner:
             )
 
     async def _builtin_artifact(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Run the ArtifactCrew to generate unit test files + test case document."""
         from app.crews.artifact_crew import ArtifactCrew
 
         crew = ArtifactCrew(
