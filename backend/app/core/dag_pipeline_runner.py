@@ -516,7 +516,7 @@ class DAGPipelineRunner:
         }
 
         MAX_DOC_CHARS = 15_000   # characters of document body to send
-        MAX_META_CHARS = 2_000   # characters for the metadata JSON blob
+        MAX_META_CHARS = 12_000  # characters for the metadata JSON blob (prev-node outputs)
 
         desc_parts: list[str] = []
 
@@ -569,7 +569,7 @@ class DAGPipelineRunner:
             task_description,
         )
         _DEFAULT_EXPECTED_OUTPUT = (
-            "A single valid JSON object containing your analysis results. "
+            "A single valid JSON object. "
             "Output ONLY the JSON - no markdown fences, no explanatory prose, "
             "no wrapper keys like 'raw_output' or 'result'. "
             "Start your response directly with '{' and end with '}'."

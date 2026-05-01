@@ -37,13 +37,16 @@
       "node_type": "agent",
       "agent_id": "requirement_analyzer",
       "label": "Requirement Analyzer",
-      "description": "Analyse requirements, classify as functional / non-functional / edge case. Output: annotated requirement list.",
+      "description": "Analyse and annotate each requirement with type, priority, and acceptance criteria.",
       "position_x": 400.0,
       "position_y": 300.0,
       "timeout_seconds": 300,
       "retry_count": 1,
       "enabled": true,
-      "config_overrides": {},
+      "config_overrides": {
+        "task_instruction": "You are a business analyst. The Context section contains a list of extracted software requirements (key: 'requirements'). Your job is to analyse each requirement and return an enriched version of the list under the key 'requirements'. For each item keep the original 'id' and 'title' and add: 'type' (one of: functional, non-functional, security, performance, ux), 'priority' (one of: critical, high, medium, low), 'acceptance_criteria' (array of 2-4 testable conditions written as 'The system shall ...'). Do not invent new requirements. Do not omit any requirement.",
+        "expected_output": "A JSON object with a single key 'requirements' containing an array. Each element must have: id (string), title (string), description (string), type (string), priority (string), acceptance_criteria (array of strings)."
+      },
       "stage_id": "testcase"
     },
     {
@@ -51,13 +54,16 @@
       "node_type": "agent",
       "agent_id": "test_case_generator",
       "label": "Test Case Generator",
-      "description": "Generate detailed test cases (title, preconditions, steps, expected result) for each requirement. Output: TestCase list.",
+      "description": "Generate structured test cases ready for Playwright automation from each requirement.",
       "position_x": 400.0,
       "position_y": 450.0,
-      "timeout_seconds": 300,
+      "timeout_seconds": 360,
       "retry_count": 1,
       "enabled": true,
-      "config_overrides": {},
+      "config_overrides": {
+        "task_instruction": "You are a senior test case engineer specialising in Playwright E2E test design. The Context section contains annotated requirements (key: 'requirements'). For each requirement generate 2-4 test cases: at least one positive (happy path) and one negative (error/edge case). Return all test cases under the key 'test_cases'. Use concrete, actionable steps that Playwright can automate (e.g. 'Navigate to /login', 'Click the Submit button', 'Expect URL to contain /dashboard').",
+        "expected_output": "A JSON object with key 'test_cases' containing an array. Each element must have: id (string, e.g. TC-001), title (string), requirement_id (string), type (string: positive|negative|edge_case), priority (string: high|medium|low), preconditions (array of strings), steps (array of objects each with 'action' (string) and 'expected' (string)), expected_result (string)."
+      },
       "stage_id": "testcase"
     },
     {
@@ -65,13 +71,16 @@
       "node_type": "agent",
       "agent_id": "test_reviewer",
       "label": "Test Case Reviewer",
-      "description": "Review test cases: remove duplicates, add edge cases, ensure every test is automatable with Playwright. Output: finalised TestCase list.",
+      "description": "Review, deduplicate and finalise test cases for Playwright automation.",
       "position_x": 400.0,
       "position_y": 600.0,
       "timeout_seconds": 300,
       "retry_count": 1,
       "enabled": true,
-      "config_overrides": {},
+      "config_overrides": {
+        "task_instruction": "You are a senior QA reviewer. The Context section contains a list of test cases (key: 'test_cases'). Your tasks: (1) Remove exact duplicates. (2) Add any critical missing edge cases. (3) Verify every step is automatable by Playwright (no steps requiring a human or external approval). (4) Add a 'review_notes' field to each test case explaining what was changed or confirmed. Return the finalised list under the key 'test_cases'.",
+        "expected_output": "A JSON object with key 'test_cases' containing the finalised array. Same schema as input (id, title, requirement_id, type, priority, preconditions, steps, expected_result) with an additional 'review_notes' field (string) per element."
+      },
       "stage_id": "playwright"
     },
     {
@@ -79,13 +88,16 @@
       "node_type": "agent",
       "agent_id": "playwright_spec_writer",
       "label": "Playwright Spec Writer",
-      "description": "Generate .spec.ts files using Page Object Model from the reviewed test cases. Output: TypeScript Playwright spec files.",
+      "description": "Generate runnable Playwright TypeScript .spec.ts files from the finalised test cases.",
       "position_x": 400.0,
       "position_y": 750.0,
-      "timeout_seconds": 420,
+      "timeout_seconds": 480,
       "retry_count": 1,
       "enabled": true,
-      "config_overrides": {},
+      "config_overrides": {
+        "task_instruction": "You are a Playwright TypeScript expert. The Context section contains finalised test cases (key: 'test_cases'). Convert them into REAL, immediately runnable Playwright TypeScript .spec.ts files. Rules: (1) Group related test cases into describe blocks by feature area. (2) Use Playwright locators: getByRole, getByLabel, getByTestId, or getByText. (3) Use expect(...).toBeVisible(), toHaveURL(), toHaveText(), etc. for assertions. (4) Import from '../fixtures'. (5) Use test.beforeEach for shared setup (e.g. navigate to page). (6) Write real code, NOT pseudocode or comments-only. Return a JSON object where each key is a file path (e.g. 'tests/auth.spec.ts') and each value is the complete TypeScript file content.",
+        "expected_output": "A JSON object with key 'spec_files'. Each property of 'spec_files' is a file path string (e.g. 'tests/auth.spec.ts') and the value is the COMPLETE runnable TypeScript content of that file as a single string."
+      },
       "stage_id": "playwright"
     },
     {
@@ -93,13 +105,16 @@
       "node_type": "agent",
       "agent_id": "playwright_fixture_writer",
       "label": "Playwright Fixture Writer",
-      "description": "Generate Page Objects, fixtures.ts, test-data.ts, playwright.config.ts, .env.example. Output: complete test infrastructure.",
+      "description": "Generate Page Objects, fixtures.ts, test-data.ts, playwright.config.ts and .env.example.",
       "position_x": 400.0,
       "position_y": 900.0,
-      "timeout_seconds": 420,
+      "timeout_seconds": 480,
       "retry_count": 1,
       "enabled": true,
-      "config_overrides": {},
+      "config_overrides": {
+        "task_instruction": "You are a Playwright infrastructure engineer. The Context section contains the generated spec files (key: 'spec_files'). Based on the pages, locators and imports used in those spec files, generate the complete test infrastructure. Output a JSON object with the following keys: (1) 'page_objects': object where each key is a file path (e.g. 'pages/LoginPage.ts') and value is the full TypeScript Page Object class. (2) 'fixtures_ts': string, full content of 'fixtures.ts' that extends base test with shared page objects and auth setup. (3) 'test_data_ts': string, full content of 'test-data.ts' with typed test data constants. (4) 'playwright_config_ts': string, full content of 'playwright.config.ts' with baseURL from env, 2 retries, HTML reporter, chromium project. (5) 'env_example': string, content of '.env.example' listing all required env vars with placeholder values. Write REAL runnable TypeScript code.",
+        "expected_output": "A JSON object with keys: 'page_objects' (object: filepath->full TypeScript content), 'fixtures_ts' (string), 'test_data_ts' (string), 'playwright_config_ts' (string), 'env_example' (string)."
+      },
       "stage_id": "playwright"
     },
     {
