@@ -1,0 +1,157 @@
+{
+  "template_id": "playwright-pipeline",
+  "name": "Playwright Test Generator",
+  "description": "Lean pipeline: Ingestion -> Test Design (3 agents) -> Playwright codegen (spec + fixtures). Output: .spec.ts files + Page Objects + playwright.config.ts.",
+  "tags": ["playwright", "typescript", "e2e", "lean"],
+  "nodes": [
+    {
+      "node_id": "pw-inp",
+      "node_type": "input",
+      "agent_id": null,
+      "label": "Input",
+      "description": "Upload requirements document (PDF / DOCX / Excel / plain text)",
+      "position_x": 400.0,
+      "position_y": 0.0,
+      "timeout_seconds": 30,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": null
+    },
+    {
+      "node_id": "pw-ingestion",
+      "node_type": "pure_python",
+      "agent_id": "ingestion_pipeline",
+      "label": "Document Ingestion",
+      "description": "Parse, chunk and analyze the document. Output: structured RequirementItem list.",
+      "position_x": 400.0,
+      "position_y": 150.0,
+      "timeout_seconds": 120,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "ingestion"
+    },
+    {
+      "node_id": "pw-req-analyzer",
+      "node_type": "agent",
+      "agent_id": "requirement_analyzer",
+      "label": "Requirement Analyzer",
+      "description": "Analyse requirements, classify as functional / non-functional / edge case. Output: annotated requirement list.",
+      "position_x": 400.0,
+      "position_y": 300.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "pw-tc-gen",
+      "node_type": "agent",
+      "agent_id": "test_case_generator",
+      "label": "Test Case Generator",
+      "description": "Generate detailed test cases (title, preconditions, steps, expected result) for each requirement. Output: TestCase list.",
+      "position_x": 400.0,
+      "position_y": 450.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "testcase"
+    },
+    {
+      "node_id": "pw-tc-reviewer",
+      "node_type": "agent",
+      "agent_id": "test_reviewer",
+      "label": "Test Case Reviewer",
+      "description": "Review test cases: remove duplicates, add edge cases, ensure every test is automatable with Playwright. Output: finalised TestCase list.",
+      "position_x": 400.0,
+      "position_y": 600.0,
+      "timeout_seconds": 300,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "playwright"
+    },
+    {
+      "node_id": "pw-spec-writer",
+      "node_type": "agent",
+      "agent_id": "playwright_spec_writer",
+      "label": "Playwright Spec Writer",
+      "description": "Generate .spec.ts files using Page Object Model from the reviewed test cases. Output: TypeScript Playwright spec files.",
+      "position_x": 400.0,
+      "position_y": 750.0,
+      "timeout_seconds": 420,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "playwright"
+    },
+    {
+      "node_id": "pw-fixture-writer",
+      "node_type": "agent",
+      "agent_id": "playwright_fixture_writer",
+      "label": "Playwright Fixture Writer",
+      "description": "Generate Page Objects, fixtures.ts, test-data.ts, playwright.config.ts, .env.example. Output: complete test infrastructure.",
+      "position_x": 400.0,
+      "position_y": 900.0,
+      "timeout_seconds": 420,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "playwright"
+    },
+    {
+      "node_id": "pw-out",
+      "node_type": "output",
+      "agent_id": null,
+      "label": "Output",
+      "description": "Result: .spec.ts files + Page Objects + fixtures + playwright.config.ts",
+      "position_x": 400.0,
+      "position_y": 1050.0,
+      "timeout_seconds": 30,
+      "retry_count": 0,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": null
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "pw-inp__pw-ingestion",
+      "source_node_id": "pw-inp",
+      "target_node_id": "pw-ingestion"
+    },
+    {
+      "edge_id": "pw-ingestion__pw-req-analyzer",
+      "source_node_id": "pw-ingestion",
+      "target_node_id": "pw-req-analyzer"
+    },
+    {
+      "edge_id": "pw-req-analyzer__pw-tc-gen",
+      "source_node_id": "pw-req-analyzer",
+      "target_node_id": "pw-tc-gen"
+    },
+    {
+      "edge_id": "pw-tc-gen__pw-tc-reviewer",
+      "source_node_id": "pw-tc-gen",
+      "target_node_id": "pw-tc-reviewer"
+    },
+    {
+      "edge_id": "pw-tc-reviewer__pw-spec-writer",
+      "source_node_id": "pw-tc-reviewer",
+      "target_node_id": "pw-spec-writer"
+    },
+    {
+      "edge_id": "pw-spec-writer__pw-fixture-writer",
+      "source_node_id": "pw-spec-writer",
+      "target_node_id": "pw-fixture-writer"
+    },
+    {
+      "edge_id": "pw-fixture-writer__pw-out",
+      "source_node_id": "pw-fixture-writer",
+      "target_node_id": "pw-out"
+    }
+  ]
+}

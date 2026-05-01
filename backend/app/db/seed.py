@@ -522,6 +522,79 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         "max_iter": 4,
         "is_custom": False,
     },
+    # ── Stage: playwright ─────────────────────────────────────────────────────
+    {
+        "agent_id": "test_reviewer",
+        "display_name": "Test Case Reviewer",
+        "stage": "playwright",
+        "role": "Senior QA Engineer",
+        "goal": (
+            "Review and refine the generated test cases for completeness, clarity, "
+            "and end-to-end testability with Playwright. Identify missing edge cases, "
+            "ambiguous steps, duplicate scenarios, and ensure every test case maps "
+            "unambiguously back to a source requirement. Output a clean, finalised "
+            "list of TestCase objects ready for Playwright code generation."
+        ),
+        "backstory": (
+            "You are a senior QA engineer with 10 years of experience reviewing test "
+            "cases for web and API applications. You have a sharp eye for incomplete "
+            "preconditions, vague expected results, and missing negative test paths. "
+            "You understand Playwright's capabilities and always flag test cases that "
+            "cannot be automated — replacing them with automatable equivalents. "
+            "Your reviews consistently improve test suite quality by 40%."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "playwright_spec_writer",
+        "display_name": "Playwright Spec Writer",
+        "stage": "playwright",
+        "role": "Playwright Test Automation Engineer",
+        "goal": (
+            "Generate complete, immediately runnable Playwright TypeScript test spec "
+            "files (.spec.ts) from the reviewed test cases. Follow Page Object Model "
+            "pattern, use descriptive test names matching the test case titles, include "
+            "proper locators (getByRole, getByTestId, getByLabel), assertions "
+            "(expect(locator).toBeVisible(), toHaveText(), etc.), and group related "
+            "tests in describe blocks. Each spec file maps to one functional area."
+        ),
+        "backstory": (
+            "You are a Playwright expert who has automated thousands of web UI and API "
+            "tests. You write TypeScript test code that is readable, maintainable, and "
+            "follows Playwright best practices: prefer user-facing locators, avoid "
+            "hard-coded waits, use auto-waiting assertions, and always test from the "
+            "user's perspective. Your specs are used by CI/CD pipelines across dozens "
+            "of production applications."
+        ),
+        "max_iter": 8,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "playwright_fixture_writer",
+        "display_name": "Playwright Fixture Writer",
+        "stage": "playwright",
+        "role": "Test Infrastructure Engineer",
+        "goal": (
+            "Generate the complete Playwright test infrastructure to support the spec "
+            "files: (1) Page Object classes in pages/ for every page/component under "
+            "test, (2) fixtures.ts extending base test with shared setup/teardown, "
+            "(3) test-data.ts with typed test data constants, (4) playwright.config.ts "
+            "with sensible defaults (baseURL, retries, reporter, browser projects), "
+            "(5) .env.example listing required environment variables."
+        ),
+        "backstory": (
+            "You are a test infrastructure specialist who designs maintainable Playwright "
+            "frameworks from scratch. You understand how to structure a test project so "
+            "that specs stay clean and infrastructure concerns are isolated. You always "
+            "generate Page Object classes with typed locators, shared fixtures for "
+            "authentication and API mocking, and configuration files that work out of "
+            "the box with npx playwright test. Your setups reduce test maintenance cost "
+            "by 60% compared to ad-hoc test files."
+        ),
+        "max_iter": 6,
+        "is_custom": False,
+    },
 ]
 # ─────────────────────────────────────────────────────────────────────────────
 #
@@ -577,6 +650,16 @@ DEFAULT_STAGES: list[dict[str, Any]] = [
         "order": 450,
         "color": "#3B82F6",  # Blue
         "icon": "file-code",
+        "enabled": True,
+        "is_builtin": True,
+    },
+    {
+        "stage_id": "playwright",
+        "display_name": "Playwright Generation",
+        "description": "Review test cases and generate runnable Playwright TypeScript spec files and test infrastructure.",
+        "order": 460,
+        "color": "#059669",  # Emerald-600 (Playwright brand green)
+        "icon": "play-circle",
         "enabled": True,
         "is_builtin": True,
     },
