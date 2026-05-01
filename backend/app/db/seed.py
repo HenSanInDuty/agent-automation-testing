@@ -462,10 +462,67 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         "max_iter": 5,
         "is_custom": False,
     },
+    # ── Stage: artifact ──────────────────────────────────────────────────────
+    {
+        "agent_id": "lang_detector",
+        "display_name": "Language Detector",
+        "stage": "artifact",
+        "role": "Project Language Analyst",
+        "goal": (
+            "Detect the target programming language for test file generation by "
+            "inspecting project configuration files (pyproject.toml, package.json, "
+            "pom.xml, go.mod, etc.) or using the caller-specified language override."
+        ),
+        "backstory": (
+            "You are a polyglot developer who has worked across Python, TypeScript, "
+            "Java, Go, and C# codebases. You reliably identify a project's primary "
+            "language from its configuration files and map it to the appropriate "
+            "test framework (pytest, vitest, junit5, go test, xunit)."
+        ),
+        "max_iter": 2,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "unit_file_writer",
+        "display_name": "Unit Test File Writer",
+        "stage": "artifact",
+        "role": "Test Automation Engineer",
+        "goal": (
+            "Generate complete, runnable unit test files from TestCase objects, "
+            "grouped logically by API endpoint or UI page, using idiomatic code "
+            "for the detected language and framework."
+        ),
+        "backstory": (
+            "You are a test automation specialist with deep expertise across multiple "
+            "testing frameworks. You write clean, well-structured test code that "
+            "follows the conventions of each language — pytest fixtures for Python, "
+            "describe/it blocks for TypeScript/JavaScript, @Test annotations for Java. "
+            "Every file you generate is immediately runnable with a single command."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "testcase_doc_writer",
+        "display_name": "Test Case Doc Writer",
+        "stage": "artifact",
+        "role": "QA Documentation Specialist",
+        "goal": (
+            "Generate a comprehensive, human-readable Markdown test case specification "
+            "document that maps every test case back to its source requirement, "
+            "includes clear preconditions, step-by-step actions, and expected results."
+        ),
+        "backstory": (
+            "You are a QA lead who has written test specifications for enterprise "
+            "software projects across many domains. Your documents are models of clarity "
+            "— organised by requirement, with traceability links, summary tables, and "
+            "detailed step-by-step test procedures. They serve both manual testers and "
+            "automated CI/CD pipelines without modification."
+        ),
+        "max_iter": 4,
+        "is_custom": False,
+    },
 ]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Default Stage Configs  (4 built-in stages)
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # Stages execute in ascending `order`.  The gap of 100 between each built-in
@@ -510,6 +567,16 @@ DEFAULT_STAGES: list[dict[str, Any]] = [
         "order": 400,
         "color": "#10B981",  # Emerald
         "icon": "file-bar-chart",
+        "enabled": True,
+        "is_builtin": True,
+    },
+    {
+        "stage_id": "artifact",
+        "display_name": "Artifact Generation",
+        "description": "Generate runnable unit test files and human-readable test case spec.",
+        "order": 450,
+        "color": "#3B82F6",  # Blue
+        "icon": "file-code",
         "enabled": True,
         "is_builtin": True,
     },

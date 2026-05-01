@@ -663,6 +663,7 @@ class DAGPipelineRunner:
         builtin_functions: dict[str, Any] = {
             "ingestion_agent": self._builtin_ingestion,
             "ingestion_pipeline": self._builtin_ingestion,
+            "artifact_pipeline": self._builtin_artifact,
             # Register additional builtins here
         }
 
@@ -929,3 +930,18 @@ class DAGPipelineRunner:
         # Forward mock_mode so IngestionCrew.run() reads it from input_data
         merged = {**input_data, "mock_mode": self._mock_mode}
         return await asyncio.to_thread(crew.run, merged)
+
+    async def _builtin_artifact(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Run the ArtifactCrew to generate unit test files + test case document."""
+        from app.crews.artifact_crew import ArtifactCrew
+
+        crew = ArtifactCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        return await asyncio.to_thread(crew.run, input_data)

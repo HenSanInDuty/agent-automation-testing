@@ -291,12 +291,26 @@
       "label": "📤 Output",
       "description": "Final test report output",
       "position_x": 400.0,
-      "position_y": 2820.0,
+      "position_y": 3150.0,
       "timeout_seconds": 30,
       "retry_count": 0,
       "enabled": true,
       "config_overrides": {},
       "stage_id": null
+    },
+    {
+      "node_id": "artifact-pipeline",
+      "node_type": "pure_python",
+      "agent_id": "artifact_pipeline",
+      "label": "\ud83d\udcc1 Artifact Generator",
+      "description": "Generate runnable unit test files (pytest/vitest/junit5/go) and human-readable test case Markdown spec from TestCaseOutput.",
+      "position_x": 400.0,
+      "position_y": 2970.0,
+      "timeout_seconds": 120,
+      "retry_count": 1,
+      "enabled": true,
+      "config_overrides": {},
+      "stage_id": "artifact"
     }
   ],
   "edges": [
@@ -462,10 +476,17 @@
       "animated": false
     },
     {
-      "edge_id": "e-repgen-out",
+      "edge_id": "e-repgen-artifact",
       "source_node_id": "report-gen",
+      "target_node_id": "artifact-pipeline",
+      "label": "test_cases + requirements",
+      "animated": false
+    },
+    {
+      "edge_id": "e-artifact-out",
+      "source_node_id": "artifact-pipeline",
       "target_node_id": "out-node",
-      "label": "final report",
+      "label": "unit_test_files + spec_doc",
       "animated": false
     }
   ]

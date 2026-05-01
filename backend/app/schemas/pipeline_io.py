@@ -369,3 +369,52 @@ class PipelineRunResult(BaseModel):
             delta = self.finished_at - self.started_at
             self.duration_seconds = round(delta.total_seconds(), 2)
         return self
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2.5 – Artifact Generation (unit test files + test case document)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestLanguage(str, Enum):
+    PYTHON = "python"
+    TYPESCRIPT = "typescript"
+    JAVASCRIPT = "javascript"
+    JAVA = "java"
+    GO = "go"
+    CSHARP = "csharp"
+
+
+class UnitTestFile(BaseModel):
+    """A single generated test file (one per endpoint / scope)."""
+
+    filename: str = Field(description="e.g. test_user_login.py")
+    language: TestLanguage
+    framework: str = Field(description="pytest | vitest | jest | junit5 | go_test | xunit")
+    content: str = Field(description="Full runnable file content")
+    test_count: int = 0
+    requirement_ids: list[str] = Field(
+        default_factory=list, description="REQ-IDs this file covers"
+    )
+
+
+class TestArtifactOutput(BaseModel):
+    """Output of the Artifact Generation stage."""
+
+    unit_test_files: list[UnitTestFile] = Field(default_factory=list)
+    test_case_markdown: str = Field(default="", description="Human-readable spec document")
+    test_fixtures: dict[str, Any] = Field(
+        default_factory=dict, description="JSON test data fixtures"
+    )
+    language: TestLanguage = TestLanguage.PYTHON
+    total_files: int = 0
+    total_tests: int = 0
+    document_name: str = ""
+
+    @model_validator(mode="after")
+    def sync_totals(self) -> "TestArtifactOutput":
+        if self.total_files == 0 and self.unit_test_files:
+            self.total_files = len(self.unit_test_files)
+        if self.total_tests == 0 and self.unit_test_files:
+            self.total_tests = sum(f.test_count for f in self.unit_test_files)
+        return self
