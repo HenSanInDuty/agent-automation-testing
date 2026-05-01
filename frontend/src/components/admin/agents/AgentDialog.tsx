@@ -273,7 +273,7 @@ export function AgentDialog({ open, onClose, agentId }: AgentDialogProps) {
         onClose={handleClose}
       />
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
         <ModalBody className="space-y-5">
           {isLoadingForm ? (
             <FormSkeleton />

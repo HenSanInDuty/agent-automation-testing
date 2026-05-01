@@ -721,16 +721,10 @@ async def get_agents_by_pipeline():
     total_agents = 0
 
     for template in templates:
-        # Only load stages that belong specifically to this pipeline template.
-        # No fallback to global stages — pipelines without configured stages
-        # show all their agents in the "__unassigned__" bucket.
-        pipeline_stages = (
-            await StageConfigDocument.find(
-                StageConfigDocument.template_id == template.template_id
-            )
-            .sort("+order")
-            .to_list()
-        )
+        # Load stages for this pipeline template, falling back to global stages
+        # (template_id=None) when no pipeline-specific stages exist yet.
+        # This ensures seeded global stages always render properly.
+        pipeline_stages = await get_all_stage_configs(template_id=template.template_id)
 
         # Build per-stage agent buckets
         stage_map: dict[str, list[AgentConfigSummary]] = {
@@ -768,9 +762,12 @@ async def get_agents_by_pipeline():
                 stage_map.setdefault(node_stage_id, [])
             stage_map[node_stage_id].append(summary)
 
-        # Build ordered stage entries from the pipeline's stage configs
+        # Build ordered stage entries — skip stages with no agents assigned
         stage_entries: list[PipelineStageEntry] = []
         for stage in pipeline_stages:
+            agents_in_stage = stage_map.get(stage.stage_id, [])
+            if not agents_in_stage:
+                continue
             stage_entries.append(
                 PipelineStageEntry(
                     stage_id=stage.stage_id,
@@ -780,7 +777,7 @@ async def get_agents_by_pipeline():
                     color=stage.color,
                     icon=stage.icon,
                     is_builtin=stage.is_builtin,
-                    agents=stage_map.get(stage.stage_id, []),
+                    agents=agents_in_stage,
                 )
             )
 
@@ -841,13 +838,7 @@ async def get_agents_for_pipeline_template(template_id: str):
     all_agents = await AgentConfigDocument.find_all().to_list()
     agent_map = {a.agent_id: a for a in all_agents}
 
-    pipeline_stages = (
-        await StageConfigDocument.find(
-            StageConfigDocument.template_id == template.template_id
-        )
-        .sort("+order")
-        .to_list()
-    )
+    pipeline_stages = await get_all_stage_configs(template_id=template.template_id)
 
     stage_map: dict[str, list[AgentConfigSummary]] = {
         s.stage_id: [] for s in pipeline_stages
@@ -885,6 +876,9 @@ async def get_agents_for_pipeline_template(template_id: str):
 
     stage_entries: list[PipelineStageEntry] = []
     for stage in pipeline_stages:
+        agents_in_stage = stage_map.get(stage.stage_id, [])
+        if not agents_in_stage:
+            continue
         stage_entries.append(
             PipelineStageEntry(
                 stage_id=stage.stage_id,
@@ -894,7 +888,7 @@ async def get_agents_for_pipeline_template(template_id: str):
                 color=stage.color,
                 icon=stage.icon,
                 is_builtin=stage.is_builtin,
-                agents=stage_map.get(stage.stage_id, []),
+                agents=agents_in_stage,
             )
         )
 

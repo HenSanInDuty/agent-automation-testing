@@ -167,7 +167,7 @@ export function PipelineGroupSection({
   React.useEffect(() => {
     const initial: Record<string, boolean> = {};
     stages.forEach((s) => {
-      initial[s.stage_id] = false;
+      initial[s.stage_id] = true;
     });
     setExpandedStages(initial);
   }, [stages]);
@@ -215,7 +215,7 @@ export function PipelineGroupSection({
         {/* ── Pipeline Header ──────────────────────────────────────────────── */}
         <div
           className={cn(
-            "flex items-center gap-3 px-4 py-3",
+            "flex items-center gap-3 px-4 py-3 min-w-0 overflow-hidden",
             "rounded-xl",
             expanded && "rounded-b-none",
             "bg-[#0f1729]",
@@ -229,7 +229,7 @@ export function PipelineGroupSection({
             onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
             aria-controls={`pipeline-body-${templateId}`}
-            className="flex-1 flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-inset rounded-lg"
+            className="flex-1 min-w-0 flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-inset rounded-lg"
           >
             {/* Pipeline number */}
             <span className="shrink-0 text-[11px] font-bold tabular-nums text-[#135bec]">
