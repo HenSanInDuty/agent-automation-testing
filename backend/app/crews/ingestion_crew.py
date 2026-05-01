@@ -68,24 +68,29 @@ For each requirement found, produce a JSON object with:
   notes       – any ambiguities or missing information (empty string if none)
 
 Return a JSON object like:
-{
+{{
   "requirements": [
-    {
+    {{
       "title": "...",
       "description": "...",
       "type": "functional",
       "priority": "medium",
       "tags": ["tag1"],
       "notes": ""
-    }
+    }}
   ]
-}
+}}
 
-Document chunk:
+{context_hint}Document chunk ({chunk_position}):
 ---
 {chunk}
 ---
 """
+
+# Documents shorter than this threshold are sent in a single LLM call to
+# preserve full cross-document context and avoid losing requirements at
+# chunk boundaries. 32 000 chars ≈ 8 000 tokens — safe for mainstream models.
+_SINGLE_SHOT_THRESHOLD = 32_000
 
 # Minimum chunk length worth sending to the LLM (very short chunks are noise)
 _MIN_CHUNK_FOR_LLM = 80
@@ -123,8 +128,8 @@ class IngestionCrew(BaseCrew):
         progress_callback: Optional[ProgressCallback] = None,
         mock_mode: Optional[bool] = None,
         # Chunking parameters (can be overridden via input_data)
-        chunk_size: int = 2000,
-        chunk_overlap: int = 200,
+        chunk_size: int = 6000,
+        chunk_overlap: int = 600,
         min_chunk_size: int = _MIN_CHUNK_FOR_LLM,
         **_kwargs: Any,
     ) -> None:
@@ -210,9 +215,24 @@ class IngestionCrew(BaseCrew):
         )
 
         # ── Step 2: Chunk ────────────────────────────────────────────────────
-        chunks = chunk_text(raw_text, chunk_size=chunk_size, overlap=chunk_overlap)
-        # Filter out chunks that are too short to contain useful information
-        chunks = [c for c in chunks if len(c.strip()) >= self._min_chunk_size]
+        # Small documents: send the whole text in one shot to preserve full
+        # cross-document context instead of losing relationships at chunk borders.
+        single_shot = len(raw_text) <= _SINGLE_SHOT_THRESHOLD
+        if single_shot:
+            chunks = [raw_text]
+            logger.info(
+                "[Ingestion][%s] Document fits in single LLM call (%d chars) — skipping chunking",
+                self._run_id,
+                len(raw_text),
+            )
+            self._emit(
+                "log",
+                {"message": f"Document fits in one LLM call ({len(raw_text):,} chars) — sending whole document", "level": "info"},
+            )
+        else:
+            chunks = chunk_text(raw_text, chunk_size=chunk_size, overlap=chunk_overlap)
+            # Filter out chunks that are too short to contain useful information
+            chunks = [c for c in chunks if len(c.strip()) >= self._min_chunk_size]
 
         self._emit_agent_started("ingestion_pipeline", "Document Ingestion")
 
@@ -278,7 +298,12 @@ class IngestionCrew(BaseCrew):
                             "Mock mode: heuristic extraction used (no LLM)"
                         )
                 else:
-                    chunk_reqs = self._llm_extract(chunk, chunk_idx)
+                    chunk_reqs = self._llm_extract(
+                        chunk,
+                        chunk_idx,
+                        total_chunks=len(chunks),
+                        document_name=document_name,
+                    )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 msg = f"Chunk {chunk_idx} analysis error: {exc}"
                 logger.warning("[Ingestion][%s] %s", self._run_id, msg)
@@ -349,6 +374,8 @@ class IngestionCrew(BaseCrew):
         self,
         chunk: str,
         chunk_index: int,
+        total_chunks: int = 1,
+        document_name: str = "",
     ) -> list[RequirementItem]:
         """
         Send *chunk* to the LLM and parse the returned JSON into RequirementItem objects.
@@ -361,8 +388,10 @@ class IngestionCrew(BaseCrew):
         Falls back to :meth:`_mock_extract` on any LLM / JSON error.
 
         Args:
-            chunk:       The text chunk to analyse.
-            chunk_index: 1-based index, used for logging.
+            chunk:        The text chunk to analyse.
+            chunk_index:  1-based index, used for logging.
+            total_chunks: Total number of chunks (for context hint in prompt).
+            document_name: Document name injected into the prompt for domain context.
 
         Returns:
             List of :class:`RequirementItem` extracted from the chunk.
@@ -391,11 +420,27 @@ class IngestionCrew(BaseCrew):
             )
             return self._mock_extract(chunk, chunk_index)
 
+        # Build context hint so each chunk call knows where it sits in the doc
+        if total_chunks == 1:
+            chunk_position = "complete document"
+            context_hint = ""
+        else:
+            chunk_position = f"part {chunk_index} of {total_chunks}"
+            context_hint = (
+                f"You are analyzing part {chunk_index} of {total_chunks} of a document"
+                + (f" named '{document_name}'" if document_name else "")
+                + ". Extract requirements visible in THIS chunk — do not invent from other parts.\n\n"
+            )
+
         messages = [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {
                 "role": "user",
-                "content": _USER_PROMPT_TEMPLATE.format(chunk=chunk),
+                "content": _USER_PROMPT_TEMPLATE.format(
+                    chunk=chunk,
+                    chunk_position=chunk_position,
+                    context_hint=context_hint,
+                ),
             },
         ]
 
