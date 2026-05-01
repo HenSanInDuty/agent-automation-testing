@@ -243,7 +243,7 @@ def _validate_upload(file: UploadFile) -> None:
 
 
 def _save_upload(file: UploadFile, run_id: str) -> tuple[str, str]:
-    """Persist the uploaded file to ``UPLOAD_DIR/<run_id>/<original_filename>``.
+    """Persist the uploaded file to ``UPLOAD_DIR/<run_id>/`` and upload to MinIO.
 
     Returns:
         ``(document_name, absolute_file_path)``
@@ -258,7 +258,7 @@ def _save_upload(file: UploadFile, run_id: str) -> tuple[str, str]:
     document_name = Path(file.filename or "upload").name
     dest_path = dest_dir / document_name
     max_bytes = settings.max_file_size_bytes
-    bytes_written = 0
+    raw_bytes = b""
 
     try:
         with dest_path.open("wb") as out_file:
@@ -266,8 +266,8 @@ def _save_upload(file: UploadFile, run_id: str) -> tuple[str, str]:
                 chunk = file.file.read(64 * 1024)
                 if not chunk:
                     break
-                bytes_written += len(chunk)
-                if bytes_written > max_bytes:
+                raw_bytes += chunk
+                if len(raw_bytes) > max_bytes:
                     out_file.close()
                     dest_path.unlink(missing_ok=True)
                     raise HTTPException(
@@ -286,10 +286,22 @@ def _save_upload(file: UploadFile, run_id: str) -> tuple[str, str]:
             detail=f"Failed to save uploaded file: {exc}",
         ) from exc
 
+    bytes_written = len(raw_bytes)
     logger.info(
         "[Pipeline] Saved upload run_id=%r  file=%r  bytes=%d",
         run_id,
         document_name,
         bytes_written,
     )
+
+    # Also persist to MinIO (non-fatal if MinIO unavailable)
+    try:
+        from app.services.storage_service import storage
+
+        content_type = file.content_type or "application/octet-stream"
+        storage.upload_document(run_id, document_name, raw_bytes, content_type)
+        logger.info("[Pipeline] Uploaded document to MinIO: uploads/%s/%s", run_id, document_name)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[Pipeline] MinIO upload skipped (non-fatal): %s", exc)
+
     return document_name, str(dest_path)

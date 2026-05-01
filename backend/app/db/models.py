@@ -436,3 +436,40 @@ class PipelineResultDocument(Document):
             IndexModel([("run_id", 1), ("agent_id", 1)]),
             IndexModel([("run_id", 1)]),
         ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# User management
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class UserRole(str, Enum):
+    """RBAC roles for the application.
+
+    - ADMIN: full access to everything
+    - QA:    full access except LLM chat endpoints
+    - DEV:   full access except creating pipeline templates
+    """
+
+    ADMIN = "admin"
+    QA = "qa"
+    DEV = "dev"
+
+
+class UserDocument(Document):
+    """MongoDB document for application users."""
+
+    username: Indexed(str, unique=True)  # type: ignore[valid-type]
+    hashed_password: str
+    full_name: str = ""
+    role: UserRole = UserRole.QA
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+    class Settings:
+        name = "users"
+        indexes = [
+            IndexModel([("username", 1)], unique=True),
+            IndexModel([("role", 1)]),
+        ]

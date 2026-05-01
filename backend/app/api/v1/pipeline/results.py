@@ -11,7 +11,6 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
@@ -137,13 +136,8 @@ async def export_report_docx(run_id: str) -> Response:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Playwright artifact file endpoints
+# Playwright artifact file endpoints (MinIO-backed)
 # ─────────────────────────────────────────────────────────────────────────────
-
-def _playwright_dir(run_id: str) -> Path:
-    import os
-    from app.config import settings
-    return Path(settings.UPLOAD_DIR) / run_id / "playwright"
 
 
 @router.get(
@@ -152,21 +146,13 @@ def _playwright_dir(run_id: str) -> Path:
     description="Returns a list of generated Playwright source files for a run.",
 )
 async def list_playwright_artifacts(run_id: str) -> list[dict]:
-    """List all files written under uploads/<run_id>/playwright/."""
+    """List all files stored in MinIO under runs/{run_id}/playwright/."""
+    import asyncio
+    from app.services.storage_service import storage
+
     await _get_run_or_404(run_id)
-
-    base = _playwright_dir(run_id)
-    if not base.exists():
-        return []
-
-    files = []
-    for path in sorted(base.rglob("*")):
-        if path.is_file():
-            rel = path.relative_to(base).as_posix()
-            files.append({
-                "path": rel,
-                "size_bytes": path.stat().st_size,
-            })
+    loop = asyncio.get_running_loop()
+    files = await loop.run_in_executor(None, storage.list_playwright_files, run_id)
     return files
 
 
@@ -177,29 +163,24 @@ async def list_playwright_artifacts(run_id: str) -> list[dict]:
     response_class=Response,
 )
 async def download_playwright_zip(run_id: str) -> Response:
-    """Bundle uploads/<run_id>/playwright/ into a ZIP and stream it."""
-    import io
-    import zipfile
+    """Build a ZIP of all MinIO playwright artifacts and stream it."""
+    import asyncio
     from fastapi.responses import Response as FastAPIResponse
+    from app.services.storage_service import storage
 
     await _get_run_or_404(run_id)
-    base = _playwright_dir(run_id)
-    if not base.exists() or not any(base.rglob("*")):
+    loop = asyncio.get_running_loop()
+    zip_bytes = await loop.run_in_executor(None, storage.build_playwright_zip, run_id)
+
+    if not zip_bytes:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No Playwright artifacts found for this run. Re-run the pipeline first.",
+            detail="No Playwright artifacts found for this run.",
         )
-
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for path in sorted(base.rglob("*")):
-            if path.is_file():
-                zf.write(path, path.relative_to(base).as_posix())
-    buf.seek(0)
 
     filename = f"playwright-tests-{run_id[:8]}.zip"
     return FastAPIResponse(
-        content=buf.getvalue(),
+        content=zip_bytes,
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
@@ -215,27 +196,33 @@ async def download_playwright_file(
     run_id: str,
     path: Annotated[str, Query(description="Relative file path, e.g. tests/auth.spec.ts")],
 ) -> Response:
-    """Download a single file from uploads/<run_id>/playwright/<path>."""
+    """Download a single file from MinIO: runs/{run_id}/playwright/{path}."""
+    import asyncio
     import mimetypes
+    import posixpath
     from fastapi.responses import Response as FastAPIResponse
+    from app.services.storage_service import storage
 
     await _get_run_or_404(run_id)
-    base = _playwright_dir(run_id)
 
-    # Sanitise path — reject any traversal attempts
-    try:
-        target = (base / path).resolve()
-        target.relative_to(base.resolve())  # raises ValueError if outside base
-    except ValueError:
+    # Sanitise: reject any path traversal attempts
+    normalised = posixpath.normpath(path)
+    if normalised.startswith("..") or "//" in path:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file path.")
 
-    if not target.exists() or not target.is_file():
+    loop = asyncio.get_running_loop()
+    try:
+        content = await loop.run_in_executor(
+            None, storage.download_playwright_file, run_id, normalised
+        )
+    except Exception:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {path}")
 
-    content = target.read_bytes()
-    mime, _ = mimetypes.guess_type(target.name)
+    filename = posixpath.basename(normalised)
+    mime, _ = mimetypes.guess_type(filename)
     return FastAPIResponse(
         content=content,
         media_type=mime or "application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{target.name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
     )

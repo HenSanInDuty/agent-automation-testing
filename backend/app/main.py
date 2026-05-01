@@ -35,6 +35,43 @@ logging.getLogger("pymongo.topology").addFilter(_MongoHeartbeatFilter())
 logger = logging.getLogger(__name__)
 
 
+# ── Startup helpers ───────────────────────────────────────────────────────────
+
+
+async def _seed_admin_user() -> None:
+    """Create the default admin user if no users exist in the database."""
+    from app.db.models import UserDocument, UserRole
+    from app.services.auth_service import hash_password
+
+    count = await UserDocument.count()
+    if count == 0:
+        admin = UserDocument(
+            username=settings.ADMIN_DEFAULT_USERNAME,
+            hashed_password=hash_password(settings.ADMIN_DEFAULT_PASSWORD),
+            full_name="Administrator",
+            role=UserRole.ADMIN,
+        )
+        await admin.insert()
+        logger.info(
+            "Created default admin user: %s (change password immediately!)",
+            settings.ADMIN_DEFAULT_USERNAME,
+        )
+
+
+async def _init_minio_bucket() -> None:
+    """Ensure the MinIO bucket exists (non-fatal if MinIO is unreachable)."""
+    import asyncio
+
+    from app.services.storage_service import storage
+
+    loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(None, storage.ensure_bucket)
+        logger.info("MinIO bucket '%s' ready ✓", settings.MINIO_BUCKET)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MinIO bucket init failed (storage may be unavailable): %s", exc)
+
+
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
 
@@ -71,6 +108,12 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # ── Seed default data ─────────────────────────────────────────────────
     if settings.AUTO_SEED:
         await seed_all()
+
+    # ── Seed default admin user ───────────────────────────────────────────
+    await _seed_admin_user()
+
+    # ── MinIO bucket init ─────────────────────────────────────────────────
+    await _init_minio_bucket()
 
     # ── Recover orphaned runs from previous sessions ───────────────────────
     from app.db.crud import recover_orphaned_runs
@@ -158,6 +201,9 @@ def create_app() -> FastAPI:
     )
 
     # REST API routers – all mounted under /api/v1
+    from app.api.v1.auth import router as auth_router
+
+    app.include_router(auth_router, prefix="/api/v1", tags=["Auth"])
     app.include_router(pipeline.router, prefix="/api/v1", tags=["Pipeline"])
     app.include_router(
         pipeline_templates.router,

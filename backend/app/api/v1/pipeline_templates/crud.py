@@ -15,8 +15,9 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.api.v1.deps import get_current_user, require_not_dev
 from app.db import crud
 from app.schemas.pipeline_template import (
     PipelineTemplateCreate,
@@ -112,6 +113,7 @@ async def list_templates(
 )
 async def create_template(
     body: PipelineTemplateCreate,
+    _: object = Depends(require_not_dev),
 ) -> PipelineTemplateResponse:
     """Create a new pipeline template."""
     existing = await crud.get_pipeline_template(body.template_id)

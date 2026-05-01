@@ -950,24 +950,20 @@ class DAGPipelineRunner:
     # ─────────────────────────────────────────────────────────────────────────
 
     async def _save_file_artifacts(self, node_id: str, output: dict) -> None:  # type: ignore[type-arg]
-        """Persist any generated source files from node output to disk.
+        """Persist any generated source files from node output to MinIO.
 
         Looks for well-known keys in *output*:
-          - ``spec_files``         : dict[filepath, str] — Playwright .spec.ts files
-          - ``page_objects``       : dict[filepath, str] — Page Object classes
-          - ``fixtures_ts``        : str — fixtures.ts content
-          - ``test_data_ts``       : str — test-data.ts content
+          - ``spec_files``          : dict[filepath, str] — Playwright .spec.ts files
+          - ``page_objects``        : dict[filepath, str] — Page Object classes
+          - ``fixtures_ts``         : str — fixtures.ts content
+          - ``test_data_ts``        : str — test-data.ts content
           - ``playwright_config_ts``: str — playwright.config.ts content
-          - ``env_example``        : str — .env.example content
+          - ``env_example``         : str — .env.example content
 
-        Files are written under ``<UPLOAD_DIR>/<run_id>/playwright/``.
+        Files are uploaded to MinIO under ``runs/<run_id>/playwright/``.
         """
-        import os
-        from app.config import settings
-
-        base_dir = (
-            os.path.join(settings.UPLOAD_DIR, self._run_id, "playwright")
-        )
+        import asyncio
+        from app.services.storage_service import storage
 
         _DEFAULT_PATHS = {
             "fixtures_ts": "fixtures.ts",
@@ -977,6 +973,7 @@ class DAGPipelineRunner:
         }
 
         files_written: list[str] = []
+        loop = asyncio.get_running_loop()
 
         for key in _FILE_OUTPUT_KEYS:
             value = output.get(key)
@@ -984,26 +981,35 @@ class DAGPipelineRunner:
                 continue
 
             if isinstance(value, dict):
-                # key -> filepath : content
                 for filepath, content in value.items():
                     if not isinstance(content, str) or not content.strip():
                         continue
-                    full_path = os.path.join(base_dir, filepath)
-                    os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                    with open(full_path, "w", encoding="utf-8") as fh:
-                        fh.write(content)
+                    await loop.run_in_executor(
+                        None,
+                        storage.upload_file_content,
+                        self._run_id,
+                        filepath,
+                        content,
+                        "playwright",
+                        "text/plain",
+                    )
                     files_written.append(filepath)
             elif isinstance(value, str) and value.strip():
                 default_name = _DEFAULT_PATHS.get(key, f"{key}.txt")
-                full_path = os.path.join(base_dir, default_name)
-                os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                with open(full_path, "w", encoding="utf-8") as fh:
-                    fh.write(value)
+                await loop.run_in_executor(
+                    None,
+                    storage.upload_file_content,
+                    self._run_id,
+                    default_name,
+                    value,
+                    "playwright",
+                    "text/plain",
+                )
                 files_written.append(default_name)
 
         if files_written:
             logger.info(
-                "[DAGRunner] Saved %d artifact file(s) for node_id=%r run_id=%r: %s",
+                "[DAGRunner] Uploaded %d artifact file(s) to MinIO for node_id=%r run_id=%r: %s",
                 len(files_written),
                 node_id,
                 self._run_id,

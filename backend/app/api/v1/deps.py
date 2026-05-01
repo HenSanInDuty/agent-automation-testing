@@ -5,21 +5,13 @@ With Beanie as the ODM, there is no per-request Session object to manage.
 Beanie operates against the global Motor client that is initialised once at
 startup via :func:`app.db.database.init_db`.
 
-This module still provides:
-- :func:`get_settings` – injects the cached :class:`~app.config.Settings` instance.
-- :func:`require_db` – lightweight guard that raises ``503`` when MongoDB is
-  unreachable (useful for endpoints that must abort gracefully rather than
-  propagate a Motor connection error deep in the call stack).
-
-Usage::
-
-    @router.get("/items")
-    async def list_items(settings: Annotated[Settings, Depends(get_settings)]):
-        ...
-
-    @router.post("/runs")
-    async def create_run(_: Annotated[None, Depends(require_db)]):
-        ...
+This module provides:
+- :func:`get_settings`      – injects the cached Settings instance.
+- :func:`require_db`        – raises 503 when MongoDB is unreachable.
+- :func:`get_current_user`  – validates JWT and returns the UserDocument.
+- :func:`require_admin`     – restrict to ADMIN role.
+- :func:`require_not_qa`    – restrict to ADMIN or DEV (QA cannot call LLM chat).
+- :func:`require_not_dev`   – restrict to ADMIN or QA (DEV cannot create pipelines).
 """
 
 from __future__ import annotations
@@ -27,6 +19,8 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
 
 from app.config import Settings
 from app.config import get_settings as _get_settings
@@ -38,15 +32,7 @@ from app.db.database import check_connection
 
 
 async def get_settings() -> Settings:
-    """FastAPI dependency that returns the cached application settings.
-
-    Because :func:`~app.config.get_settings` is decorated with
-    ``@lru_cache``, this is effectively a zero-cost call after the first
-    invocation.
-
-    Returns:
-        The singleton :class:`~app.config.Settings` instance.
-    """
+    """FastAPI dependency that returns the cached application settings."""
     return _get_settings()
 
 
@@ -57,13 +43,6 @@ async def get_settings() -> Settings:
 
 async def require_db() -> None:
     """FastAPI dependency that aborts with ``503`` when MongoDB is unreachable.
-
-    Inject this dependency into any endpoint where a database failure should
-    surface as a clean HTTP error rather than an unhandled exception::
-
-        @router.post("/runs")
-        async def create_run(_: Annotated[None, Depends(require_db)]):
-            ...
 
     Raises:
         HTTPException: 503 Service Unavailable if the MongoDB ping fails.
@@ -76,11 +55,72 @@ async def require_db() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Convenience type aliases (use with Annotated for cleaner signatures)
+# JWT / Auth dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+async def get_current_user(token: str = Depends(_oauth2_scheme)):  # type: ignore[type-arg]
+    """Validate JWT and return the authenticated UserDocument.
+
+    Raises:
+        HTTPException: 401 if token is missing, invalid, or user not found.
+    """
+    from app.db.models import UserDocument
+    from app.services.auth_service import decode_access_token
+
+    credentials_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = decode_access_token(token)
+        username: str = payload.get("sub", "")
+        if not username:
+            raise credentials_exc
+    except JWTError:
+        raise credentials_exc
+
+    user = await UserDocument.find_one(UserDocument.username == username)
+    if user is None:
+        raise credentials_exc
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled.")
+    return user
+
+
+async def require_admin(current_user=Depends(get_current_user)):  # type: ignore[type-arg]
+    """Require ADMIN role."""
+    from app.db.models import UserRole
+
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required.")
+    return current_user
+
+
+async def require_not_qa(current_user=Depends(get_current_user)):  # type: ignore[type-arg]
+    """Allow ADMIN and DEV — deny QA (cannot use LLM chat)."""
+    from app.db.models import UserRole
+
+    if current_user.role == UserRole.QA:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="QA role cannot access LLM chat.")
+    return current_user
+
+
+async def require_not_dev(current_user=Depends(get_current_user)):  # type: ignore[type-arg]
+    """Allow ADMIN and QA — deny DEV (cannot create pipeline templates)."""
+    from app.db.models import UserRole
+
+    if current_user.role == UserRole.DEV:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Dev role cannot create pipeline templates.")
+    return current_user
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Convenience type aliases
 # ─────────────────────────────────────────────────────────────────────────────
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
-"""Type alias for injecting :class:`~app.config.Settings` into route handlers."""
-
 RequireDB = Annotated[None, Depends(require_db)]
-"""Type alias for the DB availability guard dependency."""

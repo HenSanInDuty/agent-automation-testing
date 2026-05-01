@@ -101,6 +101,23 @@ class Settings(BaseSettings):
     CLICKHOUSE_PORT: int = 8123
     CLICKHOUSE_DB: str = "auto_at"
 
+    # ── MinIO (S3-compatible object storage) ──────────────────────
+    MINIO_ENDPOINT: str = "minio:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET: str = "auto-at"
+    MINIO_USE_SSL: bool = False
+    MINIO_PUBLIC_URL: Optional[str] = None  # e.g. http://localhost:9000 for browser presigned URLs
+
+    # ── Auth / JWT ────────────────────────────────────────────────
+    JWT_SECRET_KEY: str = "change-me-jwt-secret-key-min-32-chars"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 hours
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # First admin user auto-created on first startup (if no users exist)
+    ADMIN_DEFAULT_USERNAME: str = "admin"
+    ADMIN_DEFAULT_PASSWORD: str = "Admin@1234"
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_origins(cls, v: str) -> str:

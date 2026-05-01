@@ -33,6 +33,19 @@ services:
       - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
       # Ollama runs on the host — use host IP to reach it from the container
       - OLLAMA_BASE_URL=http://172.26.80.1:11434
+      # MinIO
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=auto-at
+      - MINIO_USE_SSL=false
+      - MINIO_PUBLIC_URL=http://localhost:9000
+      # JWT Auth
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-super-secret-jwt-key-change-in-production}
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=480
+      - ADMIN_DEFAULT_USERNAME=${ADMIN_DEFAULT_USERNAME:-admin}
+      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-Admin@1234}
     extra_hosts:
       # Required on Linux (Docker Desktop on Mac/Win adds this automatically)
       - "host.docker.internal:host-gateway"
@@ -43,6 +56,8 @@ services:
     command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       mongodb:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -57,6 +72,41 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # ── MinIO (S3-compatible object storage) ──────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"   # S3 API
+      - "9090:9090"   # MinIO Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9090"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── MinIO bucket init ──────────────────────────────────────────────────────
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set myminio http://minio:9000 minioadmin minioadmin &&
+        mc mb --ignore-existing myminio/auto-at &&
+        mc anonymous set download myminio/auto-at &&
+        echo 'MinIO bucket ready.'
+      "
+    restart: "no"
 
   # ── Kafka (KRaft mode – no Zookeeper) ──────────────────────────────────────
   kafka:
@@ -150,3 +200,4 @@ volumes:
   backend_uploads:
   kafka_data:
   clickhouse_data:
+  minio_data:

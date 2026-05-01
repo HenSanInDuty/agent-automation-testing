@@ -5,10 +5,11 @@ import logging
 from typing import Any, Optional
 
 import litellm
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from app.api.v1.deps import get_current_user, require_not_qa
 from app.core.llm_factory import get_model_string
 from app.db import crud
 from app.schemas.llm_profile import LLMProfileInternal
@@ -141,7 +142,10 @@ async def _resolve_profile(llm_profile_id: Optional[str]) -> LLMProfileInternal:
 
 
 @router.post("/chat/send", summary="Stream a chat response via SSE")
-async def chat_send(body: ChatRequest) -> StreamingResponse:
+async def chat_send(
+    body: ChatRequest,
+    _: object = Depends(require_not_qa),
+) -> StreamingResponse:
     """
     Send a list of messages to the configured LLM and stream the response
     back as Server-Sent Events.

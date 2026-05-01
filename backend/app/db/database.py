@@ -61,6 +61,7 @@ async def init_db() -> None:
         PipelineRunDocument,
         PipelineTemplateDocument,
         StageConfigDocument,
+        UserDocument,
     )
 
     logger.info(
@@ -95,7 +96,8 @@ async def init_db() -> None:
             StageConfigDocument,
             PipelineRunDocument,
             PipelineResultDocument,
-            PipelineTemplateDocument,  # NEW V3
+            PipelineTemplateDocument,
+            UserDocument,
         ],
     )
 
