@@ -165,7 +165,7 @@ class IngestionCrew(BaseCrew):
         """
         file_path = Path(input_data["file_path"])
         document_name = input_data.get("document_name") or file_path.name
-        mock_mode: bool = bool(input_data.get("mock_mode", False))
+        mock_mode: bool = bool(input_data.get("mock_mode") or self._is_mock_mode())
 
         # Allow per-call chunk config overrides
         chunk_size = int(input_data.get("chunk_size", self._chunk_size))
@@ -177,16 +177,26 @@ class IngestionCrew(BaseCrew):
         )
 
         # ── Step 1: Parse ────────────────────────────────────────────────────
-        self._emit(
-            "log", {"message": f"Parsing document: {document_name}", "level": "info"}
-        )
-        try:
-            raw_text = parse_document(file_path)
-        except Exception as exc:
-            error_msg = f"Document parsing failed: {exc}"
-            logger.error("[Ingestion][%s] %s", self._run_id, error_msg)
-            self._emit("log", {"message": error_msg, "level": "error"})
-            raise
+        # Re-use pre-parsed content when the caller already extracted it
+        # (e.g. DAGPipelineRunner background task) to avoid parsing twice.
+        _preloaded: str = input_data.get("document_content") or ""
+        if _preloaded:
+            raw_text = _preloaded
+            self._emit(
+                "log",
+                {"message": f"Using pre-parsed document content ({len(raw_text):,} chars)", "level": "info"},
+            )
+        else:
+            self._emit(
+                "log", {"message": f"Parsing document: {document_name}", "level": "info"}
+            )
+            try:
+                raw_text = parse_document(file_path)
+            except Exception as exc:
+                error_msg = f"Document parsing failed: {exc}"
+                logger.error("[Ingestion][%s] %s", self._run_id, error_msg)
+                self._emit("log", {"message": error_msg, "level": "error"})
+                raise
 
         logger.info(
             "[Ingestion][%s] Parsed '%s': %d chars",

@@ -178,7 +178,7 @@ async def _run_dag_pipeline_background(
             template=template,
             llm_profile_id=llm_profile_id,
             progress_callback=ws_broadcaster,
-            mock_mode=getattr(settings, "MOCK_PIPELINE", False),
+            mock_mode=settings.MOCK_CREWS,
         )
 
         initial_input: dict = {

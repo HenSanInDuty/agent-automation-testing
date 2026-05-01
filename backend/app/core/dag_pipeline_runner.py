@@ -926,4 +926,6 @@ class DAGPipelineRunner:
             progress_callback=self._progress_callback,
             mock_mode=self._mock_mode,
         )
-        return await asyncio.to_thread(crew.run, input_data)
+        # Forward mock_mode so IngestionCrew.run() reads it from input_data
+        merged = {**input_data, "mock_mode": self._mock_mode}
+        return await asyncio.to_thread(crew.run, merged)
