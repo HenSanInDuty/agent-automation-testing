@@ -33,6 +33,17 @@ from app.db.models import NodeType, PipelineNodeConfig, PipelineTemplateDocument
 
 logger = logging.getLogger(__name__)
 
+# Keys whose values are dicts of { "filepath": "file content" } or plain strings
+# that represent generated source/config files and should be saved to disk.
+_FILE_OUTPUT_KEYS = (
+    "spec_files",
+    "page_objects",
+    "fixtures_ts",
+    "test_data_ts",
+    "playwright_config_ts",
+    "env_example",
+)
+
 # Callback type: (event_type: str, data: dict) -> None
 ProgressCallback = Callable[[str, dict[str, Any]], None]
 
@@ -391,6 +402,9 @@ class DAGPipelineRunner:
                 status="completed",
                 duration_seconds=round(duration, 2),
             )
+            # Persist any generated source files (spec_files, page_objects, etc.)
+            if isinstance(output, dict) and any(output.get(k) for k in _FILE_OUTPUT_KEYS):
+                await self._save_file_artifacts(node_id, output)
             await crud.update_pipeline_run(
                 self._run_id,
                 completed_nodes=[*self._get_current_completed(), node_id],
@@ -931,11 +945,72 @@ class DAGPipelineRunner:
         merged = {**input_data, "mock_mode": self._mock_mode}
         return await asyncio.to_thread(crew.run, merged)
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # File artifact persistence
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def _save_file_artifacts(self, node_id: str, output: dict) -> None:  # type: ignore[type-arg]
+        """Persist any generated source files from node output to disk.
+
+        Looks for well-known keys in *output*:
+          - ``spec_files``         : dict[filepath, str] — Playwright .spec.ts files
+          - ``page_objects``       : dict[filepath, str] — Page Object classes
+          - ``fixtures_ts``        : str — fixtures.ts content
+          - ``test_data_ts``       : str — test-data.ts content
+          - ``playwright_config_ts``: str — playwright.config.ts content
+          - ``env_example``        : str — .env.example content
+
+        Files are written under ``<UPLOAD_DIR>/<run_id>/playwright/``.
+        """
+        import os
+        from app.config import settings
+
+        base_dir = (
+            os.path.join(settings.UPLOAD_DIR, self._run_id, "playwright")
+        )
+
+        _DEFAULT_PATHS = {
+            "fixtures_ts": "fixtures.ts",
+            "test_data_ts": "test-data.ts",
+            "playwright_config_ts": "playwright.config.ts",
+            "env_example": ".env.example",
+        }
+
+        files_written: list[str] = []
+
+        for key in _FILE_OUTPUT_KEYS:
+            value = output.get(key)
+            if not value:
+                continue
+
+            if isinstance(value, dict):
+                # key -> filepath : content
+                for filepath, content in value.items():
+                    if not isinstance(content, str) or not content.strip():
+                        continue
+                    full_path = os.path.join(base_dir, filepath)
+                    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                    with open(full_path, "w", encoding="utf-8") as fh:
+                        fh.write(content)
+                    files_written.append(filepath)
+            elif isinstance(value, str) and value.strip():
+                default_name = _DEFAULT_PATHS.get(key, f"{key}.txt")
+                full_path = os.path.join(base_dir, default_name)
+                os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                with open(full_path, "w", encoding="utf-8") as fh:
+                    fh.write(value)
+                files_written.append(default_name)
+
+        if files_written:
+            logger.info(
+                "[DAGRunner] Saved %d artifact file(s) for node_id=%r run_id=%r: %s",
+                len(files_written),
+                node_id,
+                self._run_id,
+                files_written,
+            )
+
     async def _builtin_artifact(
-        self,
-        input_data: dict,  # type: ignore[type-arg]
-    ) -> dict:  # type: ignore[type-arg]
-        """Run the ArtifactCrew to generate unit test files + test case document."""
         from app.crews.artifact_crew import ArtifactCrew
 
         crew = ArtifactCrew(

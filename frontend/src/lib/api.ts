@@ -360,6 +360,28 @@ export const pipelineApi = {
     );
     return data;
   },
+
+  /** GET /api/v1/pipeline/runs/:run_id/artifacts/playwright */
+  listPlaywrightArtifacts: async (
+    runId: string,
+  ): Promise<Array<{ path: string; size_bytes: number }>> => {
+    const { data } = await apiClient.get<Array<{ path: string; size_bytes: number }>>(
+      `/api/v1/pipeline/runs/${runId}/artifacts/playwright`,
+    );
+    return data;
+  },
+
+  /** URL for downloading the playwright zip */
+  getPlaywrightZipUrl: (runId: string): string => {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    return `${base}/api/v1/pipeline/runs/${runId}/artifacts/playwright/zip`;
+  },
+
+  /** URL for downloading a single playwright artifact file */
+  getPlaywrightFileUrl: (runId: string, filePath: string): string => {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    return `${base}/api/v1/pipeline/runs/${runId}/artifacts/playwright/file?path=${encodeURIComponent(filePath)}`;
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

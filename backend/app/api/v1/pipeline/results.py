@@ -11,7 +11,8 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from pathlib import Path
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
@@ -132,4 +133,109 @@ async def export_report_docx(run_id: str) -> Response:
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Playwright artifact file endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _playwright_dir(run_id: str) -> Path:
+    import os
+    from app.config import settings
+    return Path(settings.UPLOAD_DIR) / run_id / "playwright"
+
+
+@router.get(
+    "/runs/{run_id}/artifacts/playwright",
+    summary="List generated Playwright files",
+    description="Returns a list of generated Playwright source files for a run.",
+)
+async def list_playwright_artifacts(run_id: str) -> list[dict]:
+    """List all files written under uploads/<run_id>/playwright/."""
+    await _get_run_or_404(run_id)
+
+    base = _playwright_dir(run_id)
+    if not base.exists():
+        return []
+
+    files = []
+    for path in sorted(base.rglob("*")):
+        if path.is_file():
+            rel = path.relative_to(base).as_posix()
+            files.append({
+                "path": rel,
+                "size_bytes": path.stat().st_size,
+            })
+    return files
+
+
+@router.get(
+    "/runs/{run_id}/artifacts/playwright/zip",
+    summary="Download all Playwright files as a ZIP archive",
+    description="Bundles all generated Playwright source files into a single .zip download.",
+    response_class=Response,
+)
+async def download_playwright_zip(run_id: str) -> Response:
+    """Bundle uploads/<run_id>/playwright/ into a ZIP and stream it."""
+    import io
+    import zipfile
+    from fastapi.responses import Response as FastAPIResponse
+
+    await _get_run_or_404(run_id)
+    base = _playwright_dir(run_id)
+    if not base.exists() or not any(base.rglob("*")):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No Playwright artifacts found for this run. Re-run the pipeline first.",
+        )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for path in sorted(base.rglob("*")):
+            if path.is_file():
+                zf.write(path, path.relative_to(base).as_posix())
+    buf.seek(0)
+
+    filename = f"playwright-tests-{run_id[:8]}.zip"
+    return FastAPIResponse(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/runs/{run_id}/artifacts/playwright/file",
+    summary="Download a single Playwright artifact file",
+    description="Downloads a specific file from the Playwright artifacts directory.",
+    response_class=Response,
+)
+async def download_playwright_file(
+    run_id: str,
+    path: Annotated[str, Query(description="Relative file path, e.g. tests/auth.spec.ts")],
+) -> Response:
+    """Download a single file from uploads/<run_id>/playwright/<path>."""
+    import mimetypes
+    from fastapi.responses import Response as FastAPIResponse
+
+    await _get_run_or_404(run_id)
+    base = _playwright_dir(run_id)
+
+    # Sanitise path — reject any traversal attempts
+    try:
+        target = (base / path).resolve()
+        target.relative_to(base.resolve())  # raises ValueError if outside base
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file path.")
+
+    if not target.exists() or not target.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {path}")
+
+    content = target.read_bytes()
+    mime, _ = mimetypes.guess_type(target.name)
+    return FastAPIResponse(
+        content=content,
+        media_type=mime or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{target.name}"'},
     )

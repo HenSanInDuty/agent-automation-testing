@@ -15,6 +15,9 @@ import {
   Loader2,
   SkipForward,
   Network,
+  FolderOpen,
+  Download,
+  Archive,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/Select";
@@ -49,7 +52,7 @@ export interface ResultsViewerProps {
 // Tab definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TabId = "testcases" | "coverage" | "report" | "nodes";
+type TabId = "testcases" | "coverage" | "report" | "nodes" | "files";
 
 interface TabDef {
   id: TabId;
@@ -77,6 +80,11 @@ const TABS: TabDef[] = [
     id: "nodes",
     label: "Nodes",
     icon: <Network className="w-3.5 h-3.5" aria-hidden="true" />,
+  },
+  {
+    id: "files",
+    label: "Files",
+    icon: <FolderOpen className="w-3.5 h-3.5" aria-hidden="true" />,
   },
 ];
 
@@ -257,8 +265,138 @@ function EmptyStage({ message }: { message: string }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────// FilesTab — downloadable Playwright artifacts
 // ─────────────────────────────────────────────────────────────────────────────
-// Run summary card (Report tab)
+
+function FilesTab({ runId }: { runId: string }) {
+  const { data: files, isLoading, isError } = useQuery({
+    queryKey: ["playwrightArtifacts", runId],
+    queryFn: () => pipelineApi.listPlaywrightArtifacts(runId),
+    staleTime: 30_000,
+  });
+
+  const handleDownloadFile = (filePath: string) => {
+    const url = pipelineApi.getPlaywrightFileUrl(runId, filePath);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filePath.split("/").pop() ?? filePath;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const handleDownloadZip = () => {
+    const url = pipelineApi.getPlaywrightZipUrl(runId);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `playwright-tests-${runId.slice(0, 8)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 gap-2 text-[#3d5070]">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span className="text-sm">Loading files…</span>
+      </div>
+    );
+  }
+
+  if (isError || !files) {
+    return (
+      <EmptyStage message="Could not load artifact files. Run the pipeline first." />
+    );
+  }
+
+  if (files.length === 0) {
+    return (
+      <EmptyStage message="No Playwright files generated yet. Re-run the pipeline to generate .spec.ts files and test infrastructure." />
+    );
+  }
+
+  // Group by directory
+  const grouped = files.reduce<Record<string, typeof files>>((acc, f) => {
+    const dir = f.path.includes("/") ? f.path.split("/").slice(0, -1).join("/") : "root";
+    if (!acc[dir]) acc[dir] = [];
+    acc[dir].push(f);
+    return acc;
+  }, {});
+
+  const fileExtIcon: Record<string, string> = {
+    ".ts": "🟦",
+    ".js": "🟨",
+    ".json": "📋",
+    ".md": "📝",
+    ".example": "⚙️",
+  };
+  const getIcon = (p: string) => {
+    const ext = "." + p.split(".").pop();
+    return fileExtIcon[ext] ?? "📄";
+  };
+
+  const formatSize = (bytes: number) =>
+    bytes < 1024 ? `${bytes}B` : `${(bytes / 1024).toFixed(1)}KB`;
+
+  return (
+    <div className="space-y-4">
+      {/* Header row with zip download */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-[#92a4c9]">{files.length} file(s) generated</span>
+        <Button
+          variant="outline"
+          size="sm"
+          leftIcon={<Archive className="w-3.5 h-3.5" aria-hidden="true" />}
+          onClick={handleDownloadZip}
+          title="Download all files as ZIP"
+        >
+          Download All (.zip)
+        </Button>
+      </div>
+
+      {/* File groups */}
+      {Object.entries(grouped).map(([dir, dirFiles]) => (
+        <div key={dir} className="rounded-xl border border-[#2b3b55] overflow-hidden">
+          <div className="px-4 py-2 bg-[#1e2a3d] border-b border-[#2b3b55]">
+            <span className="text-xs font-mono text-[#92a4c9]">
+              {dir === "root" ? "/" : `/${dir}/`}
+            </span>
+          </div>
+          <div className="divide-y divide-[#2b3b55]">
+            {dirFiles.map((f) => (
+              <div
+                key={f.path}
+                className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[#1e2a3d] transition-colors"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-base shrink-0">{getIcon(f.path)}</span>
+                  <span className="text-sm font-mono text-white truncate">
+                    {f.path.split("/").pop()}
+                  </span>
+                  <span className="text-xs text-[#3d5070] shrink-0">
+                    {formatSize(f.size_bytes)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFile(f.path)}
+                  className="shrink-0 flex items-center gap-1 text-xs text-[#5b9eff] hover:text-white transition-colors px-2 py-1 rounded hover:bg-[#2b3b55]"
+                  title={`Download ${f.path}`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────// Run summary card (Report tab)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const statusTextColor: Record<PipelineStatus, string> = {
@@ -575,7 +713,7 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
     }
     return map;
   }, [nodeResultsRaw]);
-  const visibleTabs = isV3Run ? TABS : TABS.filter((t) => t.id !== "nodes");
+  const visibleTabs = isV3Run ? TABS : TABS.filter((t) => t.id !== "nodes" && t.id !== "files");
 
   return (
     <div className="rounded-2xl border border-[#2b3b55] bg-[#18202F] overflow-hidden">
@@ -685,6 +823,16 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
               )}
             </div>
           )}
+        </div>
+
+        {/* ── Files (Playwright artifacts) ─────────────────────────────── */}
+        <div
+          id="results-panel-files"
+          role="tabpanel"
+          aria-labelledby="results-tab-files"
+          hidden={activeTab !== "files"}
+        >
+          {activeTab === "files" && <FilesTab runId={run.id} />}
         </div>
 
         {/* ── Nodes (V3 DAG) ──────────────────────────────────────────────── */}
