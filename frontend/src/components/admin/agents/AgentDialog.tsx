@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Bot } from "lucide-react";
+import { Bot, Wrench, X, Plus } from "lucide-react";
 
 import {
   Modal,
@@ -24,8 +24,9 @@ import {
 import { toast } from "@/components/ui/Toast";
 import { useAgentConfig, useUpdateAgentConfig } from "@/hooks/useAgentConfigs";
 import { useLLMProfiles } from "@/hooks/useLLMProfiles";
+import { useTools, useUpdateAgentTools } from "@/hooks/useTools";
 import { cn } from "@/lib/utils";
-import type { LLMProfileResponse, AgentStage } from "@/types";
+import type { LLMProfileResponse, AgentStage, ToolInfo } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Zod schema
@@ -144,6 +145,88 @@ const STAGE_BADGE_VARIANT: Record<AgentStage, BadgeVariant> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ToolPicker
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ToolPickerProps {
+  allTools: ToolInfo[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}
+
+function ToolPicker({ allTools, selected, onChange }: ToolPickerProps) {
+  const unselected = allTools.filter((t) => !selected.includes(t.slug));
+
+  const remove = (slug: string) => onChange(selected.filter((s) => s !== slug));
+  const add = (slug: string) => onChange([...selected, slug]);
+
+  return (
+    <div className="space-y-2">
+      <Label className="mb-0 flex items-center gap-1.5">
+        <Wrench className="w-3.5 h-3.5 text-[#92a4c9]" />
+        Tools
+      </Label>
+      <p className="text-xs text-[#92a4c9]">
+        Tools attached to this agent during pipeline execution.
+      </p>
+
+      {/* Active tool chips */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((slug) => (
+            <span
+              key={slug}
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5",
+                "text-xs font-mono rounded",
+                "bg-[#1a2d4a] border border-[#3a5a8a] text-[#7ab4ff]",
+              )}
+            >
+              {slug}
+              <button
+                type="button"
+                onClick={() => remove(slug)}
+                className="text-[#92a4c9] hover:text-[#ff6b6b] transition-colors"
+                aria-label={`Remove ${slug}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Add tools dropdown */}
+      {unselected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {unselected.map((tool) => (
+            <button
+              key={tool.slug}
+              type="button"
+              onClick={() => add(tool.slug)}
+              title={tool.description}
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5",
+                "text-xs font-mono rounded border border-dashed",
+                "border-[#2b3b55] text-[#92a4c9]",
+                "hover:border-[#3a5a8a] hover:text-[#7ab4ff] transition-colors",
+              )}
+            >
+              <Plus className="w-3 h-3" />
+              {tool.slug}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {allTools.length === 0 && (
+        <p className="text-xs text-[#92a4c9] italic">No tools registered.</p>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AgentDialog
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -154,7 +237,22 @@ export function AgentDialog({ open, onClose, agentId }: AgentDialogProps) {
   );
 
   const { data: profilesData } = useLLMProfiles({ limit: 100 });
+  const { data: toolsData } = useTools();
   const updateMutation = useUpdateAgentConfig();
+  const updateToolsMutation = useUpdateAgentTools();
+
+  // Local tool_names state (derived from agent, editable separately)
+  const [selectedTools, setSelectedTools] = React.useState<string[]>([]);
+
+  // Sync tool selection when agent loads
+  React.useEffect(() => {
+    setSelectedTools(agent?.tool_names ?? []);
+  }, [agent]);
+
+  // Clear when dialog closes
+  React.useEffect(() => {
+    if (!open) setSelectedTools([]);
+  }, [open]);
 
   // ── Form ───────────────────────────────────────────────────────────────────
   const {
@@ -238,6 +336,14 @@ export function AgentDialog({ open, onClose, agentId }: AgentDialogProps) {
           verbose: values.verbose,
         },
       });
+      // Save tools only when they changed
+      const originalTools = agent?.tool_names ?? [];
+      const toolsChanged =
+        JSON.stringify([...selectedTools].sort()) !==
+        JSON.stringify([...originalTools].sort());
+      if (toolsChanged) {
+        await updateToolsMutation.mutateAsync({ agentId, toolNames: selectedTools });
+      }
       toast.success(
         "Agent saved",
         `"${values.display_name}" has been updated successfully.`,
@@ -256,7 +362,10 @@ export function AgentDialog({ open, onClose, agentId }: AgentDialogProps) {
   };
 
   const isLoadingForm = isLoadingAgent && !!agentId;
-  const isBusy = updateMutation.isPending;
+  const isBusy = updateMutation.isPending || updateToolsMutation.isPending;
+  const toolsDirty =
+    JSON.stringify([...selectedTools].sort()) !==
+    JSON.stringify([...(agent?.tool_names ?? [])].sort());
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -385,7 +494,12 @@ export function AgentDialog({ open, onClose, agentId }: AgentDialogProps) {
                 className="max-w-[180px]"
                 {...register("max_iter", { valueAsNumber: true })}
               />
-
+              {/* ── Tools ───────────────────────────────────────────── */}
+              <ToolPicker
+                allTools={toolsData?.items ?? []}
+                selected={selectedTools}
+                onChange={setSelectedTools}
+              />
               {/* ── Toggles ───────────────────────────────────────────── */}
               <div className="flex items-start gap-8 pt-1">
                 {/* Enabled */}
@@ -461,7 +575,7 @@ export function AgentDialog({ open, onClose, agentId }: AgentDialogProps) {
             type="submit"
             variant="primary"
             loading={isBusy}
-            disabled={isLoadingForm || (!isDirty && !isBusy)}
+            disabled={isLoadingForm || (!isDirty && !toolsDirty && !isBusy)}
           >
             Save Changes
           </Button>

@@ -174,6 +174,7 @@ export interface AgentConfigResponse {
   enabled: boolean;
   verbose: boolean;
   max_iter: number;
+  tool_names: string[];
   created_at: string;
   updated_at: string;
 }
@@ -188,6 +189,27 @@ export interface AgentConfigUpdate {
   enabled?: boolean;
   verbose?: boolean;
   max_iter?: number;
+  tool_names?: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tools
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ToolInfo {
+  slug: string;
+  class: string;
+  description: string;
+}
+
+export interface ToolListResponse {
+  total: number;
+  items: ToolInfo[];
+}
+
+export interface AgentToolsResponse {
+  agent_id: string;
+  tool_names: string[];
 }
 
 export interface AgentConfigResetResponse {

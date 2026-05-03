@@ -116,11 +116,25 @@ class AgentFactory:
         if llm is not None:
             agent_kwargs["llm"] = llm
 
+        # Resolve tools from ToolRegistry using the agent's configured tool_names
+        if config.tool_names:
+            from app.tools.registry import ToolRegistry  # noqa: PLC0415
+            tools = ToolRegistry.resolve(config.tool_names)
+            if tools:
+                agent_kwargs["tools"] = tools
+                logger.debug(
+                    "[AgentFactory] Attached %d tool(s) to agent %r: %s",
+                    len(tools),
+                    agent_id,
+                    config.tool_names,
+                )
+
         logger.debug(
-            "[AgentFactory] Built agent %r  stage=%s  llm=%s",
+            "[AgentFactory] Built agent %r  stage=%s  llm=%s  tools=%s",
             agent_id,
             config.stage,
             getattr(llm, "model", "env-default"),
+            config.tool_names or [],
         )
 
         return Agent(**agent_kwargs)

@@ -197,6 +197,7 @@ def create_app() -> FastAPI:
         pipeline,
         pipeline_templates,
         stage_configs,
+        tools,
         websocket,
     )
 
@@ -219,6 +220,7 @@ def create_app() -> FastAPI:
     app.include_router(
         stage_configs.router, prefix="/api/v1", tags=["Admin – Stage Configs"]
     )
+    app.include_router(tools.router, prefix="/api/v1", tags=["Admin – Tools"])
     app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
 
     # WebSocket router – the route itself defines /ws/pipeline/{run_id}

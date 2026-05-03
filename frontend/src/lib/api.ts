@@ -7,6 +7,7 @@ import type {
   AgentConfigResetResponse,
   AgentConfigSummary,
   AgentConfigUpdate,
+  AgentToolsResponse,
   DAGValidationResult,
   LLMProfileCreate,
   LLMProfileListResponse,
@@ -29,6 +30,8 @@ import type {
   StageConfigCreate,
   StageConfigUpdate,
   TemplateExportEnvelope,
+  ToolInfo,
+  ToolListResponse,
 } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -735,6 +738,44 @@ export const pipelineTemplatesApi = {
     const { data } = await apiClient.post<PipelineTemplate>(
       `/api/v1/pipeline-templates/${templateId}/nodes`,
       node,
+    );
+    return data;
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tools API
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const toolsApi = {
+  /** GET /api/v1/admin/tools */
+  list: async (): Promise<ToolListResponse> => {
+    const { data } = await apiClient.get<ToolListResponse>("/api/v1/admin/tools");
+    return data;
+  },
+
+  /** GET /api/v1/admin/tools/:slug */
+  get: async (slug: string): Promise<ToolInfo> => {
+    const { data } = await apiClient.get<ToolInfo>(`/api/v1/admin/tools/${slug}`);
+    return data;
+  },
+
+  /** GET /api/v1/admin/tools/agent/:agentId */
+  getAgentTools: async (agentId: string): Promise<AgentToolsResponse> => {
+    const { data } = await apiClient.get<AgentToolsResponse>(
+      `/api/v1/admin/tools/agent/${agentId}`,
+    );
+    return data;
+  },
+
+  /** PUT /api/v1/admin/tools/agent/:agentId */
+  updateAgentTools: async (
+    agentId: string,
+    toolNames: string[],
+  ): Promise<AgentToolsResponse> => {
+    const { data } = await apiClient.put<AgentToolsResponse>(
+      `/api/v1/admin/tools/agent/${agentId}`,
+      { tool_names: toolNames },
     );
     return data;
   },

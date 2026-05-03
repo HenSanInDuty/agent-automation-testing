@@ -139,6 +139,9 @@ class AgentConfigDocument(Document):
     verbose: bool = False
     max_iter: int = 5
     is_custom: bool = False  # True if user-created, False if seeded
+    # Tool slugs resolved at runtime via ToolRegistry.
+    # Example: ["api_runner", "document_parser"]
+    tool_names: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 

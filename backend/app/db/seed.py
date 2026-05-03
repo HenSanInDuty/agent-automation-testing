@@ -79,6 +79,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         ),
         "max_iter": 3,
         "is_custom": False,
+        "tool_names": ["document_parser", "text_chunker"],
     },
     # ── Stage: testcase ───────────────────────────────────────────────────────
     {
@@ -352,6 +353,7 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         ),
         "max_iter": 8,
         "is_custom": False,
+        "tool_names": ["api_runner"],
     },
     {
         "agent_id": "execution_logger",
