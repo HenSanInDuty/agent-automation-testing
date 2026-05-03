@@ -33,16 +33,8 @@ from app.db.models import NodeType, PipelineNodeConfig, PipelineTemplateDocument
 
 logger = logging.getLogger(__name__)
 
-# Keys whose values are dicts of { "filepath": "file content" } or plain strings
-# that represent generated source/config files and should be saved to disk.
-_FILE_OUTPUT_KEYS = (
-    "spec_files",
-    "page_objects",
-    "fixtures_ts",
-    "test_data_ts",
-    "playwright_config_ts",
-    "env_example",
-)
+# Playwright agent IDs that may generate file artifacts
+_PLAYWRIGHT_AGENT_IDS = frozenset({"playwright_spec_writer", "playwright_fixture_writer"})
 
 # Callback type: (event_type: str, data: dict) -> None
 ProgressCallback = Callable[[str, dict[str, Any]], None]
@@ -402,9 +394,10 @@ class DAGPipelineRunner:
                 status="completed",
                 duration_seconds=round(duration, 2),
             )
-            # Persist any generated source files (spec_files, page_objects, etc.)
-            if isinstance(output, dict) and any(output.get(k) for k in _FILE_OUTPUT_KEYS):
-                await self._save_file_artifacts(node_id, output)
+            # Persist any generated source files for playwright agent nodes.
+            # Uses playwright_output_parser to handle all LLM output formats.
+            if isinstance(output, dict) and node_config.agent_id in _PLAYWRIGHT_AGENT_IDS:
+                await self._save_file_artifacts(node_id, node_config.agent_id or "", output)
             await crud.update_pipeline_run(
                 self._run_id,
                 completed_nodes=[*self._get_current_completed(), node_id],
@@ -949,72 +942,51 @@ class DAGPipelineRunner:
     # File artifact persistence
     # ─────────────────────────────────────────────────────────────────────────
 
-    async def _save_file_artifacts(self, node_id: str, output: dict) -> None:  # type: ignore[type-arg]
-        """Persist any generated source files from node output to MinIO.
+    async def _save_file_artifacts(
+        self,
+        node_id: str,
+        agent_id: str,
+        output: dict,  # type: ignore[type-arg]
+    ) -> None:
+        """Persist playwright source files from node output to MinIO.
 
-        Looks for well-known keys in *output*:
-          - ``spec_files``          : dict[filepath, str] — Playwright .spec.ts files
-          - ``page_objects``        : dict[filepath, str] — Page Object classes
-          - ``fixtures_ts``         : str — fixtures.ts content
-          - ``test_data_ts``        : str — test-data.ts content
-          - ``playwright_config_ts``: str — playwright.config.ts content
-          - ``env_example``         : str — .env.example content
-
+        Uses playwright_output_parser to handle all LLM output formats.
         Files are uploaded to MinIO under ``runs/<run_id>/playwright/``.
         """
         import asyncio
+        from app.core.playwright_output_parser import extract_playwright_files
         from app.services.storage_service import storage
 
-        _DEFAULT_PATHS = {
-            "fixtures_ts": "fixtures.ts",
-            "test_data_ts": "test-data.ts",
-            "playwright_config_ts": "playwright.config.ts",
-            "env_example": ".env.example",
-        }
-
-        files_written: list[str] = []
-        loop = asyncio.get_running_loop()
-
-        for key in _FILE_OUTPUT_KEYS:
-            value = output.get(key)
-            if not value:
-                continue
-
-            if isinstance(value, dict):
-                for filepath, content in value.items():
-                    if not isinstance(content, str) or not content.strip():
-                        continue
-                    await loop.run_in_executor(
-                        None,
-                        storage.upload_file_content,
-                        self._run_id,
-                        filepath,
-                        content,
-                        "playwright",
-                        "text/plain",
-                    )
-                    files_written.append(filepath)
-            elif isinstance(value, str) and value.strip():
-                default_name = _DEFAULT_PATHS.get(key, f"{key}.txt")
-                await loop.run_in_executor(
-                    None,
-                    storage.upload_file_content,
-                    self._run_id,
-                    default_name,
-                    value,
-                    "playwright",
-                    "text/plain",
-                )
-                files_written.append(default_name)
-
-        if files_written:
-            logger.info(
-                "[DAGRunner] Uploaded %d artifact file(s) to MinIO for node_id=%r run_id=%r: %s",
-                len(files_written),
+        files_map = extract_playwright_files(agent_id, output)
+        if not files_map:
+            logger.warning(
+                "[DAGRunner] No artifact files extracted for node_id=%r agent_id=%r",
                 node_id,
-                self._run_id,
-                files_written,
+                agent_id,
             )
+            return
+
+        loop = asyncio.get_running_loop()
+        files_written: list[str] = []
+        for filename, content in files_map.items():
+            await loop.run_in_executor(
+                None,
+                storage.upload_file_content,
+                self._run_id,
+                filename,
+                content,
+                "playwright",
+                "text/plain",
+            )
+            files_written.append(filename)
+
+        logger.info(
+            "[DAGRunner] Uploaded %d artifact file(s) to MinIO for node_id=%r run_id=%r: %s",
+            len(files_written),
+            node_id,
+            self._run_id,
+            files_written,
+        )
 
     async def _builtin_artifact(
         self,

@@ -10,6 +10,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Annotated, Optional
 
@@ -23,6 +24,45 @@ from ._helpers import _get_run_or_404, _result_to_response
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_PW_AGENTS = frozenset({"playwright_spec_writer", "playwright_fixture_writer"})
+
+
+async def _ensure_playwright_artifacts(run_id: str, storage) -> None:  # type: ignore[type-arg]
+    """When MinIO has no playwright files, synthesize them from DB node results.
+
+    Delegates extraction to playwright_output_parser which handles all LLM formats.
+    """
+    from app.core.playwright_output_parser import extract_playwright_files
+
+    loop = asyncio.get_running_loop()
+
+    # Skip if MinIO already has files
+    existing = await loop.run_in_executor(None, storage.list_playwright_files, run_id)
+    if existing:
+        return
+
+    # Query all results and filter to playwright agent nodes
+    db_results = await crud.get_pipeline_results(run_id)
+    if not db_results:
+        return
+
+    for node_result in db_results:
+        agent_id_val = node_result.agent_id or ""
+        if agent_id_val not in _PW_AGENTS:
+            continue
+
+        output = node_result.output or {}
+        files_map = extract_playwright_files(agent_id_val, output)
+        for filename, content in files_map.items():
+            await loop.run_in_executor(
+                None, storage.upload_file_content,
+                run_id, filename, content, "playwright", "text/plain",
+            )
+            logger.info(
+                "[results] Uploaded synthesized artifact from DB: run=%s file=%s",
+                run_id, filename,
+            )
 
 
 @router.get(
@@ -146,13 +186,19 @@ async def export_report_docx(run_id: str) -> Response:
     description="Returns a list of generated Playwright source files for a run.",
 )
 async def list_playwright_artifacts(run_id: str) -> list[dict]:
-    """List all files stored in MinIO under runs/{run_id}/playwright/."""
-    import asyncio
+    """List all files stored in MinIO under runs/{run_id}/playwright/.
+
+    If MinIO is empty and the run has playwright DB results, synthesizes
+    TypeScript artifacts from the stored node outputs and uploads them first.
+    """
     from app.services.storage_service import storage
 
     await _get_run_or_404(run_id)
     loop = asyncio.get_running_loop()
     files = await loop.run_in_executor(None, storage.list_playwright_files, run_id)
+    if not files:
+        await _ensure_playwright_artifacts(run_id, storage)
+        files = await loop.run_in_executor(None, storage.list_playwright_files, run_id)
     return files
 
 
@@ -164,12 +210,15 @@ async def list_playwright_artifacts(run_id: str) -> list[dict]:
 )
 async def download_playwright_zip(run_id: str) -> Response:
     """Build a ZIP of all MinIO playwright artifacts and stream it."""
-    import asyncio
     from fastapi.responses import Response as FastAPIResponse
     from app.services.storage_service import storage
 
     await _get_run_or_404(run_id)
     loop = asyncio.get_running_loop()
+
+    # Ensure artifacts exist (synthesize from DB if needed)
+    await _ensure_playwright_artifacts(run_id, storage)
+
     zip_bytes = await loop.run_in_executor(None, storage.build_playwright_zip, run_id)
 
     if not zip_bytes:
@@ -197,7 +246,6 @@ async def download_playwright_file(
     path: Annotated[str, Query(description="Relative file path, e.g. tests/auth.spec.ts")],
 ) -> Response:
     """Download a single file from MinIO: runs/{run_id}/playwright/{path}."""
-    import asyncio
     import mimetypes
     import posixpath
     from fastapi.responses import Response as FastAPIResponse
@@ -224,5 +272,4 @@ async def download_playwright_file(
         content=content,
         media_type=mime or "application/octet-stream",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
     )
