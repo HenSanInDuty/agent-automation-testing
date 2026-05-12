@@ -275,24 +275,44 @@ function FilesTab({ runId }: { runId: string }) {
     staleTime: 30_000,
   });
 
-  const handleDownloadFile = (filePath: string) => {
-    const url = pipelineApi.getPlaywrightFileUrl(runId, filePath);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filePath.split("/").pop() ?? filePath;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  const saveBlob = async (blob: Blob, suggestedName: string, mimeType: string) => {
+    const picker = (window as Window & { showSaveFilePicker?: (opts: unknown) => Promise<FileSystemFileHandle> }).showSaveFilePicker;
+    if (picker) {
+      const ext = suggestedName.split(".").pop() ?? "";
+      const handle = await picker({
+        suggestedName,
+        types: [{ description: "File", accept: { [mimeType]: ext ? [`.${ext}`] : [] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    } else {
+      // Fallback for browsers without File System Access API
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = suggestedName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    }
   };
 
-  const handleDownloadZip = () => {
+  const handleDownloadFile = async (filePath: string) => {
+    const url = pipelineApi.getPlaywrightFileUrl(runId, filePath);
+    const filename = filePath.split("/").pop() ?? filePath;
+    const res = await fetch(url);
+    const blob = await res.blob();
+    await saveBlob(blob, filename, "text/plain");
+  };
+
+  const handleDownloadZip = async () => {
     const url = pipelineApi.getPlaywrightZipUrl(runId);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `playwright-tests-${runId.slice(0, 8)}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const suggestedName = `playwright-tests-${runId.slice(0, 8)}.zip`;
+    const res = await fetch(url);
+    const blob = await res.blob();
+    await saveBlob(blob, suggestedName, "application/zip");
   };
 
   if (isLoading) {
