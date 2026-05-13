@@ -4,9 +4,9 @@
 
 ```mermaid
 flowchart TD
-    A["POST /api/v1/pipeline/runs\n{template_id, file, llm_profile_id?}"]
+    A["POST /api/v1/pipeline/runs\n{template_id, file, llm_profile_id?}\nAuthorization: Bearer <token>"]
     B["Tạo PipelineRunDocument\nstatus = pending"]
-    C["Lưu file upload → uploads/{run_id}/"]
+    C["Upload file → MinIO\nuploads/{run_id}/{filename}"]
     D["asyncio.create_task\n_run_dag_pipeline_background()"]
     E["DAGPipelineRunner(run_id, template, llm_profile_id)"]
     F["DAGResolver.validate(template)"]
@@ -24,7 +24,7 @@ flowchart TD
     R["Exponential backoff\n5s → 10s → 20s..."]
     S["Hết retry: status = failed\nEmit run.failed → WS + Kafka"]
     T{"Còn layer\ntiếp theo?"}
-    U["Collect OUTPUT node result\nUpdate run: status = completed\nEmit run.completed → WS + Kafka"]
+    U["Collect OUTPUT node result\nUpdate run: status = completed\nduration_seconds\nEmit run.completed → WS + Kafka"]
 
     A --> B --> C --> D --> E --> F --> G
     G -- Không --> H
@@ -52,19 +52,20 @@ flowchart TD
     START["_run_agent_node(node_config, parent_outputs)"]
     MERGE["Merge parent_outputs + document_content\nvào input context"]
     EMIT_START["Emit node.started\n→ WS + Kafka node_events"]
-    BUILD_AGENT["AgentFactory.build(agent_id, override_profile_id)"]
-    BUILD_CREW["Build CrewAI Crew\n(agent + task)"]
+    BUILD_AGENT["AgentFactory.build(\n  agent_id,\n  override_profile_id,\n  tool_names[]\n)"]
+    BUILD_CREW["Build CrewAI Crew\n(agent + task + tools)"]
     TIMEOUT["asyncio.wait_for(\n  asyncio.to_thread(crew.kickoff),\n  timeout_seconds\n)"]
     LLM_CALL["LLM API call\n(LiteLLM → Provider)"]
     TRACK["Ghi lại:\n- latency_ms\n- prompt/completion/total tokens\n- model, provider"]
-    SUCCESS["Lưu output vào _node_outputs[node_id]\nEmit node.completed → WS + Kafka"]
+    SAVE["Lưu PipelineResultDocument:\n- output, input_data\n- duration_seconds\n- agent_id, node_id"]
+    SUCCESS["Emit node.completed → WS + Kafka"]
     LLM_EMIT["Emit llm_call → Kafka\n(latency, tokens, model, success)"]
     FAIL["Emit node.failed → WS + Kafka\n_llm_success = False\nerror_type, error_message"]
     RETRY_CHECK{"will_retry?"}
     RAISE["Re-raise exception\n→ runner xử lý retry"]
 
     START --> MERGE --> EMIT_START --> BUILD_AGENT --> BUILD_CREW --> TIMEOUT
-    TIMEOUT -->|success| LLM_CALL --> TRACK --> SUCCESS --> LLM_EMIT
+    TIMEOUT -->|success| LLM_CALL --> TRACK --> SAVE --> SUCCESS --> LLM_EMIT
     TIMEOUT -->|timeout/exception| FAIL --> RETRY_CHECK
     RETRY_CHECK -- có --> RAISE
     RETRY_CHECK -- không --> LLM_EMIT
@@ -178,14 +179,21 @@ graph LR
         REPORT -->|"pipeline_report: PipelineReport"| OUTPUT
     end
 
-    subgraph Storage["MongoDB"]
-        RUN[("PipelineRunDocument\nrun_id, status,\nnode_statuses{}")]
-        RESULT[("PipelineResultDocument\nrun_id + node_id\noutput_data JSON")]
+    subgraph MongoDB["MongoDB"]
+        RUN[("PipelineRunDocument\nrun_id, status,\nnode_statuses{},\nexecution_layers,\nduration_seconds")]
+        RESULT[("PipelineResultDocument\nrun_id + node_id\noutput JSON,\ninput_data,\nduration_seconds")]
+    end
+
+    subgraph MinIO["MinIO (S3)"]
+        UP[("uploads/{run_id}/{filename}\n(original document)")]
+        PW[("runs/{run_id}/playwright/\n(generated test files)")]
     end
 
     INGEST -->|"save_node_result"| RESULT
     TESTCASE -->|"save_node_result"| RESULT
-    EXECUTE -->|"save_node_result"| RESULT
+    EXECUTE -->|"save_node_result + playwright files"| RESULT
+    EXECUTE -->|"upload artifacts"| PW
     REPORT -->|"save_node_result"| RESULT
-    OUTPUT -->|"update status"| RUN
+    OUTPUT -->|"update status + duration_seconds"| RUN
+    INPUT -->|"reads file_path"| UP
 ```

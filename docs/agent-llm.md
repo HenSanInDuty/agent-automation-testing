@@ -97,7 +97,7 @@ flowchart TD
         LOAD_AC["get_agent_config(agent_id)"]
         RESOLVE_LLM["resolve_llm_profile()\n5-tier priority"]
         BUILD_LLM["LLMFactory.build(profile)\n→ ChatLLM"]
-        BUILD_AGENT["crewai.Agent(\n  role, goal, backstory,\n  llm, verbose, max_iter\n)"]
+        BUILD_AGENT["crewai.Agent(\n  role, goal, backstory,\n  llm, verbose, max_iter,\n  tools=[...]\n)"]
     end
 
     subgraph Crew["CrewAI Execution"]
@@ -112,20 +112,53 @@ flowchart TD
     LOAD_AC --> RESOLVE_LLM --> BUILD_LLM --> BUILD_AGENT
     BUILD_AGENT --> TASK --> CREW --> KICKOFF
 
-    KICKOFF -->|"CrewOutput"| RESULT["output_data\nsaved to pipeline_results"]
+    KICKOFF -->|"CrewOutput"| RESULT["output_data + input_data\nduration_seconds\nsaved to pipeline_results"]
 
     style RESULT fill:#dcfce7,stroke:#22c55e
 ```
 
 ---
 
-## 4. 4 Built-in Crews — cấu trúc agents
+## 4. Tool Registry — ánh xạ tool_names → instances
+
+```mermaid
+flowchart LR
+    subgraph AgentConfig["AgentConfigDocument"]
+        TN["tool_names: ['api_runner', 'document_parser']"]
+    end
+
+    subgraph Registry["ToolRegistry"]
+        REG["registry.py\n_REGISTRY dict"]
+        API_R["api_runner\nAPIRunnerTool"]
+        DOC_P["document_parser\nDocumentParserTool"]
+        CHUNK["text_chunker\nTextChunkerTool"]
+        CFG["config_loader\nConfigLoaderTool"]
+        TFIL["test_file_renderer\nTestFileRendererTool"]
+    end
+
+    TN -->|"resolve"| REG
+    REG --> API_R
+    REG --> DOC_P
+    REG --> CHUNK
+    REG --> CFG
+    REG --> TFIL
+
+    API_R -->|"HTTP calls"| EXT["External APIs"]
+    DOC_P -->|"read from MinIO/local"| FILES["PDF / DOCX / TXT"]
+    CHUNK -->|"overlap chunking"| CHUNKS["Text chunks"]
+    CFG -->|"YAML/JSON load"| CONFIG["Config files"]
+    TFIL -->|"generate + upload"| MINIO["MinIO playwright/"]
+```
+
+---
+
+## 5. 4 Built-in Crews — cấu trúc agents
 
 ```mermaid
 graph TB
     subgraph Ingestion["IngestionCrew (Layer 1)"]
-        I1["document_parser\nExtract text từ PDF/DOCX/TXT\nDùng: DocumentParser tool"]
-        I2["ingestion_splitter\nChia thành chunks\nDùng: TextChunker tool"]
+        I1["document_parser\nExtract text từ PDF/DOCX/TXT\nDùng: document_parser tool"]
+        I2["ingestion_splitter\nChia thành chunks\nDùng: text_chunker tool"]
         I3["requirement_normalizer\nChuẩn hóa → RequirementItem[]"]
         I1 --> I2 --> I3
     end
@@ -144,10 +177,11 @@ graph TB
     end
 
     subgraph Execution["ExecutionCrew (Layer 3)"]
-        E1["execution_orchestrator"] --> E2["env_adapter\nDùng: ConfigLoaderTool"]
-        E2 --> E3["test_runner\nDùng: APIRunnerTool"]
-        E3 --> E4["execution_logger"]
-        E4 --> E5["result_store"]
+        E1["execution_orchestrator"] --> E2["env_adapter\nDùng: config_loader"]
+        E2 --> E3["test_runner\nDùng: api_runner"]
+        E3 --> E4["playwright_generator\nDùng: test_file_renderer"]
+        E4 --> E5["execution_logger"]
+        E5 --> E6["result_store"]
     end
 
     subgraph Reporting["ReportingCrew (Layer 4)"]
@@ -164,7 +198,7 @@ graph TB
 
 ---
 
-## 5. Mock Mode — fallback khi không có LLM
+## 6. Mock Mode — fallback khi không có LLM
 
 ```mermaid
 flowchart LR

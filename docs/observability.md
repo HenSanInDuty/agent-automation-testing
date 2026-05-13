@@ -40,7 +40,7 @@ flowchart LR
         end
     end
 
-    KAFKAUI["kafka-ui\nport :8080\nbrowse topics"]
+    KAFKAUI["kafka-ui\n(not included in docker-compose)\nbrowse topics manually"]
 
     MW -->|"fire-and-forget\naiokafka"| T1
     DAG -->|"fire-and-forget\naiokafka"| T2

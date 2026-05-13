@@ -5,6 +5,14 @@
 ```mermaid
 mindmap
   root((Auto-AT API\n/api/v1))
+    Auth
+      POST /auth/login
+      GET /auth/me
+      POST /auth/users
+      GET /auth/users
+      GET /auth/users/{username}
+      PUT /auth/users/{username}
+      DELETE /auth/users/{username}
     Pipeline Templates
       GET /pipeline-templates
       POST /pipeline-templates
@@ -17,7 +25,8 @@ mindmap
       GET /{id}/export
       POST /import
     Pipeline Runs
-      POST /pipeline/runs
+      POST /pipeline/run (V2 legacy)
+      POST /pipeline/runs (V3 DAG)
       GET /pipeline/runs
       GET /pipeline/runs/{id}
       DELETE /pipeline/runs/{id}
@@ -43,6 +52,13 @@ mindmap
         DELETE /{agent_id}
         POST /{agent_id}/reset
         POST /reset-all
+      Stage Configs
+        GET /admin/stage-configs
+        POST /admin/stage-configs
+        PUT /{stage_id}
+        DELETE /{stage_id}
+      Tools
+        GET /admin/tools
     Chat
       GET /chat/profiles
       POST /chat/send SSE
@@ -52,19 +68,46 @@ mindmap
 
 ---
 
-## 2. Luồng tạo và theo dõi Pipeline Run
+## 2. Luồng xác thực (Auth)
+
+```mermaid
+sequenceDiagram
+    participant UI as Frontend
+    participant API as FastAPI /auth
+    participant DB as MongoDB
+
+    UI->>API: POST /api/v1/auth/login\nform: username + password
+    API->>DB: find UserDocument by username
+    DB-->>API: user record (hashed_password)
+    API->>API: bcrypt.checkpw(plain, hashed)
+    alt password valid
+        API-->>UI: 200 {access_token, token_type, username, role, full_name}
+    else invalid
+        API-->>UI: 401 Unauthorized
+    end
+
+    UI->>API: GET /api/v1/auth/me\nAuthorization: Bearer <token>
+    API->>API: decode_access_token() — JWTError → 401
+    API->>DB: UserDocument.find_one(username=sub)
+    API-->>UI: 200 UserResponse
+```
+
+---
+
+## 3. Luồng tạo và theo dõi Pipeline Run
 
 ```mermaid
 sequenceDiagram
     participant UI as Frontend
     participant API as FastAPI
+    participant MINIO as MinIO
     participant DB as MongoDB
     participant BG as Background Task
     participant WS as WebSocket
 
-    UI->>API: POST /api/v1/pipeline/runs\nFormData{file, template_id, llm_profile_id?}
+    UI->>API: POST /api/v1/pipeline/runs\nFormData{file, template_id, llm_profile_id?}\nAuthorization: Bearer <token>
     API->>DB: validate template exists
-    API->>API: save uploaded file → uploads/{run_id}/
+    API->>MINIO: upload file → uploads/{run_id}/{filename}
     API->>DB: create PipelineRunDocument\n{run_id, status:pending, template_id, ...}
     API-->>UI: 201 {run_id, status:"pending"}
 
@@ -103,7 +146,7 @@ sequenceDiagram
 
 ---
 
-## 3. Luồng quản lý LLM Profile
+## 4. Luồng quản lý LLM Profile
 
 ```mermaid
 flowchart TD
@@ -142,7 +185,7 @@ flowchart TD
 
 ---
 
-## 4. Luồng Chat SSE
+## 5. Luồng Chat SSE
 
 ```mermaid
 sequenceDiagram
@@ -168,7 +211,7 @@ sequenceDiagram
 
 ---
 
-## 5. Luồng Export Report
+## 6. Luồng Export Report
 
 ```mermaid
 flowchart LR
@@ -197,7 +240,7 @@ flowchart LR
 
 ---
 
-## 6. WebSocket event types
+## 7. WebSocket event types
 
 ```mermaid
 graph LR
