@@ -30,7 +30,7 @@ services:
       - UPLOAD_DIR=./uploads
       - PYMONGO_LOG_HEARTBEAT=off
       - PYMONGO_LOG_TOPOLOGY=off
-      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002
       # Ollama runs on the host — use host IP to reach it from the container
       - OLLAMA_BASE_URL=http://172.26.80.1:11434
       # MinIO
@@ -173,23 +173,44 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  frontend:
+  admin-app:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: dev          # use the dev stage (npm run dev)
+      context: .
+      dockerfile: apps/admin-app/Dockerfile
+      target: dev
     ports:
       - "3001:3001"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_WS_URL=ws://localhost:8000
       - NEXT_PUBLIC_APP_VERSION=3.0.0
+      - NEXT_PUBLIC_USER_APP_URL=http://localhost:3002
       - WATCHPACK_POLLING=true
       - PORT=3001
     volumes:
-      # Hot reload: mount source; node_modules stays in the image
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      - ./apps/admin-app/src:/repo/apps/admin-app/src
+      - ./packages/shared/src:/repo/packages/shared/src
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  user-app:
+    build:
+      context: .
+      dockerfile: apps/user-app/Dockerfile
+      target: dev
+    ports:
+      - "3002:3002"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+      - NEXT_PUBLIC_APP_VERSION=3.0.0
+      - WATCHPACK_POLLING=true
+      - PORT=3002
+    volumes:
+      - ./apps/user-app/src:/repo/apps/user-app/src
+      - ./packages/shared/src:/repo/packages/shared/src
     depends_on:
       backend:
         condition: service_healthy
