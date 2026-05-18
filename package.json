@@ -1,0 +1,17 @@
+{
+  "name": "auto-at",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:admin": "npm --workspace @auto-at/admin-app run dev",
+    "dev:user": "npm --workspace @auto-at/user-app run dev",
+    "build:admin": "npm --workspace @auto-at/admin-app run build",
+    "build:user": "npm --workspace @auto-at/user-app run build",
+    "build": "npm --workspaces --if-present run build",
+    "lint": "npm --workspaces --if-present run lint"
+  }
+}
