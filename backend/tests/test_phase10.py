@@ -919,17 +919,26 @@ def client():
 
     # Patch the lifespan so MongoDB is never actually contacted
     with (
-        patch("app.db.database.init_db", new_callable=AsyncMock),
-        patch("app.db.database.close_db", new_callable=AsyncMock),
-        patch("app.db.seed.seed_all", new_callable=AsyncMock),
+        patch("app.main.init_db", new_callable=AsyncMock),
+        patch("app.main.close_db", new_callable=AsyncMock),
+        patch("app.main.seed_all", new_callable=AsyncMock),
+        patch("app.main._seed_admin_user", new_callable=AsyncMock),
+        patch("app.main._init_minio_bucket", new_callable=AsyncMock),
         patch(
             "app.db.crud.recover_orphaned_runs", new_callable=AsyncMock, return_value=0
         ),
     ):
         from app.main import app
+        from app.api.v1.deps import get_current_user, require_admin
+
+        fake_admin = MagicMock(username="admin", role="admin", is_active=True)
+        app.dependency_overrides[get_current_user] = lambda: fake_admin
+        app.dependency_overrides[require_admin] = lambda: fake_admin
 
         with TestClient(app, raise_server_exceptions=False) as c:
             yield c
+
+        app.dependency_overrides.clear()
 
 
 class TestExportHTMLEndpoint:
@@ -937,7 +946,7 @@ class TestExportHTMLEndpoint:
 
     def test_404_for_unknown_run(self, client):
         missing_id = str(uuid.uuid4())
-        with patch("app.api.v1.pipeline.crud") as mock_crud:
+        with patch("app.api.v1.pipeline._helpers.crud") as mock_crud:
             mock_crud.get_pipeline_run = AsyncMock(return_value=None)
             resp = client.get(f"/api/v1/pipeline/runs/{missing_id}/export/html")
         assert resp.status_code == 404
@@ -946,7 +955,7 @@ class TestExportHTMLEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -962,7 +971,7 @@ class TestExportHTMLEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -980,7 +989,7 @@ class TestExportHTMLEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -998,7 +1007,7 @@ class TestExportHTMLEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -1017,7 +1026,7 @@ class TestExportDOCXEndpoint:
 
     def test_404_for_unknown_run(self, client):
         missing_id = str(uuid.uuid4())
-        with patch("app.api.v1.pipeline.crud") as mock_crud:
+        with patch("app.api.v1.pipeline._helpers.crud") as mock_crud:
             mock_crud.get_pipeline_run = AsyncMock(return_value=None)
             resp = client.get(f"/api/v1/pipeline/runs/{missing_id}/export/docx")
         assert resp.status_code == 404
@@ -1026,7 +1035,7 @@ class TestExportDOCXEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -1043,7 +1052,7 @@ class TestExportDOCXEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -1061,7 +1070,7 @@ class TestExportDOCXEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -1079,7 +1088,7 @@ class TestExportDOCXEndpoint:
         run_doc = _make_run_doc()
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)
@@ -1103,7 +1112,7 @@ class TestExportDOCXEndpoint:
         ]
 
         with (
-            patch("app.api.v1.pipeline.crud") as mock_crud,
+            patch("app.api.v1.pipeline._helpers.crud") as mock_crud,
             patch("app.services.export_service.crud") as svc_crud,
         ):
             mock_crud.get_pipeline_run = AsyncMock(return_value=run_doc)

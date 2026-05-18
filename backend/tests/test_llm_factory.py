@@ -11,7 +11,7 @@ Run with:
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -329,6 +329,7 @@ class TestBuildFallbackLlm:
         mock_settings.DEFAULT_LLM_BASE_URL = None
         mock_settings.DEFAULT_LLM_TEMPERATURE = 0.1
         mock_settings.DEFAULT_LLM_MAX_TOKENS = 2048
+        mock_settings.OLLAMA_BASE_URL = "http://localhost:11434"
 
         build_fallback_llm()
 
@@ -357,12 +358,9 @@ class TestBuildFallbackLlm:
 
 
 class TestLLMFactory:
-    def _make_factory(self, default_profile=None) -> LLMFactory:
-        """Create an LLMFactory with a mocked DB session."""
-        db = MagicMock()
-        db.scalar.return_value = default_profile
-        factory = LLMFactory(db)
-        return factory
+    def _make_factory(self) -> LLMFactory:
+        """Create an LLMFactory (no DB session needed — uses Beanie CRUD globally)."""
+        return LLMFactory()
 
     @patch("app.core.llm_factory.build_llm")
     def test_build_from_profile_delegates_to_build_llm(self, mock_build_llm):
@@ -372,31 +370,44 @@ class TestLLMFactory:
         mock_build_llm.assert_called_once_with(profile)
 
     @patch("app.core.llm_factory.build_llm")
-    def test_build_default_uses_db_profile_when_available(self, mock_build_llm):
+    @patch("app.db.crud.get_default_llm_profile", new_callable=AsyncMock)
+    @pytest.mark.asyncio
+    async def test_build_default_uses_db_profile_when_available(
+        self, mock_get_default, mock_build_llm
+    ):
         db_profile = _make_profile(name="DB Default", is_default=True)
-        factory = self._make_factory(default_profile=db_profile)
+        mock_get_default.return_value = db_profile
+        factory = self._make_factory()
 
-        factory.build_default()
+        await factory.build_default()
 
         mock_build_llm.assert_called_once_with(db_profile)
 
     @patch("app.core.llm_factory.build_fallback_llm")
-    def test_build_default_falls_back_to_env_when_no_db_profile(self, mock_fallback):
-        factory = self._make_factory(default_profile=None)
-        factory.build_default()
+    @patch("app.db.crud.get_default_llm_profile", new_callable=AsyncMock)
+    @pytest.mark.asyncio
+    async def test_build_default_falls_back_to_env_when_no_db_profile(
+        self, mock_get_default, mock_fallback
+    ):
+        mock_get_default.return_value = None
+        factory = self._make_factory()
+        await factory.build_default()
         mock_fallback.assert_called_once()
 
     @patch("app.core.llm_factory.build_llm")
-    def test_default_profile_is_cached(self, mock_build_llm):
+    @patch("app.db.crud.get_default_llm_profile", new_callable=AsyncMock)
+    @pytest.mark.asyncio
+    async def test_default_profile_is_cached(self, mock_get_default, mock_build_llm):
         """DB must be queried only once even when build_default is called twice."""
         db_profile = _make_profile(name="DB Default", is_default=True)
-        factory = self._make_factory(default_profile=db_profile)
+        mock_get_default.return_value = db_profile
+        factory = self._make_factory()
 
-        factory.build_default()
-        factory.build_default()
+        await factory.build_default()
+        await factory.build_default()
 
-        # DB.scalar should have been called exactly once (cache hit on 2nd call)
-        assert factory._db.scalar.call_count == 1
+        # CRUD lookup should run exactly once (cache hit on 2nd call)
+        assert mock_get_default.call_count == 1
 
     @patch("app.core.llm_factory.build_llm")
     def test_build_from_profile_returns_llm_result(self, mock_build_llm):
