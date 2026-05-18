@@ -20,7 +20,9 @@ import logging
 import time
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+
+from app.api.v1.deps import require_admin
 
 from app.db import crud
 from app.db.models import LLMProfileDocument
@@ -129,6 +131,7 @@ async def list_llm_profiles(
 )
 async def create_llm_profile(
     payload: LLMProfileCreate,
+    _: object = Depends(require_admin),
 ) -> LLMProfileResponse:
     """Create a new LLM profile.
 
@@ -211,6 +214,7 @@ async def get_llm_profile(profile_id: str) -> LLMProfileResponse:
 async def update_llm_profile(
     profile_id: str,
     payload: LLMProfileUpdate,
+    _: object = Depends(require_admin),
 ) -> LLMProfileResponse:
     """Partially update an LLM profile.
 
@@ -272,7 +276,10 @@ async def update_llm_profile(
         "will fall back to the global default on their next pipeline run."
     ),
 )
-async def delete_llm_profile(profile_id: str) -> None:
+async def delete_llm_profile(
+    profile_id: str,
+    _: object = Depends(require_admin),
+) -> None:
     """Delete an LLM profile by ObjectId.
 
     Args:
@@ -305,7 +312,10 @@ async def delete_llm_profile(profile_id: str) -> None:
         "have its own ``llm_profile_id`` override."
     ),
 )
-async def set_default_llm_profile(profile_id: str) -> LLMProfileResponse:
+async def set_default_llm_profile(
+    profile_id: str,
+    _: object = Depends(require_admin),
+) -> LLMProfileResponse:
     """Promote a profile to the global default.
 
     Args:
@@ -345,6 +355,7 @@ async def set_default_llm_profile(profile_id: str) -> LLMProfileResponse:
 async def test_llm_profile(
     profile_id: str,
     body: Annotated[LLMTestRequest, Body()] = LLMTestRequest(),
+    _: object = Depends(require_admin),
 ) -> LLMTestResponse:
     """Fire a test prompt at the configured LLM and report latency.
 

@@ -18,7 +18,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+
+from app.api.v1.deps import require_admin
 
 from app.db import crud
 from app.db.seed import DEFAULT_AGENT_CONFIGS
@@ -143,7 +145,9 @@ async def get_agents_for_pipeline_template(
         "overrides. **This action cannot be undone.**"
     ),
 )
-async def reset_all_agent_configs() -> dict[str, Any]:
+async def reset_all_agent_configs(
+    _: object = Depends(require_admin),
+) -> dict[str, Any]:
     """Reset every agent config to its seeded factory defaults."""
     docs = await crud.reset_all_agent_configs(DEFAULT_AGENT_CONFIGS)
     logger.info(
@@ -195,6 +199,7 @@ async def get_agent_config(agent_id: str) -> AgentConfigResponse:
 )
 async def create_agent_config(
     payload: AgentConfigCreate,
+    _: object = Depends(require_admin),
 ) -> AgentConfigResponse:
     """Create a new custom (user-defined) agent config."""
     existing = await crud.get_agent_config(payload.agent_id)
@@ -240,6 +245,7 @@ async def create_agent_config(
 async def update_agent_config(
     agent_id: str,
     payload: AgentConfigUpdate,
+    _: object = Depends(require_admin),
 ) -> AgentConfigResponse:
     """Partially update an agent config by its slug."""
     if payload.llm_profile_id is not None:
@@ -279,7 +285,10 @@ async def update_agent_config(
         "Built-in seeded agents cannot be deleted via this endpoint."
     ),
 )
-async def delete_agent_config(agent_id: str) -> None:
+async def delete_agent_config(
+    agent_id: str,
+    _: object = Depends(require_admin),
+) -> None:
     """Delete a custom agent config."""
     try:
         deleted = await crud.delete_agent_config(agent_id)
@@ -311,7 +320,10 @@ async def delete_agent_config(agent_id: str) -> None:
         "their original shipped values."
     ),
 )
-async def reset_agent_config(agent_id: str) -> AgentConfigResetResponse:
+async def reset_agent_config(
+    agent_id: str,
+    _: object = Depends(require_admin),
+) -> AgentConfigResetResponse:
     """Reset one agent config to its seeded factory defaults."""
     defaults = _DEFAULTS_MAP.get(agent_id)
     if defaults is None:

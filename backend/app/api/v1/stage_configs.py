@@ -19,7 +19,9 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+
+from app.api.v1.deps import require_admin
 
 from app.db import crud
 from app.schemas.stage_config import (
@@ -126,7 +128,9 @@ async def list_stage_configs(
     ),
 )
 async def reorder_stages(
-    response: Response, body: StageReorderRequest
+    response: Response,
+    body: StageReorderRequest,
+    _: object = Depends(require_admin),
 ) -> list[StageConfigResponse]:
     """Reorder stages by position in the provided list."""
     response.headers["Cache-Control"] = "no-store"
@@ -173,7 +177,9 @@ async def get_stage_config(stage_id: str, response: Response) -> StageConfigResp
     summary="Create a new custom stage",
 )
 async def create_stage_config(
-    response: Response, body: StageConfigCreate
+    response: Response,
+    body: StageConfigCreate,
+    _: object = Depends(require_admin),
 ) -> StageConfigResponse:
     """Create a new custom stage. Built-in stage IDs cannot be reused."""
     response.headers["Cache-Control"] = "no-store"
@@ -211,7 +217,10 @@ async def create_stage_config(
     ),
 )
 async def update_stage_config(
-    stage_id: str, body: StageConfigUpdate, response: Response
+    stage_id: str,
+    body: StageConfigUpdate,
+    response: Response,
+    _: object = Depends(require_admin),
 ) -> StageConfigResponse:
     """Partially update a stage config."""
     response.headers["Cache-Control"] = "no-store"
@@ -241,7 +250,11 @@ async def update_stage_config(
         "Agents in the deleted stage are reassigned to the 'custom' stage."
     ),
 )
-async def delete_stage_config(stage_id: str, response: Response) -> None:
+async def delete_stage_config(
+    stage_id: str,
+    response: Response,
+    _: object = Depends(require_admin),
+) -> None:
     """Delete a custom stage and reassign its agents to 'custom'."""
     response.headers["Cache-Control"] = "no-store"
     stage = await crud.get_stage_config(stage_id)

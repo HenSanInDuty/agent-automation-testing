@@ -14,7 +14,9 @@ import asyncio
 import logging
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+
+from app.api.v1.deps import get_current_user
 
 from app.db import crud
 from app.schemas.pipeline import PipelineResultResponse
@@ -76,6 +78,7 @@ async def _ensure_playwright_artifacts(run_id: str, storage) -> None:  # type: i
 )
 async def get_pipeline_results(
     run_id: str,
+    _: object = Depends(get_current_user),
     stage: Optional[str] = Query(
         default=None,
         description="Filter by stage: ingestion | testcase | execution | reporting",
@@ -112,7 +115,11 @@ async def get_pipeline_results(
         "Returns the persisted output of a single DAG node for the given run."
     ),
 )
-async def get_node_result(run_id: str, node_id: str) -> PipelineResultResponse:
+async def get_node_result(
+    run_id: str,
+    node_id: str,
+    _: object = Depends(get_current_user),
+) -> PipelineResultResponse:
     """Retrieve the output of a specific node in a pipeline run."""
     result = await crud.get_pipeline_result_by_node(run_id, node_id)
     if result is None:

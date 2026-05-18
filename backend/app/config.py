@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     APP_HOST: str = "0.0.0.0"
     APP_TITLE: str = "Auto-AT API"
     APP_VERSION: str = "3.0.0"
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002"
 
     # ── Database (V2 — MongoDB) ───────────────────────────────────
     MONGODB_URI: str = "mongodb://localhost:27017"

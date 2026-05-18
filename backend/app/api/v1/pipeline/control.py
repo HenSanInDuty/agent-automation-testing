@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.api.v1.deps import require_not_dev
 
 from app.db import crud
 from app.schemas.pipeline import PipelineStatus
@@ -32,7 +34,10 @@ router = APIRouter()
         "Only runs with ``status=running`` can be paused."
     ),
 )
-async def pause_pipeline(run_id: str) -> PipelineActionResponse:
+async def pause_pipeline(
+    run_id: str,
+    _: object = Depends(require_not_dev),
+) -> PipelineActionResponse:
     """Request that a running pipeline pause after the current stage."""
     from app.core.signal_manager import PipelineSignal, signal_manager
 
@@ -66,7 +71,10 @@ async def pause_pipeline(run_id: str) -> PipelineActionResponse:
         "Only runs with ``status=paused`` can be resumed."
     ),
 )
-async def resume_pipeline(run_id: str) -> PipelineActionResponse:
+async def resume_pipeline(
+    run_id: str,
+    _: object = Depends(require_not_dev),
+) -> PipelineActionResponse:
     """Request that a paused pipeline resume execution."""
     from app.core.signal_manager import PipelineSignal, signal_manager
 
@@ -101,7 +109,10 @@ async def resume_pipeline(run_id: str) -> PipelineActionResponse:
         "cancelled."
     ),
 )
-async def cancel_pipeline(run_id: str) -> PipelineActionResponse:
+async def cancel_pipeline(
+    run_id: str,
+    _: object = Depends(require_not_dev),
+) -> PipelineActionResponse:
     """Request cancellation of a running, paused, or pending pipeline."""
     from app.core.signal_manager import PipelineSignal, signal_manager
 

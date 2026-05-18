@@ -21,6 +21,7 @@ from typing import Annotated, Any, Optional
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Depends,
     File,
     Form,
     HTTPException,
@@ -28,6 +29,8 @@ from fastapi import (
     status,
     UploadFile,
 )
+
+from app.api.v1.deps import get_current_user, require_admin, require_not_dev
 
 from app.config import settings
 from app.db import crud
@@ -75,6 +78,7 @@ router = APIRouter()
 async def start_pipeline_run(
     background_tasks: BackgroundTasks,
     file: Annotated[UploadFile, File(description="Requirements document to analyse")],
+    _: object = Depends(require_not_dev),
     llm_profile_id: Annotated[
         Optional[str],
         Form(
@@ -173,6 +177,7 @@ async def start_pipeline_run(
 async def create_pipeline_run(
     background_tasks: BackgroundTasks,
     template_id: Annotated[str, Form(description="Slug of the pipeline template to execute")],
+    _: object = Depends(require_not_dev),
     file: Annotated[
         Optional[UploadFile],
         File(description="Optional requirements document to inject as INPUT node seed"),
@@ -294,6 +299,7 @@ async def create_pipeline_run(
     ),
 )
 async def list_pipeline_runs(
+    _: object = Depends(get_current_user),
     page: Annotated[int, Query(ge=1, description="Page number (1-based)")] = 1,
     page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
     status_filter: Annotated[
@@ -376,6 +382,7 @@ async def list_pipeline_runs(
 )
 async def get_pipeline_run(
     run_id: str,
+    _: object = Depends(get_current_user),
     include_results: Annotated[
         bool,
         Query(description="Include individual agent outputs in the response"),
@@ -425,7 +432,10 @@ async def get_pipeline_run(
         "Running pipelines should be cancelled before deletion."
     ),
 )
-async def delete_pipeline_run(run_id: str) -> None:
+async def delete_pipeline_run(
+    run_id: str,
+    _: object = Depends(require_admin),
+) -> None:
     """Delete a pipeline run and all its associated data."""
     from app.core.signal_manager import PipelineSignal, signal_manager
 

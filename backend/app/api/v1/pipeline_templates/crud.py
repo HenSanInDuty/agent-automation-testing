@@ -17,7 +17,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.v1.deps import get_current_user, require_not_dev
+from app.api.v1.deps import require_admin
 from app.db import crud
 from app.schemas.pipeline_template import (
     PipelineTemplateCreate,
@@ -113,7 +113,7 @@ async def list_templates(
 )
 async def create_template(
     body: PipelineTemplateCreate,
-    _: object = Depends(require_not_dev),
+    _: object = Depends(require_admin),
 ) -> PipelineTemplateResponse:
     """Create a new pipeline template."""
     existing = await crud.get_pipeline_template(body.template_id)
@@ -157,6 +157,7 @@ async def get_template(template_id: str) -> PipelineTemplateResponse:
 async def update_template(
     template_id: str,
     body: PipelineTemplateUpdate,
+    _: object = Depends(require_admin),
 ) -> PipelineTemplateResponse:
     """Update a pipeline template with partial data."""
     await _get_or_404(template_id)
@@ -192,7 +193,10 @@ async def update_template(
         "(HTTP 409); archive them instead."
     ),
 )
-async def delete_template(template_id: str) -> dict:  # type: ignore[type-arg]
+async def delete_template(
+    template_id: str,
+    _: object = Depends(require_admin),
+) -> dict:  # type: ignore[type-arg]
     """Permanently delete a pipeline template."""
     doc = await _get_or_404(template_id)
 
@@ -236,7 +240,10 @@ async def delete_template(template_id: str) -> dict:  # type: ignore[type-arg]
         "restored by updating ``is_archived`` to ``false`` via the PUT endpoint."
     ),
 )
-async def archive_template(template_id: str) -> PipelineTemplateResponse:
+async def archive_template(
+    template_id: str,
+    _: object = Depends(require_admin),
+) -> PipelineTemplateResponse:
     """Soft-delete a pipeline template by setting ``is_archived = True``."""
     doc = await _get_or_404(template_id)
 

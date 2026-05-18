@@ -16,7 +16,9 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
+
+from app.api.v1.deps import require_admin
 from pydantic import BaseModel, Field
 
 from app.db import crud
@@ -156,6 +158,7 @@ async def get_agent_tools(agent_id: str) -> AgentToolsResponse:
 async def update_agent_tools(
     agent_id: str,
     payload: Annotated[AgentToolsUpdate, Body()],
+    _: object = Depends(require_admin),
 ) -> AgentToolsResponse:
     """Replace the tool_names list for an agent config.
 

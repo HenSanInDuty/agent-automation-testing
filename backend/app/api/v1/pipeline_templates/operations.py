@@ -15,8 +15,10 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Body, HTTPException, Response, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
+
+from app.api.v1.deps import require_admin
 
 from app.core.dag_resolver import DAGResolver, DAGValidationError
 from app.db import crud
@@ -55,6 +57,7 @@ router = APIRouter()
 )
 async def import_template(
     body: dict = Body(..., description="JSON object produced by the export endpoint."),  # type: ignore[assignment]
+    _: object = Depends(require_admin),
 ) -> PipelineTemplateResponse:
     """Import a pipeline template from a previously-exported JSON document."""
     if body.get("export_type") != "pipeline_template":
@@ -152,7 +155,10 @@ async def export_template(template_id: str) -> JSONResponse:
         "``is_valid=false`` with error messages on failure.  Always returns HTTP 200."
     ),
 )
-async def validate_template(template_id: str) -> DAGValidationResponse:
+async def validate_template(
+    template_id: str,
+    _: object = Depends(require_admin),
+) -> DAGValidationResponse:
     """Validate the DAG structure of a stored pipeline template."""
     doc = await _get_or_404(template_id)
 
@@ -203,6 +209,7 @@ async def validate_template(template_id: str) -> DAGValidationResponse:
 async def clone_template(
     template_id: str,
     body: CloneTemplateRequest,
+    _: object = Depends(require_admin),
 ) -> PipelineTemplateResponse:
     """Clone an existing pipeline template into a new document."""
     source = await _get_or_404(template_id)
@@ -233,6 +240,7 @@ async def update_node_stage(
     template_id: str,
     body: NodeStageUpdate,
     response: Response,
+    _: object = Depends(require_admin),
 ) -> dict:
     """Set or clear the stage label on a DAG node."""
     response.headers["Cache-Control"] = "no-store"
@@ -265,6 +273,7 @@ async def append_node_to_template(
     template_id: str,
     body: PipelineNodeInput,
     response: Response,
+    _: object = Depends(require_admin),
 ) -> PipelineTemplateResponse:
     """Append one node to the pipeline template."""
     await _get_or_404(template_id)
