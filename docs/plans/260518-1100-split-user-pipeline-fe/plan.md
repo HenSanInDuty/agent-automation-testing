@@ -1,7 +1,7 @@
 ---
 title: "Split User Pipeline FE from Admin FE"
 description: ""
-status: pending
+status: completed
 priority: P2
 branch: "develop"
 tags: []
@@ -66,17 +66,17 @@ auto-at/
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | [Research & Architecture](./phase-01-research-architecture.md) | Pending |
-| 2 | [Workspace & Shared Package Setup](./phase-02-workspace-shared-package-setup.md) | Pending |
-| 3 | [Scaffold User FE App](./phase-03-scaffold-user-fe-app.md) | Pending |
-| 4 | [Auth & Layout](./phase-04-auth-layout.md) | Pending |
-| 5 | [Pipeline List & Detail (read-only)](./phase-05-pipeline-list-detail-read-only.md) | Pending |
-| 6 | [Pipeline Run Flow](./phase-06-pipeline-run-flow.md) | Pending |
-| 7 | [Run History & Progress](./phase-07-run-history-progress.md) | Pending |
-| 8 | [Admin FE Cleanup](./phase-08-admin-fe-cleanup.md) | Pending |
-| 9 | [Backend Adjustments (RBAC tightening)](./phase-09-backend-adjustments-rbac-tightening.md) | Pending |
-| 10 | [Docker & Deployment](./phase-10-docker-deployment.md) | Pending |
-| 11 | [Testing & QA](./phase-11-testing-qa.md) | Pending |
+| 1 | [Research & Architecture](./phase-01-research-architecture.md) | Completed |
+| 2 | [Workspace & Shared Package Setup](./phase-02-workspace-shared-package-setup.md) | Completed |
+| 3 | [Scaffold User FE App](./phase-03-scaffold-user-fe-app.md) | Completed |
+| 4 | [Auth & Layout](./phase-04-auth-layout.md) | Completed |
+| 5 | [Pipeline List & Detail (read-only)](./phase-05-pipeline-list-detail-read-only.md) | Completed |
+| 6 | [Pipeline Run Flow](./phase-06-pipeline-run-flow.md) | Completed |
+| 7 | [Run History & Progress](./phase-07-run-history-progress.md) | Completed |
+| 8 | [Admin FE Cleanup](./phase-08-admin-fe-cleanup.md) | Completed |
+| 9 | [Backend Adjustments (RBAC tightening)](./phase-09-backend-adjustments-rbac-tightening.md) | Completed |
+| 10 | [Docker & Deployment](./phase-10-docker-deployment.md) | Completed |
+| 11 | [Testing & QA](./phase-11-testing-qa.md) | Completed |
 
 ## Risk Summary
 
@@ -93,17 +93,17 @@ auto-at/
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | [Research & Architecture](./phase-01-research-architecture.md) | Pending |
-| 2 | [Workspace & Shared Package Setup](./phase-02-workspace-shared-package-setup.md) | Pending |
-| 3 | [Scaffold User FE App](./phase-03-scaffold-user-fe-app.md) | Pending |
-| 4 | [Auth & Layout](./phase-04-auth-layout.md) | Pending |
-| 5 | [Pipeline List & Detail (read-only)](./phase-05-pipeline-list-detail-read-only.md) | Pending |
-| 6 | [Pipeline Run Flow](./phase-06-pipeline-run-flow.md) | Pending |
-| 7 | [Run History & Progress](./phase-07-run-history-progress.md) | Pending |
-| 8 | [Admin FE Cleanup](./phase-08-admin-fe-cleanup.md) | Pending |
-| 9 | [Backend Adjustments (RBAC tightening)](./phase-09-backend-adjustments-rbac-tightening.md) | Pending |
-| 10 | [Docker & Deployment](./phase-10-docker-deployment.md) | Pending |
-| 11 | [Testing & QA](./phase-11-testing-qa.md) | Pending |
+| 1 | [Research & Architecture](./phase-01-research-architecture.md) | Completed |
+| 2 | [Workspace & Shared Package Setup](./phase-02-workspace-shared-package-setup.md) | Completed |
+| 3 | [Scaffold User FE App](./phase-03-scaffold-user-fe-app.md) | Completed |
+| 4 | [Auth & Layout](./phase-04-auth-layout.md) | Completed |
+| 5 | [Pipeline List & Detail (read-only)](./phase-05-pipeline-list-detail-read-only.md) | Completed |
+| 6 | [Pipeline Run Flow](./phase-06-pipeline-run-flow.md) | Completed |
+| 7 | [Run History & Progress](./phase-07-run-history-progress.md) | Completed |
+| 8 | [Admin FE Cleanup](./phase-08-admin-fe-cleanup.md) | Completed |
+| 9 | [Backend Adjustments (RBAC tightening)](./phase-09-backend-adjustments-rbac-tightening.md) | Completed |
+| 10 | [Docker & Deployment](./phase-10-docker-deployment.md) | Completed |
+| 11 | [Testing & QA](./phase-11-testing-qa.md) | Completed |
 
 ## Dependencies
 
