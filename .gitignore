@@ -1,9 +1,16 @@
 # Environment & secrets
 backend/.env
-frontend/.env
-frontend/.env.*
+apps/*/.env
+apps/*/.env.*
 .env
 .env.*
+
+# Node / monorepo
+node_modules/
+**/node_modules/
+**/.next/
+**/tsconfig.tsbuildinfo
+**/next-env.d.ts
 
 # Uploaded files
 backend/uploads/
@@ -20,4 +27,4 @@ backend/auto_at.db-shm
 backend/auto_at.db-wal
 
 # Frontend junk
-frontend/nul
+**/nul
