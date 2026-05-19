@@ -2,33 +2,99 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Play, History, Network, Clock, Layers } from "lucide-react";
+import {
+  Play,
+  History,
+  Network,
+  Clock,
+  Layers,
+  Search,
+  Workflow,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Tag,
+  AlertCircle,
+  RefreshCw,
+  ArrowUpRight,
+} from "lucide-react";
 
 import { usePipelineTemplates } from "@auto-at/shared";
 import type { PipelineTemplateListItem } from "@auto-at/shared";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function cn(...args: Array<string | false | null | undefined>): string {
+  return args.filter(Boolean).join(" ");
+}
+
+function formatRelativeTime(iso?: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  const diffD = Math.round(diffH / 24);
+  if (diffD < 30) return `${diffD}d ago`;
+  const diffMo = Math.round(diffD / 30);
+  if (diffMo < 12) return `${diffMo}mo ago`;
+  return `${Math.round(diffMo / 12)}y ago`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Status badge
 // ─────────────────────────────────────────────────────────────────────────────
 
+function statusStyle(status?: string) {
+  switch (status) {
+    case "completed":
+      return {
+        cls: "bg-emerald-500/10 text-emerald-300 border-emerald-500/25",
+        Icon: CheckCircle2,
+      };
+    case "failed":
+      return {
+        cls: "bg-red-500/10 text-red-300 border-red-500/25",
+        Icon: XCircle,
+      };
+    case "running":
+    case "pending":
+      return {
+        cls: "bg-blue-500/10 text-blue-300 border-blue-500/25",
+        Icon: Loader2,
+      };
+    case "cancelled":
+      return {
+        cls: "bg-orange-500/10 text-orange-300 border-orange-500/25",
+        Icon: XCircle,
+      };
+    default:
+      return {
+        cls: "bg-[#1e2a3d] text-[#92a4c9] border-[#22304a]",
+        Icon: Clock,
+      };
+  }
+}
+
 function LastRunBadge({ status }: { status?: string }) {
   if (!status) return null;
-
-  const colors: Record<string, string> = {
-    completed: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
-    failed: "bg-red-500/15 text-red-400 border-red-500/20",
-    running: "bg-blue-500/15 text-blue-400 border-blue-500/20",
-    cancelled: "bg-orange-500/15 text-orange-400 border-orange-500/20",
-    pending: "bg-zinc-500/15 text-zinc-400 border-zinc-500/20",
-  };
-
-  const colorClass = colors[status] ?? "bg-[#2b3b55] text-[#92a4c9] border-[#3d5070]";
-
+  const { cls, Icon } = statusStyle(status);
+  const isRunning = status === "running" || status === "pending";
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${colorClass}`}
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide",
+        cls,
+      )}
     >
+      <Icon className={cn("w-2.5 h-2.5", isRunning && "animate-spin")} />
       {status}
     </span>
   );
@@ -40,65 +106,142 @@ function LastRunBadge({ status }: { status?: string }) {
 
 function PipelineCard({ template }: { template: PipelineTemplateListItem }) {
   const id = template.template_id;
+  const lastRun = formatRelativeTime(template.last_run_at ?? null);
+  const isBuiltin = template.is_builtin;
 
   return (
-    <div className="rounded-xl border border-[#2b3b55] bg-[#18202F] p-5 flex flex-col gap-4 hover:border-[#3d5070] transition-colors duration-150">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#1e2a3d] border border-[#2b3b55] shrink-0 mt-0.5">
-            <Network className="w-4 h-4 text-[#92a4c9]" aria-hidden="true" />
+    <article
+      className={cn(
+        "group relative flex flex-col rounded-2xl overflow-hidden",
+        "border border-[#22304a] bg-[#141c2c]/80 backdrop-blur-sm",
+        "transition-all duration-200",
+        "hover:border-[#3d5070] hover:bg-[#172033] hover:-translate-y-0.5",
+        "hover:shadow-[0_8px_24px_-8px_rgba(19,91,236,0.25)]",
+      )}
+    >
+      {/* Gradient accent strip on top, brighter on hover */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#3d5070] to-transparent opacity-60 group-hover:opacity-100 group-hover:via-[#5b9eff] transition-opacity duration-300"
+      />
+
+      {/* Body */}
+      <div className="flex flex-col gap-4 p-5 flex-1">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            {/* Icon container */}
+            <div
+              className={cn(
+                "relative flex items-center justify-center w-11 h-11 rounded-xl shrink-0",
+                "bg-gradient-to-br from-[#1e2a3d] to-[#141c2c]",
+                "border border-[#22304a] group-hover:border-[#3d5070]",
+                "transition-all duration-200",
+              )}
+            >
+              <Workflow
+                className="w-5 h-5 text-[#92a4c9] group-hover:text-[#5b9eff] transition-colors"
+                aria-hidden="true"
+              />
+              {isBuiltin && (
+                <span
+                  className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-[#135bec] border-2 border-[#141c2c]"
+                  title="Built-in"
+                >
+                  <Sparkles className="w-2 h-2 text-white" />
+                </span>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h2
+                className="text-sm font-semibold text-white leading-snug line-clamp-1"
+                title={template.name}
+              >
+                {template.name}
+              </h2>
+              {template.description && (
+                <p
+                  className="mt-1 text-xs text-[#92a4c9] line-clamp-2 leading-relaxed"
+                  title={template.description}
+                >
+                  {template.description}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-white leading-tight truncate">
-              {template.name}
-            </h2>
-            {template.description && (
-              <p className="mt-0.5 text-xs text-[#92a4c9] line-clamp-2">
-                {template.description}
-              </p>
+
+          <LastRunBadge status={template.last_run_status ?? undefined} />
+        </div>
+
+        {/* Tags */}
+        {template.tags && template.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {template.tags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#1e2a3d] border border-[#22304a] text-[#7a8baa]"
+              >
+                <Tag className="w-2.5 h-2.5" />
+                {tag}
+              </span>
+            ))}
+            {template.tags.length > 4 && (
+              <span className="text-[10px] text-[#5e7196]">
+                +{template.tags.length - 4}
+              </span>
             )}
           </div>
-        </div>
-        <LastRunBadge status={template.last_run_status ?? undefined} />
-      </div>
-
-      {/* Stats */}
-      <div className="flex items-center gap-4">
-        <span className="inline-flex items-center gap-1 text-xs text-[#3d5070]">
-          <Layers className="w-3.5 h-3.5" />
-          {template.node_count ?? 0} nodes
-        </span>
-        {template.version && (
-          <span className="inline-flex items-center gap-1 text-xs text-[#3d5070]">
-            <Clock className="w-3.5 h-3.5" />
-            v{template.version}
-          </span>
         )}
+
+        {/* Meta */}
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#7a8baa] mt-auto">
+          <span className="inline-flex items-center gap-1">
+            <Layers className="w-3 h-3" />
+            {template.node_count ?? 0} {template.node_count === 1 ? "node" : "nodes"}
+          </span>
+          {typeof template.version === "number" && (
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-3 h-3" />v{template.version}
+            </span>
+          )}
+          {lastRun && (
+            <span className="inline-flex items-center gap-1 ml-auto text-[#5e7196]">
+              Last run {lastRun}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 pt-1 border-t border-[#2b3b55]">
-        <Link href={`/pipelines/${id}/run`} className="flex-1">
-          <button
-            type="button"
-            className="w-full inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-[#135bec] hover:bg-[#1a6df0] text-white transition-colors duration-150"
-          >
-            <Play className="w-3.5 h-3.5" aria-hidden="true" />
-            Run
-          </button>
+      {/* Footer actions */}
+      <div className="flex items-stretch gap-px bg-[#22304a]/60 border-t border-[#22304a]">
+        <Link
+          href={`/pipelines/${id}/run`}
+          className={cn(
+            "flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-3 text-xs font-semibold",
+            "bg-[#135bec] hover:bg-[#1a6aff] text-white",
+            "transition-colors duration-150",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30",
+          )}
+        >
+          <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+          Run pipeline
+          <ArrowUpRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
         </Link>
-        <Link href={`/pipelines/${id}/runs`}>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-[#1e2a3d] hover:bg-[#2b3b55] text-[#92a4c9] hover:text-white border border-[#2b3b55] transition-colors duration-150"
-          >
-            <History className="w-3.5 h-3.5" aria-hidden="true" />
-            History
-          </button>
+        <Link
+          href={`/pipelines/${id}/runs`}
+          className={cn(
+            "inline-flex items-center justify-center gap-1.5 h-10 px-4 text-xs font-medium",
+            "bg-[#141c2c] hover:bg-[#1e2a3d] text-[#92a4c9] hover:text-white",
+            "transition-colors duration-150",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#135bec]",
+          )}
+        >
+          <History className="w-3.5 h-3.5" aria-hidden="true" />
+          History
         </Link>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -108,19 +251,181 @@ function PipelineCard({ template }: { template: PipelineTemplateListItem }) {
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-[#2b3b55] bg-[#18202F] p-5 flex flex-col gap-4 animate-pulse">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg bg-[#2b3b55] shrink-0" />
-        <div className="flex-1 flex flex-col gap-2">
-          <div className="h-4 w-3/4 rounded bg-[#2b3b55]" />
-          <div className="h-3 w-full rounded bg-[#2b3b55]" />
-          <div className="h-3 w-1/2 rounded bg-[#2b3b55]" />
+    <div className="rounded-2xl border border-[#22304a] bg-[#141c2c]/60 overflow-hidden animate-pulse">
+      <div className="p-5 flex flex-col gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-[#1e2a3d] shrink-0" />
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="h-4 w-3/4 rounded bg-[#1e2a3d]" />
+            <div className="h-3 w-full rounded bg-[#1e2a3d]" />
+            <div className="h-3 w-2/3 rounded bg-[#1e2a3d]" />
+          </div>
+        </div>
+        <div className="h-3 w-2/5 rounded bg-[#1e2a3d]" />
+      </div>
+      <div className="h-10 bg-[#1e2a3d]/60 border-t border-[#22304a]" />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero header
+// ─────────────────────────────────────────────────────────────────────────────
+
+function HeroHeader({
+  total,
+  query,
+  onQueryChange,
+}: {
+  total: number;
+  query: string;
+  onQueryChange: (v: string) => void;
+}) {
+  return (
+    <header
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-[#22304a]",
+        "bg-gradient-to-br from-[#141c2c] via-[#141c2c] to-[#101725]",
+        "px-6 py-6 mb-6",
+      )}
+    >
+      {/* Decorative top hairline */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#3d5070] to-transparent"
+      />
+      {/* Decorative glow */}
+      <div
+        aria-hidden="true"
+        className="absolute -top-24 -right-20 w-72 h-72 rounded-full bg-[#135bec]/10 blur-3xl pointer-events-none"
+      />
+
+      <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-[#135bec]/20 to-[#135bec]/5 border border-[#135bec]/30 shrink-0">
+            <Network className="w-6 h-6 text-[#5b9eff]" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[#5e7196]">
+              Workflow Library
+            </p>
+            <div className="mt-1 flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-white leading-tight">
+                Pipelines
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold bg-[#1e2a3d] border border-[#22304a] text-[#92a4c9]">
+                {total}
+              </span>
+            </div>
+            <p className="mt-1.5 text-sm text-[#92a4c9] max-w-xl">
+              Select a pipeline to run an automated test workflow or browse its
+              full execution history.
+            </p>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full lg:w-72 shrink-0">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5e7196] pointer-events-none"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Search pipelines…"
+            aria-label="Search pipelines"
+            className={cn(
+              "w-full h-10 pl-9 pr-3 rounded-xl text-sm",
+              "bg-[#101725] border border-[#22304a] text-white placeholder:text-[#5e7196]",
+              "focus:outline-none focus:ring-2 focus:ring-[#135bec]/40 focus:border-[#135bec]/60",
+              "transition-colors",
+            )}
+          />
         </div>
       </div>
-      <div className="h-3 w-1/3 rounded bg-[#2b3b55]" />
-      <div className="flex gap-2 pt-1 border-t border-[#2b3b55]">
-        <div className="flex-1 h-8 rounded-lg bg-[#2b3b55]" />
-        <div className="h-8 w-20 rounded-lg bg-[#2b3b55]" />
+    </header>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty state
+// ─────────────────────────────────────────────────────────────────────────────
+
+function EmptyState({
+  query,
+  onClearQuery,
+}: {
+  query: string;
+  onClearQuery: () => void;
+}) {
+  const isFiltered = query.trim().length > 0;
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-dashed border-[#22304a] bg-[#141c2c]/40 py-20 px-6 text-center">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-[0.15] pointer-events-none"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 50% 30%, #135bec 0%, transparent 55%)",
+        }}
+      />
+      <div className="relative flex flex-col items-center gap-4">
+        <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1e2a3d] to-[#141c2c] border border-[#22304a]">
+          <Network className="w-7 h-7 text-[#92a4c9]" aria-hidden="true" />
+        </div>
+        <div className="max-w-md">
+          <p className="text-base font-semibold text-white">
+            {isFiltered ? "No matches found" : "No pipelines yet"}
+          </p>
+          <p className="mt-1.5 text-sm text-[#92a4c9]">
+            {isFiltered
+              ? `Nothing matches "${query}". Try a different search term.`
+              : "There are no available pipelines for your account yet."}
+          </p>
+        </div>
+        {isFiltered && (
+          <button
+            type="button"
+            onClick={onClearQuery}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-[#1e2a3d] hover:bg-[#263450] text-[#92a4c9] hover:text-white border border-[#22304a] transition-colors"
+          >
+            Clear search
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error state
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.04] py-12 px-6 text-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/25">
+          <AlertCircle className="w-6 h-6 text-red-400" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-white">
+            Failed to load pipelines
+          </p>
+          <p className="mt-1 text-xs text-[#92a4c9]">
+            Check your network connection or try again.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-[#1e2a3d] hover:bg-[#263450] text-[#92a4c9] hover:text-white border border-[#22304a] transition-colors"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Retry
+        </button>
       </div>
     </div>
   );
@@ -134,48 +439,52 @@ export default function PipelinesPage() {
   const { data, isLoading, isError, refetch } = usePipelineTemplates({
     include_archived: false,
   });
+  const [query, setQuery] = React.useState("");
 
   const templates = data?.items ?? [];
 
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter((t: PipelineTemplateListItem) => {
+      const haystack = [
+        t.name,
+        t.description,
+        ...(t.tags ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [templates, query]);
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Pipelines</h1>
-        <p className="mt-1 text-sm text-[#92a4c9]">
-          Select a pipeline to run or view its history.
-        </p>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <HeroHeader
+        total={templates.length}
+        query={query}
+        onQueryChange={setQuery}
+      />
 
-      {/* Error state */}
-      {isError && (
-        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-          <p className="text-sm text-red-400">Failed to load pipelines.</p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="inline-flex items-center gap-1.5 text-xs text-[#92a4c9] hover:text-white border border-[#2b3b55] rounded-lg px-3 h-8 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      )}
+      {isError && <ErrorState onRetry={() => refetch()} />}
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading
-          ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
-          : templates.map((t: PipelineTemplateListItem) => (
-              <PipelineCard key={t.template_id} template={t} />
-            ))}
-      </div>
+      {!isError && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+              : filtered.map((t: PipelineTemplateListItem) => (
+                  <PipelineCard key={t.template_id} template={t} />
+                ))}
+          </div>
 
-      {/* Empty state */}
-      {!isLoading && !isError && templates.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-          <Network className="w-10 h-10 text-[#3d5070]" />
-          <p className="text-sm text-[#92a4c9]">No pipelines available.</p>
-        </div>
+          {!isLoading && filtered.length === 0 && (
+            <div className="mt-4">
+              <EmptyState query={query} onClearQuery={() => setQuery("")} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
