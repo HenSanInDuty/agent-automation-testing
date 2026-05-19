@@ -1,0 +1,409 @@
+"use client";
+
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+
+import type { AgentRunStatus, PipelineStatus, WSEvent } from "../types";
+import { wsManager } from "../lib/wsManager";
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// State shape
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+interface PipelineSession {
+  activeRunId: string | null;
+  activeRunStatus: PipelineStatus | null;
+  agentStatuses: Record<string, AgentRunStatus>;
+  agentProgress: Record<string, { pct: number; message: string }>;
+  nodeStatuses: Record<string, string>;
+  currentNode: string | null;
+  executionLayers: string[][];
+  activeTemplateId: string | null;
+  currentStage: string | null;
+  completedStages: string[];
+  stageResults: Record<string, Record<string, unknown>>;
+  stageSummaries: Record<string, Record<string, unknown>>;
+  logMessages: string[];
+  stageLogMessages: Record<string, string[]>;
+  events: WSEvent[];
+  isTerminal: boolean;
+}
+
+interface PipelineStoreState extends PipelineSession {
+  // Actions
+  startSession: (runId: string, templateId?: string | null) => void;
+  clearSession: () => void;
+  updateFromWSEvent: (event: WSEvent) => void;
+  setStageResult: (stage: string, data: Record<string, unknown>) => void;
+  setStageSummary: (stage: string, summary: Record<string, unknown>) => void;
+  clearStageResults: () => void;
+  // Sync run status from HTTP polling (fallback when WS events are missed)
+  syncRunStatus: (status: PipelineStatus, completedStages?: string[]) => void;
+
+  // WebSocket
+  wsStatus: "disconnected" | "connecting" | "connected" | "error";
+  connectWebSocket: (runId: string) => void;
+  disconnectWebSocket: () => void;
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Initial state factory
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+const INITIAL_SESSION: PipelineSession = {
+  activeRunId: null,
+  activeRunStatus: null,
+  agentStatuses: {},
+  agentProgress: {},
+  nodeStatuses: {},
+  currentNode: null,
+  executionLayers: [],
+  activeTemplateId: null,
+  currentStage: null,
+  completedStages: [],
+  stageResults: {},
+  stageSummaries: {},
+  logMessages: [],
+  stageLogMessages: {},
+  events: [],
+  isTerminal: false,
+};
+
+const MAX_EVENTS = 500;
+const MAX_LOGS = 100;
+const MAX_STAGE_LOGS = 50;
+const NOISE_EVENTS = new Set(["connected", "ping", "pong"]);
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Store
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export const usePipelineStore = create<PipelineStoreState>()(
+  persist(
+    (set, get) => ({
+      // â”€â”€ Initial state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      ...INITIAL_SESSION,
+      wsStatus: "disconnected",
+
+      // â”€â”€ Session lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      startSession: (runId, templateId) => {
+        set({
+          ...INITIAL_SESSION,
+          activeRunId: runId,
+          activeRunStatus: "running",
+          activeTemplateId: templateId ?? null,
+        });
+        get().connectWebSocket(runId);
+      },
+
+      clearSession: () => {
+        get().disconnectWebSocket();
+        set({ ...INITIAL_SESSION, wsStatus: "disconnected" });
+      },
+
+      // â”€â”€ WS event handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      updateFromWSEvent: (event) => {
+        // Append to event list (skip noise)
+        if (!NOISE_EVENTS.has(event.event)) {
+          set((s) => {
+            const next = [...s.events, event];
+            return {
+              events: next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next,
+            };
+          });
+        }
+
+        switch (event.event) {
+          case "node.started":
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [event.data.node_id as string]: "running",
+              },
+              currentNode: event.data.node_id as string,
+            }));
+            break;
+
+          case "node.completed": {
+            const completedNodeId = event.data.node_id as string;
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [completedNodeId]: "completed",
+              },
+              currentNode:
+                s.currentNode === completedNodeId ? null : s.currentNode,
+            }));
+            break;
+          }
+
+          case "node.failed": {
+            const failedNodeId = event.data.node_id as string;
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [failedNodeId]: "failed",
+              },
+              currentNode:
+                s.currentNode === failedNodeId ? null : s.currentNode,
+            }));
+            break;
+          }
+
+          case "node.skipped":
+            set((s) => ({
+              nodeStatuses: {
+                ...s.nodeStatuses,
+                [event.data.node_id as string]: "skipped",
+              },
+            }));
+            break;
+
+          case "node.progress":
+            // node.progress doesn't change the status string, only agentProgress-like tracking
+            // We keep nodeStatuses as "running" while progress events arrive
+            break;
+
+          case "layer.started": {
+            const layerIndex = event.data.layer_index as number;
+            const layerNodes = event.data.nodes as string[];
+            set((s) => {
+              const size = Math.max(s.executionLayers.length, layerIndex + 1);
+              // Array.from fills every slot explicitly â€” no sparse holes, no nulls
+              const nextLayers = Array.from(
+                { length: size },
+                (_, i) => (i === layerIndex ? layerNodes : (s.executionLayers[i] ?? [])),
+              );
+              return { executionLayers: nextLayers };
+            });
+            break;
+          }
+
+          case "layer.completed":
+            // Node statuses already reflect completion; nothing extra needed here.
+            break;
+
+          case "agent.started":
+            set((s) => ({
+              agentStatuses: {
+                ...s.agentStatuses,
+                [event.data.agent_id as string]: "running" as AgentRunStatus,
+              },
+            }));
+            break;
+
+          case "agent.progress":
+            set((s) => ({
+              agentProgress: {
+                ...s.agentProgress,
+                [event.data.agent_id as string]: {
+                  pct: (event.data.progress as number) ?? 0,
+                  message: (event.data.message as string) ?? "",
+                },
+              },
+            }));
+            break;
+
+          case "agent.completed": {
+            const agentId = event.data.agent_id as string;
+            set((s) => {
+              const next = { ...s.agentProgress };
+              delete next[agentId];
+              return {
+                agentStatuses: {
+                  ...s.agentStatuses,
+                  [agentId]: "completed" as AgentRunStatus,
+                },
+                agentProgress: next,
+              };
+            });
+            break;
+          }
+
+          case "agent.failed": {
+            const agentId = event.data.agent_id as string;
+            set((s) => {
+              const next = { ...s.agentProgress };
+              delete next[agentId];
+              return {
+                agentStatuses: {
+                  ...s.agentStatuses,
+                  [agentId]: "failed" as AgentRunStatus,
+                },
+                agentProgress: next,
+              };
+            });
+            break;
+          }
+
+          case "stage.started":
+            set({ currentStage: event.data.stage as string });
+            break;
+
+          case "stage.completed": {
+            const stage = event.data.stage as string;
+            const summary = event.data.summary as
+              | Record<string, unknown>
+              | undefined;
+            set((s) => ({
+              completedStages: s.completedStages.includes(stage)
+                ? s.completedStages
+                : [...s.completedStages, stage],
+              stageSummaries: summary
+                ? { ...s.stageSummaries, [stage]: summary }
+                : s.stageSummaries,
+            }));
+            break;
+          }
+
+          case "log": {
+            const msg = event.data.message as string;
+            if (msg) {
+              set((s) => {
+                const next = [...s.logMessages, msg];
+                const stage = s.currentStage;
+                const prevStageLogs = stage
+                  ? (s.stageLogMessages[stage] ?? [])
+                  : null;
+                const nextStageLogs =
+                  stage && prevStageLogs !== null
+                    ? {
+                        ...s.stageLogMessages,
+                        [stage]: [...prevStageLogs, msg].slice(-MAX_STAGE_LOGS),
+                      }
+                    : s.stageLogMessages;
+                return {
+                  logMessages:
+                    next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next,
+                  stageLogMessages: nextStageLogs,
+                };
+              });
+            }
+            break;
+          }
+
+          case "run.completed":
+            set({
+              activeRunStatus: "completed",
+              isTerminal: true,
+            });
+            break;
+
+          case "run.failed":
+            set({
+              activeRunStatus: "failed",
+              isTerminal: true,
+            });
+            break;
+
+          case "run.paused":
+            set({
+              activeRunStatus: "paused",
+              isTerminal: false,
+            });
+            break;
+
+          case "run.resumed":
+            set({
+              activeRunStatus: "running",
+              isTerminal: false,
+            });
+            break;
+
+          case "run.cancelled":
+            set({
+              activeRunStatus: "cancelled",
+              isTerminal: true,
+            });
+            break;
+
+          case "run.started": {
+            const layers = event.data.layers as string[][] | undefined;
+            if (Array.isArray(layers)) {
+              // Pre-populate all execution layers at once to avoid sparse-array nulls
+              set({
+                executionLayers: layers.filter((l): l is string[] =>
+                  Array.isArray(l),
+                ),
+              });
+            }
+            break;
+          }
+
+          default:
+            break;
+        }
+      },
+
+      // â”€â”€ Stage results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      setStageResult: (stage, data) => {
+        set((s) => ({
+          stageResults: { ...s.stageResults, [stage]: data },
+        }));
+      },
+
+      setStageSummary: (stage, summary) => {
+        set((s) => ({
+          stageSummaries: { ...s.stageSummaries, [stage]: summary },
+        }));
+      },
+
+      clearStageResults: () => {
+        set({ stageResults: {}, stageSummaries: {} });
+      },
+
+      syncRunStatus: (status, completedStages) => {
+        const isNowTerminal = ["completed", "failed", "cancelled"].includes(
+          status,
+        );
+        set((s) => ({
+          activeRunStatus: status,
+          isTerminal: isNowTerminal,
+          ...(completedStages !== undefined
+            ? {
+                completedStages:
+                  completedStages.length > s.completedStages.length
+                    ? completedStages
+                    : s.completedStages,
+              }
+            : {}),
+        }));
+      },
+
+      // â”€â”€ WebSocket â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      connectWebSocket: (runId) => {
+        set({ wsStatus: "connecting" });
+        wsManager.connect(
+          runId,
+          (event) => get().updateFromWSEvent(event),
+          (status) => set({ wsStatus: status }),
+        );
+      },
+
+      disconnectWebSocket: () => {
+        wsManager.disconnect();
+        set({ wsStatus: "disconnected" });
+      },
+    }),
+    {
+      name: "auto-at-pipeline-session",
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined" ? sessionStorage : localStorage,
+      ),
+      // Only persist a lightweight subset â€” not events/logs (too large)
+      partialize: (state) => ({
+        activeRunId: state.activeRunId,
+        activeRunStatus: state.activeRunStatus,
+        agentStatuses: state.agentStatuses,
+        nodeStatuses: state.nodeStatuses,
+        currentNode: state.currentNode,
+        executionLayers: state.executionLayers,
+        activeTemplateId: state.activeTemplateId,
+        currentStage: state.currentStage,
+        completedStages: state.completedStages,
+        isTerminal: state.isTerminal,
+        stageSummaries: state.stageSummaries,
+      }),
+    },
+  ),
+);
