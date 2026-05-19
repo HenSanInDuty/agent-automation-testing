@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Scan shared workspace package so Tailwind generates classes used inside it. */
+@source "../../../../packages/shared/src/**/*.{ts,tsx}";
+
 /* ─────────────────────────────────────────────────────────────────────────────
    Design tokens
    ───────────────────────────────────────────────────────────────────────────── */
