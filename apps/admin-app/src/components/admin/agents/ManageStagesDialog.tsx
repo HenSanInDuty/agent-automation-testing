@@ -8,6 +8,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
+  ConfirmDialog,
 } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
@@ -93,6 +94,10 @@ export function ManageStagesDialog({
   const dragIndexRef = React.useRef<number | null>(null);
   // Track which index is being dragged-over for visual feedback
   const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
+
+  // Stage pending deletion (null when confirm dialog is closed)
+  const [deletingStage, setDeletingStage] =
+    React.useState<StageConfig | null>(null);
 
   // ── Sync ordered list from API ─────────────────────────────────────────────
   React.useEffect(() => {
@@ -190,25 +195,24 @@ export function ManageStagesDialog({
   // ── Delete handler ─────────────────────────────────────────────────────────
 
   const handleDelete = (stage: StageConfig) => {
-    const confirmed = window.confirm(
-      `Delete stage "${stage.display_name}"?\n\nAgents assigned to this stage will be moved to an unassigned state. This action cannot be undone.`,
-    );
-    if (!confirmed) return;
+    setDeletingStage(stage);
+  };
 
-    deleteMutation
-      .mutateAsync(stage.stage_id)
-      .then(() => {
-        toast.success(
-          "Stage deleted",
-          `"${stage.display_name}" has been removed.`,
-        );
-      })
-      .catch(() => {
-        toast.error(
-          "Delete failed",
-          "Could not delete the stage. Please try again.",
-        );
-      });
+  const handleDeleteConfirm = async () => {
+    if (!deletingStage) return;
+    try {
+      await deleteMutation.mutateAsync(deletingStage.stage_id);
+      toast.success(
+        "Stage deleted",
+        `"${deletingStage.display_name}" has been removed.`,
+      );
+      setDeletingStage(null);
+    } catch {
+      toast.error(
+        "Delete failed",
+        "Could not delete the stage. Please try again.",
+      );
+    }
   };
 
   // ── Save order handler ─────────────────────────────────────────────────────
@@ -236,6 +240,7 @@ export function ManageStagesDialog({
   // Render
   // ─────────────────────────────────────────────────────────────────────────
   return (
+    <>
     <Modal open={open} onClose={onClose} size="xl">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <ModalHeader
@@ -387,6 +392,23 @@ export function ManageStagesDialog({
         </div>
       </ModalFooter>
     </Modal>
+
+    <ConfirmDialog
+      open={deletingStage !== null}
+      onClose={() => setDeletingStage(null)}
+      onConfirm={handleDeleteConfirm}
+      title="Delete Stage"
+      description={
+        deletingStage
+          ? `Delete stage "${deletingStage.display_name}"? Agents assigned to this stage will be moved to an unassigned state. This action cannot be undone.`
+          : ""
+      }
+      confirmLabel="Delete Stage"
+      cancelLabel="Cancel"
+      variant="danger"
+      loading={deleteMutation.isPending}
+    />
+    </>
   );
 }
 
