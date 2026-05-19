@@ -8,6 +8,9 @@ import {
   GitBranch,
   ArrowRightLeft,
   Plus,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -18,7 +21,10 @@ import {
   type AgentConfigSummary,
   type PipelineStageEntry,
 } from "@/types";
-import { useUpdateNodeStage } from "@/hooks/usePipelineTemplates";
+import {
+  useUpdateNodeStage,
+  useUpdateTemplate,
+} from "@/hooks/usePipelineTemplates";
 
 import { AgentCard } from "./AgentCard";
 import { StageIcon } from "./StageIcon";
@@ -160,8 +166,71 @@ export function PipelineGroupSection({
     Record<string, boolean>
   >({});
   const [addAgentOpen, setAddAgentOpen] = React.useState(false);
+  const [renaming, setRenaming] = React.useState(false);
+  const [draftName, setDraftName] = React.useState(pipelineName);
+  const renameInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const qc = useQueryClient();
+  const { mutate: updateTemplate, isPending: isRenaming } =
+    useUpdateTemplate(templateId);
+
+  // Keep draft name in sync when the pipeline name changes externally
+  React.useEffect(() => {
+    setDraftName(pipelineName);
+  }, [pipelineName]);
+
+  // Focus the input as soon as rename mode opens
+  React.useEffect(() => {
+    if (renaming) {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }
+  }, [renaming]);
+
+  const beginRename = () => {
+    setDraftName(pipelineName);
+    setRenaming(true);
+  };
+
+  const cancelRename = () => {
+    setRenaming(false);
+    setDraftName(pipelineName);
+  };
+
+  const commitRename = () => {
+    const next = draftName.trim();
+    if (!next || next === pipelineName) {
+      cancelRename();
+      return;
+    }
+    updateTemplate(
+      { name: next },
+      {
+        onSuccess: () => {
+          // Pipeline name is also displayed in the agent-by-pipeline view
+          qc.invalidateQueries({ queryKey: queryKeys.agentConfigs.byPipeline() });
+          toast.success("Pipeline renamed", `Renamed to "${next}".`);
+          setRenaming(false);
+        },
+        onError: () => {
+          toast.error(
+            "Rename failed",
+            "Could not rename the pipeline. Please try again.",
+          );
+        },
+      },
+    );
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitRename();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelRename();
+    }
+  };
 
   // Initialise all stages as expanded whenever the stages list changes
   React.useEffect(() => {
@@ -223,94 +292,164 @@ export function PipelineGroupSection({
             "transition-colors duration-150",
           )}
         >
-          {/* Toggle button wraps everything except the "Stages" button */}
-          <button
-            type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            aria-expanded={expanded}
-            aria-controls={`pipeline-body-${templateId}`}
-            className="flex-1 min-w-0 flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-inset rounded-lg"
-          >
-            {/* Pipeline number */}
-            <span className="shrink-0 text-[11px] font-bold tabular-nums text-[#135bec]">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-
-            {/* GitBranch icon */}
-            <GitBranch
-              className="shrink-0 w-4 h-4 text-[#135bec]"
-              aria-hidden="true"
-            />
-
-            {/* Pipeline name + description */}
-            <span className="flex-1 text-left leading-snug min-w-0">
-              <span className="text-sm font-semibold text-white">
-                {pipelineName}
+          {renaming ? (
+            // ── Inline rename row ──────────────────────────────────────────
+            <div className="flex-1 min-w-0 flex items-center gap-3">
+              <span className="shrink-0 text-[11px] font-bold tabular-nums text-[#135bec]">
+                {String(index + 1).padStart(2, "0")}
               </span>
-              {pipelineDescription && (
-                <span className="block text-[11px] text-[#92a4c9] truncate mt-0.5">
-                  {pipelineDescription}
+              <GitBranch
+                className="shrink-0 w-4 h-4 text-[#135bec]"
+                aria-hidden="true"
+              />
+              <input
+                ref={renameInputRef}
+                type="text"
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                disabled={isRenaming}
+                aria-label="Pipeline name"
+                maxLength={120}
+                className={cn(
+                  "flex-1 min-w-0 px-2 py-1 rounded-md",
+                  "bg-[#18202F] border border-[#2b3b55]",
+                  "text-sm font-semibold text-white",
+                  "outline-none focus:border-[#135bec] focus:ring-1 focus:ring-[#135bec]",
+                  isRenaming && "opacity-60",
+                )}
+              />
+              <Button
+                variant="primary"
+                size="xs"
+                leftIcon={<Check className="w-3 h-3" aria-hidden="true" />}
+                onClick={commitRename}
+                disabled={
+                  isRenaming ||
+                  !draftName.trim() ||
+                  draftName.trim() === pipelineName
+                }
+                title="Save new name"
+              >
+                Save
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
+                leftIcon={<X className="w-3 h-3" aria-hidden="true" />}
+                onClick={cancelRename}
+                disabled={isRenaming}
+                title="Cancel rename"
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Toggle button wraps everything except the trailing actions */}
+              <button
+                type="button"
+                onClick={() => setExpanded((prev) => !prev)}
+                aria-expanded={expanded}
+                aria-controls={`pipeline-body-${templateId}`}
+                className="flex-1 min-w-0 flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-inset rounded-lg"
+              >
+                {/* Pipeline number */}
+                <span className="shrink-0 text-[11px] font-bold tabular-nums text-[#135bec]">
+                  {String(index + 1).padStart(2, "0")}
                 </span>
-              )}
-            </span>
 
-            {/* Stats badges */}
-            <span className="shrink-0 inline-flex items-center gap-2">
-              <span
-                className={cn(
-                  "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold",
-                  "bg-[#135bec]/10 border border-[#135bec]/30 text-[#5b9eff]",
-                )}
+                {/* GitBranch icon */}
+                <GitBranch
+                  className="shrink-0 w-4 h-4 text-[#135bec]"
+                  aria-hidden="true"
+                />
+
+                {/* Pipeline name + description */}
+                <span className="flex-1 text-left leading-snug min-w-0">
+                  <span className="text-sm font-semibold text-white">
+                    {pipelineName}
+                  </span>
+                  {pipelineDescription && (
+                    <span className="block text-[11px] text-[#92a4c9] truncate mt-0.5">
+                      {pipelineDescription}
+                    </span>
+                  )}
+                </span>
+
+                {/* Stats badges */}
+                <span className="shrink-0 inline-flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold",
+                      "bg-[#135bec]/10 border border-[#135bec]/30 text-[#5b9eff]",
+                    )}
+                  >
+                    {stages.length} {stages.length === 1 ? "stage" : "stages"}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold",
+                      "bg-[#18202F] border border-[#2b3b55] text-[#92a4c9]",
+                    )}
+                  >
+                    {totalAgents} {totalAgents === 1 ? "agent" : "agents"}
+                  </span>
+                </span>
+
+                {/* Chevron */}
+                <span className="shrink-0 text-[#92a4c9]" aria-hidden="true">
+                  {expanded ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </span>
+              </button>
+
+              {/* Rename button — lives outside the toggle button */}
+              <Button
+                variant="ghost"
+                size="xs"
+                leftIcon={<Pencil className="w-3 h-3" aria-hidden="true" />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  beginRename();
+                }}
+                title={`Rename ${pipelineName}`}
               >
-                {stages.length} {stages.length === 1 ? "stage" : "stages"}
-              </span>
-              <span
-                className={cn(
-                  "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold",
-                  "bg-[#18202F] border border-[#2b3b55] text-[#92a4c9]",
-                )}
+                Rename
+              </Button>
+
+              {/* Add Agent button — lives outside the toggle button */}
+              <Button
+                variant="primary"
+                size="xs"
+                leftIcon={<Plus className="w-3 h-3" aria-hidden="true" />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAddAgentOpen(true);
+                }}
+                title={`Add agent to ${pipelineName}`}
               >
-                {totalAgents} {totalAgents === 1 ? "agent" : "agents"}
-              </span>
-            </span>
+                Add Agent
+              </Button>
 
-            {/* Chevron */}
-            <span className="shrink-0 text-[#92a4c9]" aria-hidden="true">
-              {expanded ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </span>
-          </button>
-
-          {/* Add Agent button — lives outside the toggle button */}
-          <Button
-            variant="primary"
-            size="xs"
-            leftIcon={<Plus className="w-3 h-3" aria-hidden="true" />}
-            onClick={(e) => {
-              e.stopPropagation();
-              setAddAgentOpen(true);
-            }}
-            title={`Add agent to ${pipelineName}`}
-          >
-            Add Agent
-          </Button>
-
-          {/* Manage Stages button — lives outside the toggle button */}
-          <Button
-            variant="secondary"
-            size="xs"
-            leftIcon={<Layers className="w-3 h-3" aria-hidden="true" />}
-            onClick={(e) => {
-              e.stopPropagation();
-              onManageStages(templateId, pipelineName);
-            }}
-            title={`Manage stages for ${pipelineName}`}
-          >
-            Stages
-          </Button>
+              {/* Manage Stages button — lives outside the toggle button */}
+              <Button
+                variant="secondary"
+                size="xs"
+                leftIcon={<Layers className="w-3 h-3" aria-hidden="true" />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onManageStages(templateId, pipelineName);
+                }}
+                title={`Manage stages for ${pipelineName}`}
+              >
+                Stages
+              </Button>
+            </>
+          )}
         </div>
 
         {/* ── Expanded content — stages ─────────────────────────────────────── */}
