@@ -197,3 +197,34 @@ graph LR
     OUTPUT -->|"update status + duration_seconds"| RUN
     INPUT -->|"reads file_path"| UP
 ```
+
+## 5. Template `automation-testing-api` (MD-only pipeline)
+
+Pipeline mới (plan 260519-1430) chấp nhận file `.md` mô tả API và đảm bảo
+output cuối cùng có đủ 3 thành phần trước khi user tải xuống.
+
+```mermaid
+flowchart TD
+    A["📥 INPUT (.md file)"]
+    B["md_api_spec_verifier\n(pure_python, retry=0)\n→ MDSpecValidationError\n  khi thiếu Endpoint/Request/Response"]
+    C["ingestion_pipeline"]
+    D["requirement → rule → scope → data_model →\ntest_condition → dependency → test_case_generator"]
+    E["test_level_classifier (NEW)\nrule-first tag: unit | integration | contract | e2e\nexecutable: bool"]
+    F["automation_agent → coverage_pre → report_pre"]
+    G["execution_orchestrator → env_adapter →\ntest_runner (filter executable=true) →\nexecution_logger → result_store"]
+    H["artifact_pipeline\n(unit test files)"]
+    I["coverage_analyzer → root_cause_analyzer → report_generator"]
+    J["export_html_docx (NEW)\nrender + upload report.html/.docx vào MinIO"]
+    K["report_verifier (NEW, retry=0)\nGuard: count test_cases > 0,\npass_rate present,\nunit test files parse-able"]
+    L["📤 OUTPUT (download + verification summary)"]
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> L
+```
+
+### Fail-fast guarantees
+
+| Tình huống | Hành vi |
+|------------|---------|
+| MD thiếu section → `MDSpecValidationError` | Runner mark `failed`, **skip retry** (xem `is_structured_pipeline_error`); `error_message` là JSON `{error_type, code, missing_sections, missing_fields, detail}`; WS event `node.failed` mang `error_type` để FE render structured alert. |
+| Report thiếu component → `ReportVerificationError` | Mark `failed` không retry; FE GET `/report/verification` thấy `verified=false` + `issues[]`; nút Download HTML/DOCX disabled. |
+| Admin cần lấy file để debug | `GET /export/html?force=true` (yêu cầu role admin) bỏ qua gate. |

@@ -268,3 +268,50 @@ graph LR
     WS --> LayerEvents
     WS --> NodeEvents
 ```
+
+## Endpoint mới — Automation Testing API report verification
+
+```
+GET /api/v1/pipeline/runs/{run_id}/report/verification
+→ 200 ReportVerificationResponse
+```
+
+Response shape:
+
+```json
+{
+  "verified": true,
+  "components": {
+    "test_cases":      {"ok": true, "count": 23, "issues": []},
+    "results":         {"ok": true, "count": 18, "issues": [], "extra": {"pass_rate": 82.0}},
+    "unit_test_files": {"ok": true, "count": 8, "issues": []}
+  },
+  "html_url": "runs/{run_id}/report.html",
+  "docx_url": "runs/{run_id}/report.docx",
+  "summary": "Report ready for delivery",
+  "available": true
+}
+```
+
+```
+GET /api/v1/pipeline/runs/{run_id}/export/{html|docx}
+  - 200 file bytes when verified=true (or no verifier output exists for legacy runs)
+  - 409 {error_type:"report_verification", message, components} when verified=false
+  - ?force=true bypass gate (admin override)
+```
+
+Structured node failure event:
+
+```
+node.failed
+{
+  "node_id": "at-api-md-verifier",
+  "error_type": "md_spec_validation",
+  "error_detail": {
+    "code": "MD_SPEC_MISSING_RESPONSE_STATUS",
+    "missing_sections": ["response"],
+    "missing_fields": ["status_code"],
+    "detail": "..."
+  }
+}
+```
