@@ -597,6 +597,94 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         "max_iter": 6,
         "is_custom": False,
     },
+    # ── Stage: ingestion — Automation Testing API guard ───────────────────────
+    {
+        "agent_id": "md_api_spec_verifier",
+        "display_name": "MD API Spec Verifier",
+        "stage": "ingestion",
+        "role": "MD API Spec Validator",
+        "goal": (
+            "Validate uploaded Markdown API specification files against the "
+            "Automation Testing API contract v1: Endpoint / Request / Response "
+            "sections must be present and well-formed. Fail-fast with a "
+            "structured error so the downstream DAG never runs on broken input."
+        ),
+        "backstory": (
+            "You are a deterministic, rule-based guard. You do not call an LLM. "
+            "You parse the markdown line by line, extract Method / Path / "
+            "request fields / response status codes, and either approve the spec "
+            "or raise MDSpecValidationError with machine-readable codes."
+        ),
+        "max_iter": 1,
+        "is_custom": False,
+        "tool_names": ["md_api_spec_validator"],
+    },
+    # ── Stage: testcase — Test-level classifier ───────────────────────────────
+    {
+        "agent_id": "test_level_classifier",
+        "display_name": "Test Level Classifier",
+        "stage": "testcase",
+        "role": "Test Level Classifier",
+        "goal": (
+            "Tag every test case with test_level ∈ {unit, integration, "
+            "contract, e2e} and the executable boolean flag based on the "
+            "endpoint hint and case content. Apply rule-based classification "
+            "first; only fall back to LLM reasoning when the rule confidence "
+            "is below threshold."
+        ),
+        "backstory": (
+            "You are a senior QA architect specialised in test taxonomy. You "
+            "know that misclassifying a unit test as integration wastes "
+            "execution budget, and misclassifying an e2e as unit breaks the "
+            "runner. You apply heuristics deterministically and only escalate "
+            "ambiguous cases to the LLM."
+        ),
+        "max_iter": 3,
+        "is_custom": False,
+        "tool_names": ["test_level_tagger"],
+    },
+    # ── Stage: reporting — Export + Verifier ──────────────────────────────────
+    {
+        "agent_id": "export_html_docx",
+        "display_name": "Report Export (HTML + DOCX)",
+        "stage": "reporting",
+        "role": "Report Exporter",
+        "goal": (
+            "Render the final PipelineReport into HTML and DOCX formats and "
+            "upload both files to MinIO under runs/{run_id}/report.{ext}. "
+            "Return the storage paths plus byte sizes so the verifier can "
+            "syntax-check before the user downloads."
+        ),
+        "backstory": (
+            "You are a deterministic export utility. You template the report, "
+            "package the unit test files, and persist artifacts. You never "
+            "call an LLM."
+        ),
+        "max_iter": 1,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "report_verifier",
+        "display_name": "Report Verifier",
+        "stage": "reporting",
+        "role": "Report 3-Component Verifier",
+        "goal": (
+            "Verify that the final report contains all 3 mandatory "
+            "components: (1) test case info, (2) execution results, (3) "
+            "unit test files. Raise ReportVerificationError when any "
+            "component is missing or malformed; the API will refuse the "
+            "download until the issue is fixed."
+        ),
+        "backstory": (
+            "You are the last guard before the user receives a deliverable. "
+            "You are paranoid about empty arrays, missing pass-rate, and "
+            "syntactically invalid generated files. You are rule-based and "
+            "never call an LLM."
+        ),
+        "max_iter": 1,
+        "is_custom": False,
+        "tool_names": ["report_verifier"],
+    },
 ]
 # ─────────────────────────────────────────────────────────────────────────────
 #
@@ -1184,23 +1272,245 @@ async def seed_stage_configs() -> None:
 
 
 async def seed_pipeline_templates() -> None:
-    """Insert the default 'auto-testing' pipeline template (idempotent).
+    """Insert built-in pipeline templates (idempotent).
 
-    Uses :func:`~app.db.crud.get_pipeline_template` to check for an existing
-    document before inserting, so repeated calls are safe.
+    Currently seeds:
+      - ``auto-testing``             — the V3 default sequential pipeline.
+      - ``automation-testing-api``   — MD spec → guarded testcase + exec → verified report.
     """
     existing = await crud.get_pipeline_template(
         DEFAULT_PIPELINE_TEMPLATE["template_id"]
     )
-    if existing is not None:
+    if existing is None:
+        await crud.create_pipeline_template(dict(DEFAULT_PIPELINE_TEMPLATE))
+        logger.info(
+            "Seeded default pipeline template: %s",
+            DEFAULT_PIPELINE_TEMPLATE["template_id"],
+        )
+    else:
         logger.debug("Default pipeline template already exists — skipping seed.")
-        return
 
-    await crud.create_pipeline_template(dict(DEFAULT_PIPELINE_TEMPLATE))
-    logger.info(
-        "Seeded default pipeline template: %s",
-        DEFAULT_PIPELINE_TEMPLATE["template_id"],
+    at_template = _build_automation_testing_api_template()
+    existing_at = await crud.get_pipeline_template(at_template["template_id"])
+    if existing_at is None:
+        await crud.create_pipeline_template(dict(at_template))
+        logger.info(
+            "Seeded pipeline template: %s",
+            at_template["template_id"],
+        )
+    else:
+        logger.debug(
+            "Pipeline template '%s' already exists — skipping seed.",
+            at_template["template_id"],
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Automation Testing API template builder (Phase 6 — automation-testing-api plan)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _build_automation_testing_api_template() -> dict[str, Any]:
+    """Construct the ``automation-testing-api`` PipelineTemplateDocument dict.
+
+    Layered sequential DAG (mirrors plan §Architecture). Every node id is
+    prefixed with ``at-api-`` to avoid collisions with the default template.
+    """
+    nodes: list[dict[str, Any]] = []
+    edges: list[dict[str, Any]] = []
+    y = 0.0
+
+    def _add_node(
+        node_id: str,
+        node_type: str,
+        agent_id: str | None,
+        label: str,
+        description: str,
+        timeout: int = 300,
+        retry: int = 1,
+    ) -> str:
+        nonlocal y
+        node: dict[str, Any] = {
+            "node_id": node_id,
+            "node_type": node_type,
+            "label": label,
+            "description": description,
+            "position_x": 400.0,
+            "position_y": y,
+            "timeout_seconds": timeout,
+            "retry_count": retry,
+            "enabled": True,
+            "config_overrides": {},
+        }
+        if agent_id:
+            node["agent_id"] = agent_id
+        nodes.append(node)
+        y += 140.0
+        return node_id
+
+    def _edge(src: str, tgt: str) -> None:
+        edges.append(
+            {
+                "edge_id": f"e-{src}-{tgt}",
+                "source_node_id": src,
+                "target_node_id": tgt,
+                "animated": False,
+            }
+        )
+
+    # Layer 0 — INPUT
+    inp = _add_node(
+        "at-api-input", "input", None,
+        "📥 MD Upload", "Upload Markdown API specification",
+        timeout=30, retry=0,
     )
+    # Layer 1 — guard: md_api_spec_verifier (retry=0 → fail-fast)
+    verifier = _add_node(
+        "at-api-md-verifier", "pure_python", "md_api_spec_verifier",
+        "MD Spec Verifier",
+        "Validate that the uploaded MD follows the v1 contract",
+        timeout=60, retry=0,
+    )
+    _edge(inp, verifier)
+
+    # Layer 2 — ingestion
+    ingestion = _add_node(
+        "at-api-ingestion", "pure_python", "ingestion_pipeline",
+        "Ingestion Pipeline",
+        "Parse + chunk the MD spec into requirement items",
+        timeout=180, retry=1,
+    )
+    _edge(verifier, ingestion)
+
+    # Layers 3-9 — testcase chain (reuse existing agents)
+    testcase_agents = [
+        ("at-api-req-analyzer", "requirement_analyzer", "Requirement Analyzer"),
+        ("at-api-rule-parser", "rule_parser", "Rule Parser"),
+        ("at-api-scope-classifier", "scope_classifier", "Scope Classifier"),
+        ("at-api-data-model", "data_model_agent", "Data Model Agent"),
+        ("at-api-test-conditions", "test_condition_agent", "Test Conditions"),
+        ("at-api-dependency-agent", "dependency_agent", "Dependency Agent"),
+        ("at-api-tc-generator", "test_case_generator", "Test Case Generator"),
+    ]
+    prev = ingestion
+    for nid, agent_id, label in testcase_agents:
+        _add_node(nid, "agent", agent_id, label, label, timeout=300, retry=1)
+        _edge(prev, nid)
+        prev = nid
+
+    # Layer 10 — test_level_classifier (NEW)
+    classifier = _add_node(
+        "at-api-test-level-classifier", "pure_python",
+        "test_level_classifier", "Test Level Classifier",
+        "Tag every case with test_level + executable",
+        timeout=120, retry=0,
+    )
+    _edge(prev, classifier)
+    prev = classifier
+
+    # Layer 11 — automation + coverage_pre (parallel could be enabled later;
+    # kept sequential here to mirror current default template behaviour).
+    automation = _add_node(
+        "at-api-automation-agent", "agent", "automation_agent",
+        "Automation Agent", "Generate automation scripts",
+        timeout=600, retry=1,
+    )
+    _edge(prev, automation)
+    coverage_pre = _add_node(
+        "at-api-coverage-pre", "agent", "coverage_agent_pre",
+        "Coverage (Pre)", "Pre-execution coverage",
+        timeout=300, retry=1,
+    )
+    _edge(automation, coverage_pre)
+
+    # Layer 12 — report_pre
+    report_pre = _add_node(
+        "at-api-report-pre", "agent", "report_agent_pre",
+        "Pre-Exec Report", "Pre-execution test design report",
+        timeout=300, retry=1,
+    )
+    _edge(coverage_pre, report_pre)
+
+    # Layers 13-17 — execution chain
+    exec_chain = [
+        ("at-api-exec-orchestrator", "execution_orchestrator", "Execution Orchestrator"),
+        ("at-api-env-adapter", "env_adapter", "Environment Adapter"),
+        ("at-api-test-runner", "test_runner", "Test Runner (executable filter)"),
+        ("at-api-exec-logger", "execution_logger", "Execution Logger"),
+        ("at-api-result-store", "result_store", "Result Store"),
+    ]
+    prev = report_pre
+    for nid, agent_id, label in exec_chain:
+        _add_node(nid, "agent", agent_id, label, label, timeout=600, retry=0)
+        _edge(prev, nid)
+        prev = nid
+
+    # Layer 17b — artifact_pipeline (unit test files)
+    artifact = _add_node(
+        "at-api-artifact", "pure_python", "artifact_pipeline",
+        "Artifact Pipeline", "Generate unit-test files + spec markdown",
+        timeout=600, retry=1,
+    )
+    _edge(prev, artifact)
+
+    # Layers 18-20 — reporting chain
+    coverage_analyzer = _add_node(
+        "at-api-coverage-analyzer", "agent", "coverage_analyzer",
+        "Coverage Analyzer", "Post-execution coverage",
+        timeout=300, retry=0,
+    )
+    _edge(artifact, coverage_analyzer)
+    root_cause = _add_node(
+        "at-api-root-cause", "agent", "root_cause_analyzer",
+        "Root Cause Analyzer", "Failure root cause analysis",
+        timeout=300, retry=0,
+    )
+    _edge(coverage_analyzer, root_cause)
+    report_gen = _add_node(
+        "at-api-report-gen", "agent", "report_generator",
+        "Report Generator", "Final report generation",
+        timeout=600, retry=0,
+    )
+    _edge(root_cause, report_gen)
+
+    # Layer 21 — export_html_docx (NEW)
+    export_node = _add_node(
+        "at-api-export-html-docx", "pure_python", "export_html_docx",
+        "Export HTML + DOCX", "Render HTML + DOCX, upload to MinIO",
+        timeout=180, retry=1,
+    )
+    _edge(report_gen, export_node)
+
+    # Layer 22 — report_verifier (NEW, retry=0 fail-fast)
+    verifier_node = _add_node(
+        "at-api-report-verifier", "pure_python", "report_verifier",
+        "Report Verifier", "Check 3-component completeness",
+        timeout=60, retry=0,
+    )
+    _edge(export_node, verifier_node)
+
+    # Layer 23 — OUTPUT
+    out_node = _add_node(
+        "at-api-output", "output", None,
+        "📤 Output", "Download links + verification result",
+        timeout=30, retry=0,
+    )
+    _edge(verifier_node, out_node)
+
+    return {
+        "template_id": "automation-testing-api",
+        "name": "Automation Testing API",
+        "description": (
+            "MD spec → guarded verification → tagged testcases → executable-only "
+            "execution → verified HTML/DOCX report"
+        ),
+        "version": 1,
+        "is_builtin": True,
+        "is_archived": False,
+        "tags": ["automation-testing", "api", "md", "builtin"],
+        "nodes": nodes,
+        "edges": edges,
+    }
 
 
 async def seed_all() -> None:
