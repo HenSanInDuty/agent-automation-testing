@@ -70,12 +70,36 @@ def _make_text_chunker() -> Any:
     return TextChunkerTool()
 
 
+def _make_md_api_spec_validator() -> Any:
+    """Return a plain Python callable so CrewAI agents can also call it.
+
+    The tool is primarily used by :class:`MDSpecVerifierCrew` (pure-python),
+    but registering it here lets future CrewAI agents reference the slug
+    in their ``tool_names`` config.
+    """
+    from app.tools.md_api_spec_validator import validate_md_api_spec  # noqa: PLC0415
+    return validate_md_api_spec
+
+
+def _make_test_level_tagger() -> Any:
+    from app.tools.test_level_tagger import classify_test_level  # noqa: PLC0415
+    return classify_test_level
+
+
+def _make_report_verifier() -> Any:
+    from app.tools.report_verifier import verify_report  # noqa: PLC0415
+    return verify_report
+
+
 # slug → zero-arg factory function
 _REGISTRY: dict[str, Callable[[], Any]] = {
     "api_runner": _make_api_runner,
     "config_loader": _make_config_loader,
     "document_parser": _make_document_parser,
     "text_chunker": _make_text_chunker,
+    "md_api_spec_validator": _make_md_api_spec_validator,
+    "test_level_tagger": _make_test_level_tagger,
+    "report_verifier": _make_report_verifier,
 }
 
 

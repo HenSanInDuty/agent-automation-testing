@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
 from app.core.dag_resolver import DAGResolver, DAGValidationError
+from app.core.errors import StructuredPipelineError, is_structured_pipeline_error
 from app.core.signal_manager import PipelineSignal, signal_manager
 from app.db import crud
 from app.db.models import NodeType, PipelineNodeConfig, PipelineTemplateDocument
@@ -235,7 +236,19 @@ class DAGPipelineRunner:
             for node_id, result in zip(enabled_ids, results):
                 if isinstance(result, BaseException):
                     all_succeeded = False
-                    error_str = str(result)
+                    # Structured errors carry machine-readable metadata that
+                    # the FE renders without showing a stack trace.
+                    if isinstance(result, StructuredPipelineError):
+                        error_payload = result.to_dict()
+                        error_str = str(result)  # already JSON
+                        error_event_extra = {
+                            "error_type": error_payload.get("error_type"),
+                            "error_detail": error_payload,
+                        }
+                    else:
+                        error_payload = None
+                        error_str = str(result)
+                        error_event_extra = {}
                     logger.error(
                         "[DAGRunner] Node %r failed in run_id=%r: %s",
                         node_id,
@@ -244,7 +257,12 @@ class DAGPipelineRunner:
                     )
                     self._emit(
                         "node.failed",
-                        {"node_id": node_id, "error": error_str, "will_retry": False},
+                        {
+                            "node_id": node_id,
+                            "error": error_str,
+                            "will_retry": False,
+                            **error_event_extra,
+                        },
                     )
                     await crud.save_node_result(
                         self._run_id,
@@ -255,11 +273,19 @@ class DAGPipelineRunner:
                     await crud.update_pipeline_run(
                         self._run_id,
                         status="failed",
-                        error_message=f"Node '{node_id}' failed: {error_str}",
+                        error_message=(
+                            error_str
+                            if error_payload is not None
+                            else f"Node '{node_id}' failed: {error_str}"
+                        ),
                     )
                     self._emit(
                         "run.failed",
-                        {"failed_node": node_id, "error": error_str},
+                        {
+                            "failed_node": node_id,
+                            "error": error_str,
+                            **error_event_extra,
+                        },
                     )
                     raise result  # type: ignore[misc]
                 else:
@@ -322,6 +348,17 @@ class DAGPipelineRunner:
                 return await self._execute_node(node_config, parent_outputs)
             except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 last_error = exc
+                # Fail-fast on structured pipeline errors (spec / report validation).
+                # These errors describe contract violations the caller must fix
+                # before any retry could succeed.
+                if is_structured_pipeline_error(exc):
+                    logger.info(
+                        "[DAGRunner] Node %r raised structured error %s — "
+                        "skipping retry.",
+                        node_config.node_id,
+                        type(exc).__name__,
+                    )
+                    raise
                 if attempt < max_retries:
                     delay = 2**attempt  # 1s, 2s, 4s, …
                     logger.warning(
@@ -671,6 +708,11 @@ class DAGPipelineRunner:
             "ingestion_agent": self._builtin_ingestion,
             "ingestion_pipeline": self._builtin_ingestion,
             "artifact_pipeline": self._builtin_artifact,
+            # Automation Testing API pipeline
+            "md_api_spec_verifier": self._builtin_md_spec_verifier,
+            "test_level_classifier": self._builtin_test_level_classifier,
+            "export_html_docx": self._builtin_export_html_docx,
+            "report_verifier": self._builtin_report_verifier,
             # Register additional builtins here
         }
 
@@ -996,6 +1038,76 @@ class DAGPipelineRunner:
         from app.crews.artifact_crew import ArtifactCrew
 
         crew = ArtifactCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        return await asyncio.to_thread(crew.run, input_data)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Automation Testing API — builtin pure-python handlers
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def _builtin_md_spec_verifier(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Validate MD API spec; raise MDSpecValidationError if invalid."""
+        from app.crews.md_spec_verifier_crew import MDSpecVerifierCrew
+
+        crew = MDSpecVerifierCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        # Forward original document content if INPUT didn't pre-load it.
+        merged: dict = dict(input_data)  # type: ignore[type-arg]
+        if self._document_content and "document_content" not in merged:
+            merged["document_content"] = self._document_content
+        if self._document_name and "document_name" not in merged:
+            merged["document_name"] = self._document_name
+        return await asyncio.to_thread(crew.run, merged)
+
+    async def _builtin_test_level_classifier(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Tag each TestCase with ``test_level`` + ``executable`` flag."""
+        from app.crews.test_level_classifier_crew import TestLevelClassifierCrew
+
+        crew = TestLevelClassifierCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        return await asyncio.to_thread(crew.run, input_data)
+
+    async def _builtin_export_html_docx(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Export the final report to HTML + DOCX and upload to MinIO."""
+        from app.crews.export_crew import ExportCrew
+
+        crew = ExportCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        return await asyncio.to_thread(crew.run, input_data)
+
+    async def _builtin_report_verifier(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Verify the report carries all 3 mandatory components."""
+        from app.crews.report_verifier_crew import ReportVerifierCrew
+
+        crew = ReportVerifierCrew(
             run_id=self._run_id,
             run_profile_id=self._llm_profile_id,
             progress_callback=self._progress_callback,

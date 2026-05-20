@@ -2,10 +2,11 @@
 pipeline/results.py – Result retrieval and report export endpoints.
 
 Endpoints:
-    GET /pipeline/runs/{run_id}/results             – all agent outputs
-    GET /pipeline/runs/{run_id}/results/{node_id}   – single node output
-    GET /pipeline/runs/{run_id}/export/html         – HTML report download
-    GET /pipeline/runs/{run_id}/export/docx         – DOCX report download
+    GET /pipeline/runs/{run_id}/results               – all agent outputs
+    GET /pipeline/runs/{run_id}/results/{node_id}     – single node output
+    GET /pipeline/runs/{run_id}/report/verification   – 3-component verification result
+    GET /pipeline/runs/{run_id}/export/html           – HTML report download (gated)
+    GET /pipeline/runs/{run_id}/export/docx           – DOCX report download (gated)
 """
 
 from __future__ import annotations
@@ -130,19 +131,66 @@ async def get_node_result(
     return _result_to_response(result)
 
 
+async def _get_verification_payload(run_id: str) -> Optional[dict]:
+    """Return the latest report_verifier result payload for *run_id*, if any."""
+    results = await crud.get_pipeline_results(run_id)
+    for r in results:
+        if (r.agent_id or "") == "report_verifier":
+            output = r.output or {}
+            verification = output.get("report_verification") or output
+            if isinstance(verification, dict):
+                return verification
+    return None
+
+
+@router.get(
+    "/runs/{run_id}/report/verification",
+    summary="Get the 3-component report verification result",
+    description=(
+        "Returns the report_verifier output for a run. When the run uses "
+        "the `automation-testing-api` template, the FE uses this to decide "
+        "whether the download buttons are enabled."
+    ),
+)
+async def get_report_verification(
+    run_id: str,
+    _: object = Depends(get_current_user),
+) -> dict:
+    await _get_run_or_404(run_id)
+    payload = await _get_verification_payload(run_id)
+    if payload is None:
+        return {
+            "verified": False,
+            "components": {},
+            "summary": "Report verification has not run yet for this pipeline run.",
+            "available": False,
+        }
+    return {**payload, "available": True}
+
+
 @router.get(
     "/runs/{run_id}/export/html",
     summary="Download pipeline report as HTML",
-    description="Generates a self-contained HTML report for a completed pipeline run.",
+    description=(
+        "Generates a self-contained HTML report. For runs using the "
+        "automation-testing-api template the endpoint returns 409 when the "
+        "report has not yet been verified (use `?force=true` admin override)."
+    ),
     response_class=Response,
 )
-async def export_report_html(run_id: str) -> Response:
+async def export_report_html(
+    run_id: str,
+    force: bool = Query(default=False, description="Admin override — bypass verifier gate."),
+    _: object = Depends(get_current_user),
+) -> Response:
     """Download the pipeline report as a self-contained HTML file."""
     from fastapi.responses import Response as FastAPIResponse
 
     from app.services.export_service import ExportService
 
     await _get_run_or_404(run_id)
+    if not force:
+        await _enforce_verification_gate(run_id)
     try:
         service = ExportService(run_id)
         html_bytes = await service.export_html()
@@ -159,16 +207,25 @@ async def export_report_html(run_id: str) -> Response:
 @router.get(
     "/runs/{run_id}/export/docx",
     summary="Download pipeline report as DOCX",
-    description="Generates a Microsoft Word DOCX report for a completed pipeline run.",
+    description=(
+        "Generates a Microsoft Word DOCX report. Same 409 gate as the HTML "
+        "endpoint when the run uses the automation-testing-api template."
+    ),
     response_class=Response,
 )
-async def export_report_docx(run_id: str) -> Response:
+async def export_report_docx(
+    run_id: str,
+    force: bool = Query(default=False, description="Admin override — bypass verifier gate."),
+    _: object = Depends(get_current_user),
+) -> Response:
     """Download the pipeline report as a DOCX (Microsoft Word) file."""
     from fastapi.responses import Response as FastAPIResponse
 
     from app.services.export_service import ExportService
 
     await _get_run_or_404(run_id)
+    if not force:
+        await _enforce_verification_gate(run_id)
     try:
         service = ExportService(run_id)
         docx_bytes = await service.export_docx()
@@ -180,6 +237,30 @@ async def export_report_docx(run_id: str) -> Response:
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+async def _enforce_verification_gate(run_id: str) -> None:
+    """409 when the run uses automation-testing-api and verification failed.
+
+    For runs that do NOT use this template, the legacy download behaviour is
+    preserved (no gate) so existing pipelines remain backward-compatible.
+    """
+    payload = await _get_verification_payload(run_id)
+    if payload is None:
+        # No verifier result → legacy run, allow download.
+        return
+    if not payload.get("verified", False):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error_type": "report_verification",
+                "message": payload.get(
+                    "summary",
+                    "Report verification failed; download blocked.",
+                ),
+                "components": payload.get("components", {}),
+            },
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

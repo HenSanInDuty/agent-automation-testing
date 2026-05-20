@@ -43,6 +43,19 @@ class TestType(str, Enum):
     UNIT = "unit"
 
 
+class TestLevel(str, Enum):
+    """Maturity level of a test case — used by Automation Testing API pipeline.
+
+    Added in Phase 3 of the automation-testing-api plan to support the
+    ``executable=true`` filter in :class:`ExecutionCrew`.
+    """
+
+    UNIT = "unit"
+    INTEGRATION = "integration"
+    CONTRACT = "contract"
+    E2E = "e2e"
+
+
 class TestCategory(str, Enum):
     POSITIVE = "positive"
     NEGATIVE = "negative"
@@ -156,6 +169,18 @@ class TestCase(BaseModel):
     ui_page: Optional[str] = None
     ui_selector: Optional[str] = None
 
+    # Test taxonomy (Phase 3, automation-testing-api plan)
+    test_level: TestLevel = TestLevel.UNIT
+    executable: bool = False
+    classification_confidence: float = Field(
+        default=0.0,
+        description="Confidence score (0..1) of the test_level classifier.",
+    )
+    skip_reason: Optional[str] = Field(
+        default=None,
+        description="Populated when ExecutionCrew filters this case out.",
+    )
+
 
 class CoverageSummary(BaseModel):
     """Coverage metrics for the generated test suite."""
@@ -221,6 +246,10 @@ class TestExecutionResult(BaseModel):
     error_message: Optional[str] = None
     timestamp: datetime = Field(default_factory=_utcnow)
     logs: list[str] = Field(default_factory=list)
+    skip_reason: Optional[str] = Field(
+        default=None,
+        description="Set when the case was filtered out (e.g. executable=false).",
+    )
 
 
 class ExecutionSummary(BaseModel):
@@ -234,10 +263,18 @@ class ExecutionSummary(BaseModel):
     pass_rate: float = 0.0
     duration_seconds: float = 0.0
 
+    # Phase 4: separate runnable vs skipped (non-executable) accounting
+    runnable_count: int = 0
+    skipped_count: int = 0
+    skipped_reasons: dict[str, int] = Field(default_factory=dict)
+
     @model_validator(mode="after")
     def compute_pass_rate(self) -> "ExecutionSummary":
-        if self.pass_rate == 0.0 and self.total > 0:
-            self.pass_rate = round(self.passed / self.total * 100, 1)
+        # pass_rate is reported against the runnable subset when available,
+        # otherwise falls back to the full total (legacy behaviour).
+        denom = self.runnable_count if self.runnable_count > 0 else self.total
+        if self.pass_rate == 0.0 and denom > 0:
+            self.pass_rate = round(self.passed / denom * 100, 1)
         return self
 
 
