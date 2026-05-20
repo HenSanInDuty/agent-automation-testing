@@ -14,13 +14,21 @@ WebSocket events without the crew knowing about HTTP or WebSocket details.
 from app.crews.base_crew import BaseCrew, ProgressCallback
 from app.crews.execution_crew import ExecutionCrew
 from app.crews.ingestion_crew import IngestionCrew
+from app.crews.export_crew import ExportCrew
+from app.crews.md_spec_verifier_crew import MDSpecVerifierCrew
+from app.crews.report_verifier_crew import ReportVerifierCrew
 from app.crews.reporting_crew import ReportingCrew
+from app.crews.test_level_classifier_crew import TestLevelClassifierCrew
 from app.crews.testcase_crew import TestcaseCrew
 
 __all__ = [
     "BaseCrew",
     "ProgressCallback",
     "IngestionCrew",
+    "MDSpecVerifierCrew",
+    "TestLevelClassifierCrew",
+    "ExportCrew",
+    "ReportVerifierCrew",
     "TestcaseCrew",
     "ExecutionCrew",
     "ReportingCrew",
