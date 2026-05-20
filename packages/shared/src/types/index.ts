@@ -311,6 +311,41 @@ export interface PipelineNodeResult {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Automation Testing API — report verification (Phase 5 of MD pipeline plan)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ReportVerificationComponent {
+  ok: boolean;
+  count: number;
+  issues: string[];
+  extra?: Record<string, unknown>;
+}
+
+export interface ReportVerificationResponse {
+  verified: boolean;
+  components: {
+    test_cases?: ReportVerificationComponent;
+    results?: ReportVerificationComponent;
+    unit_test_files?: ReportVerificationComponent;
+    [k: string]: ReportVerificationComponent | undefined;
+  };
+  html_url?: string;
+  docx_url?: string;
+  summary?: string;
+  /** False when no verifier output exists yet for the run. */
+  available?: boolean;
+}
+
+/** Structured error returned by the MD spec verifier guard node. */
+export interface MDSpecValidationErrorPayload {
+  error_type: "md_spec_validation";
+  code: string;
+  missing_sections?: string[];
+  missing_fields?: string[];
+  detail: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // WebSocket Events
 // ─────────────────────────────────────────────────────────────────────────────
 

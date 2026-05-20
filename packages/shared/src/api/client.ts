@@ -26,6 +26,7 @@ import type {
   PipelineTemplateCreate,
   PipelineTemplateListResponse,
   PipelineTemplateUpdate,
+  ReportVerificationResponse,
   StageConfig,
   StageConfigCreate,
   StageConfigUpdate,
@@ -362,6 +363,18 @@ export const pipelineApi = {
   getExportDocxUrl: (runId: string): string => {
     const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     return `${base}/api/v1/pipeline/runs/${runId}/export/docx`;
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/report/verification
+   *  Returns the report_verifier output (Phase 5 of automation-testing-api plan).
+   */
+  getReportVerification: async (
+    runId: string,
+  ): Promise<ReportVerificationResponse> => {
+    const { data } = await apiClient.get<ReportVerificationResponse>(
+      `/api/v1/pipeline/runs/${runId}/report/verification`,
+    );
+    return data;
   },
 
   /** GET /api/v1/pipeline/runs/:run_id/results */

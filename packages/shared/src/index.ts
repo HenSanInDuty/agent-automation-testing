@@ -20,6 +20,7 @@ export * from "./hooks/usePipeline";
 export * from "./hooks/usePipelineTemplates";
 export * from "./hooks/usePipelineWebSocket";
 export * from "./hooks/useLLMProfiles";
+export * from "./hooks/useReportVerification";
 
 // Store
 export * from "./store/pipelineStore";
@@ -44,6 +45,7 @@ export * from "./components/pipeline/PipelineRunPage";
 export * from "./components/pipeline/PrettyOutput";
 export * from "./components/pipeline/ResultsViewer";
 export * from "./components/pipeline/RunHistory";
+export * from "./components/pipeline/ReportVerificationCard";
 export * from "./components/pipeline/StageResultsPanel";
 
 // Pipelines components
