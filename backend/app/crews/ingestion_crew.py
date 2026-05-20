@@ -166,10 +166,18 @@ class IngestionCrew(BaseCrew):
 
         Raises:
             FileNotFoundError: If the document file does not exist.
-            ValueError: If the file format is not supported.
+            ValueError: If neither ``document_content`` nor ``file_path`` is
+                provided, or if the file format is not supported.
         """
-        file_path = Path(input_data["file_path"])
-        document_name = input_data.get("document_name") or file_path.name
+        # ``file_path`` may be absent when an upstream node (e.g. the
+        # md_api_spec_verifier) has already parsed the document and forwarded
+        # ``document_content`` downstream.
+        file_path_raw = input_data.get("file_path")
+        file_path: Optional[Path] = Path(file_path_raw) if file_path_raw else None
+        document_name = (
+            input_data.get("document_name")
+            or (file_path.name if file_path else "uploaded-document")
+        )
         mock_mode: bool = bool(input_data.get("mock_mode") or self._is_mock_mode())
 
         # Allow per-call chunk config overrides
@@ -192,6 +200,14 @@ class IngestionCrew(BaseCrew):
                 {"message": f"Using pre-parsed document content ({len(raw_text):,} chars)", "level": "info"},
             )
         else:
+            if file_path is None:
+                error_msg = (
+                    "Ingestion received neither 'document_content' nor "
+                    "'file_path' — upstream node did not forward parsed text."
+                )
+                logger.error("[Ingestion][%s] %s", self._run_id, error_msg)
+                self._emit("log", {"message": error_msg, "level": "error"})
+                raise ValueError(error_msg)
             self._emit(
                 "log", {"message": f"Parsing document: {document_name}", "level": "info"}
             )

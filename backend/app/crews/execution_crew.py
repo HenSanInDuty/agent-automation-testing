@@ -145,6 +145,23 @@ class ExecutionCrew(BaseCrew):
         force_mock: Optional[bool] = input_data.get("mock_mode")
         execution_config: dict[str, Any] = input_data.get("execution_config", {})
 
+        # ── Phase 4: split runnable vs skipped by `executable` flag ───────
+        # If no case carries the `executable` field (legacy pipelines), every
+        # case is treated as runnable to preserve backward-compatibility.
+        has_exec_flag = any("executable" in (tc or {}) for tc in test_cases)
+        if has_exec_flag:
+            runnable = [tc for tc in test_cases if tc.get("executable")]
+            skipped = [tc for tc in test_cases if not tc.get("executable")]
+        else:
+            runnable = list(test_cases)
+            skipped = []
+
+        if skipped:
+            self._emit_log(
+                f"Filtered {len(skipped)} non-executable case(s) — "
+                f"will report as skipped"
+            )
+
         # Resolve mock mode: per-call arg overrides constructor arg
         use_mock = force_mock if force_mock is not None else self._is_mock_mode()
         # Auto-fallback to mock if crewai is not installed
@@ -156,16 +173,19 @@ class ExecutionCrew(BaseCrew):
             use_mock = True
 
         self._emit_log(
-            f"Starting execution of {len(test_cases)} test case(s) "
-            f"on environment '{environment}' "
+            f"Starting execution of {len(runnable)} runnable test case(s) "
+            f"(+{len(skipped)} skipped) on environment '{environment}' "
             f"({'mock' if use_mock else 'real'} mode)"
         )
 
         try:
             if use_mock:
-                result = self._mock_run(test_cases, environment)
+                result = self._mock_run(runnable, environment)
+            elif not runnable:
+                # Nothing to run — but we still need a valid ExecutionOutput
+                result = self._mock_run([], environment)
             else:
-                result = self._real_run(test_cases, environment, execution_config)
+                result = self._real_run(runnable, environment, execution_config)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             error_msg = f"Execution crew failed: {exc}"
             logger.exception(
@@ -175,6 +195,68 @@ class ExecutionCrew(BaseCrew):
             # Return a minimal failed output so the pipeline can continue to reporting
             return self._error_output(test_cases, environment, error_msg)
 
+        # ── Append synthetic SKIPPED results for non-executable cases ─────
+        if skipped:
+            result = self._append_skipped_results(result, skipped)
+
+        return result
+
+    @staticmethod
+    def _append_skipped_results(
+        result: dict[str, Any],
+        skipped_cases: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Inject `status="skipped"` entries for every non-executable case."""
+        from datetime import datetime, timezone
+
+        results_list = list(result.get("results") or [])
+        skip_reason_counts: dict[str, int] = {}
+        for tc in skipped_cases:
+            level = str(tc.get("test_level") or "unknown")
+            reason = f"not_executable:{level}"
+            skip_reason_counts[reason] = skip_reason_counts.get(reason, 0) + 1
+            results_list.append(
+                {
+                    "test_case_id": str(tc.get("id", "TC-?")),
+                    "status": ExecutionStatus.SKIPPED.value,
+                    "duration_ms": 0.0,
+                    "actual_result": "Skipped (non-executable)",
+                    "actual_status_code": None,
+                    "actual_response": None,
+                    "error_message": None,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "logs": [
+                        f"Filtered by executable_filter: test_level={level}"
+                    ],
+                    "skip_reason": reason,
+                }
+            )
+        result["results"] = results_list
+
+        summary = dict(result.get("summary") or {})
+        runnable_count = int(summary.get("total", 0))
+        skipped_count = len(skipped_cases)
+        existing_skipped = int(summary.get("skipped", 0))
+        summary["total"] = runnable_count + skipped_count
+        summary["skipped"] = existing_skipped + skipped_count
+        summary["runnable_count"] = runnable_count
+        summary["skipped_count"] = skipped_count
+        existing_reasons = dict(summary.get("skipped_reasons") or {})
+        for k, v in skip_reason_counts.items():
+            existing_reasons[k] = existing_reasons.get(k, 0) + v
+        summary["skipped_reasons"] = existing_reasons
+        # Recompute pass_rate against runnable subset only
+        if runnable_count > 0:
+            summary["pass_rate"] = round(
+                int(summary.get("passed", 0)) / runnable_count * 100, 1
+            )
+        result["summary"] = summary
+
+        notes = list(result.get("execution_notes") or [])
+        notes.append(
+            f"Phase 4 filter: {skipped_count} non-executable case(s) marked skipped"
+        )
+        result["execution_notes"] = notes
         return result
 
     # ─────────────────────────────────────────────────────────────────────────
