@@ -37,8 +37,79 @@ logger = logging.getLogger(__name__)
 # Playwright agent IDs that may generate file artifacts
 _PLAYWRIGHT_AGENT_IDS = frozenset({"playwright_spec_writer", "playwright_fixture_writer"})
 
+# Keys stripped from upstream input before carrying it forward in a node's
+# output. `document_content` is re-injected per-agent by the runner from
+# `self._document_content`; `_html_bytes` / `_docx_bytes` are short-lived
+# bytes that only flow from ExportCrew to ReportVerifierCrew (single hop)
+# and must never be persisted in PipelineResultDocument; `__sources__` is a
+# multi-parent merge marker that should not accumulate across hops.
+_NON_PROPAGATING_KEYS = frozenset({
+    "document_content",
+    "__sources__",
+    "_html_bytes",
+    "_docx_bytes",
+})
+
+# Keys whose value must be a list of dicts in the canonical pipeline schema.
+# When a downstream LLM agent hallucinates a value here (e.g. emits
+# ``test_cases: ["TC-1", "TC-2"]`` or an empty list), the carry-forward keeps
+# the upstream list of dicts instead of letting the bad value poison the
+# report verifier (which calls ``.get(...)`` on each element).
+_STRUCTURED_LIST_KEYS = frozenset({
+    "test_cases",
+    "results",
+    "unit_test_files",
+})
+
 # Callback type: (event_type: str, data: dict) -> None
 ProgressCallback = Callable[[str, dict[str, Any]], None]
+
+
+def _is_list_of_dicts(value: Any) -> bool:
+    """True if *value* is a non-empty list whose every item is a dict."""
+    return (
+        isinstance(value, list)
+        and len(value) > 0
+        and all(isinstance(item, dict) for item in value)
+    )
+
+
+def _carry_forward(
+    merged_input: dict[str, Any],
+    node_output: Any,
+) -> Any:
+    """Carry upstream structured data forward into a node's output.
+
+    Without this, agent nodes (which return only the LLM's JSON) and a few
+    pure-python crews (Ingestion, Artifact, MDSpecVerifier) drop upstream
+    keys like ``test_cases`` / ``results`` / ``unit_test_files``, leaving
+    the final ``report_verifier`` with empty components.
+
+    The merge gives precedence to ``node_output`` — a node may still
+    override any inherited key — while excluding bytes/blobs listed in
+    ``_NON_PROPAGATING_KEYS``.
+
+    For ``_STRUCTURED_LIST_KEYS`` the carry is stricter: if upstream already
+    holds a non-empty list of dicts and the downstream value is missing,
+    empty, or doesn't carry the same shape (e.g. an LLM hallucinated a list
+    of strings or scalars), the upstream list wins. This prevents the
+    report-verifier from receiving lists whose elements lack ``.get()``.
+    """
+    if not isinstance(node_output, dict):
+        return node_output
+    if not isinstance(merged_input, dict) or not merged_input:
+        return node_output
+    carried = {
+        k: v
+        for k, v in merged_input.items()
+        if k not in _NON_PROPAGATING_KEYS
+    }
+    merged = {**carried, **node_output}
+    for k in _STRUCTURED_LIST_KEYS:
+        if k in carried and _is_list_of_dicts(carried[k]):
+            if not _is_list_of_dicts(merged.get(k)):
+                merged[k] = carried[k]
+    return merged
 
 
 class DAGPipelineRunner:
@@ -696,7 +767,7 @@ class DAGPipelineRunner:
             except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 pass
 
-        return self._parse_crew_output(_crew_result)
+        return _carry_forward(merged_input, self._parse_crew_output(_crew_result))
 
     async def _run_pure_python_node(
         self,
@@ -710,6 +781,8 @@ class DAGPipelineRunner:
             "artifact_pipeline": self._builtin_artifact,
             # Automation Testing API pipeline
             "md_api_spec_verifier": self._builtin_md_spec_verifier,
+            "api_test_case_generator": self._builtin_api_test_case_generator,
+            "api_test_runner": self._builtin_api_test_runner,
             "test_level_classifier": self._builtin_test_level_classifier,
             "export_html_docx": self._builtin_export_html_docx,
             "report_verifier": self._builtin_report_verifier,
@@ -724,10 +797,11 @@ class DAGPipelineRunner:
             )
 
         merged_input = self._merge_inputs(parent_outputs)
-        return await asyncio.wait_for(
+        output = await asyncio.wait_for(
             func(merged_input),
             timeout=node_config.timeout_seconds,
         )
+        return _carry_forward(merged_input, output)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Input gathering & merging
@@ -1068,6 +1142,46 @@ class DAGPipelineRunner:
             merged["document_content"] = self._document_content
         if self._document_name and "document_name" not in merged:
             merged["document_name"] = self._document_name
+        return await asyncio.to_thread(crew.run, merged)
+
+    async def _builtin_api_test_case_generator(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Generate API test cases deterministically from md_spec_parsed."""
+        from app.crews.api_test_case_crew import ApiTestCaseCrew
+
+        crew = ApiTestCaseCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        # Forward the original document so the generator can recover the
+        # `Base URL:` line that the validator does not capture.
+        merged: dict = dict(input_data)  # type: ignore[type-arg]
+        if self._document_content and "document_content" not in merged:
+            merged["document_content"] = self._document_content
+        return await asyncio.to_thread(crew.run, merged)
+
+    async def _builtin_api_test_runner(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Execute every executable API test case via httpx."""
+        from app.crews.api_test_runner_crew import ApiTestRunnerCrew
+
+        crew = ApiTestRunnerCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        # Forward the original document so the runner can recover the
+        # Base URL declared in the spec body.
+        merged: dict = dict(input_data)  # type: ignore[type-arg]
+        if self._document_content and "document_content" not in merged:
+            merged["document_content"] = self._document_content
         return await asyncio.to_thread(crew.run, merged)
 
     async def _builtin_test_level_classifier(

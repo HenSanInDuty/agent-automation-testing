@@ -75,16 +75,22 @@ def _file_stem(endpoint: str, test_type: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def group_test_cases(
-    test_cases: list[dict[str, Any]],
+    test_cases: list[Any],
 ) -> dict[str, list[dict[str, Any]]]:
     """
     Group test cases by (api_endpoint or ui_page, test_type) into file buckets.
+
+    Non-dict entries (e.g. an upstream LLM hallucinating a list of strings)
+    are silently skipped so the artifact pipeline never crashes on
+    ``'str' object has no attribute 'get'``.
 
     Returns:
         ``{ "file_stem": [tc, tc, …] }`` — each bucket becomes one test file.
     """
     buckets: dict[str, list[dict[str, Any]]] = {}
     for tc in test_cases:
+        if not isinstance(tc, dict):
+            continue
         endpoint = tc.get("api_endpoint") or tc.get("ui_page") or "N/A"
         test_type = tc.get("test_type") or "api"
         stem = _file_stem(endpoint, test_type)

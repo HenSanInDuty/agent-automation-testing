@@ -82,6 +82,30 @@ apiClient.interceptors.response.use(
   },
 );
 
+/**
+ * Trigger a browser file download from a blob payload (anchor + revoke pattern).
+ *
+ * Used by authenticated GET endpoints that return binary content — `<a href>`
+ * does not carry the Authorization header, so we fetch via apiClient
+ * (responseType: "blob") and synthesise the download here.
+ */
+function triggerBrowserDownload(
+  payload: BlobPart,
+  filename: string,
+  mimeType: string,
+): void {
+  if (typeof window === "undefined") return;
+  const blob = payload instanceof Blob ? payload : new Blob([payload], { type: mimeType });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.URL.revokeObjectURL(url);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LLM Profiles
 // ─────────────────────────────────────────────────────────────────────────────
@@ -353,16 +377,42 @@ export const pipelineApi = {
     return data;
   },
 
-  /** GET /api/v1/pipeline/runs/:run_id/export/html  (returns a URL for window.open) */
-  getExportHtmlUrl: (runId: string): string => {
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-    return `${base}/api/v1/pipeline/runs/${runId}/export/html`;
+  /** GET /api/v1/pipeline/runs/:run_id/export/html
+   *  Streams the HTML report as a blob and triggers a browser download.
+   *  Uses the apiClient so the JWT Authorization header is attached —
+   *  raw `<a href>` navigations would 401 here.
+   */
+  downloadExportHtml: async (runId: string, force = false): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/export/html`,
+      {
+        params: force ? { force: true } : undefined,
+        responseType: "blob",
+      },
+    );
+    triggerBrowserDownload(
+      response.data,
+      `auto-at-report-${runId.slice(0, 8)}.html`,
+      "text/html",
+    );
   },
 
-  /** GET /api/v1/pipeline/runs/:run_id/export/docx  (returns a URL for window.open) */
-  getExportDocxUrl: (runId: string): string => {
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-    return `${base}/api/v1/pipeline/runs/${runId}/export/docx`;
+  /** GET /api/v1/pipeline/runs/:run_id/export/docx
+   *  See {@link downloadExportHtml}; same gating + auth model.
+   */
+  downloadExportDocx: async (runId: string, force = false): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/export/docx`,
+      {
+        params: force ? { force: true } : undefined,
+        responseType: "blob",
+      },
+    );
+    triggerBrowserDownload(
+      response.data,
+      `auto-at-report-${runId.slice(0, 8)}.docx`,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
   },
 
   /** GET /api/v1/pipeline/runs/:run_id/report/verification

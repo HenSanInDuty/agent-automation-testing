@@ -59,12 +59,14 @@ class ReportVerifierCrew(BaseCrew):
             or (input_data.get("artifact_output") or {}).get("unit_test_files")
             or []
         )
-        pass_rate = (
-            (input_data.get("summary") or {}).get("pass_rate")
-            or ((input_data.get("execution_output") or {}).get("summary") or {}).get(
-                "pass_rate"
+        # Use explicit `is not None` lookup — `or`-chains treat
+        # ``pass_rate == 0.0`` as falsy and would mark it as missing.
+        _summary = input_data.get("summary")
+        if not isinstance(_summary, dict):
+            _summary = (
+                (input_data.get("execution_output") or {}).get("summary") or {}
             )
-        )
+        pass_rate = _summary.get("pass_rate") if isinstance(_summary, dict) else None
 
         result = verify_report(
             test_cases=test_cases,

@@ -208,19 +208,25 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         "agent_id": "test_case_generator",
         "display_name": "Test Case Generator",
         "stage": "testcase",
-        "role": "Senior Test Case Engineer",
+        "role": "Senior API Test Case Engineer",
         "goal": (
-            "Transform combined test conditions into complete, fully-specified test cases "
-            "— each with a unique ID, clear preconditions, numbered steps, and an "
-            "unambiguous expected result — that can be executed directly and traced back "
-            "to the originating requirement rule."
+            "From the analysed requirements, generate complete and fully-specified "
+            "REST API test cases in a single pass. Internally: extract validation "
+            "rules, build the request/response data model, apply equivalence "
+            "partitioning and boundary value analysis, map cross-field "
+            "dependencies, then emit atomic test cases. Each case must include a "
+            "unique ID, HTTP method + endpoint, request body/headers, expected "
+            "status code, expected response shape, and traceability back to the "
+            "source requirement. No UI / browser steps — API only."
         ),
         "backstory": (
-            "You are a senior QA engineer with extensive experience writing test cases "
-            "for REST APIs and web applications. Every test case you write is atomic, "
-            "self-contained, and traceable. You follow the Arrange-Act-Assert pattern "
-            "instinctively and you never leave an expected result vague. You produce "
-            "structured JSON output that automation tools can consume without translation."
+            "You are a senior QA engineer specialised in REST API testing. You "
+            "habitually decompose requirements into rules → data partitions → "
+            "boundary values → dependency chains → concrete test cases in one "
+            "pass without losing rigor. Every test case you write is atomic, "
+            "self-contained, traceable, and runnable by an httpx/pytest "
+            "harness. You produce structured JSON output with a top-level "
+            "``test_cases`` array — no markdown, no prose."
         ),
         "max_iter": 7,
         "is_custom": False,
@@ -334,22 +340,25 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
     },
     {
         "agent_id": "test_runner",
-        "display_name": "API / UI Test Runner",
+        "display_name": "API Test Runner",
         "stage": "execution",
-        "role": "Test Execution Engineer",
+        "role": "API Test Execution Engineer",
         "goal": (
-            "Execute every automation script against the real system under test, "
-            "capturing the full HTTP response (status code, headers, body) for API "
-            "tests or the complete UI state snapshot for UI tests, and return raw "
-            "execution results for each test case."
+            "Execute every executable API test case against the configured "
+            "target environment via the ``api_runner`` tool, capture the full "
+            "HTTP response (status code, headers, body, latency), compare it "
+            "against the expected status code and expected_result, and return "
+            "a structured ExecutionOutput with per-case verdicts plus an "
+            "aggregate summary (total / passed / failed / skipped / pass_rate)."
         ),
         "backstory": (
-            "You are a hands-on automation engineer who has executed millions of "
-            "automated tests across REST APIs and web UIs. You are meticulous about "
-            "capturing all evidence — response bodies, timings, redirects, and UI "
-            "screenshots — because you know that insufficient evidence makes "
-            "post-execution analysis impossible. You never skip an assertion and you "
-            "record every deviation from the expected result with full detail."
+            "You are a REST API test execution specialist. You have run "
+            "millions of httpx-driven test cases against production-grade "
+            "APIs. You record every response with full evidence — body, "
+            "headers, latency — and never paper over a deviation from the "
+            "expected status code. You always emit a strict JSON object with "
+            "``results`` (list of dicts) and ``summary`` (dict with "
+            "``pass_rate``) so downstream verifiers can read it deterministically."
         ),
         "max_iter": 8,
         "is_custom": False,
@@ -448,18 +457,23 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         "stage": "reporting",
         "role": "QA Report Generator",
         "goal": (
-            "Synthesise coverage analysis, root-cause findings, execution statistics, "
-            "and traceability data into a comprehensive final test report that provides "
-            "an executive summary, detailed per-requirement results, defect catalogue, "
-            "and concrete recommendations for both the QA team and developers."
+            "From the executed API test cases, results, and generated unit "
+            "test files, produce the final QA report in a single pass. "
+            "Internally: compute post-execution coverage per requirement, "
+            "diagnose root causes for each failed case (classify as "
+            "code defect / data issue / environment / test-script bug), "
+            "then emit an executive summary, per-requirement results table, "
+            "defect catalogue ranked by severity, and prioritised "
+            "recommendations. Do NOT discuss UI selectors or browser "
+            "behaviour — this is an API testing pipeline."
         ),
         "backstory": (
-            "You are a senior QA lead who produces professional test reports read by "
-            "CTOs, product managers, and developers alike. You know how to layer "
-            "information — starting with a crisp executive summary, then drilling into "
-            "technical details for those who need them. Every report you write ends with "
-            "clear, prioritised action items. You output clean Markdown that can be "
-            "rendered directly or converted to HTML/PDF without reformatting."
+            "You are a senior QA lead who synthesises coverage analysis, "
+            "root-cause findings, and execution statistics in one pass for "
+            "REST API test runs. Reports you write are read by CTOs, product "
+            "managers, and developers — crisp executive summary up top, "
+            "technical drill-down below, prioritised actions at the bottom. "
+            "You output clean Markdown that converts directly to HTML/DOCX."
         ),
         "max_iter": 5,
         "is_custom": False,
@@ -1232,26 +1246,49 @@ async def seed_llm_profiles() -> None:
 
 
 async def seed_agent_configs() -> None:
-    """Insert all 19 default agent configs (idempotent).
+    """Insert or refresh default agent configs (idempotent).
 
-    Calls :func:`~app.db.crud.upsert_agent_config` for every entry in
-    :data:`DEFAULT_AGENT_CONFIGS`.  Documents that already exist (matched
-    by ``agent_id``) are skipped without modification, preserving any
-    customisations the admin has made via the UI.
+    Behaviour per agent:
+      - missing in DB  → insert via :func:`~app.db.crud.upsert_agent_config`
+      - exists & ``is_custom=False`` (seeded) → refresh the prompt fields
+        from :data:`DEFAULT_AGENT_CONFIGS` so that goal/role/backstory
+        updates in this file actually reach existing deployments
+      - exists & ``is_custom=True`` (admin-customised) → left untouched
     """
-    inserted: list[str] = []
+    # Only refresh fields that describe the agent's behaviour. Things like
+    # ``enabled`` and ``tool_names`` may have been deliberately tuned by
+    # operators and are not refreshed automatically.
+    _REFRESHABLE_FIELDS = ("role", "goal", "backstory", "display_name", "max_iter")
+
+    inserted = 0
+    refreshed = 0
+    skipped_custom = 0
 
     for cfg in DEFAULT_AGENT_CONFIGS:
-        doc = await crud.upsert_agent_config(cfg)
-        # upsert_agent_config returns existing doc if already present;
-        # we can detect a fresh insert by comparing created_at ≈ now,
-        # but for logging simplicity we just track the agent_id.
-        _ = doc  # result available if callers need it
-        inserted.append(cfg["agent_id"])
+        existing = await crud.get_agent_config(cfg["agent_id"])
+        if existing is None:
+            await crud.upsert_agent_config(cfg)
+            inserted += 1
+            continue
+        if getattr(existing, "is_custom", False):
+            skipped_custom += 1
+            continue
+        diff = {
+            field: cfg[field]
+            for field in _REFRESHABLE_FIELDS
+            if field in cfg and getattr(existing, field, None) != cfg[field]
+        }
+        if diff:
+            await crud.update_agent_config(cfg["agent_id"], diff)
+            refreshed += 1
 
     logger.info(
-        "Agent config seed complete — processed %d agent(s).",
-        len(inserted),
+        "Agent config seed complete — %d inserted, %d refreshed, "
+        "%d admin-customised left alone (total seed entries: %d).",
+        inserted,
+        refreshed,
+        skipped_custom,
+        len(DEFAULT_AGENT_CONFIGS),
     )
 
 
@@ -1292,15 +1329,37 @@ async def seed_pipeline_templates() -> None:
 
     at_template = _build_automation_testing_api_template()
     existing_at = await crud.get_pipeline_template(at_template["template_id"])
+    target_version = int(at_template.get("version") or 1)
     if existing_at is None:
         await crud.create_pipeline_template(dict(at_template))
         logger.info(
-            "Seeded pipeline template: %s",
+            "Seeded pipeline template: %s (v%d)",
             at_template["template_id"],
+            target_version,
+        )
+    elif existing_at.is_builtin and int(existing_at.version) < target_version:
+        # Upsert builtin template when the seed version moves ahead — keeps
+        # the shipped DAG in lock-step with the seed file without forcing
+        # operators to manually delete the document.
+        update_payload = {
+            "name": at_template["name"],
+            "description": at_template["description"],
+            "nodes": at_template["nodes"],
+            "edges": at_template["edges"],
+            "tags": at_template.get("tags", []),
+        }
+        await crud.update_pipeline_template(
+            at_template["template_id"], update_payload
+        )
+        logger.info(
+            "Upgraded builtin pipeline template '%s' from v%d to v%d",
+            at_template["template_id"],
+            int(existing_at.version),
+            target_version,
         )
     else:
         logger.debug(
-            "Pipeline template '%s' already exists — skipping seed.",
+            "Pipeline template '%s' already at target version — skipping seed.",
             at_template["template_id"],
         )
 
@@ -1311,10 +1370,46 @@ async def seed_pipeline_templates() -> None:
 
 
 def _build_automation_testing_api_template() -> dict[str, Any]:
-    """Construct the ``automation-testing-api`` PipelineTemplateDocument dict.
+    """Construct the slim ``automation-testing-api`` PipelineTemplateDocument.
 
-    Layered sequential DAG (mirrors plan §Architecture). Every node id is
-    prefixed with ``at-api-`` to avoid collisions with the default template.
+    Linear API-only DAG — 11 nodes total (INPUT + 9 stages + OUTPUT). The
+    previous v1 template chained 23 nodes including UI/UX-oriented agents
+    (``scope_classifier``, ``automation_agent`` for Playwright/Selenium,
+    ``test_runner`` described as "API / UI Test Runner") which are not
+    needed for pure API testing. The pre-execution coverage / report agents
+    and the 4 micro-stages around the test runner were also redundant.
+
+    What stays:
+        INPUT
+          ↓
+        md_api_spec_verifier   (pure_python guard — MD spec contract)
+          ↓
+        ingestion_pipeline     (pure_python — MD → requirements)
+          ↓
+        requirement_analyzer   (agent — enrich requirements, API-only)
+          ↓
+        test_case_generator    (agent — generate API test cases, EP/BVA
+                                inline; replaces rule_parser, scope_classifier,
+                                data_model, test_conditions, dependency)
+          ↓
+        test_level_classifier  (pure_python — tag executable flag)
+          ↓
+        test_runner            (agent — execute API tests via api_runner tool;
+                                replaces orchestrator/env_adapter/logger/store)
+          ↓
+        artifact_pipeline      (pure_python — pytest+httpx test files)
+          ↓
+        report_generator       (agent — final report; replaces coverage_analyzer
+                                and root_cause_analyzer)
+          ↓
+        export_html_docx       (pure_python — render + upload to MinIO)
+          ↓
+        report_verifier        (pure_python guard — 3-component completeness)
+          ↓
+        OUTPUT
+
+    Every node id is prefixed with ``at-api-`` to avoid collisions with the
+    default template.
     """
     nodes: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
@@ -1364,16 +1459,17 @@ def _build_automation_testing_api_template() -> dict[str, Any]:
         "📥 MD Upload", "Upload Markdown API specification",
         timeout=30, retry=0,
     )
-    # Layer 1 — guard: md_api_spec_verifier (retry=0 → fail-fast)
+
+    # Layer 1 — MD spec guard (fail-fast)
     verifier = _add_node(
         "at-api-md-verifier", "pure_python", "md_api_spec_verifier",
         "MD Spec Verifier",
-        "Validate that the uploaded MD follows the v1 contract",
+        "Validate that the uploaded MD follows the v1 API spec contract",
         timeout=60, retry=0,
     )
     _edge(inp, verifier)
 
-    # Layer 2 — ingestion
+    # Layer 2 — parse MD into requirements
     ingestion = _add_node(
         "at-api-ingestion", "pure_python", "ingestion_pipeline",
         "Ingestion Pipeline",
@@ -1382,114 +1478,81 @@ def _build_automation_testing_api_template() -> dict[str, Any]:
     )
     _edge(verifier, ingestion)
 
-    # Layers 3-9 — testcase chain (reuse existing agents)
-    testcase_agents = [
-        ("at-api-req-analyzer", "requirement_analyzer", "Requirement Analyzer"),
-        ("at-api-rule-parser", "rule_parser", "Rule Parser"),
-        ("at-api-scope-classifier", "scope_classifier", "Scope Classifier"),
-        ("at-api-data-model", "data_model_agent", "Data Model Agent"),
-        ("at-api-test-conditions", "test_condition_agent", "Test Conditions"),
-        ("at-api-dependency-agent", "dependency_agent", "Dependency Agent"),
-        ("at-api-tc-generator", "test_case_generator", "Test Case Generator"),
-    ]
-    prev = ingestion
-    for nid, agent_id, label in testcase_agents:
-        _add_node(nid, "agent", agent_id, label, label, timeout=300, retry=1)
-        _edge(prev, nid)
-        prev = nid
+    # Layer 3 — single requirement enrichment step
+    req_analyzer = _add_node(
+        "at-api-req-analyzer", "agent", "requirement_analyzer",
+        "Requirement Analyzer",
+        "Enrich requirements with API-focused context",
+        timeout=300, retry=1,
+    )
+    _edge(ingestion, req_analyzer)
 
-    # Layer 10 — test_level_classifier (NEW)
+    # Layer 4 — generate API test cases deterministically from the parsed
+    # MD spec (pure-Python rule-based; no LLM dependency).
+    tc_generator = _add_node(
+        "at-api-tc-generator", "pure_python", "api_test_case_generator",
+        "Test Case Generator",
+        "Rule-based generator: happy + required-field + type-mismatch + 404",
+        timeout=60, retry=0,
+    )
+    _edge(req_analyzer, tc_generator)
+
+    # Layer 5 — tag executable flag on each case
     classifier = _add_node(
         "at-api-test-level-classifier", "pure_python",
         "test_level_classifier", "Test Level Classifier",
         "Tag every case with test_level + executable",
         timeout=120, retry=0,
     )
-    _edge(prev, classifier)
-    prev = classifier
+    _edge(tc_generator, classifier)
 
-    # Layer 11 — automation + coverage_pre (parallel could be enabled later;
-    # kept sequential here to mirror current default template behaviour).
-    automation = _add_node(
-        "at-api-automation-agent", "agent", "automation_agent",
-        "Automation Agent", "Generate automation scripts",
-        timeout=600, retry=1,
+    # Layer 6 — execute API tests deterministically via httpx (pure-Python).
+    test_runner = _add_node(
+        "at-api-test-runner", "pure_python", "api_test_runner",
+        "API Test Runner",
+        "httpx-based runner: execute each executable case, capture response",
+        timeout=900, retry=0,
     )
-    _edge(prev, automation)
-    coverage_pre = _add_node(
-        "at-api-coverage-pre", "agent", "coverage_agent_pre",
-        "Coverage (Pre)", "Pre-execution coverage",
-        timeout=300, retry=1,
-    )
-    _edge(automation, coverage_pre)
+    _edge(classifier, test_runner)
 
-    # Layer 12 — report_pre
-    report_pre = _add_node(
-        "at-api-report-pre", "agent", "report_agent_pre",
-        "Pre-Exec Report", "Pre-execution test design report",
-        timeout=300, retry=1,
-    )
-    _edge(coverage_pre, report_pre)
-
-    # Layers 13-17 — execution chain
-    exec_chain = [
-        ("at-api-exec-orchestrator", "execution_orchestrator", "Execution Orchestrator"),
-        ("at-api-env-adapter", "env_adapter", "Environment Adapter"),
-        ("at-api-test-runner", "test_runner", "Test Runner (executable filter)"),
-        ("at-api-exec-logger", "execution_logger", "Execution Logger"),
-        ("at-api-result-store", "result_store", "Result Store"),
-    ]
-    prev = report_pre
-    for nid, agent_id, label in exec_chain:
-        _add_node(nid, "agent", agent_id, label, label, timeout=600, retry=0)
-        _edge(prev, nid)
-        prev = nid
-
-    # Layer 17b — artifact_pipeline (unit test files)
+    # Layer 7 — generate runnable pytest+httpx files
     artifact = _add_node(
         "at-api-artifact", "pure_python", "artifact_pipeline",
-        "Artifact Pipeline", "Generate unit-test files + spec markdown",
+        "Artifact Pipeline",
+        "Generate unit-test files + spec markdown",
         timeout=600, retry=1,
     )
-    _edge(prev, artifact)
+    _edge(test_runner, artifact)
 
-    # Layers 18-20 — reporting chain
-    coverage_analyzer = _add_node(
-        "at-api-coverage-analyzer", "agent", "coverage_analyzer",
-        "Coverage Analyzer", "Post-execution coverage",
-        timeout=300, retry=0,
-    )
-    _edge(artifact, coverage_analyzer)
-    root_cause = _add_node(
-        "at-api-root-cause", "agent", "root_cause_analyzer",
-        "Root Cause Analyzer", "Failure root cause analysis",
-        timeout=300, retry=0,
-    )
-    _edge(coverage_analyzer, root_cause)
+    # Layer 8 — final report (formerly coverage_analyzer + root_cause +
+    # report_generator)
     report_gen = _add_node(
         "at-api-report-gen", "agent", "report_generator",
-        "Report Generator", "Final report generation",
+        "Report Generator",
+        "Synthesise coverage, findings, and final QA report",
         timeout=600, retry=0,
     )
-    _edge(root_cause, report_gen)
+    _edge(artifact, report_gen)
 
-    # Layer 21 — export_html_docx (NEW)
+    # Layer 9 — export HTML + DOCX
     export_node = _add_node(
         "at-api-export-html-docx", "pure_python", "export_html_docx",
-        "Export HTML + DOCX", "Render HTML + DOCX, upload to MinIO",
+        "Export HTML + DOCX",
+        "Render HTML + DOCX, upload to MinIO",
         timeout=180, retry=1,
     )
     _edge(report_gen, export_node)
 
-    # Layer 22 — report_verifier (NEW, retry=0 fail-fast)
+    # Layer 10 — verify 3 components (fail-fast)
     verifier_node = _add_node(
         "at-api-report-verifier", "pure_python", "report_verifier",
-        "Report Verifier", "Check 3-component completeness",
+        "Report Verifier",
+        "Check 3-component completeness before download",
         timeout=60, retry=0,
     )
     _edge(export_node, verifier_node)
 
-    # Layer 23 — OUTPUT
+    # Layer 11 — OUTPUT
     out_node = _add_node(
         "at-api-output", "output", None,
         "📤 Output", "Download links + verification result",
@@ -1501,10 +1564,11 @@ def _build_automation_testing_api_template() -> dict[str, Any]:
         "template_id": "automation-testing-api",
         "name": "Automation Testing API",
         "description": (
-            "MD spec → guarded verification → tagged testcases → executable-only "
-            "execution → verified HTML/DOCX report"
+            "API-only pipeline: MD spec → requirement enrichment → rule-based "
+            "test case generation → executable filter → API execution → unit "
+            "test files → final report → verified HTML/DOCX download"
         ),
-        "version": 1,
+        "version": 4,
         "is_builtin": True,
         "is_archived": False,
         "tags": ["automation-testing", "api", "md", "builtin"],

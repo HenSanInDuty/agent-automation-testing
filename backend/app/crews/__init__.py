@@ -11,6 +11,8 @@ Each crew accepts a progress_callback so the pipeline runner can stream
 WebSocket events without the crew knowing about HTTP or WebSocket details.
 """
 
+from app.crews.api_test_case_crew import ApiTestCaseCrew
+from app.crews.api_test_runner_crew import ApiTestRunnerCrew
 from app.crews.base_crew import BaseCrew, ProgressCallback
 from app.crews.execution_crew import ExecutionCrew
 from app.crews.ingestion_crew import IngestionCrew
@@ -24,6 +26,8 @@ from app.crews.testcase_crew import TestcaseCrew
 __all__ = [
     "BaseCrew",
     "ProgressCallback",
+    "ApiTestCaseCrew",
+    "ApiTestRunnerCrew",
     "IngestionCrew",
     "MDSpecVerifierCrew",
     "TestLevelClassifierCrew",

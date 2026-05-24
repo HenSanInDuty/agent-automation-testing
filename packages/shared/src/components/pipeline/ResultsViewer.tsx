@@ -437,30 +437,16 @@ function ExportButtons({ runId }: { runId: string }) {
   const [docxLoading, setDocxLoading] = React.useState(false);
 
   const handleDownload = async (type: "html" | "docx") => {
-    const url =
-      type === "html"
-        ? pipelineApi.getExportHtmlUrl(runId)
-        : pipelineApi.getExportDocxUrl(runId);
     const setLoading = type === "html" ? setHtmlLoading : setDocxLoading;
-
     setLoading(true);
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        const detail = await response
-          .text()
-          .catch(() => `HTTP ${response.status}`);
-        throw new Error(detail || `Server returned ${response.status}`);
+      // Use the authenticated apiClient-backed helpers — raw `fetch(url)` on
+      // these endpoints would omit the Bearer token and 401.
+      if (type === "html") {
+        await pipelineApi.downloadExportHtml(runId);
+      } else {
+        await pipelineApi.downloadExportDocx(runId);
       }
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = `report-${runId.slice(0, 8)}.${type}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(objectUrl);
       toast.success(
         "Report downloaded",
         `The ${type.toUpperCase()} report has been saved to your downloads folder.`,

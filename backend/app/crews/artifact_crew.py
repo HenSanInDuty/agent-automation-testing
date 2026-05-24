@@ -121,8 +121,23 @@ class ArtifactCrew(BaseCrew):
         Returns:
             ``TestArtifactOutput.model_dump()``
         """
-        test_cases: list[dict] = input_data.get("test_cases") or []
-        requirements: list[dict] = input_data.get("requirements") or []
+        raw_test_cases = input_data.get("test_cases") or []
+        # Filter out non-dict entries early so the renderers never see a
+        # value that fails ``.get(...)`` (LLM hallucinations occasionally
+        # emit ``test_cases: ["TC-1", ...]`` instead of dicts).
+        test_cases: list[dict] = [
+            tc for tc in raw_test_cases if isinstance(tc, dict)
+        ]
+        if len(test_cases) != len(raw_test_cases):
+            logger.warning(
+                "[Artifact][%s] Dropped %d non-dict test_case entr(ies)",
+                self._run_id,
+                len(raw_test_cases) - len(test_cases),
+            )
+        raw_requirements = input_data.get("requirements") or []
+        requirements: list[dict] = [
+            r for r in raw_requirements if isinstance(r, dict)
+        ]
         document_name: str = input_data.get("document_name") or "document"
 
         self._emit("log", {"message": f"Starting artifact generation for '{document_name}'", "level": "info"})

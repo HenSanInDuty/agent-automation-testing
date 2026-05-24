@@ -165,13 +165,13 @@ export function ReportVerificationCard({
       <footer style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <DownloadButton
           label="Tải HTML"
-          href={pipelineApi.getExportHtmlUrl(runId)}
+          onClick={() => pipelineApi.downloadExportHtml(runId)}
           disabled={buildDisabled}
           tooltip={tooltip}
         />
         <DownloadButton
           label="Tải DOCX"
-          href={pipelineApi.getExportDocxUrl(runId)}
+          onClick={() => pipelineApi.downloadExportDocx(runId)}
           disabled={buildDisabled}
           tooltip={tooltip}
         />
@@ -179,13 +179,13 @@ export function ReportVerificationCard({
           <>
             <DownloadButton
               label="Tải HTML (force)"
-              href={`${pipelineApi.getExportHtmlUrl(runId)}?force=true`}
+              onClick={() => pipelineApi.downloadExportHtml(runId, true)}
               disabled={false}
               tooltip="Admin override — bỏ qua verifier"
             />
             <DownloadButton
               label="Tải DOCX (force)"
-              href={`${pipelineApi.getExportDocxUrl(runId)}?force=true`}
+              onClick={() => pipelineApi.downloadExportDocx(runId, true)}
               disabled={false}
               tooltip="Admin override — bỏ qua verifier"
             />
@@ -198,12 +198,12 @@ export function ReportVerificationCard({
 
 interface DownloadButtonProps {
   label: string;
-  href: string;
+  onClick: () => Promise<void> | void;
   disabled: boolean;
   tooltip: string;
 }
 
-function DownloadButton({ label, href, disabled, tooltip }: DownloadButtonProps) {
+function DownloadButton({ label, onClick, disabled, tooltip }: DownloadButtonProps) {
   if (disabled) {
     return (
       <button
@@ -225,19 +225,29 @@ function DownloadButton({ label, href, disabled, tooltip }: DownloadButtonProps)
     );
   }
   return (
-    <a
-      href={href}
+    <button
+      type="button"
       title={tooltip}
+      onClick={() => {
+        // Fire-and-forget; the helper surfaces failures through window alerts
+        // upstream. Don't await in the handler — keeps the click responsive.
+        void Promise.resolve(onClick()).catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          if (typeof window !== "undefined") {
+            window.alert(`Tải thất bại: ${message}`);
+          }
+        });
+      }}
       style={{
         padding: "6px 12px",
         borderRadius: 6,
         border: "1px solid #2563eb",
         background: "#2563eb",
         color: "#ffffff",
-        textDecoration: "none",
+        cursor: "pointer",
       }}
     >
       {label}
-    </a>
+    </button>
   );
 }

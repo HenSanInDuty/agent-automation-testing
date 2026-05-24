@@ -111,15 +111,24 @@ def verify_report(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _check_test_cases(cases: list[dict[str, Any]]) -> ComponentCheck:
+def _check_test_cases(cases: list[Any]) -> ComponentCheck:
     chk = ComponentCheck()
-    chk.count = len(cases)
+    # Guard against upstream lists that contain non-dict entries (e.g. an
+    # LLM hallucinating ``test_cases: ["TC-1", "TC-2"]`` instead of dicts).
+    dict_cases = [c for c in cases if isinstance(c, dict)]
+    non_dict_count = len(cases) - len(dict_cases)
+    chk.count = len(dict_cases)
+    if non_dict_count:
+        chk.issues.append(
+            f"{non_dict_count} test case entr(ies) are not objects "
+            "(ignored — fix the upstream generator to emit dicts)."
+        )
     if chk.count == 0:
         chk.issues.append("No test cases were generated.")
         return chk
     missing_titles = 0
     missing_expected = 0
-    for tc in cases:
+    for tc in dict_cases:
         if not str(tc.get("title") or "").strip():
             missing_titles += 1
         if not str(tc.get("expected_result") or tc.get("expected_status_code") or "").strip():
@@ -137,17 +146,24 @@ def _check_test_cases(cases: list[dict[str, Any]]) -> ComponentCheck:
 
 
 def _check_results(
-    results: list[dict[str, Any]],
+    results: list[Any],
     pass_rate: Optional[float],
 ) -> ComponentCheck:
     chk = ComponentCheck()
-    chk.count = len(results)
+    dict_results = [r for r in results if isinstance(r, dict)]
+    non_dict_count = len(results) - len(dict_results)
+    chk.count = len(dict_results)
+    if non_dict_count:
+        chk.issues.append(
+            f"{non_dict_count} execution result entr(ies) are not objects "
+            "(ignored — fix the upstream runner to emit dicts)."
+        )
     if chk.count == 0:
         chk.issues.append("Execution results are empty.")
         return chk
 
-    runnable = sum(1 for r in results if r.get("status") != "skipped")
-    skipped = sum(1 for r in results if r.get("status") == "skipped")
+    runnable = sum(1 for r in dict_results if r.get("status") != "skipped")
+    skipped = sum(1 for r in dict_results if r.get("status") == "skipped")
     chk.extra["runnable"] = runnable
     chk.extra["skipped"] = skipped
 
@@ -165,16 +181,23 @@ def _check_results(
     return chk
 
 
-def _check_unit_test_files(files: list[dict[str, Any]]) -> ComponentCheck:
+def _check_unit_test_files(files: list[Any]) -> ComponentCheck:
     chk = ComponentCheck()
-    chk.count = len(files)
+    dict_files = [f for f in files if isinstance(f, dict)]
+    non_dict_count = len(files) - len(dict_files)
+    chk.count = len(dict_files)
+    if non_dict_count:
+        chk.issues.append(
+            f"{non_dict_count} unit test file entr(ies) are not objects "
+            "(ignored — fix the artifact generator to emit dicts)."
+        )
     if chk.count == 0:
         chk.issues.append("No unit test files were generated.")
         return chk
 
     syntax_failures: list[str] = []
     empties: list[str] = []
-    for f in files:
+    for f in dict_files:
         name = str(f.get("filename") or f.get("path") or "?")
         content = str(f.get("content") or "")
         language = str(f.get("language") or "").lower()
