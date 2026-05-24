@@ -10,20 +10,16 @@ import {
   ChevronDown,
   ChevronUp,
   Terminal,
-  Wifi,
   WifiOff,
   Loader2,
   AlertCircle,
   CheckCircle2,
   XCircle,
   Clock,
-  SkipForward,
-  Circle,
   FileText,
   RefreshCw,
   Sparkles,
   Hash,
-  Activity,
   GitBranch,
 } from "lucide-react";
 
@@ -33,11 +29,10 @@ import { useStartDagPipeline, usePipelineRun } from "../../hooks/usePipeline";
 import { usePipelineStore } from "../../store/pipelineStore";
 import { DocumentUpload } from "../../components/pipeline/DocumentUpload";
 import { LLMProfileSelector } from "../../components/pipeline/LLMProfileSelector";
-import { PipelineRunView } from "../../components/pipeline/PipelineRunView";
 import { PipelineControls } from "../../components/pipeline/PipelineControls";
 import { Button } from "../../components/ui/Button";
 import { toast } from "../../components/ui/Toast";
-import type { PipelineNodeConfig, PipelineStatus } from "../../types";
+import type { PipelineStatus } from "../../types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design tokens
@@ -82,59 +77,6 @@ function SectionHeader({
 // ─────────────────────────────────────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** Coloured dot + label for a node execution status */
-function NodeStatusBadge({
-  status,
-  isCurrentNode = false,
-}: {
-  status: string;
-  isCurrentNode?: boolean;
-}) {
-  switch (status) {
-    case "running":
-      return (
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium",
-            "bg-blue-500/10 text-blue-300 border border-blue-500/25",
-            isCurrentNode && "font-semibold",
-          )}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-          running
-        </span>
-      );
-    case "completed":
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/25">
-          <CheckCircle2 className="w-3 h-3" />
-          completed
-        </span>
-      );
-    case "failed":
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-500/10 text-red-300 border border-red-500/25">
-          <XCircle className="w-3 h-3" />
-          failed
-        </span>
-      );
-    case "skipped":
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-zinc-500/10 text-zinc-300 border border-zinc-500/25">
-          <SkipForward className="w-3 h-3" />
-          skipped
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#1e2a3d] text-[#7a8baa] border border-[#22304a]">
-          <Circle className="w-2.5 h-2.5" />
-          idle
-        </span>
-      );
-  }
-}
 
 /** WS connection status pill */
 function WsStatusIndicator({
@@ -218,107 +160,65 @@ function NoRunPlaceholder() {
   );
 }
 
-/** Node progress per execution layer */
-function NodeProgressSection({
-  executionLayers,
-  nodeStatuses,
-  currentNode,
-  templateNodes,
-}: {
-  executionLayers: string[][];
-  nodeStatuses: Record<string, string>;
-  currentNode: string | null;
-  templateNodes: PipelineNodeConfig[];
-}) {
-  const labelMap = React.useMemo(() => {
-    const m: Record<string, string> = {};
-    templateNodes.forEach((n) => {
-      m[n.node_id] = n.label;
-    });
-    return m;
-  }, [templateNodes]);
+/** Friendly waiting card shown to end-users while the pipeline runs */
+const LOADING_MESSAGES = [
+  "Đang xử lý tài liệu của bạn…",
+  "Hệ thống đang phân tích nội dung, vui lòng chờ trong giây lát…",
+  "Quá trình này có thể mất một vài phút — cảm ơn bạn đã kiên nhẫn.",
+  "Đang sinh test cases, gần xong rồi…",
+  "Hoàn tất các bước cuối cùng…",
+];
 
-  if (executionLayers.length === 0) {
-    return (
-      <div className={cn(card, "flex items-center gap-2 px-5 py-4 text-sm", mutedText)}>
-        <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-        Preparing execution plan…
-      </div>
-    );
-  }
+function RunInProgressCard() {
+  const [messageIdx, setMessageIdx] = React.useState(0);
 
-  const totalNodes = executionLayers.reduce((sum, l) => sum + l.length, 0);
-  const completedNodes = executionLayers
-    .flat()
-    .filter((n) => nodeStatuses[n] === "completed").length;
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIdx((i) => (i + 1) % LOADING_MESSAGES.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className={cn(card, "overflow-hidden")}>
-      <SectionHeader
-        icon={<Activity className="w-3.5 h-3.5" />}
-        title="Node Progress"
-        hint={`${executionLayers.length} ${executionLayers.length === 1 ? "layer" : "layers"} • ${totalNodes} nodes`}
-        trailing={
-          <span className="text-xs font-mono text-[#92a4c9]">
-            {completedNodes}/{totalNodes}
-          </span>
-        }
+    <div
+      className={cn(
+        card,
+        "relative overflow-hidden",
+        "flex flex-col items-center justify-center text-center py-16 px-8",
+      )}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-[0.18] pointer-events-none"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 50% 0%, #135bec 0%, transparent 60%)",
+        }}
       />
-      <div className="divide-y divide-[#22304a]">
-        {executionLayers
-          .filter((layer): layer is string[] => Array.isArray(layer))
-          .map((layer, layerIdx) => (
-            <div key={layerIdx} className="px-5 py-4">
-              <div className="mb-2.5 flex items-center gap-2">
-                <span className="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-md bg-[#1e2a3d] border border-[#22304a] text-[10px] font-mono font-semibold text-[#92a4c9]">
-                  L{layerIdx + 1}
-                </span>
-                <p className="text-[11px] font-medium text-[#5e7196] uppercase tracking-wider">
-                  Layer {layerIdx + 1}
-                </p>
-                <span className="ml-auto text-[10px] text-[#5e7196]">
-                  {layer.length} {layer.length === 1 ? "node" : "nodes"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {layer.map((nodeId) => {
-                  const status = nodeStatuses[nodeId] ?? "idle";
-                  const isActive = nodeId === currentNode;
-                  return (
-                    <div
-                      key={nodeId}
-                      className={cn(
-                        "group flex items-center justify-between gap-3 rounded-lg px-3 py-2",
-                        "border transition-all duration-150",
-                        isActive
-                          ? "border-blue-500/40 bg-blue-500/[0.07] shadow-[0_0_0_3px_rgba(19,91,236,0.08)]"
-                          : "border-[#22304a] bg-[#101725] hover:bg-[#141d2c]",
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                          className={cn(
-                            "w-1 h-1 rounded-full shrink-0",
-                            isActive ? "bg-blue-400" : "bg-[#3d5070]",
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "text-xs font-mono truncate",
-                            isActive ? "text-blue-200" : "text-[#92a4c9]",
-                          )}
-                          title={nodeId}
-                        >
-                          {labelMap[nodeId] ?? nodeId}
-                        </span>
-                      </div>
-                      <NodeStatusBadge status={status} isCurrentNode={isActive} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+      <div className="relative flex flex-col items-center gap-5">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-2xl bg-[#135bec]/25 blur-2xl animate-pulse" />
+          <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1e2a3d] to-[#141c2c] border border-[#2b3b55]">
+            <Loader2 className="w-7 h-7 text-[#5b9eff] animate-spin" aria-hidden="true" />
+          </div>
+        </div>
+        <div className="max-w-md min-h-[3rem]">
+          <p className="text-base font-semibold text-white">Pipeline đang chạy</p>
+          <p
+            key={messageIdx}
+            className={cn(
+              "mt-2 text-sm transition-opacity duration-500",
+              mutedText,
+            )}
+          >
+            {LOADING_MESSAGES[messageIdx]}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:-0.3s]" />
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:-0.15s]" />
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" />
+        </div>
       </div>
     </div>
   );
@@ -659,8 +559,6 @@ export function PipelineRunPage({ templateId }: PipelineRunPageProps) {
   const activeRunId = usePipelineStore((s) => s.activeRunId);
   const activeRunStatus = usePipelineStore((s) => s.activeRunStatus);
   const nodeStatuses = usePipelineStore((s) => s.nodeStatuses);
-  const currentNode = usePipelineStore((s) => s.currentNode);
-  const executionLayers = usePipelineStore((s) => s.executionLayers);
   const isTerminal = usePipelineStore((s) => s.isTerminal);
   const wsStatus = usePipelineStore((s) => s.wsStatus);
   const logMessages = usePipelineStore((s) => s.logMessages);
@@ -927,65 +825,16 @@ export function PipelineRunPage({ templateId }: PipelineRunPageProps) {
         <div className="flex flex-col gap-4 min-w-0">
           {!hasActiveRun && <NoRunPlaceholder />}
 
-          {isActivelyRunning && template.nodes.length > 0 && (
-            <section className={cn(card, "overflow-hidden")}>
-              <SectionHeader
-                icon={<GitBranch className="w-3.5 h-3.5" />}
-                title="Execution Graph"
-                hint="Live DAG visualization"
-                trailing={
-                  <span className="inline-flex items-center gap-1.5 text-[11px] text-blue-300">
-                    <span className="relative flex w-1.5 h-1.5">
-                      <span className="absolute inline-flex w-full h-full rounded-full bg-blue-400 opacity-60 animate-ping" />
-                      <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    </span>
-                    Live
-                  </span>
-                }
-              />
-              <div style={{ height: 420 }} className="bg-[#0c121d]">
-                <PipelineRunView
-                  templateNodes={template.nodes}
-                  templateEdges={template.edges}
-                />
-              </div>
-            </section>
-          )}
-
-          {isActivelyRunning && (
-            <NodeProgressSection
-              executionLayers={executionLayers}
-              nodeStatuses={nodeStatuses}
-              currentNode={currentNode}
-              templateNodes={template.nodes}
-            />
-          )}
+          {isActivelyRunning && <RunInProgressCard />}
 
           {isTerminalRun && activeRunStatus && activeRunId && (
-            <>
-              {template.nodes.length > 0 && (
-                <section className={cn(card, "overflow-hidden")}>
-                  <SectionHeader
-                    icon={<GitBranch className="w-3.5 h-3.5" />}
-                    title="Execution Graph"
-                    hint="Final state"
-                  />
-                  <div style={{ height: 380 }} className="bg-[#0c121d]">
-                    <PipelineRunView
-                      templateNodes={template.nodes}
-                      templateEdges={template.edges}
-                    />
-                  </div>
-                </section>
-              )}
-              <TerminalSummaryCard
-                status={activeRunStatus}
-                runId={activeRunId}
-                nodeStatuses={nodeStatuses}
-                templateId={templateId}
-                runData={runData ?? undefined}
-              />
-            </>
+            <TerminalSummaryCard
+              status={activeRunStatus}
+              runId={activeRunId}
+              nodeStatuses={nodeStatuses}
+              templateId={templateId}
+              runData={runData ?? undefined}
+            />
           )}
         </div>
       </div>
