@@ -556,6 +556,19 @@ async def derive_pipeline_run(
                 detail=f"LLM profile '{pid}' not found (node_llm_overrides['{nid}']).",
             )
 
+    # Validate node_input_overrides keys exist in template snapshot
+    if body.node_input_overrides and snapshot_nodes:
+        invalid_override_nodes = set(body.node_input_overrides.keys()) - snapshot_nodes
+        if invalid_override_nodes:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"node_input_overrides references unknown node(s): "
+                    f"{sorted(invalid_override_nodes)}. "
+                    f"Available nodes: {sorted(snapshot_nodes)}"
+                ),
+            )
+
     new_run_id = str(uuid.uuid4())
     run_params = {**parent.run_params}
     if body.label:
@@ -572,6 +585,7 @@ async def derive_pipeline_run(
         parent_run_id=run_id,
         rerun_from_node=body.rerun_from_node,
         node_llm_overrides=body.node_llm_overrides,
+        node_input_overrides=body.node_input_overrides,
     )
 
     logger.info(
@@ -592,6 +606,7 @@ async def derive_pipeline_run(
         parent_run_id=run_id,
         rerun_from_node=body.rerun_from_node,
         node_llm_overrides=body.node_llm_overrides,
+        node_input_overrides=body.node_input_overrides,
     )
 
     return await _dag_run_to_response(new_run)

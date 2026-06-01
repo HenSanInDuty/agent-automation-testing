@@ -142,6 +142,7 @@ class DAGPipelineRunner:
         parent_run_id: Optional[str] = None,
         rerun_from_node: Optional[str] = None,
         node_llm_overrides: Optional[dict[str, str]] = None,
+        node_input_overrides: Optional[dict[str, dict]] = None,
     ) -> None:
         self._run_id = run_id
         self._template = template
@@ -153,6 +154,7 @@ class DAGPipelineRunner:
         self._parent_run_id = parent_run_id
         self._rerun_from_node = rerun_from_node
         self._node_llm_overrides: dict[str, str] = node_llm_overrides or {}
+        self._node_input_overrides: dict[str, dict] = node_input_overrides or {}  # type: ignore[type-arg]
 
         # Node outputs cache: { node_id: output_dict }
         self._node_outputs: dict[str, dict] = {}  # type: ignore[type-arg]
@@ -849,10 +851,18 @@ class DAGPipelineRunner:
         """
         Collect outputs from all parent nodes.
 
+        If a manual input override is configured for this node, it is returned
+        directly (wrapped as a single-parent dict) instead of collecting from
+        the DAG parents.
+
         Returns:
             Mapping ``{ parent_node_id: parent_output_dict }`` for all
             parents whose output is already available.
         """
+        if node_id in self._node_input_overrides:
+            # Treat the override as if a single virtual parent produced it.
+            return {"__override__": self._node_input_overrides[node_id]}
+
         parents = self._resolver.get_node_parents(node_id)
         return {
             parent_id: self._node_outputs[parent_id]

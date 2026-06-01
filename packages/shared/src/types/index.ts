@@ -322,6 +322,7 @@ export interface DeriveRunRequest {
   rerun_from_node: string;
   llm_profile_id?: string | null;
   node_llm_overrides?: Record<string, string>;
+  node_input_overrides?: Record<string, unknown>;
   label?: string | null;
 }
 

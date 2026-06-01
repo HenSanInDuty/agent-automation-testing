@@ -382,6 +382,10 @@ class PipelineRunDocument(Document):
         default_factory=dict,
         description="Per-node LLM profile overrides: { node_id: llm_profile_id }",
     )
+    node_input_overrides: dict = Field(
+        default_factory=dict,
+        description="Per-node input overrides: { node_id: input_dict }. Stored for audit trail.",
+    )
 
     # Error
     error_message: Optional[str] = None

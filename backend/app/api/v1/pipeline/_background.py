@@ -139,6 +139,7 @@ async def _run_dag_pipeline_background(
     parent_run_id: Optional[str] = None,
     rerun_from_node: Optional[str] = None,
     node_llm_overrides: Optional[dict] = None,
+    node_input_overrides: Optional[dict] = None,
 ) -> None:
     """Background task for the V3 DAG pipeline runner."""
     import json
@@ -186,6 +187,7 @@ async def _run_dag_pipeline_background(
             parent_run_id=parent_run_id,
             rerun_from_node=rerun_from_node,
             node_llm_overrides=node_llm_overrides,
+            node_input_overrides=node_input_overrides,
         )
 
         initial_input: dict = {

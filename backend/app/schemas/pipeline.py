@@ -198,6 +198,15 @@ class DeriveRunRequest(BaseModel):
         default_factory=dict,
         description="Per-node LLM profile overrides: { node_id: llm_profile_id }",
     )
+    node_input_overrides: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Per-node input overrides: { node_id: input_dict }. "
+            "When set, the given dict is used as the node's input instead of "
+            "collecting outputs from parent nodes. Only applies to nodes that "
+            "will be re-executed (not inherited nodes)."
+        ),
+    )
     label: Optional[str] = Field(
         None,
         description="Optional human-readable label stored in run_params['label']",

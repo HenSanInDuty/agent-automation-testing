@@ -1709,6 +1709,7 @@ async def create_dag_run(
     parent_run_id: Optional[str] = None,
     rerun_from_node: Optional[str] = None,
     node_llm_overrides: Optional[dict] = None,  # type: ignore[type-arg]
+    node_input_overrides: Optional[dict] = None,  # type: ignore[type-arg]
 ) -> PipelineRunDocument:
     """Create a new V3 DAG pipeline run in PENDING state.
 
@@ -1744,6 +1745,7 @@ async def create_dag_run(
         parent_run_id=parent_run_id,
         rerun_from_node=rerun_from_node,
         node_llm_overrides=node_llm_overrides or {},
+        node_input_overrides=node_input_overrides or {},
     )
     await doc.insert()
     logger.info(
