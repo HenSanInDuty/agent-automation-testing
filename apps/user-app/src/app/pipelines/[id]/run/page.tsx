@@ -16,6 +16,7 @@ export default function UserPipelineRunPage() {
         hideLlmProfile
         hideRunControls
         showResultsInline
+        hideNodeResults
       />
     </div>
   );

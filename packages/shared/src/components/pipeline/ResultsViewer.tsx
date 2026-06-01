@@ -50,6 +50,8 @@ export interface ResultsViewerProps {
     node_type: string;
     enabled: boolean;
   }>;
+  /** Hide the per-node ("Nodes") results tab — end users only need the final output. */
+  hideNodeResults?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -880,9 +882,11 @@ function RunSummaryCard({ run }: { run: PipelineRunResponse }) {
 // ResultsViewer
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
+export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: ResultsViewerProps) {
   const isV3RunCheck = !!run.node_statuses && Object.keys(run.node_statuses).length > 0;
-  const [activeTab, setActiveTab] = React.useState<TabId>(isV3RunCheck ? "nodes" : "testcases");
+  const [activeTab, setActiveTab] = React.useState<TabId>(
+    isV3RunCheck && !hideNodeResults ? "nodes" : "testcases",
+  );
 
   // ── Group agents by stage — works with any dynamic stages ─────────────────
   const agentsByStage = run.agent_runs.reduce<
@@ -935,7 +939,8 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
   }, [nodeResultsRaw]);
   // "Files" tab now lists Playwright artifacts for every run (synthesised from
   // DB output when MinIO is empty). Only V3-only "Nodes" stays gated.
-  const visibleTabs = isV3Run ? TABS : TABS.filter((t) => t.id !== "nodes");
+  const visibleTabs =
+    isV3Run && !hideNodeResults ? TABS : TABS.filter((t) => t.id !== "nodes");
 
   return (
     <div className="rounded-2xl border border-[#2b3b55] bg-[#18202F] overflow-hidden">

@@ -61,6 +61,8 @@ function StatusBadge({ status }: { status: string }) {
 export interface PipelineRunDetailPageProps {
   templateId: string;
   runId: string;
+  /** Hide the per-node ("Nodes") results tab — end users only need the final output. */
+  hideNodeResults?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -470,7 +472,7 @@ function DeriveRunModal({ runId, templateId, nodeIds, templateNodes, edges, onCl
   );
 }
 
-export function PipelineRunDetailPage({ templateId, runId }: PipelineRunDetailPageProps) {
+export function PipelineRunDetailPage({ templateId, runId, hideNodeResults = false }: PipelineRunDetailPageProps) {
   const qc = useQueryClient();
   const { data: run, isLoading: runLoading, isError: runError } = usePipelineRun(runId);
   const { data: template } = usePipelineTemplate(templateId);
@@ -591,7 +593,11 @@ export function PipelineRunDetailPage({ templateId, runId }: PipelineRunDetailPa
       )}
 
       {run && !runLoading && (
-        <ResultsViewer run={run} templateNodes={templateNodes} />
+        <ResultsViewer
+          run={run}
+          templateNodes={templateNodes}
+          hideNodeResults={hideNodeResults}
+        />
       )}
 
       {showDeriveModal && (

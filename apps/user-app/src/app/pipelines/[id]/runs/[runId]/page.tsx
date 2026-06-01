@@ -9,6 +9,10 @@ export default function UserPipelineRunDetailPage() {
   const runId = typeof params.runId === "string" ? params.runId : (params.runId?.[0] ?? "");
 
   return (
-    <PipelineRunDetailPage templateId={templateId} runId={runId} />
+    <PipelineRunDetailPage
+      templateId={templateId}
+      runId={runId}
+      hideNodeResults
+    />
   );
 }

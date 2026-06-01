@@ -546,6 +546,8 @@ export interface PipelineRunPageProps {
   hideRunControls?: boolean;
   /** Render the full ResultsViewer inline once the run reaches a terminal state. */
   showResultsInline?: boolean;
+  /** Hide the per-node ("Nodes") results tab in the inline ResultsViewer. */
+  hideNodeResults?: boolean;
 }
 
 export function PipelineRunPage({
@@ -553,6 +555,7 @@ export function PipelineRunPage({
   hideLlmProfile = false,
   hideRunControls = false,
   showResultsInline = false,
+  hideNodeResults = false,
 }: PipelineRunPageProps) {
   // ── Local state ────────────────────────────────────────────────────────────
   const [file, setFile] = React.useState<File | null>(null);
@@ -866,7 +869,11 @@ export function PipelineRunPage({
 
           {/* Full results inline (opt-in) so users see output without navigating away */}
           {isTerminalRun && showResultsInline && runData && (
-            <ResultsViewer run={runData} templateNodes={templateNodes} />
+            <ResultsViewer
+              run={runData}
+              templateNodes={templateNodes}
+              hideNodeResults={hideNodeResults}
+            />
           )}
         </div>
       </div>
