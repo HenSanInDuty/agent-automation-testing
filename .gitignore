@@ -62,3 +62,6 @@ Thumbs.db
 
 # agent-browser screenshots
 .screenshots/
+
+# Claude Code agent tooling (local only — not part of project)
+.claude/
