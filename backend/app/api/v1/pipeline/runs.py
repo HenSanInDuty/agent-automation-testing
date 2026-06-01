@@ -35,6 +35,9 @@ from app.api.v1.deps import get_current_user, require_admin, require_not_dev
 from app.config import settings
 from app.db import crud
 from app.schemas.pipeline import (
+    DeriveRunRequest,
+    NodeCompareResponse,
+    NodeCompareItem,
     PipelineResultResponse,
     PipelineRunListItem,
     PipelineRunListResponse,
@@ -408,8 +411,13 @@ async def get_pipeline_run(
                 run_id=r.run_id,
                 stage=r.stage or "",
                 agent_id=r.agent_id or "",
+                node_id=r.node_id,
                 output=r.output,
                 created_at=r.created_at,
+                llm_profile_id=r.llm_profile_id,
+                is_inherited=r.is_inherited,
+                source_run_id=r.source_run_id,
+                duration_seconds=r.duration_seconds,
             ).model_dump()
             for r in raw_results
         ]
@@ -467,3 +475,213 @@ async def delete_pipeline_run(
             detail=f"Pipeline run '{run_id}' not found.",
         )
     logger.info("[Pipeline] Deleted run  run_id=%r", run_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POST /pipeline/runs/{run_id}/derive  (derived / checkpoint run)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/runs/{run_id}/derive",
+    response_model=PipelineRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Derive a new run from a checkpoint",
+    description=(
+        "Creates a new pipeline run derived from an existing completed run. "
+        "All nodes *upstream* of ``rerun_from_node`` are inherited (outputs copied "
+        "from the parent) so only ``rerun_from_node`` and its downstream nodes are "
+        "re-executed. Optionally override the LLM profile globally or per-node.\n\n"
+        "This is the recommended way to A/B-test LLM changes or re-run a single "
+        "pipeline layer without paying the full execution cost."
+    ),
+)
+async def derive_pipeline_run(
+    run_id: str,
+    body: DeriveRunRequest,
+    background_tasks: BackgroundTasks,
+    _: object = Depends(require_not_dev),
+) -> PipelineRunResponse:
+    """Create a derived run from an existing checkpoint."""
+    parent = await _get_run_or_404(run_id)
+
+    if parent.template_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Derive is only supported for V3 template-based runs.",
+        )
+
+    # Verify the parent run is completed or failed (not still running)
+    if parent.status not in (
+        "completed",
+        "failed",
+        "cancelled",
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Cannot derive from a run with status '{parent.status}'. "
+                "Parent run must be completed, failed, or cancelled."
+            ),
+        )
+
+    # Verify rerun_from_node exists in the parent template snapshot
+    snapshot_nodes = {
+        n["node_id"]
+        for n in (parent.template_snapshot or {}).get("nodes", [])
+    }
+    if snapshot_nodes and body.rerun_from_node not in snapshot_nodes:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Node '{body.rerun_from_node}' not found in parent run's template snapshot. "
+                f"Available nodes: {sorted(snapshot_nodes)}"
+            ),
+        )
+
+    # Validate overridden LLM profiles exist
+    effective_llm = body.llm_profile_id or parent.llm_profile_id
+    if effective_llm is not None:
+        profile = await crud.get_llm_profile(effective_llm)
+        if profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"LLM profile '{effective_llm}' not found.",
+            )
+    for nid, pid in body.node_llm_overrides.items():
+        profile = await crud.get_llm_profile(pid)
+        if profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"LLM profile '{pid}' not found (node_llm_overrides['{nid}']).",
+            )
+
+    new_run_id = str(uuid.uuid4())
+    run_params = {**parent.run_params}
+    if body.label:
+        run_params["label"] = body.label
+
+    new_run = await crud.create_dag_run(
+        run_id=new_run_id,
+        template_id=parent.template_id,
+        template_snapshot=parent.template_snapshot or {},
+        document_name=parent.document_name,
+        file_path=parent.file_path or parent.document_path,
+        llm_profile_id=effective_llm,
+        run_params=run_params,
+        parent_run_id=run_id,
+        rerun_from_node=body.rerun_from_node,
+        node_llm_overrides=body.node_llm_overrides,
+    )
+
+    logger.info(
+        "[Pipeline] Derived run  new_run_id=%r  parent=%r  from_node=%r",
+        new_run_id,
+        run_id,
+        body.rerun_from_node,
+    )
+
+    background_tasks.add_task(
+        _run_dag_pipeline_background,
+        run_id=new_run_id,
+        template_id=parent.template_id,
+        file_path=parent.file_path or parent.document_path,
+        document_name=parent.document_name,
+        llm_profile_id=effective_llm,
+        run_params=run_params,
+        parent_run_id=run_id,
+        rerun_from_node=body.rerun_from_node,
+        node_llm_overrides=body.node_llm_overrides,
+    )
+
+    return await _dag_run_to_response(new_run)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /pipeline/runs/compare
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/runs/compare",
+    response_model=NodeCompareResponse,
+    summary="Compare a node's output across multiple runs",
+    description=(
+        "Returns the output of the same DAG node from two or more runs side by "
+        "side, enabling A/B comparisons between different LLM configs or "
+        "re-executions. Pass ``run_ids`` as a comma-separated list."
+    ),
+)
+async def compare_runs(
+    node_id: Annotated[str, Query(description="DAG node ID to compare")],
+    run_ids: Annotated[
+        str,
+        Query(description="Comma-separated list of run IDs to compare (min 2)"),
+    ],
+    _: object = Depends(get_current_user),
+) -> NodeCompareResponse:
+    """Compare one node's output across multiple runs."""
+    ids = [r.strip() for r in run_ids.split(",") if r.strip()]
+    if len(ids) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least 2 run IDs are required for comparison.",
+        )
+
+    items: list[NodeCompareItem] = []
+    for rid in ids:
+        result = await crud.get_node_result(rid, node_id)
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No result found for node '{node_id}' in run '{rid}'.",
+            )
+        items.append(
+            NodeCompareItem(
+                run_id=rid,
+                output=result.output,
+                duration_seconds=result.duration_seconds,
+                llm_profile_id=result.llm_profile_id,
+                is_inherited=result.is_inherited,
+                created_at=result.created_at,
+            )
+        )
+
+    return NodeCompareResponse(node_id=node_id, runs=items)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /pipeline/runs/{run_id}/nodes/{node_id}/export
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/runs/{run_id}/nodes/{node_id}/export",
+    summary="Export a node's output as a JSON file download",
+    description=(
+        "Returns the raw output of a specific DAG node as a downloadable JSON "
+        "file. Useful for inspecting, archiving, or replaying individual pipeline "
+        "layer outputs without having to copy from the run detail page."
+    ),
+)
+async def export_node_output(
+    run_id: str,
+    node_id: str,
+    _: object = Depends(get_current_user),
+) -> Any:
+    """Download the output of a single node as a JSON file."""
+    from fastapi.responses import JSONResponse
+
+    await _get_run_or_404(run_id)  # 404 if run doesn't exist
+    result = await crud.get_node_result(run_id, node_id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No result found for node '{node_id}' in run '{run_id}'.",
+        )
+
+    filename = f"{run_id[:8]}_{node_id}_output.json"
+    return JSONResponse(
+        content=result.output,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
