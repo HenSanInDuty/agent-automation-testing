@@ -167,6 +167,60 @@ class PipelineResultResponse(BaseModel):
     agent_id: str
     output: Any = Field(description="JSON output from the agent")
     created_at: datetime
+    # Checkpoint metadata (V3 derived runs)
+    node_id: Optional[str] = None
+    llm_profile_id: Optional[str] = None
+    is_inherited: bool = False
+    source_run_id: Optional[str] = None
+    duration_seconds: Optional[float] = None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Derived Run
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class DeriveRunRequest(BaseModel):
+    """Request body for POST /pipeline/runs/{run_id}/derive."""
+
+    rerun_from_node: str = Field(
+        description=(
+            "Node ID where fresh execution starts. This node and all downstream "
+            "nodes will be re-executed; all upstream nodes are inherited from the "
+            "parent run."
+        )
+    )
+    llm_profile_id: Optional[str] = Field(
+        None,
+        description="New global LLM profile for the derived run. Omit to keep parent's.",
+    )
+    node_llm_overrides: dict[str, str] = Field(
+        default_factory=dict,
+        description="Per-node LLM profile overrides: { node_id: llm_profile_id }",
+    )
+    label: Optional[str] = Field(
+        None,
+        description="Optional human-readable label stored in run_params['label']",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Compare
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class NodeCompareItem(BaseModel):
+    run_id: str
+    output: Any
+    duration_seconds: Optional[float] = None
+    llm_profile_id: Optional[str] = None
+    is_inherited: bool = False
+    created_at: datetime
+
+
+class NodeCompareResponse(BaseModel):
+    node_id: str
+    runs: list[NodeCompareItem]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1651,6 +1651,9 @@ async def save_node_result(
     input_data: Optional[dict] = None,  # type: ignore[type-arg]
     error_message: Optional[str] = None,
     duration_seconds: Optional[float] = None,
+    llm_profile_id: Optional[str] = None,
+    is_inherited: bool = False,
+    source_run_id: Optional[str] = None,
 ) -> PipelineResultDocument:
     """Persist the output of a single DAG node execution (V3).
 
@@ -1663,6 +1666,9 @@ async def save_node_result(
         input_data: What the node received as input (for debugging/replay).
         error_message: Error string if status="failed".
         duration_seconds: Execution time in seconds.
+        llm_profile_id: LLM profile that was active for this node.
+        is_inherited: True when the result is copied from a parent run.
+        source_run_id: The parent run_id this result was inherited from.
 
     Returns:
         The newly-inserted PipelineResultDocument.
@@ -1680,10 +1686,14 @@ async def save_node_result(
         error_message=error_message,
         duration_seconds=duration_seconds,
         completed_at=now if status in ("completed", "failed") else None,
+        llm_profile_id=llm_profile_id,
+        is_inherited=is_inherited,
+        source_run_id=source_run_id,
     )
     await doc.insert()
     logger.info(
-        "Saved node result: run_id=%s node_id=%s status=%s", run_id, node_id, status
+        "Saved node result: run_id=%s node_id=%s status=%s inherited=%s",
+        run_id, node_id, status, is_inherited,
     )
     return doc
 
@@ -1696,6 +1706,9 @@ async def create_dag_run(
     file_path: Optional[str] = None,
     llm_profile_id: Optional[str] = None,
     run_params: Optional[dict] = None,  # type: ignore[type-arg]
+    parent_run_id: Optional[str] = None,
+    rerun_from_node: Optional[str] = None,
+    node_llm_overrides: Optional[dict] = None,  # type: ignore[type-arg]
 ) -> PipelineRunDocument:
     """Create a new V3 DAG pipeline run in PENDING state.
 
@@ -1707,6 +1720,10 @@ async def create_dag_run(
         file_path: Absolute path to uploaded file (if any).
         llm_profile_id: Optional LLM profile override.
         run_params: Extra run parameters dict.
+        parent_run_id: If set, this run is derived from the given parent run.
+        rerun_from_node: Node ID where fresh execution starts (upstream nodes
+            are inherited from parent).
+        node_llm_overrides: Per-node LLM profile overrides ``{node_id: profile_id}``.
 
     Returns:
         The newly-created PipelineRunDocument.
@@ -1724,7 +1741,53 @@ async def create_dag_run(
         agent_statuses={},
         completed_stages=[],
         stage_results_summary={},
+        parent_run_id=parent_run_id,
+        rerun_from_node=rerun_from_node,
+        node_llm_overrides=node_llm_overrides or {},
     )
     await doc.insert()
-    logger.info("Created DAG run: %s for template: %s", run_id, template_id)
+    logger.info(
+        "Created DAG run: %s for template: %s  parent=%s  rerun_from=%s",
+        run_id, template_id, parent_run_id, rerun_from_node,
+    )
     return doc
+
+
+async def get_node_result(
+    run_id: str,
+    node_id: str,
+) -> Optional[PipelineResultDocument]:
+    """Get the most recent result document for a specific node within a run.
+
+    Args:
+        run_id: UUID string of the pipeline run.
+        node_id: DAG node identifier.
+
+    Returns:
+        The most recently created PipelineResultDocument for that node, or
+        None if no result exists.
+    """
+    return await PipelineResultDocument.find(
+        PipelineResultDocument.run_id == run_id,
+        PipelineResultDocument.node_id == node_id,
+    ).sort("-created_at").first_or_none()
+
+
+async def get_derived_runs(
+    parent_run_id: str,
+) -> list[PipelineRunDocument]:
+    """Get all runs that were derived from a given parent run.
+
+    Args:
+        parent_run_id: UUID string of the original pipeline run.
+
+    Returns:
+        List of derived PipelineRunDocuments ordered by creation time ascending.
+    """
+    return (
+        await PipelineRunDocument.find(
+            PipelineRunDocument.parent_run_id == parent_run_id
+        )
+        .sort("+created_at")
+        .to_list()
+    )

@@ -136,6 +136,9 @@ async def _run_dag_pipeline_background(
     document_name: str,
     llm_profile_id: Optional[str],
     run_params: dict,
+    parent_run_id: Optional[str] = None,
+    rerun_from_node: Optional[str] = None,
+    node_llm_overrides: Optional[dict] = None,
 ) -> None:
     """Background task for the V3 DAG pipeline runner."""
     import json
@@ -146,9 +149,10 @@ async def _run_dag_pipeline_background(
     from app.core.dag_resolver import DAGValidationError
 
     logger.info(
-        "[V3-Pipeline] Background task started  run_id=%r  template=%r",
+        "[V3-Pipeline] Background task started  run_id=%r  template=%r  parent=%r",
         run_id,
         template_id,
+        parent_run_id,
     )
 
     current_loop = asyncio.get_running_loop()
@@ -179,6 +183,9 @@ async def _run_dag_pipeline_background(
             llm_profile_id=llm_profile_id,
             progress_callback=ws_broadcaster,
             mock_mode=settings.MOCK_CREWS,
+            parent_run_id=parent_run_id,
+            rerun_from_node=rerun_from_node,
+            node_llm_overrides=node_llm_overrides,
         )
 
         initial_input: dict = {

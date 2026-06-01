@@ -369,6 +369,20 @@ class PipelineRunDocument(Document):
     )
     duration_seconds: Optional[float] = None
 
+    # Derived run support
+    parent_run_id: Optional[str] = Field(
+        None,
+        description="ID of the parent run this was derived from (None = original run)",
+    )
+    rerun_from_node: Optional[str] = Field(
+        None,
+        description="Node ID where re-execution starts; upstream nodes are inherited from parent",
+    )
+    node_llm_overrides: dict[str, str] = Field(
+        default_factory=dict,
+        description="Per-node LLM profile overrides: { node_id: llm_profile_id }",
+    )
+
     # Error
     error_message: Optional[str] = None
     error: Optional[str] = None  # V2 compat
@@ -424,6 +438,20 @@ class PipelineResultDocument(Document):
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_seconds: Optional[float] = None
+
+    # Checkpoint / inheritance metadata
+    llm_profile_id: Optional[str] = Field(
+        None,
+        description="LLM profile used when this node was executed",
+    )
+    is_inherited: bool = Field(
+        False,
+        description="True when this result was copied from a parent run (not re-executed)",
+    )
+    source_run_id: Optional[str] = Field(
+        None,
+        description="Parent run_id this result was inherited from",
+    )
 
     # Status
     status: str = "completed"  # completed | failed | skipped

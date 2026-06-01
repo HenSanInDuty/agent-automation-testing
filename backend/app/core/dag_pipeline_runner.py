@@ -139,6 +139,9 @@ class DAGPipelineRunner:
         llm_profile_id: Optional[str] = None,
         progress_callback: Optional[ProgressCallback] = None,
         mock_mode: bool = False,
+        parent_run_id: Optional[str] = None,
+        rerun_from_node: Optional[str] = None,
+        node_llm_overrides: Optional[dict[str, str]] = None,
     ) -> None:
         self._run_id = run_id
         self._template = template
@@ -146,8 +149,17 @@ class DAGPipelineRunner:
         self._progress_callback = progress_callback
         self._mock_mode = mock_mode
 
+        # Derived-run parameters
+        self._parent_run_id = parent_run_id
+        self._rerun_from_node = rerun_from_node
+        self._node_llm_overrides: dict[str, str] = node_llm_overrides or {}
+
         # Node outputs cache: { node_id: output_dict }
         self._node_outputs: dict[str, dict] = {}  # type: ignore[type-arg]
+
+        # Set of node_ids whose outputs were loaded from the parent run
+        # (will be skipped during execution).
+        self._inherited_nodes: set[str] = set()
 
         # Original document content — injected into every agent's merged_input
         # so all nodes in the DAG have access regardless of their depth.
@@ -216,7 +228,11 @@ class DAGPipelineRunner:
         self._node_outputs[input_node.node_id] = initial_input
         self._document_content = initial_input.get("document_content") or ""
         self._document_name = initial_input.get("document_name") or ""
-        # ── 4. Execute layer by layer ────────────────────────────────────────
+
+        # ── 3b. Load inherited node outputs from parent run ──────────────────
+        if self._parent_run_id and self._rerun_from_node:
+            await self._load_inherited_nodes(layers)
+
         for layer_idx, layer_node_ids in enumerate(layers):
             # Skip layers that contain only the INPUT node (already seeded)
             if all(
@@ -289,6 +305,18 @@ class DAGPipelineRunner:
                     self._emit(
                         "node.skipped",
                         {"node_id": node_id, "reason": "node disabled"},
+                    )
+                    continue
+                # Skip inherited nodes — their outputs are already loaded
+                if node_id in self._inherited_nodes:
+                    self._emit(
+                        "node.skipped",
+                        {"node_id": node_id, "reason": "inherited from parent run"},
+                    )
+                    await crud.update_pipeline_run(
+                        self._run_id,
+                        completed_nodes=[*self._get_current_completed(), node_id],
+                        node_statuses={node_id: "skipped"},
                     )
                     continue
                 parent_outputs = self._gather_inputs(node_id)
@@ -493,6 +521,12 @@ class DAGPipelineRunner:
                 raise ValueError(f"Unknown node_type: {node_config.node_type!r}")
 
             duration = time.time() - node_start
+            # Resolve effective LLM profile for this node (for audit trail)
+            _effective_llm = (
+                self._node_llm_overrides.get(node_id)
+                or (node_config.config_overrides or {}).get("llm_profile_id")
+                or self._llm_profile_id
+            )
             await crud.save_node_result(
                 self._run_id,
                 node_id=node_id,
@@ -501,6 +535,7 @@ class DAGPipelineRunner:
                 input_data=parent_outputs,
                 status="completed",
                 duration_seconds=round(duration, 2),
+                llm_profile_id=_effective_llm,
             )
             # Persist any generated source files for playwright agent nodes.
             # Uses playwright_output_parser to handle all LLM output formats.
@@ -558,6 +593,9 @@ class DAGPipelineRunner:
         override_profile_id: Optional[str] = None
         if node_config.config_overrides:
             override_profile_id = node_config.config_overrides.get("llm_profile_id")
+        # Derived-run per-node LLM overrides take precedence over config_overrides
+        if node_config.node_id in self._node_llm_overrides:
+            override_profile_id = self._node_llm_overrides[node_config.node_id]
 
         factory = AgentFactory(run_profile_id=self._llm_profile_id)
 
@@ -979,6 +1017,75 @@ class DAGPipelineRunner:
             "node_outputs": self._node_outputs,
             "status": "cancelled",
         }
+
+    async def _load_inherited_nodes(self, layers: list[list[str]]) -> None:
+        """Load node outputs from the parent run for all nodes that precede
+        ``rerun_from_node`` in the execution order (inclusive of INPUT, exclusive
+        of ``rerun_from_node`` itself and all its downstream nodes).
+
+        Populates ``self._node_outputs`` and ``self._inherited_nodes`` so the
+        layer-execution loop can skip them and carry their data forward.
+        """
+        if not self._parent_run_id or not self._rerun_from_node:
+            return
+
+        # Build set of all nodes that appear *before* rerun_from_node in the
+        # flattened layer order.  Nodes in the same layer as rerun_from_node
+        # that are NOT rerun_from_node itself are also inherited.
+        inherited: set[str] = set()
+        for layer in layers:
+            if self._rerun_from_node in layer:
+                # All other nodes in this layer (siblings) are also inherited
+                for nid in layer:
+                    if nid != self._rerun_from_node:
+                        inherited.add(nid)
+                break
+            inherited.update(layer)
+
+        # INPUT node is always seeded from the new run's initial_input — skip
+        input_node = next(
+            n for n in self._template.nodes if n.node_type == NodeType.INPUT
+        )
+        inherited.discard(input_node.node_id)
+
+        # Fetch outputs from parent and populate caches
+        for node_id in inherited:
+            parent_result = await crud.get_node_result(self._parent_run_id, node_id)
+            if parent_result is None or parent_result.output is None:
+                logger.warning(
+                    "[DAGRunner] Parent run %r has no result for node %r — "
+                    "will re-execute instead of inheriting.",
+                    self._parent_run_id,
+                    node_id,
+                )
+                continue
+
+            self._node_outputs[node_id] = (
+                parent_result.output if isinstance(parent_result.output, dict) else {}
+            )
+            self._inherited_nodes.add(node_id)
+
+            # Persist an inherited-marker result for this node in the new run
+            await crud.save_node_result(
+                self._run_id,
+                node_id=node_id,
+                agent_id=parent_result.agent_id,
+                output=parent_result.output,
+                input_data=parent_result.input_data,
+                status="completed",
+                duration_seconds=parent_result.duration_seconds,
+                llm_profile_id=parent_result.llm_profile_id,
+                is_inherited=True,
+                source_run_id=self._parent_run_id,
+            )
+
+        logger.info(
+            "[DAGRunner] run_id=%r  inherited %d nodes from parent %r: %s",
+            self._run_id,
+            len(self._inherited_nodes),
+            self._parent_run_id,
+            sorted(self._inherited_nodes),
+        )
 
     def _parse_crew_output(self, result: Any) -> dict:  # type: ignore[type-arg]
         """Parse a CrewAI kickoff result into a plain dict.

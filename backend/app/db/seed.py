@@ -29,11 +29,11 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 DEFAULT_LLM_PROFILE: dict[str, Any] = {
-    "name": "GPT-4o (Default)",
-    "provider": "openai",
-    "model": "gpt-4o",
-    "api_key": None,  # user fills this in via Admin UI
-    "base_url": None,
+    "name": "Ollama Local (Default)",
+    "provider": "ollama",
+    "model": "gemma4:e2b",
+    "api_key": None,
+    "base_url": "http://localhost:11434",
     "temperature": 0.1,
     "max_tokens": 2048,
     "is_default": True,
