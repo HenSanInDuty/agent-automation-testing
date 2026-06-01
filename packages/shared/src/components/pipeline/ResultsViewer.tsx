@@ -36,6 +36,10 @@ import type {
 } from "../../types";
 import { toast } from "../../components/ui/Toast";
 import { PrettyOutput } from "./PrettyOutput";
+import { TestCasesTable } from "./TestCasesTable";
+import type { ExecutionStatus, TestCaseRow } from "./TestCasesTable";
+import { CoverageView } from "./CoverageView";
+import type { PreCoverage, PostCoverage } from "./CoverageView";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -905,11 +909,12 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
   const isV3Run =
     !!run.node_statuses && Object.keys(run.node_statuses).length > 0;
 
-  // Fetch per-node outputs for the Nodes tab (V3 only)
+  // Fetch the run's stored stage outputs — feeds the Nodes tab (V3) plus the
+  // structured Test Cases and Coverage tabs (both V2 and V3).
   const { data: nodeResultsRaw } = useQuery({
     queryKey: ["nodeResults", run.id],
     queryFn: () => pipelineApi.getRunResults(run.id),
-    enabled: isV3Run,
+    enabled: true,
     staleTime: 5 * 60_000,
   });
   // Map: node_id → result data for V3
@@ -937,6 +942,59 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
     }
     return map;
   }, [nodeResultsRaw]);
+
+  // ── Test cases + pre-execution coverage (from the test-case stage output) ──
+  const { testCases, preCoverage } = React.useMemo(() => {
+    for (const r of nodeResultsRaw ?? []) {
+      const out = (r as { output?: unknown }).output as
+        | { test_cases?: unknown[]; coverage_summary?: PreCoverage }
+        | undefined;
+      if (out && Array.isArray(out.test_cases) && out.test_cases.length > 0) {
+        const rows: TestCaseRow[] = out.test_cases.map((t) => {
+          const tc = t as Record<string, unknown>;
+          return {
+            id: String(tc.id ?? ""),
+            title: String(tc.title ?? tc.id ?? "Untitled"),
+            description: typeof tc.description === "string" ? tc.description : "",
+            executable: tc.executable !== false,
+          };
+        });
+        return { testCases: rows, preCoverage: out.coverage_summary ?? null };
+      }
+    }
+    return { testCases: [] as TestCaseRow[], preCoverage: null as PreCoverage | null };
+  }, [nodeResultsRaw]);
+
+  // ── Execution outcomes: test_case_id → status (from the execution stage) ───
+  const executionByCaseId = React.useMemo<Record<string, ExecutionStatus>>(() => {
+    const map: Record<string, ExecutionStatus> = {};
+    for (const r of nodeResultsRaw ?? []) {
+      const out = (r as { output?: unknown }).output as { results?: unknown[] } | undefined;
+      if (out && Array.isArray(out.results)) {
+        for (const er of out.results) {
+          const e = er as Record<string, unknown>;
+          const id = typeof e.test_case_id === "string" ? e.test_case_id : null;
+          const status = typeof e.status === "string" ? (e.status as ExecutionStatus) : null;
+          if (id && status) map[id] = status;
+        }
+      }
+    }
+    return map;
+  }, [nodeResultsRaw]);
+
+  // ── Post-execution coverage (from the reporting stage output) ──────────────
+  const postCoverage = React.useMemo<PostCoverage | null>(() => {
+    for (const r of nodeResultsRaw ?? []) {
+      const out = (r as { output?: unknown }).output as
+        | { coverage_analysis?: PostCoverage }
+        | undefined;
+      if (out && out.coverage_analysis && typeof out.coverage_analysis === "object") {
+        return out.coverage_analysis;
+      }
+    }
+    return null;
+  }, [nodeResultsRaw]);
+
   // "Files" tab now lists Playwright artifacts for every run (synthesised from
   // DB output when MinIO is empty). Only V3-only "Nodes" stays gated.
   const visibleTabs =
@@ -1001,10 +1059,11 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
         >
           {activeTab === "testcases" && (
             <div className="space-y-4">
-              {displayAgents.length > 0 ? (
-                displayAgents.map((agent) => (
-                  <AgentOutputCard key={agent.agent_id} agent={agent} />
-                ))
+              {testCases.length > 0 ? (
+                <TestCasesTable
+                  testCases={testCases}
+                  executionByCaseId={executionByCaseId}
+                />
               ) : (
                 <EmptyStage message="Test cases will appear here after the pipeline completes." />
               )}
@@ -1021,10 +1080,8 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
         >
           {activeTab === "coverage" && (
             <div className="space-y-4">
-              {displayAgents.length > 0 ? (
-                displayAgents.map((agent) => (
-                  <AgentOutputCard key={agent.agent_id} agent={agent} />
-                ))
+              {preCoverage || postCoverage ? (
+                <CoverageView pre={preCoverage} post={postCoverage} />
               ) : (
                 <EmptyStage message="Coverage data will appear here after the execution stage completes." />
               )}
