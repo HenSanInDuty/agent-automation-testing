@@ -9,8 +9,14 @@ export default function UserPipelineRunPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      {/* No renderDagView prop — DAG visualization is admin-only (requires React Flow + builder nodes) */}
-      <PipelineRunPage templateId={templateId} />
+      {/* Simplified end-user mode: no LLM profile / run-control choices, results shown inline.
+          DAG visualization stays admin-only (requires React Flow + builder nodes). */}
+      <PipelineRunPage
+        templateId={templateId}
+        hideLlmProfile
+        hideRunControls
+        showResultsInline
+      />
     </div>
   );
 }

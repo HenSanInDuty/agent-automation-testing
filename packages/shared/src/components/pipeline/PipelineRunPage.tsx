@@ -30,6 +30,7 @@ import { usePipelineStore } from "../../store/pipelineStore";
 import { DocumentUpload } from "../../components/pipeline/DocumentUpload";
 import { LLMProfileSelector } from "../../components/pipeline/LLMProfileSelector";
 import { PipelineControls } from "../../components/pipeline/PipelineControls";
+import { ResultsViewer } from "../../components/pipeline/ResultsViewer";
 import { Button } from "../../components/ui/Button";
 import { toast } from "../../components/ui/Toast";
 import type { PipelineStatus } from "../../types";
@@ -539,9 +540,20 @@ function statusMeta(status: PipelineStatus | null | undefined) {
 
 export interface PipelineRunPageProps {
   templateId: string;
+  /** Hide the LLM Profile selector; the run always uses the System Default. */
+  hideLlmProfile?: boolean;
+  /** Hide the Pause/Cancel controls shown while a run is in progress. */
+  hideRunControls?: boolean;
+  /** Render the full ResultsViewer inline once the run reaches a terminal state. */
+  showResultsInline?: boolean;
 }
 
-export function PipelineRunPage({ templateId }: PipelineRunPageProps) {
+export function PipelineRunPage({
+  templateId,
+  hideLlmProfile = false,
+  hideRunControls = false,
+  showResultsInline = false,
+}: PipelineRunPageProps) {
   // ── Local state ────────────────────────────────────────────────────────────
   const [file, setFile] = React.useState<File | null>(null);
   const [llmProfileId, setLlmProfileId] = React.useState<number | null>(null);
@@ -616,6 +628,18 @@ export function PipelineRunPage({ templateId }: PipelineRunPageProps) {
   const canStartRun = !startMutation.isPending && !isActivelyRunning;
 
   const runMeta = statusMeta(activeRunStatus);
+
+  // Node metadata for inline results (mirrors PipelineRunDetailPage shape)
+  const templateNodes = React.useMemo(
+    () =>
+      (template?.nodes ?? []).map((n) => ({
+        node_id: n.node_id,
+        label: n.label,
+        node_type: n.node_type,
+        enabled: n.enabled ?? true,
+      })),
+    [template],
+  );
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleRun = async () => {
@@ -766,20 +790,22 @@ export function PipelineRunPage({ templateId }: PipelineRunPageProps) {
           </section>
 
           {/* LLM profile */}
-          <section className={cn(card, "overflow-hidden")}>
-            <SectionHeader
-              icon={<Sparkles className="w-3.5 h-3.5" />}
-              title="LLM Profile"
-              hint="Model used by AI nodes"
-            />
-            <div className="p-4">
-              <LLMProfileSelector
-                value={llmProfileId}
-                onChange={setLlmProfileId}
-                disabled={isActivelyRunning || startMutation.isPending}
+          {!hideLlmProfile && (
+            <section className={cn(card, "overflow-hidden")}>
+              <SectionHeader
+                icon={<Sparkles className="w-3.5 h-3.5" />}
+                title="LLM Profile"
+                hint="Model used by AI nodes"
               />
-            </div>
-          </section>
+              <div className="p-4">
+                <LLMProfileSelector
+                  value={llmProfileId}
+                  onChange={setLlmProfileId}
+                  disabled={isActivelyRunning || startMutation.isPending}
+                />
+              </div>
+            </section>
+          )}
 
           {/* Run button + controls */}
           <div className="flex flex-col gap-3 pt-1">
@@ -804,7 +830,8 @@ export function PipelineRunPage({ templateId }: PipelineRunPageProps) {
                   : "Run Pipeline"}
             </Button>
 
-            {hasActiveRun &&
+            {!hideRunControls &&
+              hasActiveRun &&
               activeRunStatus &&
               !isTerminal &&
               activeRunId && (
@@ -835,6 +862,11 @@ export function PipelineRunPage({ templateId }: PipelineRunPageProps) {
               templateId={templateId}
               runData={runData ?? undefined}
             />
+          )}
+
+          {/* Full results inline (opt-in) so users see output without navigating away */}
+          {isTerminalRun && showResultsInline && runData && (
+            <ResultsViewer run={runData} templateNodes={templateNodes} />
           )}
         </div>
       </div>

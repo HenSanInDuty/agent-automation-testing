@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import {
   Play,
@@ -8,7 +7,6 @@ import {
   Network,
   Clock,
   Layers,
-  Search,
   Workflow,
   Sparkles,
   CheckCircle2,
@@ -272,15 +270,7 @@ function SkeletonCard() {
 // Hero header
 // ─────────────────────────────────────────────────────────────────────────────
 
-function HeroHeader({
-  total,
-  query,
-  onQueryChange,
-}: {
-  total: number;
-  query: string;
-  onQueryChange: (v: string) => void;
-}) {
+function HeroHeader({ total }: { total: number }) {
   return (
     <header
       className={cn(
@@ -318,31 +308,10 @@ function HeroHeader({
               </span>
             </div>
             <p className="mt-1.5 text-sm text-[#92a4c9] max-w-xl">
-              Select a pipeline to run an automated test workflow or browse its
-              full execution history.
+              Pick a pipeline to run an automated test workflow and see the
+              results right here.
             </p>
           </div>
-        </div>
-
-        {/* Search */}
-        <div className="relative w-full lg:w-72 shrink-0">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5e7196] pointer-events-none"
-            aria-hidden="true"
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Search pipelines…"
-            aria-label="Search pipelines"
-            className={cn(
-              "w-full h-10 pl-9 pr-3 rounded-xl text-sm",
-              "bg-[#101725] border border-[#22304a] text-white placeholder:text-[#5e7196]",
-              "focus:outline-none focus:ring-2 focus:ring-[#135bec]/40 focus:border-[#135bec]/60",
-              "transition-colors",
-            )}
-          />
         </div>
       </div>
     </header>
@@ -353,14 +322,7 @@ function HeroHeader({
 // Empty state
 // ─────────────────────────────────────────────────────────────────────────────
 
-function EmptyState({
-  query,
-  onClearQuery,
-}: {
-  query: string;
-  onClearQuery: () => void;
-}) {
-  const isFiltered = query.trim().length > 0;
+function EmptyState() {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-dashed border-[#22304a] bg-[#141c2c]/40 py-20 px-6 text-center">
       <div
@@ -376,24 +338,11 @@ function EmptyState({
           <Network className="w-7 h-7 text-[#92a4c9]" aria-hidden="true" />
         </div>
         <div className="max-w-md">
-          <p className="text-base font-semibold text-white">
-            {isFiltered ? "No matches found" : "No pipelines yet"}
-          </p>
+          <p className="text-base font-semibold text-white">No pipelines yet</p>
           <p className="mt-1.5 text-sm text-[#92a4c9]">
-            {isFiltered
-              ? `Nothing matches "${query}". Try a different search term.`
-              : "There are no available pipelines for your account yet."}
+            There are no available pipelines for your account yet.
           </p>
         </div>
-        {isFiltered && (
-          <button
-            type="button"
-            onClick={onClearQuery}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-[#1e2a3d] hover:bg-[#263450] text-[#92a4c9] hover:text-white border border-[#22304a] transition-colors"
-          >
-            Clear search
-          </button>
-        )}
       </div>
     </div>
   );
@@ -439,33 +388,12 @@ export default function PipelinesPage() {
   const { data, isLoading, isError, refetch } = usePipelineTemplates({
     include_archived: false,
   });
-  const [query, setQuery] = React.useState("");
 
   const templates = data?.items ?? [];
 
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return templates;
-    return templates.filter((t: PipelineTemplateListItem) => {
-      const haystack = [
-        t.name,
-        t.description,
-        ...(t.tags ?? []),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [templates, query]);
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <HeroHeader
-        total={templates.length}
-        query={query}
-        onQueryChange={setQuery}
-      />
+      <HeroHeader total={templates.length} />
 
       {isError && <ErrorState onRetry={() => refetch()} />}
 
@@ -474,14 +402,14 @@ export default function PipelinesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
-              : filtered.map((t: PipelineTemplateListItem) => (
+              : templates.map((t: PipelineTemplateListItem) => (
                   <PipelineCard key={t.template_id} template={t} />
                 ))}
           </div>
 
-          {!isLoading && filtered.length === 0 && (
+          {!isLoading && templates.length === 0 && (
             <div className="mt-4">
-              <EmptyState query={query} onClearQuery={() => setQuery("")} />
+              <EmptyState />
             </div>
           )}
         </>
