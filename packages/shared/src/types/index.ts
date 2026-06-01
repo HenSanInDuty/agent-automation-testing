@@ -308,6 +308,35 @@ export interface PipelineNodeResult {
   started_at?: string | null;
   completed_at?: string | null;
   duration_seconds?: number | null;
+  // Checkpoint fields
+  llm_profile_id?: string | null;
+  is_inherited?: boolean;
+  source_run_id?: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pipeline Checkpoint — derived run / compare types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DeriveRunRequest {
+  rerun_from_node: string;
+  llm_profile_id?: string | null;
+  node_llm_overrides?: Record<string, string>;
+  label?: string | null;
+}
+
+export interface NodeCompareItem {
+  run_id: string;
+  output: unknown;
+  duration_seconds?: number | null;
+  llm_profile_id?: string | null;
+  is_inherited: boolean;
+  created_at: string;
+}
+
+export interface NodeCompareResponse {
+  node_id: string;
+  runs: NodeCompareItem[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

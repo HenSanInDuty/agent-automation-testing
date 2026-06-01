@@ -7,5 +7,7 @@ export * from "./PipelineRunHistoryPage";
 export * from "./PipelineRunPage";
 export * from "./PrettyOutput";
 export * from "./ResultsViewer";
+export * from "./RunComparePage";
+export * from "./RunCompareView";
 export * from "./RunHistory";
 export * from "./StageResultsPanel";

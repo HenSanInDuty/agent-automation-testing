@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileText, Timer, Calendar } from "lucide-react";
+import { ArrowLeft, FileText, Timer, Calendar, GitBranch, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { usePipelineRun } from "../../hooks/usePipeline";
@@ -11,6 +11,8 @@ import { usePipelineWebSocket } from "../../hooks/usePipelineWebSocket";
 import { ResultsViewer } from "./ResultsViewer";
 import { cn } from "../../lib/utils";
 import { queryKeys } from "../../lib/queryClient";
+import { pipelineApi } from "../../api/client";
+import { toast } from "../../components/ui/Toast";
 import type { PipelineStatus } from "../../types";
 
 function formatDateTime(iso?: string | null): string {
@@ -60,12 +62,113 @@ export interface PipelineRunDetailPageProps {
   runId: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DeriveRunModal
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DeriveRunModalProps {
+  runId: string;
+  templateId: string;
+  nodeIds: string[];
+  onClose: () => void;
+  onDerived: (newRunId: string) => void;
+}
+
+function DeriveRunModal({ runId, templateId, nodeIds, onClose, onDerived }: DeriveRunModalProps) {
+  const [selectedNode, setSelectedNode] = useState(nodeIds[0] ?? "");
+  const [label, setLabel] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedNode) return;
+    setIsSubmitting(true);
+    try {
+      const derived = await pipelineApi.deriveRun(runId, {
+        rerun_from_node: selectedNode,
+        label: label || undefined,
+      });
+      toast.success("Derived run created: " + derived.id.slice(0, 8));
+      onDerived(derived.id);
+      onClose();
+    } catch {
+      toast.error("Failed to create derived run");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-[#2b3b55] bg-[#111827] p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+            <GitBranch className="w-4 h-4 text-blue-400" />
+            Re-run from Checkpoint
+          </h2>
+          <button onClick={onClose} className="text-[#3d5070] hover:text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-[#3d5070] mb-1.5">
+              Re-run from node
+            </label>
+            <select
+              value={selectedNode}
+              onChange={(e) => setSelectedNode(e.target.value)}
+              className="w-full rounded-lg border border-[#2b3b55] bg-[#18202F] text-sm text-white px-3 py-2 focus:outline-none focus:border-blue-500"
+            >
+              {nodeIds.map((id) => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-[#3d5070] mt-1">Nodes before this will be inherited from the current run.</p>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-[#3d5070] mb-1.5">
+              Label (optional)
+            </label>
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. gpt-4o retry"
+              className="w-full rounded-lg border border-[#2b3b55] bg-[#18202F] text-sm text-white px-3 py-2 placeholder:text-[#3d5070] focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-[#2b3b55] px-4 py-2 text-sm text-[#92a4c9] hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedNode || isSubmitting}
+              className="flex-1 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-medium text-white transition-colors"
+            >
+              {isSubmitting ? "Creating…" : "Create derived run"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function PipelineRunDetailPage({ templateId, runId }: PipelineRunDetailPageProps) {
   const qc = useQueryClient();
   const { data: run, isLoading: runLoading, isError: runError } = usePipelineRun(runId);
   const { data: template } = usePipelineTemplate(templateId);
+  const [showDeriveModal, setShowDeriveModal] = useState(false);
 
   const isActive = run?.status === "running" || run?.status === "pending";
+  const isV3 = !!(run?.node_statuses);
+  const canDerive = isV3 && run?.status === "completed";
 
   // Connect WebSocket only while the run is active so we know when it finishes.
   const { isTerminal } = usePipelineWebSocket({
@@ -87,6 +190,8 @@ export function PipelineRunDetailPage({ templateId, runId }: PipelineRunDetailPa
     node_type: n.node_type,
     enabled: n.enabled ?? true,
   }));
+
+  const nodeIds = run?.node_statuses ? Object.keys(run.node_statuses) : [];
 
   const duration = run
     ? formatDuration(run.started_at, run.completed_at, run.duration_seconds)
@@ -110,7 +215,18 @@ export function PipelineRunDetailPage({ templateId, runId }: PipelineRunDetailPa
             <h1 className="text-lg font-semibold text-white">Run Detail</h1>
             <p className="text-xs text-[#3d5070] font-mono mt-0.5">{runId}</p>
           </div>
-          {run && <StatusBadge status={run.status} />}
+          <div className="flex items-center gap-3">
+            {run && <StatusBadge status={run.status} />}
+            {canDerive && (
+              <button
+                onClick={() => setShowDeriveModal(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-white border border-blue-400/30 hover:border-blue-400 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <GitBranch className="w-3 h-3" />
+                Re-run from checkpoint
+              </button>
+            )}
+          </div>
         </div>
 
         {run && (
@@ -164,6 +280,19 @@ export function PipelineRunDetailPage({ templateId, runId }: PipelineRunDetailPa
 
       {run && !runLoading && (
         <ResultsViewer run={run} templateNodes={templateNodes} />
+      )}
+
+      {showDeriveModal && (
+        <DeriveRunModal
+          runId={runId}
+          templateId={templateId}
+          nodeIds={nodeIds}
+          onClose={() => setShowDeriveModal(false)}
+          onDerived={(newId) => {
+            qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.lists() });
+            window.location.href = `/pipelines/${templateId}/runs/${newId}`;
+          }}
+        />
       )}
     </div>
   );

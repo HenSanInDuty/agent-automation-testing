@@ -18,6 +18,10 @@ import {
   FolderOpen,
   Download,
   Archive,
+  ChevronDown,
+  FileJson,
+  FileCode2,
+  Package,
 } from "lucide-react";
 
 import { Badge } from "../../components/ui/Select";
@@ -500,6 +504,155 @@ function ExportButtons({ runId }: { runId: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ArtifactDownloadMenu — Dev/QA hand-off downloads (test cases, unit tests, …)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ArtifactDownloadMenuProps {
+  runId: string;
+}
+
+function ArtifactDownloadMenu({ runId }: ArtifactDownloadMenuProps) {
+  const [open, setOpen] = React.useState(false);
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const run = async (key: string, fn: () => Promise<void>, label: string) => {
+    setBusy(key);
+    try {
+      await fn();
+      toast.success("Download started", `${label} is being saved to your downloads folder.`);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : `Could not download ${label}. The pipeline may not have produced this artifact yet.`;
+      toast.error("Download failed", message);
+    } finally {
+      setBusy(null);
+      setOpen(false);
+    }
+  };
+
+  type MenuItem = {
+    key: string;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    action: () => Promise<void>;
+  };
+
+  const items: MenuItem[] = [
+    {
+      key: "testcases-json",
+      label: "Test Cases (JSON)",
+      description: "Raw test case payload from the generator",
+      icon: <FileJson className="w-3.5 h-3.5 text-[#5b9eff]" aria-hidden="true" />,
+      action: () => pipelineApi.downloadTestCases(runId, "json"),
+    },
+    {
+      key: "testcases-md",
+      label: "Test Cases (Markdown)",
+      description: "Human-readable specification document",
+      icon: <FileText className="w-3.5 h-3.5 text-[#5b9eff]" aria-hidden="true" />,
+      action: () => pipelineApi.downloadTestCases(runId, "md"),
+    },
+    {
+      key: "unit-tests",
+      label: "Unit Tests (.zip)",
+      description: "Generated runnable unit-test files + fixtures",
+      icon: <FileCode2 className="w-3.5 h-3.5 text-[#5b9eff]" aria-hidden="true" />,
+      action: () => pipelineApi.downloadUnitTestsZip(runId),
+    },
+    {
+      key: "execution",
+      label: "Execution Result (JSON)",
+      description: "Pass/fail status, timings, and assertions",
+      icon: <BarChart3 className="w-3.5 h-3.5 text-[#5b9eff]" aria-hidden="true" />,
+      action: () => pipelineApi.downloadExecutionResult(runId),
+    },
+    {
+      key: "bundle",
+      label: "Full Bundle (.zip)",
+      description: "All artifacts in one archive",
+      icon: <Package className="w-3.5 h-3.5 text-[#4ade80]" aria-hidden="true" />,
+      action: () => pipelineApi.downloadBundle(runId),
+    },
+  ];
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen((v) => !v)}
+        leftIcon={
+          busy ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Download className="w-3.5 h-3.5" aria-hidden="true" />
+          )
+        }
+        rightIcon={<ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />}
+        title="Download generated artifacts for this run"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        Downloads
+      </Button>
+
+      {open && (
+        <div
+          role="menu"
+          className={cn(
+            "absolute right-0 mt-1 w-72 z-20",
+            "rounded-xl border border-[#2b3b55] bg-[#18202F] shadow-lg",
+            "overflow-hidden",
+          )}
+        >
+          {items.map((it) => (
+            <button
+              key={it.key}
+              type="button"
+              role="menuitem"
+              disabled={busy !== null}
+              onClick={() => run(it.key, it.action, it.label)}
+              className={cn(
+                "w-full flex items-start gap-2.5 px-3 py-2.5 text-left",
+                "hover:bg-[#1e2a3d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+                "border-b border-[#2b3b55] last:border-b-0",
+              )}
+            >
+              <span className="mt-0.5 shrink-0">
+                {busy === it.key ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5b9eff]" aria-hidden="true" />
+                ) : (
+                  it.icon
+                )}
+              </span>
+              <span className="flex flex-col min-w-0">
+                <span className="text-sm text-white font-medium">{it.label}</span>
+                <span className="text-[11px] text-[#92a4c9] leading-snug">
+                  {it.description}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // NodeResultCard
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -509,6 +662,11 @@ interface NodeResultCardProps {
   nodeType: string;
   status: string;
   outputPreview?: string | null;
+  // Checkpoint fields
+  durationSeconds?: number | null;
+  llmProfileId?: string | null;
+  isInherited?: boolean;
+  runId?: string;
 }
 
 function NodeResultCard({
@@ -517,6 +675,10 @@ function NodeResultCard({
   nodeType,
   status,
   outputPreview,
+  durationSeconds,
+  llmProfileId,
+  isInherited,
+  runId,
 }: NodeResultCardProps) {
   const statusColors: Record<string, string> = {
     idle: "text-zinc-500",
@@ -532,28 +694,67 @@ function NodeResultCard({
     pure_python: "🐍",
   };
 
+  const durationLabel = durationSeconds != null
+    ? (durationSeconds < 60
+        ? `${Math.round(durationSeconds)}s`
+        : `${Math.floor(durationSeconds / 60)}m ${Math.round(durationSeconds % 60)}s`)
+    : null;
+
+  const exportUrl = runId && status === "completed" && !isInherited
+    ? pipelineApi.getNodeExportUrl(runId, nodeId)
+    : null;
+
   return (
     <div className="rounded-xl border border-[#2b3b55] bg-[#18202F] p-4">
       <div className="flex items-center gap-3">
         <span className="text-xl">{nodeIcons[nodeType] ?? "🤖"}</span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-white truncate">
               {label}
             </span>
             <code className="text-[10px] font-mono text-[#3d5070] bg-[#1e2a3d] px-1.5 py-0.5 rounded border border-[#2b3b55]">
               {nodeId.slice(0, 12)}…
             </code>
-          </div>
-          <span
-            className={cn(
-              "text-xs capitalize mt-0.5 block",
-              statusColors[status] ?? "text-zinc-500",
+            {isInherited && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-1.5 py-0.5 rounded">
+                <SkipForward className="w-2.5 h-2.5" />
+                Inherited
+              </span>
             )}
-          >
-            {status}
-          </span>
+          </div>
+          <div className="flex items-center gap-3 mt-0.5">
+            <span
+              className={cn(
+                "text-xs capitalize",
+                statusColors[status] ?? "text-zinc-500",
+              )}
+            >
+              {status}
+            </span>
+            {durationLabel && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-[#3d5070]">
+                <Clock className="w-2.5 h-2.5" />
+                {durationLabel}
+              </span>
+            )}
+            {llmProfileId && (
+              <span className="text-[10px] text-[#3d5070] font-mono truncate max-w-[120px]">
+                {llmProfileId}
+              </span>
+            )}
+          </div>
         </div>
+        {exportUrl && (
+          <a
+            href={exportUrl}
+            download
+            className="shrink-0 inline-flex items-center gap-1 text-[10px] text-[#92a4c9] hover:text-white border border-[#2b3b55] hover:border-[#92a4c9] px-2 py-1 rounded transition-colors"
+          >
+            <Download className="w-3 h-3" />
+            JSON
+          </a>
+        )}
       </div>
       {outputPreview && (
         <PrettyOutput value={outputPreview} className="mt-3" />
@@ -707,19 +908,34 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
     enabled: isV3Run,
     staleTime: 5 * 60_000,
   });
-  // Map: stage field = node_id for V3 results
+  // Map: node_id → result data for V3
   const nodeOutputMap = React.useMemo(() => {
-    const map: Record<string, { output?: unknown; status?: string }> = {};
+    const map: Record<string, {
+      output?: unknown;
+      status?: string;
+      durationSeconds?: number | null;
+      llmProfileId?: string | null;
+      isInherited?: boolean;
+    }> = {};
     if (nodeResultsRaw) {
       for (const r of nodeResultsRaw) {
-        if ((r as any).stage) {
-          map[(r as any).stage] = { output: (r as any).output, status: (r as any).status };
+        const key = r.node_id ?? (r as any).stage;
+        if (key) {
+          map[key] = {
+            output: r.output,
+            status: (r as any).status,
+            durationSeconds: r.duration_seconds,
+            llmProfileId: r.llm_profile_id,
+            isInherited: r.is_inherited,
+          };
         }
       }
     }
     return map;
   }, [nodeResultsRaw]);
-  const visibleTabs = isV3Run ? TABS : TABS.filter((t) => t.id !== "nodes" && t.id !== "files");
+  // "Files" tab now lists Playwright artifacts for every run (synthesised from
+  // DB output when MinIO is empty). Only V3-only "Nodes" stays gated.
+  const visibleTabs = isV3Run ? TABS : TABS.filter((t) => t.id !== "nodes");
 
   return (
     <div className="rounded-2xl border border-[#2b3b55] bg-[#18202F] overflow-hidden">
@@ -760,10 +976,11 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
           })}
         </div>
 
-        {/* ── Export buttons (completed or paused with partial results) ─── */}
+        {/* ── Export + artifact downloads (completed or paused) ─── */}
         {canExport && (
-          <div className="px-3 py-1.5">
+          <div className="px-3 py-1.5 flex items-center gap-2">
             <ExportButtons runId={run.id} />
+            <ArtifactDownloadMenu runId={run.id} />
           </div>
         )}
       </div>
@@ -868,6 +1085,10 @@ export function ResultsViewer({ run, templateNodes }: ResultsViewerProps) {
                       nodeType={tmplNode?.node_type ?? "agent"}
                       status={status}
                       outputPreview={outputPreview}
+                      durationSeconds={nodeData?.durationSeconds}
+                      llmProfileId={nodeData?.llmProfileId}
+                      isInherited={nodeData?.isInherited}
+                      runId={run.id}
                     />
                   );
                 })

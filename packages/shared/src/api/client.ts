@@ -18,6 +18,8 @@ import type {
   PaginationParams,
   PipelineActionResponse,
   PipelineAgentGroup,
+  DeriveRunRequest,
+  NodeCompareResponse,
   PipelineNodeResult,
   PipelineRunListResponse,
   PipelineRunResponse,
@@ -450,6 +452,36 @@ export const pipelineApi = {
     return data;
   },
 
+  /** POST /api/v1/pipeline/runs/:run_id/derive */
+  deriveRun: async (
+    runId: string,
+    body: DeriveRunRequest,
+  ): Promise<PipelineRunResponse> => {
+    const { data } = await apiClient.post<PipelineRunResponse>(
+      `/api/v1/pipeline/runs/${runId}/derive`,
+      body,
+    );
+    return data;
+  },
+
+  /** GET /api/v1/pipeline/runs/compare?run_ids=...&node_id=... */
+  compareRunNodes: async (
+    runIds: string[],
+    nodeId: string,
+  ): Promise<NodeCompareResponse> => {
+    const { data } = await apiClient.get<NodeCompareResponse>(
+      `/api/v1/pipeline/runs/compare`,
+      { params: { run_ids: runIds.join(","), node_id: nodeId } },
+    );
+    return data;
+  },
+
+  /** URL for downloading a single node output as JSON */
+  getNodeExportUrl: (runId: string, nodeId: string): string => {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    return `${base}/api/v1/pipeline/runs/${runId}/nodes/${nodeId}/export`;
+  },
+
   /** GET /api/v1/pipeline/runs/:run_id/artifacts/playwright */
   listPlaywrightArtifacts: async (
     runId: string,
@@ -470,6 +502,88 @@ export const pipelineApi = {
   getPlaywrightFileUrl: (runId: string, filePath: string): string => {
     const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     return `${base}/api/v1/pipeline/runs/${runId}/artifacts/playwright/file?path=${encodeURIComponent(filePath)}`;
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/artifacts/testcases?format=json|md */
+  downloadTestCases: async (
+    runId: string,
+    format: "json" | "md" = "json",
+  ): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/artifacts/testcases`,
+      { params: { format }, responseType: "blob" },
+    );
+    const ext = format === "md" ? "md" : "json";
+    const mime = format === "md" ? "text/markdown" : "application/json";
+    triggerBrowserDownload(
+      response.data,
+      `test-cases-${runId.slice(0, 8)}.${ext}`,
+      mime,
+    );
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/artifacts/unit-tests */
+  listUnitTestFiles: async (
+    runId: string,
+  ): Promise<Array<{
+    filename: string;
+    language: string;
+    framework: string;
+    test_count: number;
+    size_bytes: number;
+  }>> => {
+    const { data } = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/artifacts/unit-tests`,
+    );
+    return data;
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/artifacts/unit-tests/zip */
+  downloadUnitTestsZip: async (runId: string): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/artifacts/unit-tests/zip`,
+      { responseType: "blob" },
+    );
+    triggerBrowserDownload(
+      response.data,
+      `unit-tests-${runId.slice(0, 8)}.zip`,
+      "application/zip",
+    );
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/artifacts/unit-tests/file?name=... */
+  downloadUnitTestFile: async (runId: string, name: string): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/artifacts/unit-tests/file`,
+      { params: { name }, responseType: "blob" },
+    );
+    triggerBrowserDownload(response.data, name, "text/plain");
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/artifacts/execution-result */
+  downloadExecutionResult: async (runId: string): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/artifacts/execution-result`,
+      { responseType: "blob" },
+    );
+    triggerBrowserDownload(
+      response.data,
+      `execution-result-${runId.slice(0, 8)}.json`,
+      "application/json",
+    );
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/artifacts/bundle */
+  downloadBundle: async (runId: string): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/artifacts/bundle`,
+      { responseType: "blob" },
+    );
+    triggerBrowserDownload(
+      response.data,
+      `auto-at-bundle-${runId.slice(0, 8)}.zip`,
+      "application/zip",
+    );
   },
 };
 
