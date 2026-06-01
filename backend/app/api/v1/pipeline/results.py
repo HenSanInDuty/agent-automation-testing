@@ -101,8 +101,13 @@ async def get_pipeline_results(
             run_id=r.run_id,
             stage=r.stage or "",
             agent_id=r.agent_id or "",
+            node_id=r.node_id,
             output=r.output,
             created_at=r.created_at,
+            llm_profile_id=r.llm_profile_id,
+            is_inherited=r.is_inherited,
+            source_run_id=r.source_run_id,
+            duration_seconds=r.duration_seconds,
         )
         for r in raw_results
     ]
