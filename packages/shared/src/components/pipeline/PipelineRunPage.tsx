@@ -772,92 +772,40 @@ export function PipelineRunPage({
         </div>
       </header>
 
-      {/* ── Main two-column grid ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
-        {/* ── Left column: controls ──────────────────────────────────────── */}
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
-          {/* Document upload */}
-          <section className={cn(card, "overflow-hidden")}>
-            <SectionHeader
-              icon={<FileText className="w-3.5 h-3.5" />}
-              title="Document"
-              hint="Optional input file"
-            />
-            <div className="p-4">
-              <DocumentUpload
-                file={file}
-                onChange={setFile}
-                disabled={isActivelyRunning || startMutation.isPending}
-              />
-            </div>
-          </section>
-
-          {/* LLM profile */}
-          {!hideLlmProfile && (
-            <section className={cn(card, "overflow-hidden")}>
-              <SectionHeader
-                icon={<Sparkles className="w-3.5 h-3.5" />}
-                title="LLM Profile"
-                hint="Model used by AI nodes"
-              />
-              <div className="p-4">
-                <LLMProfileSelector
-                  value={llmProfileId}
-                  onChange={setLlmProfileId}
-                  disabled={isActivelyRunning || startMutation.isPending}
-                />
-              </div>
-            </section>
-          )}
-
-          {/* Run button + controls */}
-          <div className="flex flex-col gap-3 pt-1">
+      {/* ── Results layout ───────────────────────────────────────────────────
+          End-user inline mode after a terminal run → collapse controls into a
+          slim bar and give the results the full page width. Everything else
+          (idle, running, admin) keeps the two-column controls + preview grid. */}
+      {showResultsInline && isTerminalRun ? (
+        <div className="flex flex-col gap-4">
+          {/* Compact run-again bar (controls collapsed) */}
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#22304a] bg-[#141c2c]/80 px-4 py-3">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border",
+                runMeta.cls,
+              )}
+            >
+              <span className={cn("w-1.5 h-1.5 rounded-full", runMeta.dot)} />
+              {runMeta.label}
+            </span>
             <Button
               variant="primary"
-              size="lg"
-              fullWidth
+              size="sm"
               loading={startMutation.isPending}
               disabled={!canStartRun}
               onClick={handleRun}
               leftIcon={
                 !startMutation.isPending ? (
-                  <Play className="w-4 h-4 fill-current" aria-hidden="true" />
+                  <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
                 ) : undefined
               }
-              className="shadow-lg shadow-blue-500/20"
             >
-              {startMutation.isPending
-                ? "Starting…"
-                : isActivelyRunning
-                  ? "Pipeline Running…"
-                  : "Run Pipeline"}
+              {startMutation.isPending ? "Starting…" : "Run again"}
             </Button>
-
-            {!hideRunControls &&
-              hasActiveRun &&
-              activeRunStatus &&
-              !isTerminal &&
-              activeRunId && (
-                <div className="flex justify-center">
-                  <PipelineControls
-                    runId={activeRunId}
-                    status={activeRunStatus}
-                    onCancelled={() => {
-                      /* store updates via WS */
-                    }}
-                  />
-                </div>
-              )}
           </div>
-        </aside>
 
-        {/* ── Right column: DAG + progress ──────────────────────────────── */}
-        <div className="flex flex-col gap-4 min-w-0">
-          {!hasActiveRun && <NoRunPlaceholder />}
-
-          {isActivelyRunning && <RunInProgressCard />}
-
-          {isTerminalRun && activeRunStatus && activeRunId && (
+          {activeRunStatus && activeRunId && (
             <TerminalSummaryCard
               status={activeRunStatus}
               runId={activeRunId}
@@ -867,8 +815,7 @@ export function PipelineRunPage({
             />
           )}
 
-          {/* Full results inline (opt-in) so users see output without navigating away */}
-          {isTerminalRun && showResultsInline && runData && (
+          {runData && (
             <ResultsViewer
               run={runData}
               templateNodes={templateNodes}
@@ -876,7 +823,103 @@ export function PipelineRunPage({
             />
           )}
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
+          {/* ── Left column: controls ──────────────────────────────────────── */}
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+            {/* Document upload */}
+            <section className={cn(card, "overflow-hidden")}>
+              <SectionHeader
+                icon={<FileText className="w-3.5 h-3.5" />}
+                title="Document"
+                hint="Optional input file"
+              />
+              <div className="p-4">
+                <DocumentUpload
+                  file={file}
+                  onChange={setFile}
+                  disabled={isActivelyRunning || startMutation.isPending}
+                />
+              </div>
+            </section>
+
+            {/* LLM profile */}
+            {!hideLlmProfile && (
+              <section className={cn(card, "overflow-hidden")}>
+                <SectionHeader
+                  icon={<Sparkles className="w-3.5 h-3.5" />}
+                  title="LLM Profile"
+                  hint="Model used by AI nodes"
+                />
+                <div className="p-4">
+                  <LLMProfileSelector
+                    value={llmProfileId}
+                    onChange={setLlmProfileId}
+                    disabled={isActivelyRunning || startMutation.isPending}
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* Run button + controls */}
+            <div className="flex flex-col gap-3 pt-1">
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={startMutation.isPending}
+                disabled={!canStartRun}
+                onClick={handleRun}
+                leftIcon={
+                  !startMutation.isPending ? (
+                    <Play className="w-4 h-4 fill-current" aria-hidden="true" />
+                  ) : undefined
+                }
+                className="shadow-lg shadow-blue-500/20"
+              >
+                {startMutation.isPending
+                  ? "Starting…"
+                  : isActivelyRunning
+                    ? "Pipeline Running…"
+                    : "Run Pipeline"}
+              </Button>
+
+              {!hideRunControls &&
+                hasActiveRun &&
+                activeRunStatus &&
+                !isTerminal &&
+                activeRunId && (
+                  <div className="flex justify-center">
+                    <PipelineControls
+                      runId={activeRunId}
+                      status={activeRunStatus}
+                      onCancelled={() => {
+                        /* store updates via WS */
+                      }}
+                    />
+                  </div>
+                )}
+            </div>
+          </aside>
+
+          {/* ── Right column: DAG + progress ──────────────────────────────── */}
+          <div className="flex flex-col gap-4 min-w-0">
+            {!hasActiveRun && <NoRunPlaceholder />}
+
+            {isActivelyRunning && <RunInProgressCard />}
+
+            {isTerminalRun && activeRunStatus && activeRunId && (
+              <TerminalSummaryCard
+                status={activeRunStatus}
+                runId={activeRunId}
+                nodeStatuses={nodeStatuses}
+                templateId={templateId}
+                runData={runData ?? undefined}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Log messages (collapsible) ────────────────────────────────────── */}
       {hasActiveRun && (

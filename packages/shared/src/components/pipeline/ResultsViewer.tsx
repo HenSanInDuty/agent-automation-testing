@@ -37,7 +37,12 @@ import type {
 import { toast } from "../../components/ui/Toast";
 import { PrettyOutput } from "./PrettyOutput";
 import { TestCasesTable } from "./TestCasesTable";
-import type { ExecutionStatus, TestCaseRow } from "./TestCasesTable";
+import type {
+  ExecutionStatus,
+  TestStepRow,
+  TestCaseRow,
+  TestExecutionDetail,
+} from "./TestCasesTable";
 import { CoverageView } from "./CoverageView";
 import type { PreCoverage, PostCoverage } from "./CoverageView";
 
@@ -957,6 +962,14 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
             title: String(tc.title ?? tc.id ?? "Untitled"),
             description: typeof tc.description === "string" ? tc.description : "",
             executable: tc.executable !== false,
+            preconditions: typeof tc.preconditions === "string" ? tc.preconditions : undefined,
+            expectedResult: typeof tc.expected_result === "string" ? tc.expected_result : undefined,
+            steps: Array.isArray(tc.steps) ? (tc.steps as TestStepRow[]) : undefined,
+            httpMethod: typeof tc.http_method === "string" ? tc.http_method : null,
+            apiEndpoint: typeof tc.api_endpoint === "string" ? tc.api_endpoint : null,
+            requestHeaders: tc.request_headers ?? null,
+            requestBody: tc.request_body ?? null,
+            expectedStatusCode: typeof tc.expected_status_code === "number" ? tc.expected_status_code : null,
           };
         });
         return { testCases: rows, preCoverage: out.coverage_summary ?? null };
@@ -965,9 +978,9 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
     return { testCases: [] as TestCaseRow[], preCoverage: null as PreCoverage | null };
   }, [nodeResultsRaw]);
 
-  // ── Execution outcomes: test_case_id → status (from the execution stage) ───
-  const executionByCaseId = React.useMemo<Record<string, ExecutionStatus>>(() => {
-    const map: Record<string, ExecutionStatus> = {};
+  // ── Execution outcomes: test_case_id → detail (status + actual req/response) ─
+  const executionByCaseId = React.useMemo<Record<string, TestExecutionDetail>>(() => {
+    const map: Record<string, TestExecutionDetail> = {};
     for (const r of nodeResultsRaw ?? []) {
       const out = (r as { output?: unknown }).output as { results?: unknown[] } | undefined;
       if (out && Array.isArray(out.results)) {
@@ -975,7 +988,17 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
           const e = er as Record<string, unknown>;
           const id = typeof e.test_case_id === "string" ? e.test_case_id : null;
           const status = typeof e.status === "string" ? (e.status as ExecutionStatus) : null;
-          if (id && status) map[id] = status;
+          if (id && status) {
+            map[id] = {
+              status,
+              actualStatusCode: typeof e.actual_status_code === "number" ? e.actual_status_code : null,
+              actualResponse: e.actual_response ?? null,
+              actualResult: typeof e.actual_result === "string" ? e.actual_result : undefined,
+              errorMessage: typeof e.error_message === "string" ? e.error_message : null,
+              durationMs: typeof e.duration_ms === "number" ? e.duration_ms : undefined,
+              logs: Array.isArray(e.logs) ? (e.logs as string[]) : undefined,
+            };
+          }
         }
       }
     }
