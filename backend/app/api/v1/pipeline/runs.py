@@ -47,8 +47,10 @@ from app.schemas.pipeline import (
 
 from ._background import _run_dag_pipeline_background, _run_pipeline_background
 from ._helpers import (
+    _cleanup_rejected_upload,
     _dag_run_to_response,
     _get_run_or_404,
+    _preflight_api_spec_upload,
     _run_to_response,
     _save_upload,
     _validate_upload,
@@ -204,6 +206,12 @@ async def create_pipeline_run(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"run_params is not valid JSON: {exc}",
         ) from exc
+    strict_md_spec = parsed_run_params.get("strict_md_spec", True)
+    if not isinstance(strict_md_spec, bool):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="run_params.strict_md_spec must be a boolean.",
+        )
 
     template = await crud.get_pipeline_template(template_id)
     if template is None:
@@ -250,9 +258,37 @@ async def create_pipeline_run(
     file_path: Optional[str] = None
     document_name: str = ""
 
+    if template_id == "automation-testing-api" and not (file and file.filename):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error_type": "md_spec_validation",
+                "code": "MD_SPEC_FILE_REQUIRED",
+                "missing_sections": [],
+                "missing_fields": ["document"],
+                "field_errors": [
+                    {
+                        "field": "document",
+                        "code": "MD_SPEC_FILE_REQUIRED",
+                        "detail": "Upload one Markdown API specification.",
+                    }
+                ],
+                "detail": "automation-testing-api requires one uploaded API specification.",
+            },
+        )
+
     if file and file.filename:
         _validate_upload(file)
         document_name, file_path = _save_upload(file, run_id)
+        if template_id == "automation-testing-api":
+            try:
+                _preflight_api_spec_upload(
+                    file_path,
+                    strict=strict_md_spec,
+                )
+            except HTTPException:
+                _cleanup_rejected_upload(run_id)
+                raise
 
     run = await crud.create_dag_run(
         run_id=run_id,

@@ -52,8 +52,8 @@ class ApiTestCaseCrew(BaseCrew):
         Args:
             input_data: Merged DAG input. Expected keys:
                 - ``md_spec_parsed`` (dict): from ``md_api_spec_verifier``.
-                - ``document_content`` (str): raw MD — used to recover the
-                  ``Base URL:`` declared in the spec body.
+                - ``document_content`` (str): retained for compatibility;
+                  normalized URL and headers come from ``md_spec_parsed``.
                 - ``requirements`` (list[dict], optional): used purely for
                   traceability — the first ``id`` is attached to every
                   generated test case.

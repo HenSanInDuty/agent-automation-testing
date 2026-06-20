@@ -21,6 +21,7 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - And other workflows: `./.claude/rules/*`
 
 **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
+**IMPORTANT:** At session start, use the local skill at `.codex/skills/auto-at-session-bootstrap/SKILL.md` to bootstrap repo context.
 **IMPORTANT:** You must follow strictly the development rules in `./.claude/rules/development-rules.md` file.
 **IMPORTANT:** Before you plan or proceed any implementation, always read the `./README.md` file first to get context.
 **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
@@ -38,11 +39,11 @@ Keep all important docs in `./docs` folder:
 
 ```
 ./docs
-├── project-overview-pdr.md
-├── code-standards.md
-├── codebase-summary.md
-├── design-guidelines.md
-└── system-architecture.md
+â”œâ”€â”€ project-overview-pdr.md
+â”œâ”€â”€ code-standards.md
+â”œâ”€â”€ codebase-summary.md
+â”œâ”€â”€ design-guidelines.md
+â””â”€â”€ system-architecture.md
 ```
 
 ## External Files
@@ -63,7 +64,7 @@ Reference external instruction files in `opencode.json`:
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **agent-automation-testing** (9338 symbols, 16093 relationships, 197 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **agent-automation-testing** (9393 symbols, 16197 relationships, 196 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

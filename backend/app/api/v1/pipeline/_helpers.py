@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json as _json
 import logging
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from pydantic import BaseModel as _BaseModel
 from app.config import settings
 from app.db import crud
 from app.db.models import PipelineRunDocument
+from app.core.errors import MDSpecValidationError
 from app.schemas.pipeline import (
     AGENT_STATUS_TO_FRONTEND,
     AgentRunResult,
@@ -310,3 +312,65 @@ def _save_upload(file: UploadFile, run_id: str) -> tuple[str, str]:
         logger.warning("[Pipeline] MinIO upload skipped (non-fatal): %s", exc)
 
     return document_name, str(dest_path)
+
+
+def _preflight_api_spec_upload(file_path: str, *, strict: bool = True) -> None:
+    """Validate a saved API-spec upload before any run document is created."""
+    path = Path(file_path)
+    if path.suffix.lower() not in {".md", ".markdown"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error_type": "md_spec_validation",
+                "code": "MD_SPEC_UNSUPPORTED_FILE_TYPE",
+                "missing_sections": [],
+                "missing_fields": [],
+                "field_errors": [],
+                "detail": "automation-testing-api requires a Markdown API specification.",
+            },
+        )
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error_type": "md_spec_validation",
+                "code": "MD_SPEC_UNREADABLE",
+                "missing_sections": [],
+                "missing_fields": [],
+                "field_errors": [],
+                "detail": "Uploaded Markdown must be readable UTF-8 text.",
+            },
+        ) from exc
+
+    from app.tools.md_api_spec_validator import validate_md_api_spec
+
+    result = validate_md_api_spec(text, strict=strict)
+    if result.valid:
+        return
+    error = MDSpecValidationError(
+        code=result.code or "MD_SPEC_VALIDATION_FAILED",
+        detail=result.detail or "MD spec failed validation.",
+        missing_sections=result.missing_sections,
+        missing_fields=result.missing_fields,
+        field_errors=[item.model_dump() for item in result.field_errors],
+    )
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail=error.to_dict(),
+    )
+
+
+def _cleanup_rejected_upload(run_id: str) -> None:
+    """Best-effort removal of local and MinIO objects for a rejected preflight."""
+    upload_root = Path(settings.UPLOAD_DIR).resolve()
+    run_dir = (upload_root / run_id).resolve()
+    if run_dir.parent == upload_root:
+        shutil.rmtree(run_dir, ignore_errors=True)
+    try:
+        from app.services.storage_service import storage
+
+        storage.delete_run_artifacts(run_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to clean rejected upload for run %s: %s", run_id, exc)

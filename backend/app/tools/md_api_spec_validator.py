@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
@@ -35,6 +36,7 @@ _SECTION_SYNONYMS: dict[str, list[str]] = {
     "endpoint": ["endpoint", "api endpoint", "api", "route", "uri"],
     "request": ["request", "req", "request payload", "input", "body"],
     "response": ["response", "responses", "resp", "output", "result"],
+    "headers": ["headers", "request headers", "header"],
 }
 
 _HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
@@ -45,6 +47,7 @@ _METHODS_WITH_BODY = {"POST", "PUT", "PATCH"}
 _RE_METHOD = re.compile(r"(?im)^\s*[-*]?\s*Method\s*[:=]\s*(\w+)")
 _RE_PATH = re.compile(r"(?im)^\s*[-*]?\s*Path\s*[:=]\s*(\S+)")
 _RE_AUTH = re.compile(r"(?im)^\s*[-*]?\s*Auth\s*[:=]\s*(.+)$")
+_RE_BASE_URL = re.compile(r"(?im)^\s*[-*]?\s*Base[\s_-]*URL\s*[:=]\s*(\S+)")
 _RE_STATUS_CODE = re.compile(r"\b([1-5]\d{2})\b")
 _RE_TABLE_SEPARATOR = re.compile(r"^\s*\|?\s*[:\- ]+\s*\|")
 
@@ -79,10 +82,25 @@ class ParsedResponse(BaseModel):
     payload_preview: str = ""
 
 
+class ParsedHeader(BaseModel):
+    name: str
+    value_schema: str = ""
+    required: bool = False
+
+
 class ParsedSpec(BaseModel):
+    base_url: str = ""
     endpoint: ParsedEndpoint = Field(default_factory=ParsedEndpoint)
     request: ParsedRequest = Field(default_factory=ParsedRequest)
     responses: list[ParsedResponse] = Field(default_factory=list)
+    response_body: str = ""
+    headers: list[ParsedHeader] = Field(default_factory=list)
+
+
+class FieldViolation(BaseModel):
+    field: str
+    code: str
+    detail: str
 
 
 class ValidationResult(BaseModel):
@@ -91,6 +109,7 @@ class ValidationResult(BaseModel):
     detail: str = ""
     missing_sections: list[str] = Field(default_factory=list)
     missing_fields: list[str] = Field(default_factory=list)
+    field_errors: list[FieldViolation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     parsed: ParsedSpec = Field(default_factory=ParsedSpec)
 
@@ -123,128 +142,106 @@ def validate_md_api_spec(
     """
     synonyms = _merge_synonyms(extra_synonyms)
     sections = _extract_sections(text, synonyms)
-    parsed = ParsedSpec()
-    warnings: list[str] = []
+    parsed = ParsedSpec(base_url=_parse_base_url(text))
+    violations: list[FieldViolation] = []
     missing_sections: list[str] = []
-    missing_fields: list[str] = []
 
     # ── 1. Endpoint section ────────────────────────────────────────────────
     endpoint_text = sections.get("endpoint", "")
     if not endpoint_text:
-        return _fail(
-            code="MD_SPEC_MISSING_ENDPOINT",
-            detail="Section '## Endpoint' is missing from the MD spec.",
-            missing_sections=["endpoint"],
-            strict=strict,
-            warnings=warnings,
-            parsed=parsed,
+        missing_sections.append("endpoint")
+        violations.extend(
+            [
+                _violation("endpoint.method", "MD_SPEC_MISSING_ENDPOINT", "Endpoint method is required."),
+                _violation("endpoint.path", "MD_SPEC_MISSING_ENDPOINT", "Endpoint path is required."),
+            ]
         )
-
-    endpoint, ep_missing = _parse_endpoint(endpoint_text)
-    parsed.endpoint = endpoint
-    if ep_missing:
-        return _fail(
-            code="MD_SPEC_MISSING_ENDPOINT",
-            detail=(
-                "Section '## Endpoint' must declare both "
-                "'Method:' and 'Path:'. Missing: "
-                + ", ".join(ep_missing)
-            ),
-            missing_sections=["endpoint"],
-            missing_fields=ep_missing,
-            strict=strict,
-            warnings=warnings,
-            parsed=parsed,
-        )
-
-    if endpoint.method.upper() not in _HTTP_METHODS:
-        return _fail(
-            code="MD_SPEC_INVALID_METHOD",
-            detail=(
-                f"Method '{endpoint.method}' is not a valid HTTP method. "
-                f"Allowed: {sorted(_HTTP_METHODS)}"
-            ),
-            strict=strict,
-            warnings=warnings,
-            parsed=parsed,
-        )
-
-    if not endpoint.path.startswith("/"):
-        return _fail(
-            code="MD_SPEC_INVALID_PATH",
-            detail=f"Path '{endpoint.path}' must start with '/'.",
-            strict=strict,
-            warnings=warnings,
-            parsed=parsed,
-        )
+    else:
+        endpoint, ep_missing = _parse_endpoint(endpoint_text)
+        parsed.endpoint = endpoint
+        for field in ep_missing:
+            canonical = f"endpoint.{field.lower()}"
+            violations.append(
+                _violation(canonical, "MD_SPEC_MISSING_ENDPOINT", f"{canonical} is required.")
+            )
+        if endpoint.method and endpoint.method.upper() not in _HTTP_METHODS:
+            violations.append(
+                _violation(
+                    "endpoint.method",
+                    "MD_SPEC_INVALID_METHOD",
+                    f"Endpoint method must be one of {sorted(_HTTP_METHODS)}.",
+                )
+            )
+        if endpoint.path and not endpoint.path.startswith("/"):
+            violations.append(
+                _violation("endpoint.path", "MD_SPEC_INVALID_PATH", "Endpoint path must start with '/'.")
+            )
 
     # ── 2. Request section ─────────────────────────────────────────────────
     request_text = sections.get("request", "")
-    method_upper = endpoint.method.upper()
-    needs_body = method_upper in _METHODS_WITH_BODY
-
-    if needs_body and not request_text:
-        return _fail(
-            code="MD_SPEC_MISSING_REQUEST_BODY",
-            detail=(
-                f"Method {method_upper} requires a '## Request' section "
-                "with a body schema."
-            ),
-            missing_sections=["request"],
-            strict=strict,
-            warnings=warnings,
-            parsed=parsed,
+    if not request_text:
+        missing_sections.append("request")
+        violations.append(
+            _violation("request.body", "MD_SPEC_MISSING_REQUEST_BODY", "A non-empty request body schema is required for every method.")
         )
-
-    if request_text:
+    else:
         req, req_missing = _parse_request(request_text)
         parsed.request = req
-        if needs_body and not req.body_fields and not req.raw_body_schema:
-            return _fail(
-                code="MD_SPEC_MISSING_REQUEST_BODY",
-                detail=(
-                    f"Method {method_upper} requires a non-empty body schema "
-                    "(markdown table or JSON block) inside '## Request'."
-                ),
-                missing_sections=["request"],
-                missing_fields=req_missing or ["body_schema"],
-                strict=strict,
-                warnings=warnings,
-                parsed=parsed,
+        if not req.body_fields and not req.raw_body_schema:
+            violations.append(
+                _violation("request.body", "MD_SPEC_MISSING_REQUEST_BODY", "Request body schema must contain fields or a JSON block.")
             )
 
     # ── 3. Response section ────────────────────────────────────────────────
     response_text = sections.get("response", "")
     if not response_text:
-        return _fail(
-            code="MD_SPEC_MISSING_RESPONSE_STATUS",
-            detail="Section '## Response' is missing from the MD spec.",
-            missing_sections=["response"],
-            strict=strict,
-            warnings=warnings,
-            parsed=parsed,
+        missing_sections.append("response")
+        violations.extend(
+            [
+                _violation("response.status", "MD_SPEC_MISSING_RESPONSE_STATUS", "At least one response status is required."),
+                _violation("response.body", "MD_SPEC_MISSING_RESPONSE_BODY", "A non-empty response body schema is required."),
+            ]
+        )
+    else:
+        parsed.responses = _parse_responses(response_text)
+        parsed.response_body = _extract_response_body(response_text, parsed.responses)
+        if not parsed.responses:
+            violations.append(
+                _violation("response.status", "MD_SPEC_MISSING_RESPONSE_STATUS", "Response section must contain an HTTP status code.")
+            )
+        if not parsed.response_body:
+            violations.append(
+                _violation("response.body", "MD_SPEC_MISSING_RESPONSE_BODY", "Response section must contain a JSON body or schema.")
+            )
+
+    if not parsed.base_url or not _is_valid_base_url(parsed.base_url):
+        code = "MD_SPEC_MISSING_BASE_URL" if not parsed.base_url else "MD_SPEC_INVALID_BASE_URL"
+        violations.append(
+            _violation("base_url", code, "Base URL must be an absolute http(s) URL.")
         )
 
-    responses = _parse_responses(response_text)
-    parsed.responses = responses
-    if not responses:
-        return _fail(
-            code="MD_SPEC_MISSING_RESPONSE_STATUS",
-            detail=(
-                "Section '## Response' does not contain any HTTP status code "
-                "(expected pattern \\b[1-5][0-9][0-9]\\b)."
-            ),
-            missing_sections=["response"],
-            missing_fields=["status_code"],
-            strict=strict,
-            warnings=warnings,
-            parsed=parsed,
+    headers_text = sections.get("headers", "")
+    parsed.headers, header_conflicts = _parse_headers(headers_text)
+    if not headers_text:
+        missing_sections.append("headers")
+    if not parsed.headers:
+        violations.append(
+            _violation("headers", "MD_SPEC_MISSING_HEADERS", "Declare at least one request header name or schema; secret values belong in runtime credentials.")
+        )
+    for header_name in header_conflicts:
+        violations.append(
+            _violation(
+                f"headers.{header_name.lower()}",
+                "MD_SPEC_CONFLICTING_HEADER",
+                f"Header {header_name!r} is declared more than once with conflicting schema metadata.",
+            )
         )
 
-    return ValidationResult(
-        valid=True,
-        warnings=warnings,
+    return _result_from_violations(
         parsed=parsed,
+        violations=violations,
+        missing_sections=missing_sections,
+        strict=strict,
     )
 
 
@@ -262,6 +259,50 @@ def _merge_synonyms(
     for key, defaults in _SECTION_SYNONYMS.items():
         merged[key] = list(defaults) + [s.lower() for s in extra.get(key, [])]
     return merged
+
+
+def _violation(field: str, code: str, detail: str) -> FieldViolation:
+    return FieldViolation(field=field, code=code, detail=detail)
+
+
+def _result_from_violations(
+    *,
+    parsed: ParsedSpec,
+    violations: list[FieldViolation],
+    missing_sections: list[str],
+    strict: bool,
+) -> ValidationResult:
+    if not violations:
+        return ValidationResult(valid=True, parsed=parsed)
+
+    warnings = [f"[{item.code}] {item.field}: {item.detail}" for item in violations]
+    missing_fields = list(dict.fromkeys(item.field for item in violations))
+    first = violations[0]
+    detail = "API specification contract violations: " + "; ".join(
+        f"{item.field} ({item.code})" for item in violations
+    )
+    return ValidationResult(
+        valid=not strict,
+        code=first.code if strict else "",
+        detail=detail if strict else "",
+        missing_sections=list(dict.fromkeys(missing_sections)),
+        missing_fields=missing_fields,
+        field_errors=violations,
+        warnings=warnings if not strict else [],
+        parsed=parsed,
+    )
+
+
+def _parse_base_url(text: str) -> str:
+    match = _RE_BASE_URL.search(text or "")
+    if not match:
+        return ""
+    return match.group(1).strip().strip("`").rstrip(".,;:")
+
+
+def _is_valid_base_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
 def _extract_sections(
@@ -346,6 +387,93 @@ def _parse_request(text: str) -> tuple[ParsedRequest, list[str]]:
         req.raw_body_schema = json_block
 
     return req, missing
+
+
+def _parse_headers(text: str) -> tuple[list[ParsedHeader], list[str]]:
+    if not text:
+        return [], []
+
+    lines = [line for line in text.splitlines() if line.strip()]
+    headers: list[ParsedHeader] = []
+    seen: set[str] = set()
+    by_name: dict[str, ParsedHeader] = {}
+    conflicts: list[str] = []
+    table_header_index: Optional[int] = None
+    table_columns: dict[str, int] = {}
+
+    for index, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [cell.lower() for cell in _split_table_row(line)]
+        if any(name in cells for name in ("header", "name")):
+            if index + 1 < len(lines) and _RE_TABLE_SEPARATOR.match(lines[index + 1]):
+                table_header_index = index
+                table_columns = {cell: position for position, cell in enumerate(cells)}
+                break
+
+    if table_header_index is not None:
+        name_key = "header" if "header" in table_columns else "name"
+        for line in lines[table_header_index + 2 :]:
+            if not line.lstrip().startswith("|"):
+                break
+            cells = _split_table_row(line)
+            name_index = table_columns[name_key]
+            if name_index >= len(cells):
+                continue
+            name = cells[name_index].strip()
+            normalized = name.lower()
+            if not name:
+                continue
+            schema = ""
+            for schema_key in ("schema", "type", "description"):
+                position = table_columns.get(schema_key)
+                if position is not None and position < len(cells):
+                    schema = cells[position].strip()
+                    break
+            required_position = table_columns.get("required")
+            required = bool(
+                required_position is not None
+                and required_position < len(cells)
+                and cells[required_position].strip().lower()
+                in {"yes", "y", "true", "required"}
+            )
+            candidate = ParsedHeader(
+                name=name,
+                value_schema=_safe_header_schema(name, schema),
+                required=required,
+            )
+            existing = by_name.get(normalized)
+            if existing:
+                if (existing.value_schema, existing.required) != (
+                    candidate.value_schema,
+                    candidate.required,
+                ):
+                    conflicts.append(existing.name)
+                continue
+            headers.append(candidate)
+            seen.add(normalized)
+            by_name[normalized] = candidate
+
+    if headers:
+        return headers, list(dict.fromkeys(conflicts))
+
+    for line in lines:
+        match = re.match(r"^\s*[-*]\s*`?([A-Za-z][A-Za-z0-9-]*)`?(?:\s*[:(]|\s*$)", line)
+        if not match:
+            continue
+        name = match.group(1)
+        normalized = name.lower()
+        if normalized not in seen:
+            headers.append(ParsedHeader(name=name))
+            seen.add(normalized)
+    return headers, []
+
+
+def _safe_header_schema(name: str, schema: str) -> str:
+    normalized = name.lower().replace("_", "-")
+    if normalized in {"authorization", "cookie", "set-cookie", "api-key", "x-api-key"}:
+        return "runtime credential"
+    return schema
 
 
 def _parse_markdown_field_table(text: str) -> list[ParsedField]:
@@ -456,39 +584,17 @@ def _parse_responses(text: str) -> list[ParsedResponse]:
     return responses
 
 
-def _fail(
-    *,
-    code: str,
-    detail: str,
-    strict: bool,
-    warnings: list[str],
-    parsed: ParsedSpec,
-    missing_sections: Optional[list[str]] = None,
-    missing_fields: Optional[list[str]] = None,
-) -> ValidationResult:
-    missing_sections = missing_sections or []
-    missing_fields = missing_fields or []
-    if strict:
-        return ValidationResult(
-            valid=False,
-            code=code,
-            detail=detail,
-            missing_sections=missing_sections,
-            missing_fields=missing_fields,
-            warnings=warnings,
-            parsed=parsed,
-        )
-
-    warnings.append(f"[{code}] {detail}")
-    return ValidationResult(
-        valid=True,
-        code="",
-        detail="",
-        missing_sections=missing_sections,
-        missing_fields=missing_fields,
-        warnings=warnings,
-        parsed=parsed,
-    )
+def _extract_response_body(text: str, responses: list[ParsedResponse]) -> str:
+    inline = next((item.payload_preview for item in responses if item.payload_preview), "")
+    if inline:
+        return inline
+    json_block = _extract_first_code_block(text, lang_hint="json")
+    if json_block:
+        return json_block[:2000]
+    fields = _parse_markdown_field_table(text)
+    if fields:
+        return "markdown-schema:" + ",".join(field.name for field in fields)
+    return ""
 
 
 def to_summary(result: ValidationResult) -> dict[str, Any]:
@@ -499,5 +605,6 @@ def to_summary(result: ValidationResult) -> dict[str, Any]:
         "detail": result.detail,
         "missing_sections": result.missing_sections,
         "missing_fields": result.missing_fields,
+        "field_errors": [item.model_dump() for item in result.field_errors],
         "warnings": result.warnings,
     }

@@ -97,7 +97,6 @@ _SAMPLE_WRONG_TYPE: dict[str, Any] = {
     "time": "not-a-time",
 }
 
-_RE_BASE_URL = re.compile(r"(?im)^\s*Base\s*URL\s*[:=]\s*(\S+)")
 _RE_PATH_PARAM = re.compile(r"[:{](\w+)[}]?")
 
 
@@ -111,8 +110,8 @@ def generate_test_cases(
     Args:
         parsed:            The :class:`ParsedSpec` emitted by
                            :func:`md_api_spec_validator.validate_md_api_spec`.
-        document_content:  Raw markdown — used to recover the ``Base URL``
-                           that the validator does not capture.
+        document_content:  Retained for backward-compatible callers; normalized
+                           URL/header data comes from ``parsed``.
         requirement_ids:   Optional traceability link. The first id is
                            attached to every generated test case so
                            coverage analysis downstream still works.
@@ -124,7 +123,7 @@ def generate_test_cases(
     request = parsed.request
     responses = parsed.responses
 
-    base_url = _extract_base_url(document_content)
+    base_url = parsed.base_url
     full_url = (base_url.rstrip("/") + endpoint.path) if base_url else endpoint.path
     method = (endpoint.method or "GET").upper()
     requirement_id = (requirement_ids[0] if requirement_ids else "REQ-001")
@@ -144,6 +143,11 @@ def generate_test_cases(
         valid_headers["Content-Type"] = request.content_type
     elif method in _METHODS_WITH_BODY:
         valid_headers["Content-Type"] = "application/json"
+    for header in parsed.headers:
+        if header.name.lower() == "content-type":
+            continue
+        env_name = re.sub(r"[^A-Z0-9]+", "_", header.name.upper()).strip("_")
+        valid_headers.setdefault(header.name, f"${{HEADER_{env_name}}}")
 
     # ── 1. Happy-path per 2xx response ────────────────────────────────────
     for resp in responses:
@@ -367,15 +371,6 @@ def generate_test_cases(
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def _extract_base_url(text: str) -> str:
-    m = _RE_BASE_URL.search(text or "")
-    if not m:
-        return ""
-    raw = m.group(1).strip().strip("`")
-    # Strip trailing punctuation that often follows inline URLs in markdown
-    return raw.rstrip(".,;:")
 
 
 def _build_valid_body(fields: list[ParsedField]) -> dict[str, Any]:

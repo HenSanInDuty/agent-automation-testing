@@ -1,4 +1,4 @@
-# Automation Testing API — MD Spec Contract (v1)
+# Automation Testing API — MD Spec Contract (v2)
 
 > Contract chính tắc cho file `.md` mô tả API mà user upload vào pipeline
 > `automation-testing-api`. Là input cho tool `md_api_spec_validator` (Phase 2)
@@ -20,9 +20,11 @@ case-insensitive; synonym được chấp nhận):
 
 | Canonical name | Synonyms (regex, case-insensitive) | Required keys bên trong |
 |----------------|-----------------------------------|-------------------------|
+| `Base URL:`    | `Base URL`, `base_url`              | Absolute `http(s)` URL |
+| `## Headers`   | `headers`, `request headers`, `header` | ≥ 1 header name/schema; secret values come from runtime credentials |
 | `## Endpoint`  | `endpoint`, `api endpoint`, `api`  | `Method:`, `Path:`      |
-| `## Request`   | `request`, `req`, `request payload`| Bảng body khi method ∈ POST/PUT/PATCH |
-| `## Response`  | `response`, `responses`, `resp`    | ≥ 1 status code (regex `\b[1-5]\d{2}\b`) |
+| `## Request`   | `request`, `req`, `request payload`| Non-empty body schema for every method |
+| `## Response`  | `response`, `responses`, `resp`    | ≥ 1 status code and non-empty body/schema |
 
 > Một số section khác (`## Auth`, `## Examples`, `## Errors`, `## Notes`) là
 > optional — verifier không reject nếu thiếu.
@@ -72,8 +74,9 @@ Yêu cầu cột: `field`, `type`, `required` (3 cột bắt buộc). Cột `rul
   ```
 ```
 
-> Khi method ∈ `{GET, DELETE, HEAD, OPTIONS}` thì `## Request` có thể trống
-> hoặc chỉ chứa `Query params:` — verifier sẽ không bắt body.
+> Policy v2: `## Request` must contain a body/schema for every HTTP method,
+> including GET/DELETE. This is intentionally stricter than conventional HTTP
+> semantics so the uploaded contract always contains all six required elements.
 
 ### 3.3 `## Response`
 
@@ -122,7 +125,8 @@ Mỗi endpoint phải có nhóm 3 H2 (`## Endpoint`, `## Request`, `## Response`
 
 ## 5. Error codes — verifier output
 
-Verifier output `code` (1 lỗi đầu tiên gặp được, ưu tiên Endpoint → Request → Response):
+Verifier returns the first stable `code` for compatibility and also returns all
+violations in `missing_fields` and `field_errors`.
 
 | Code                                  | Khi nào |
 |---------------------------------------|---------|
@@ -131,6 +135,11 @@ Verifier output `code` (1 lỗi đầu tiên gặp được, ưu tiên Endpoint 
 | `MD_SPEC_MISSING_RESPONSE_STATUS`     | Section Response không có status code nào |
 | `MD_SPEC_INVALID_METHOD`              | `Method:` không thuộc whitelist HTTP method |
 | `MD_SPEC_INVALID_PATH`                | `Path:` không bắt đầu bằng `/` |
+| `MD_SPEC_MISSING_BASE_URL`            | Missing absolute Base URL |
+| `MD_SPEC_INVALID_BASE_URL`            | Base URL is not absolute HTTP(S) |
+| `MD_SPEC_MISSING_HEADERS`             | No declared header name/schema |
+| `MD_SPEC_CONFLICTING_HEADER`          | Duplicate header has conflicting schema metadata |
+| `MD_SPEC_MISSING_RESPONSE_BODY`       | Response has no body/schema |
 | `MD_SPEC_MULTIPLE_ENDPOINTS_AMBIGUOUS`| File có ≥ 2 nhóm endpoint nhưng không wrap bằng `## API: <name>` |
 
 ## 6. Strict mode vs warn mode
@@ -143,7 +152,8 @@ Toggle qua `run_params.strict_md_spec` khi POST `/pipeline/runs`.
 
 ## 7. Versioning
 
-- `v1` (this doc) — initial release 2026-05-19.
+- `v1` — initial release 2026-05-19.
+- `v2` — strict six-field collect-all contract, 2026-06-20.
 - Mỗi bump version → thêm field `version: 1` ở YAML frontmatter của MD spec.
   Nếu thiếu → assume v1.
 

@@ -93,7 +93,9 @@ class MDSpecVerifierCrew(BaseCrew):
         )
 
         text = self._load_text(input_data)
-        strict = bool(input_data.get("strict", True))
+        strict = input_data.get("strict_md_spec", input_data.get("strict", True))
+        if not isinstance(strict, bool):
+            strict = True
         synonyms = input_data.get("md_spec_synonyms") or None
 
         result: ValidationResult = validate_md_api_spec(
@@ -124,6 +126,7 @@ class MDSpecVerifierCrew(BaseCrew):
                 detail=result.detail or "MD spec failed validation.",
                 missing_sections=result.missing_sections,
                 missing_fields=result.missing_fields,
+                field_errors=[item.model_dump() for item in result.field_errors],
             )
 
         self._emit_agent_completed(

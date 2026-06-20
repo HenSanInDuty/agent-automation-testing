@@ -60,12 +60,14 @@ class MDSpecValidationError(StructuredPipelineError):
         *,
         missing_sections: list[str] | None = None,
         missing_fields: list[str] | None = None,
+        field_errors: list[dict[str, Any]] | None = None,
     ) -> None:
         super().__init__(detail)
         self.code = code
         self.detail = detail
         self.missing_sections = list(missing_sections or [])
         self.missing_fields = list(missing_fields or [])
+        self.field_errors = list(field_errors or [])
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -73,6 +75,7 @@ class MDSpecValidationError(StructuredPipelineError):
             "code": self.code,
             "missing_sections": self.missing_sections,
             "missing_fields": self.missing_fields,
+            "field_errors": self.field_errors,
             "detail": self.detail,
         }
 
