@@ -798,9 +798,9 @@ DEFAULT_PIPELINE_TEMPLATE: dict[str, Any] = {
         "Ingestion → Test Cases → Execution → Reporting"
     ),
     "version": 1,
-    "is_builtin": True,
+    "is_builtin": False,
     "is_archived": False,
-    "tags": ["default", "testing", "builtin"],
+    "tags": ["default", "testing"],
     "nodes": [
         # ── Entry/Exit ────────────────────────────────────────────────────────
         {
@@ -1283,11 +1283,12 @@ async def seed_agent_configs() -> None:
             refreshed += 1
 
     logger.info(
-        "Agent config seed complete — %d inserted, %d refreshed, "
-        "%d admin-customised left alone (total seed entries: %d).",
+        "Agent configs: %d inserted, %d refreshed, %d custom left alone.",
         inserted,
         refreshed,
         skipped_custom,
+    ) if (inserted or refreshed) else logger.debug(
+        "Agent configs: unchanged (%d total).",
         len(DEFAULT_AGENT_CONFIGS),
     )
 
@@ -1302,64 +1303,41 @@ async def seed_stage_configs() -> None:
     for stage in DEFAULT_STAGES:
         await crud.upsert_stage_config(stage)
 
-    logger.info(
-        "Stage config seed complete — processed %d stage(s).",
+    logger.debug(
+        "Stage configs: processed %d stage(s).",
         len(DEFAULT_STAGES),
     )
 
 
 async def seed_pipeline_templates() -> None:
-    """Insert built-in pipeline templates (idempotent).
-
-    Currently seeds:
-      - ``auto-testing``             — the V3 default sequential pipeline.
-      - ``automation-testing-api``   — MD spec → guarded testcase + exec → verified report.
-    """
+    """Insert pipeline templates if they do not already exist (idempotent)."""
     existing = await crud.get_pipeline_template(
         DEFAULT_PIPELINE_TEMPLATE["template_id"]
     )
     if existing is None:
         await crud.create_pipeline_template(dict(DEFAULT_PIPELINE_TEMPLATE))
         logger.info(
-            "Seeded default pipeline template: %s",
+            "Seeded pipeline template: %s",
             DEFAULT_PIPELINE_TEMPLATE["template_id"],
         )
     else:
-        logger.debug("Default pipeline template already exists — skipping seed.")
+        logger.debug(
+            "Pipeline template '%s' already exists — skipping seed.",
+            DEFAULT_PIPELINE_TEMPLATE["template_id"],
+        )
 
     at_template = _build_automation_testing_api_template()
     existing_at = await crud.get_pipeline_template(at_template["template_id"])
-    target_version = int(at_template.get("version") or 1)
     if existing_at is None:
         await crud.create_pipeline_template(dict(at_template))
         logger.info(
             "Seeded pipeline template: %s (v%d)",
             at_template["template_id"],
-            target_version,
-        )
-    elif existing_at.is_builtin and int(existing_at.version) < target_version:
-        # Upsert builtin template when the seed version moves ahead — keeps
-        # the shipped DAG in lock-step with the seed file without forcing
-        # operators to manually delete the document.
-        update_payload = {
-            "name": at_template["name"],
-            "description": at_template["description"],
-            "nodes": at_template["nodes"],
-            "edges": at_template["edges"],
-            "tags": at_template.get("tags", []),
-        }
-        await crud.update_pipeline_template(
-            at_template["template_id"], update_payload
-        )
-        logger.info(
-            "Upgraded builtin pipeline template '%s' from v%d to v%d",
-            at_template["template_id"],
-            int(existing_at.version),
-            target_version,
+            int(at_template.get("version") or 1),
         )
     else:
         logger.debug(
-            "Pipeline template '%s' already at target version — skipping seed.",
+            "Pipeline template '%s' already exists — skipping seed.",
             at_template["template_id"],
         )
 
@@ -1455,108 +1433,146 @@ def _build_automation_testing_api_template() -> dict[str, Any]:
 
     # Layer 0 — INPUT
     inp = _add_node(
-        "at-api-input", "input", None,
-        "📥 MD Upload", "Upload Markdown API specification",
-        timeout=30, retry=0,
+        "at-api-input",
+        "input",
+        None,
+        "📥 MD Upload",
+        "Upload Markdown API specification",
+        timeout=30,
+        retry=0,
     )
 
     # Layer 1 — MD spec guard (fail-fast)
     verifier = _add_node(
-        "at-api-md-verifier", "pure_python", "md_api_spec_verifier",
+        "at-api-md-verifier",
+        "pure_python",
+        "md_api_spec_verifier",
         "MD Spec Verifier",
         "Validate that the uploaded MD follows the v1 API spec contract",
-        timeout=60, retry=0,
+        timeout=60,
+        retry=0,
     )
     _edge(inp, verifier)
 
     # Layer 2 — parse MD into requirements
     ingestion = _add_node(
-        "at-api-ingestion", "pure_python", "ingestion_pipeline",
+        "at-api-ingestion",
+        "pure_python",
+        "ingestion_pipeline",
         "Ingestion Pipeline",
         "Parse + chunk the MD spec into requirement items",
-        timeout=180, retry=1,
+        timeout=180,
+        retry=1,
     )
     _edge(verifier, ingestion)
 
     # Layer 3 — single requirement enrichment step
     req_analyzer = _add_node(
-        "at-api-req-analyzer", "agent", "requirement_analyzer",
+        "at-api-req-analyzer",
+        "agent",
+        "requirement_analyzer",
         "Requirement Analyzer",
         "Enrich requirements with API-focused context",
-        timeout=300, retry=1,
+        timeout=300,
+        retry=1,
     )
     _edge(ingestion, req_analyzer)
 
     # Layer 4 — generate API test cases deterministically from the parsed
     # MD spec (pure-Python rule-based; no LLM dependency).
     tc_generator = _add_node(
-        "at-api-tc-generator", "pure_python", "api_test_case_generator",
+        "at-api-tc-generator",
+        "pure_python",
+        "api_test_case_generator",
         "Test Case Generator",
         "Rule-based generator: happy + required-field + type-mismatch + 404",
-        timeout=60, retry=0,
+        timeout=60,
+        retry=0,
     )
     _edge(req_analyzer, tc_generator)
 
     # Layer 5 — tag executable flag on each case
     classifier = _add_node(
-        "at-api-test-level-classifier", "pure_python",
-        "test_level_classifier", "Test Level Classifier",
+        "at-api-test-level-classifier",
+        "pure_python",
+        "test_level_classifier",
+        "Test Level Classifier",
         "Tag every case with test_level + executable",
-        timeout=120, retry=0,
+        timeout=120,
+        retry=0,
     )
     _edge(tc_generator, classifier)
 
     # Layer 6 — execute API tests deterministically via httpx (pure-Python).
     test_runner = _add_node(
-        "at-api-test-runner", "pure_python", "api_test_runner",
+        "at-api-test-runner",
+        "pure_python",
+        "api_test_runner",
         "API Test Runner",
         "httpx-based runner: execute each executable case, capture response",
-        timeout=900, retry=0,
+        timeout=900,
+        retry=0,
     )
     _edge(classifier, test_runner)
 
     # Layer 7 — generate runnable pytest+httpx files
     artifact = _add_node(
-        "at-api-artifact", "pure_python", "artifact_pipeline",
+        "at-api-artifact",
+        "pure_python",
+        "artifact_pipeline",
         "Artifact Pipeline",
         "Generate unit-test files + spec markdown",
-        timeout=600, retry=1,
+        timeout=600,
+        retry=1,
     )
     _edge(test_runner, artifact)
 
     # Layer 8 — final report (formerly coverage_analyzer + root_cause +
     # report_generator)
     report_gen = _add_node(
-        "at-api-report-gen", "agent", "report_generator",
+        "at-api-report-gen",
+        "agent",
+        "report_generator",
         "Report Generator",
         "Synthesise coverage, findings, and final QA report",
-        timeout=600, retry=0,
+        timeout=600,
+        retry=0,
     )
     _edge(artifact, report_gen)
 
     # Layer 9 — export HTML + DOCX
     export_node = _add_node(
-        "at-api-export-html-docx", "pure_python", "export_html_docx",
+        "at-api-export-html-docx",
+        "pure_python",
+        "export_html_docx",
         "Export HTML + DOCX",
         "Render HTML + DOCX, upload to MinIO",
-        timeout=180, retry=1,
+        timeout=180,
+        retry=1,
     )
     _edge(report_gen, export_node)
 
     # Layer 10 — verify 3 components (fail-fast)
     verifier_node = _add_node(
-        "at-api-report-verifier", "pure_python", "report_verifier",
+        "at-api-report-verifier",
+        "pure_python",
+        "report_verifier",
         "Report Verifier",
         "Check 3-component completeness before download",
-        timeout=60, retry=0,
+        timeout=60,
+        retry=0,
     )
     _edge(export_node, verifier_node)
 
     # Layer 11 — OUTPUT
     out_node = _add_node(
-        "at-api-output", "output", None,
-        "📤 Output", "Download links + verification result",
-        timeout=30, retry=0,
+        "at-api-output",
+        "output",
+        None,
+        "📤 Output",
+        "Download links + verification result",
+        timeout=30,
+        retry=0,
     )
     _edge(verifier_node, out_node)
 
@@ -1569,9 +1585,9 @@ def _build_automation_testing_api_template() -> dict[str, Any]:
             "test files → final report → verified HTML/DOCX download"
         ),
         "version": 4,
-        "is_builtin": True,
+        "is_builtin": False,
         "is_archived": False,
-        "tags": ["automation-testing", "api", "md", "builtin"],
+        "tags": ["automation-testing", "api", "md"],
         "nodes": nodes,
         "edges": edges,
     }
@@ -1590,9 +1606,7 @@ async def seed_all() -> None:
     The function is fully idempotent — running it against a database that
     already contains the seeded data is a safe no-op.
     """
-    logger.info("Running database seeders…")
     await seed_llm_profiles()
     await seed_agent_configs()
     await seed_stage_configs()
     await seed_pipeline_templates()  # NEW V3
-    logger.info("Database seeding complete ✓")

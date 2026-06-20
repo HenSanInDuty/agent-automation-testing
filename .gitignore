@@ -63,5 +63,11 @@ Thumbs.db
 # agent-browser screenshots
 .screenshots/
 
+# Generated tool outputs
+graphify-out/
+
+# Python caches (root-level)
+.pytest_cache/
+
 # Claude Code agent tooling (local only — not part of project)
 .claude/

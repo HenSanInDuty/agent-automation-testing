@@ -10,7 +10,6 @@ import {
   Trash2,
   Play,
   History,
-  Lock,
   Clock,
   Network,
   Pencil,
@@ -129,33 +128,31 @@ function CardMenu({
         "py-1 overflow-hidden",
       )}
     >
-      {!template.is_builtin && (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              onRequestRename();
-              onClose();
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d] transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            Rename
-          </button>
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            onRequestRename();
+            onClose();
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d] transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          Rename
+        </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              onRequestEditDetails();
-              onClose();
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d] transition-colors"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            Edit details
-          </button>
-        </>
-      )}
+        <button
+          type="button"
+          onClick={() => {
+            onRequestEditDetails();
+            onClose();
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d] transition-colors"
+        >
+          <Settings2 className="w-3.5 h-3.5" />
+          Edit details
+        </button>
+      </>
 
       <button
         type="button"
@@ -167,33 +164,31 @@ function CardMenu({
         Clone
       </button>
 
-      {!template.is_builtin && (
-        <>
-          <button
-            type="button"
-            onClick={handleArchive}
-            disabled={archiveMutation.isPending}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d] transition-colors disabled:opacity-50"
-          >
-            <Archive className="w-3.5 h-3.5" />
-            {template.is_archived ? "Unarchive" : "Archive"}
-          </button>
+      <>
+        <button
+          type="button"
+          onClick={handleArchive}
+          disabled={archiveMutation.isPending}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#92a4c9] hover:text-white hover:bg-[#1e2a3d] transition-colors disabled:opacity-50"
+        >
+          <Archive className="w-3.5 h-3.5" />
+          {template.is_archived ? "Unarchive" : "Archive"}
+        </button>
 
-          <div className="h-px bg-[#2b3b55] my-1" />
+        <div className="h-px bg-[#2b3b55] my-1" />
 
-          <button
-            type="button"
-            onClick={() => {
-              onRequestDelete();
-              onClose();
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-[#1e2a3d] transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
-        </>
-      )}
+        <button
+          type="button"
+          onClick={() => {
+            onRequestDelete();
+            onClose();
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-[#1e2a3d] transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          Delete
+        </button>
+      </>
     </div>
   );
 }
@@ -383,27 +378,16 @@ export function PipelineTemplateCard({ template }: PipelineTemplateCardProps) {
                 <h3
                   className={cn(
                     "text-sm font-semibold text-white truncate",
-                    !template.is_builtin &&
-                      "cursor-text hover:text-[#5b9eff] transition-colors",
+                    "cursor-text hover:text-[#5b9eff] transition-colors",
                   )}
-                  title={
-                    template.is_builtin
-                      ? template.name
-                      : `${template.name} — double-click to rename`
-                  }
+                  title={`${template.name} — double-click to rename`}
                   onDoubleClick={(e) => {
-                    if (template.is_builtin) return;
                     e.stopPropagation();
                     beginRename();
                   }}
                 >
                   {template.name}
                 </h3>
-                {template.is_builtin && (
-                  <span aria-label="Built-in" title="Built-in">
-                    <Lock className="w-3 h-3 text-[#3d5070] shrink-0" />
-                  </span>
-                )}
                 {template.is_archived && (
                   <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#2b3b55] text-[#92a4c9]">
                     Archived
@@ -419,7 +403,7 @@ export function PipelineTemplateCard({ template }: PipelineTemplateCardProps) {
           </div>
 
           {/* Rename quick-action button (visible on hover, hidden while renaming) */}
-          {!renaming && !template.is_builtin && (
+          {!renaming && (
             <button
               type="button"
               onClick={(e) => {

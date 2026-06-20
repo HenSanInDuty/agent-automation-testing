@@ -142,7 +142,6 @@ class PipelineTemplateResponse(BaseModel):
     nodes: list[PipelineNodeInput]
     edges: list[PipelineEdgeInput]
 
-    is_builtin: bool
     is_archived: bool
     tags: list[str]
 
@@ -162,7 +161,6 @@ class PipelineTemplateListItem(BaseModel):
     description: str
     version: int
 
-    is_builtin: bool
     is_archived: bool
     tags: list[str]
 

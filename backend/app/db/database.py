@@ -64,7 +64,7 @@ async def init_db() -> None:
         UserDocument,
     )
 
-    logger.info(
+    logger.debug(
         "Connecting to MongoDB: %s / %s",
         settings.MONGODB_URI,
         settings.MONGODB_DB_NAME,
@@ -87,6 +87,25 @@ async def init_db() -> None:
             )
     except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         logger.warning("Migration: could not drop stage_id_1 index: %s", exc)
+
+    # ── Migration: clear is_builtin flag from pipeline templates ──────────
+    # Pipeline templates are now fully managed via DB — no more built-in
+    # protection. Clear the flag on any existing documents.
+    try:
+        template_col = db["pipeline_templates"]
+        result = await template_col.update_many(
+            {"is_builtin": True},
+            {"$set": {"is_builtin": False}},
+        )
+        if result.modified_count:
+            logger.info(
+                "Migration: cleared is_builtin flag on %d pipeline template(s) ✓",
+                result.modified_count,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Migration: could not clear pipeline template is_builtin: %s", exc
+        )
 
     await init_beanie(
         database=db,

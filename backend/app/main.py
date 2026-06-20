@@ -26,10 +26,13 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+
 # Suppress noisy pymongo heartbeat debug logs
 class _MongoHeartbeatFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         return "heartbeat" not in record.getMessage().lower()
+
 
 logging.getLogger("pymongo.topology").addFilter(_MongoHeartbeatFilter())
 logger = logging.getLogger(__name__)
@@ -96,11 +99,15 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
     from app.api.v1.websocket import manager as ws_manager
 
-    logger.info("Starting Auto-AT backend (env=%s)", settings.APP_ENV)
+    logger.info(
+        "Auto-AT v%s starting (env=%s)",
+        settings.APP_VERSION,
+        settings.APP_ENV,
+    )
 
     # ── Upload directory ──────────────────────────────────────────────────
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    logger.info("Upload directory: %s", settings.UPLOAD_DIR)
+    logger.debug("Upload directory: %s", settings.UPLOAD_DIR)
 
     # ── MongoDB + Beanie ──────────────────────────────────────────────────
     await init_db()
@@ -125,7 +132,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
             recovered,
         )
     else:
-        logger.info("No orphaned runs found.")
+        logger.debug("No orphaned runs found.")
 
     # ── WebSocket event-loop registration ─────────────────────────────────
     # Register the event loop on the WebSocket manager BEFORE any pipeline
@@ -133,7 +140,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # every event if the pipeline thread fires before the first WS client
     # connects (which sets _loop lazily).
     ws_manager.set_loop(asyncio.get_running_loop())
-    logger.info("WebSocket manager event loop registered ✓")
+    logger.debug("WebSocket manager event loop registered.")
 
     # ── Kafka EventBus ───────────────────────────────────────────────
     from app.services.event_bus import event_bus

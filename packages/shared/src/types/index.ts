@@ -572,7 +572,6 @@ export interface PipelineTemplate {
   version: number;
   nodes: PipelineNodeConfig[];
   edges: PipelineEdgeConfig[];
-  is_builtin: boolean;
   is_archived: boolean;
   tags: string[];
   node_count: number;
@@ -587,7 +586,6 @@ export interface PipelineTemplateListItem {
   name: string;
   description: string;
   version: number;
-  is_builtin: boolean;
   is_archived: boolean;
   tags: string[];
   node_count: number;

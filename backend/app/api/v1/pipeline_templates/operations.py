@@ -19,7 +19,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from app.api.v1.deps import require_admin
-
 from app.core.dag_resolver import DAGResolver, DAGValidationError
 from app.db import crud
 from app.schemas.pipeline_template import (
@@ -123,7 +122,6 @@ async def export_template(template_id: str) -> JSONResponse:
         "nodes": [n.model_dump(mode="json") for n in doc.nodes],
         "edges": [e.model_dump(mode="json") for e in doc.edges],
         "tags": doc.tags,
-        "is_builtin": doc.is_builtin,
         "is_archived": doc.is_archived,
         "node_count": len(doc.nodes),
         "edge_count": len(doc.edges),
@@ -202,8 +200,8 @@ async def validate_template(
     summary="Clone a pipeline template",
     description=(
         "Create a new pipeline template that is an exact copy of the source "
-        "template.  The clone starts at version 1, is not built-in, and is "
-        "not archived.  Body params: new_template_id, new_name."
+        "The clone starts at version 1 and is not archived.  "
+        "Body params: new_template_id, new_name."
     ),
 )
 async def clone_template(

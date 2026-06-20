@@ -76,7 +76,6 @@ async def list_templates(
                 name=tmpl.name,
                 description=tmpl.description,
                 version=tmpl.version,
-                is_builtin=tmpl.is_builtin,
                 is_archived=tmpl.is_archived,
                 tags=tmpl.tags,
                 node_count=len(tmpl.nodes),
@@ -188,7 +187,6 @@ async def update_template(
     summary="Hard-delete a pipeline template",
     description=(
         "Permanently remove a pipeline template from the database.  "
-        "Built-in templates cannot be deleted (HTTP 403); archive them instead.  "
         "Templates with one or more associated pipeline runs cannot be deleted "
         "(HTTP 409); archive them instead."
     ),
@@ -198,16 +196,7 @@ async def delete_template(
     _: object = Depends(require_admin),
 ) -> dict:  # type: ignore[type-arg]
     """Permanently delete a pipeline template."""
-    doc = await _get_or_404(template_id)
-
-    if doc.is_builtin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                f"Pipeline template '{template_id}' is a built-in template and "
-                "cannot be deleted.  Archive it instead."
-            ),
-        )
+    await _get_or_404(template_id)
 
     run_count = await crud.count_runs_for_template(template_id)
     if run_count > 0:

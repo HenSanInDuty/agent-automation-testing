@@ -8,7 +8,6 @@ import {
   Clock,
   Layers,
   Workflow,
-  Sparkles,
   CheckCircle2,
   XCircle,
   Loader2,
@@ -105,7 +104,6 @@ function LastRunBadge({ status }: { status?: string }) {
 function PipelineCard({ template }: { template: PipelineTemplateListItem }) {
   const id = template.template_id;
   const lastRun = formatRelativeTime(template.last_run_at ?? null);
-  const isBuiltin = template.is_builtin;
 
   return (
     <article
@@ -141,14 +139,6 @@ function PipelineCard({ template }: { template: PipelineTemplateListItem }) {
                 className="w-5 h-5 text-[#92a4c9] group-hover:text-[#5b9eff] transition-colors"
                 aria-hidden="true"
               />
-              {isBuiltin && (
-                <span
-                  className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-[#135bec] border-2 border-[#141c2c]"
-                  title="Built-in"
-                >
-                  <Sparkles className="w-2 h-2 text-white" />
-                </span>
-              )}
             </div>
 
             <div className="min-w-0 flex-1">

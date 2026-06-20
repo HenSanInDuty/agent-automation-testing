@@ -79,7 +79,6 @@ def _to_response(template) -> PipelineTemplateResponse:  # type: ignore[return]
         version=template.version,
         nodes=nodes,
         edges=edges,
-        is_builtin=template.is_builtin,
         is_archived=template.is_archived,
         tags=template.tags,
         node_count=len(template.nodes),

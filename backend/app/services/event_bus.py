@@ -90,7 +90,7 @@ class EventBus:
     async def startup(self) -> None:
         """Start the aiokafka producer. Called from the FastAPI lifespan."""
         if not settings.KAFKA_ENABLED:
-            logger.info("[EventBus] Kafka disabled (KAFKA_ENABLED=false).")
+            logger.debug("[EventBus] Kafka disabled (KAFKA_ENABLED=false) — skipping.")
             return
 
         try:
@@ -149,9 +149,7 @@ class EventBus:
         try:
             await self._producer.send(full_topic, value=message)
         except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            logger.debug(
-                "[EventBus] Failed to emit topic=%s: %s", full_topic, exc
-            )
+            logger.debug("[EventBus] Failed to emit topic=%s: %s", full_topic, exc)
 
     def emit_sync(self, topic_suffix: str, payload: dict) -> None:  # type: ignore[type-arg]
         """
