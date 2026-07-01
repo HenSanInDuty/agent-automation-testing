@@ -237,10 +237,6 @@ export type AgentRunStatus =
   | "failed"
   | "skipped";
 
-export interface PipelineRunCreate {
-  llm_profile_id?: string | null;
-}
-
 export interface AgentRunResult {
   agent_id: string;
   display_name: string;

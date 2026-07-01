@@ -71,3 +71,4 @@ graphify-out/
 
 # Claude Code agent tooling (local only — not part of project)
 .claude/
+.codegraph/

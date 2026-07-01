@@ -2,8 +2,7 @@
 pipeline/runs.py – CRUD endpoints for pipeline run management.
 
 Endpoints:
-    POST   /pipeline/run          – upload document + start V2 run
-    POST   /pipeline/runs         – [V3] start DAG pipeline run from template
+    POST   /pipeline/runs         – start DAG pipeline run from template
     GET    /pipeline/runs         – paginated list of runs
     GET    /pipeline/runs/{run_id} – get one run (with results)
     DELETE /pipeline/runs/{run_id} – delete run + files
@@ -45,13 +44,12 @@ from app.schemas.pipeline import (
     PipelineStatus,
 )
 
-from ._background import _run_dag_pipeline_background, _run_pipeline_background
+from ._background import _run_dag_pipeline_background
 from ._helpers import (
     _cleanup_rejected_upload,
     _dag_run_to_response,
     _get_run_or_404,
     _preflight_api_spec_upload,
-    _run_to_response,
     _save_upload,
     _validate_upload,
 )
@@ -60,108 +58,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# POST /pipeline/run  (V2 legacy)
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-@router.post(
-    "/run",
-    response_model=PipelineRunResponse,
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Upload a document and start a pipeline run",
-    description=(
-        "Accepts a multipart/form-data request containing the requirements document "
-        "and optional run parameters. Returns immediately with ``status=pending``. "
-        "Connect to ``WS /ws/pipeline/{run_id}`` to stream real-time progress "
-        "events.\n\n"
-        "**Supported file types:** PDF, TXT, MD, DOCX, HTML, CSV, RST\n\n"
-        f"**Maximum file size:** {settings.MAX_FILE_SIZE_MB} MB"
-    ),
-)
-async def start_pipeline_run(
-    background_tasks: BackgroundTasks,
-    file: Annotated[UploadFile, File(description="Requirements document to analyse")],
-    _: object = Depends(require_not_dev),
-    llm_profile_id: Annotated[
-        Optional[str],
-        Form(
-            description=(
-                "MongoDB ObjectId of the LLM profile to use for this run. "
-                "Omit to use the global default profile."
-            ),
-        ),
-    ] = None,
-    skip_execution: Annotated[
-        bool,
-        Form(
-            description=(
-                "When true, only run Ingestion and Test Case Generation. "
-                "Execution and Reporting stages will be skipped."
-            ),
-        ),
-    ] = False,
-    environment: Annotated[
-        str,
-        Form(description="Target test environment name passed to the Execution crew."),
-    ] = "default",
-) -> PipelineRunResponse:
-    """Upload a requirements document and start a full V2 pipeline run."""
-    _validate_upload(file)
-
-    if llm_profile_id is not None:
-        profile = await crud.get_llm_profile(llm_profile_id)
-        if profile is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"LLM profile with id={llm_profile_id!r} not found.",
-            )
-
-    _, running_count = await crud.get_all_pipeline_runs(
-        skip=0, limit=1, status=PipelineStatus.RUNNING.value
-    )
-    if running_count >= settings.MAX_CONCURRENT_RUNS:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=(
-                f"Maximum concurrent runs ({settings.MAX_CONCURRENT_RUNS}) "
-                "reached. Please wait for a running pipeline to complete."
-            ),
-        )
-
-    run_id = str(uuid.uuid4())
-    document_name, file_path = _save_upload(file, run_id)
-
-    run = await crud.create_pipeline_run(
-        run_id=run_id,
-        document_name=document_name,
-        document_path=file_path,
-        llm_profile_id=llm_profile_id,
-    )
-
-    logger.info(
-        "[Pipeline] Created run  run_id=%r  document=%r  llm_profile=%s",
-        run_id,
-        document_name,
-        llm_profile_id,
-    )
-
-    background_tasks.add_task(
-        _run_pipeline_background,
-        run_id=run_id,
-        file_path=file_path,
-        document_name=document_name,
-        llm_profile_id=llm_profile_id,
-        skip_execution=skip_execution,
-        environment=environment,
-    )
-
-    return await _run_to_response(run)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# POST /pipeline/runs  (V3 – DAG runner)
+# POST /pipeline/runs  (DAG runner)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -169,14 +67,14 @@ async def start_pipeline_run(
     "/runs",
     response_model=PipelineRunResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="[V3] Start a DAG pipeline run from a template",
+    summary="Start a DAG pipeline run from a template",
     description=(
         "Creates a new pipeline run based on a saved PipelineTemplate and starts "
         "DAG execution in the background.  Connect to "
         "``WS /ws/pipeline/{run_id}`` for real-time node/layer events.\n\n"
         "The template's DAG is validated before the run is created.  If validation "
         "fails, HTTP 422 is returned immediately.\n\n"
-        "**V3 endpoint** — requires ``template_id``."
+        "Requires ``template_id``."
     ),
 )
 async def create_pipeline_run(
@@ -433,10 +331,12 @@ async def get_pipeline_run(
 ) -> dict[str, Any]:
     """Retrieve the full detail of a single pipeline run."""
     run = await _get_run_or_404(run_id)
-    if run.template_id:
-        run_response = await _dag_run_to_response(run)
-    else:
-        run_response = await _run_to_response(run)
+    if not run.template_id:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Legacy stage-based pipeline runs are no longer supported.",
+        )
+    run_response = await _dag_run_to_response(run)
     response: dict[str, Any] = run_response.model_dump()
 
     if include_results:

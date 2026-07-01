@@ -19,7 +19,6 @@ from app.db import crud
 from app.db.models import PipelineRunDocument
 from app.core.errors import MDSpecValidationError
 from app.schemas.pipeline import (
-    AGENT_STATUS_TO_FRONTEND,
     AgentRunResult,
     PipelineResultResponse,
     PipelineRunResponse,
@@ -97,59 +96,6 @@ async def _get_run_or_404(run_id: str) -> PipelineRunDocument:
 # ─────────────────────────────────────────────────────────────────────────────
 # Response converters
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-async def _run_to_response(run: PipelineRunDocument) -> PipelineRunResponse:
-    """Convert a PipelineRunDocument to the V2 API response schema."""
-    raw_statuses: dict[str, str] = run.agent_statuses
-
-    agent_runs: list[AgentRunResult] = []
-
-    if raw_statuses:
-        all_configs = await crud.get_all_agent_configs()
-        config_map = {c.agent_id: c for c in all_configs}
-
-        all_results = await crud.get_pipeline_results(run.run_id)
-        results_map: dict[str, str] = {}
-        for r in all_results:
-            preview = (
-                _json.dumps(r.output, ensure_ascii=False, default=str)[:15_000]
-                if r.output is not None
-                else None
-            )
-            results_map[r.agent_id or ""] = preview or ""
-
-        for agent_id, raw_status in raw_statuses.items():
-            config = config_map.get(agent_id)
-            frontend_status = AGENT_STATUS_TO_FRONTEND.get(raw_status, "pending")
-            agent_runs.append(
-                AgentRunResult(
-                    agent_id=agent_id,
-                    display_name=config.display_name if config else agent_id,
-                    stage=config.stage if config else "ingestion",
-                    status=frontend_status,
-                    output_preview=results_map.get(agent_id),
-                    error_message=None,
-                    started_at=None,
-                    completed_at=None,
-                )
-            )
-
-    return PipelineRunResponse(
-        id=run.run_id,
-        run_id=run.run_id,
-        document_filename=run.document_name,
-        status=PipelineStatus(run.status),
-        llm_profile_id=run.llm_profile_id,
-        current_stage=run.current_stage,
-        completed_stages=run.completed_stages,
-        agent_runs=agent_runs,
-        error_message=run.error,
-        created_at=run.created_at,
-        started_at=run.started_at,
-        completed_at=run.finished_at,
-    )
-
 
 _SPECIAL_AGENT_IDS = frozenset({"__input__", "__output__"})
 

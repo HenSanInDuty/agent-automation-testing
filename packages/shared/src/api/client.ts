@@ -309,28 +309,7 @@ export const pipelineApi = {
   },
 
   /**
-   * POST /api/v1/pipeline/run
-   * Upload a document file and start a pipeline run.
-   */
-  run: async (
-    file: File,
-    llmProfileId?: number | null,
-  ): Promise<PipelineRunResponse> => {
-    const form = new FormData();
-    form.append("file", file);
-    if (llmProfileId != null) {
-      form.append("llm_profile_id", String(llmProfileId));
-    }
-    const { data } = await apiClient.post<PipelineRunResponse>(
-      "/api/v1/pipeline/run",
-      form,
-      { headers: { "Content-Type": "multipart/form-data" }, timeout: 60_000 },
-    );
-    return data;
-  },
-
-  /**
-   * POST /api/v1/pipeline/runs   (V3 — DAG runner)
+   * POST /api/v1/pipeline/runs
    * Start a pipeline run based on a template. File is optional.
    */
   createRun: async (

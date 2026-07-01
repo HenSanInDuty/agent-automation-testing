@@ -8,6 +8,11 @@ const startMutation = {
   mutateAsync: vi.fn(),
 };
 
+const cancelMutation = {
+  isPending: false,
+  mutateAsync: vi.fn(),
+};
+
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a {...props}>{children}</a>
@@ -30,6 +35,7 @@ vi.mock("../../../hooks/usePipelineTemplates", () => ({
 vi.mock("../../../hooks/usePipeline", () => ({
   usePipelineRun: () => ({ data: undefined }),
   useStartDagPipeline: () => startMutation,
+  useCancelPipeline: () => cancelMutation,
 }));
 
 const DEFAULT_STORE_STATE = {
@@ -56,6 +62,7 @@ vi.mock("../../../store/pipelineStore", () => ({
 describe("PipelineRunPage document requirements", () => {
   beforeEach(() => {
     startMutation.mutateAsync.mockReset();
+    cancelMutation.mutateAsync.mockReset();
     storeState = { ...DEFAULT_STORE_STATE, clearSession: vi.fn() };
   });
 

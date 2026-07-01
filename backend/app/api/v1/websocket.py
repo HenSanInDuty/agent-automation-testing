@@ -116,7 +116,7 @@ class ConnectionManager:
         Thread-safe broadcast: schedules :meth:`broadcast` on the event loop.
 
         Call this from synchronous code running inside a thread-pool executor
-        (e.g. the PipelineRunner background task).
+        (e.g. DAG pipeline background work).
         """
         loop = self._loop
         if loop is None:

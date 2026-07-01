@@ -67,23 +67,6 @@ class WSEventType(str, Enum):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class PipelineRunCreate(BaseModel):
-    """Payload for creating a pipeline run (V3: template-based)."""
-
-    template_id: Optional[str] = Field(
-        default=None,
-        description="Which pipeline template to run. None = use legacy stage-based runner.",
-    )
-    llm_profile_id: Optional[str] = Field(
-        default=None,
-        description="Override LLM profile for this run. None = use global default.",
-    )
-    run_params: dict = Field(
-        default_factory=dict,
-        description="Extra parameters passed to the pipeline runner at run time.",
-    )
-
-
 class AgentRunResult(BaseModel):
     agent_id: str
     display_name: str

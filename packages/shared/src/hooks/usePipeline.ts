@@ -45,29 +45,7 @@ export function usePipelineRun(runId: string | undefined) {
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
- * Start a new pipeline run by uploading a document file.
- * Accepts an optional LLM profile ID to override the default.
- * Invalidates the pipeline runs list on success.
- */
-export function useStartPipeline() {
-  const qc = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      file,
-      llmProfileId,
-    }: {
-      file: File;
-      llmProfileId?: number | null;
-    }) => pipelineApi.run(file, llmProfileId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.pipelineRuns.lists() });
-    },
-  });
-}
-
-/**
- * Start a V3 DAG pipeline run from a template.
+ * Start a DAG pipeline run from a template.
  * Accepts an optional file and LLM profile override.
  * Invalidates the pipeline runs list on success.
  */
