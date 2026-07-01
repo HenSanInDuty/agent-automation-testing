@@ -1,7 +1,0 @@
-interface:
-  display_name: "Auto-AT Session Bootstrap"
-  short_description: "Always load Auto-AT repo context"
-  default_prompt: "Use $auto-at-session-bootstrap before working in the Auto-AT repo."
-
-policy:
-  allow_implicit_invocation: true
