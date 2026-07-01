@@ -48,6 +48,9 @@ _NON_PROPAGATING_KEYS = frozenset({
     "__sources__",
     "_html_bytes",
     "_docx_bytes",
+    # Per-node config snapshot injected for pure-python builtins; it is
+    # node-specific and must never bleed into a downstream node's input.
+    "__node_config__",
 })
 
 # Keys whose value must be a list of dicts in the canonical pipeline schema.
@@ -822,6 +825,7 @@ class DAGPipelineRunner:
             # Automation Testing API pipeline
             "md_api_spec_verifier": self._builtin_md_spec_verifier,
             "api_test_case_generator": self._builtin_api_test_case_generator,
+            "adaptive_api_test_planner": self._builtin_adaptive_api_test_planner,
             "api_test_runner": self._builtin_api_test_runner,
             "test_level_classifier": self._builtin_test_level_classifier,
             "export_html_docx": self._builtin_export_html_docx,
@@ -837,6 +841,14 @@ class DAGPipelineRunner:
             )
 
         merged_input = self._merge_inputs(parent_outputs)
+        # Snapshot this node's config_overrides so a builtin handler can resolve
+        # its own template defaults (e.g. coverage threshold, planner bounds).
+        # The key is non-propagating, so it never leaks into a downstream node.
+        if node_config.config_overrides:
+            merged_input = {
+                **merged_input,
+                "__node_config__": dict(node_config.config_overrides),
+            }
         output = await asyncio.wait_for(
             func(merged_input),
             timeout=node_config.timeout_seconds,
@@ -1276,6 +1288,34 @@ class DAGPipelineRunner:
         )
         # Forward the original document so the generator can recover the
         # `Base URL:` line that the validator does not capture.
+        merged: dict = dict(input_data)  # type: ignore[type-arg]
+        if self._document_content and "document_content" not in merged:
+            merged["document_content"] = self._document_content
+        return await asyncio.to_thread(crew.run, merged)
+
+    async def _builtin_adaptive_api_test_planner(
+        self,
+        input_data: dict,  # type: ignore[type-arg]
+    ) -> dict:  # type: ignore[type-arg]
+        """Generate API test cases via the bounded multi-agent planner.
+
+        Deterministic baseline + 1-5 complexity-selected planner agents +
+        debate + consolidation. The baseline is always retained, so an LLM
+        outage or mock mode still yields a valid suite plus a visible warning.
+        """
+        from app.crews.adaptive_api_test_planner_crew import (
+            AdaptiveApiTestPlannerCrew,
+        )
+
+        crew = AdaptiveApiTestPlannerCrew(
+            run_id=self._run_id,
+            run_profile_id=self._llm_profile_id,
+            progress_callback=self._progress_callback,
+            mock_mode=self._mock_mode,
+        )
+        crew._event_loop = asyncio.get_running_loop()  # planners hit async DB
+        # Forward the original document so the baseline generator can recover
+        # the `Base URL:` line the validator does not capture.
         merged: dict = dict(input_data)  # type: ignore[type-arg]
         if self._document_content and "document_content" not in merged:
             merged["document_content"] = self._document_content

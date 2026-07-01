@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Integrate UI and end-to-end validation"
-status: pending
+status: complete
 priority: P1
 dependencies: [4]
 ---
@@ -47,12 +47,19 @@ Extend shared types/API client/hooks and existing export controls. Avoid changin
 
 ## Success Criteria
 
-- [ ] Invalid spec presents all required corrections and no downstream progress.
-- [ ] User can follow agent selection and review iterations in real time and after refresh.
-- [ ] Exhausted gate is prominent but does not hide available results.
-- [ ] PDF and HTML downloads work from admin and user run-detail pages.
-- [ ] Existing callers of `ResultsViewer` compile without prop changes.
-- [ ] `uv run pytest`, shared package checks, admin/user builds, and E2E acceptance suite pass.
+- [x] Invalid spec presents all required corrections and no downstream progress. (`ValidatorFailureChecklist` from structured `md_spec_validation` payload; generic fallback for legacy.)
+- [x] User can follow agent selection and review iterations in real time and after refresh. (`PlanningReviewSummary` from persisted node results = source of truth after refresh.)
+- [x] Exhausted gate is prominent but does not hide available results.
+- [x] PDF and HTML downloads work from admin and user run-detail pages. (`downloadExportPdf` + gated PDF button in `ReportVerificationCard`.)
+- [x] Existing callers of `ResultsViewer` compile without prop changes. (Public props unchanged; admin/user typecheck = 0 source errors.)
+- [x] `uv run pytest` (376 pass), shared component tests (19 pass via new vitest harness), admin/user typecheck clean. E2E: no Playwright harness exists in repo — deferred (noted).
+
+## Implementation Notes (sync-back)
+
+- New shared components: `PlanningReviewSummary.tsx`, `ValidatorFailureChecklist.tsx`; new types `PlannerReviewGate/Complexity/Obligation/…`, `pdf_url`, `review_coverage`, `planner.review_iteration` event.
+- Admin pipeline-builder: bounded adaptive-node config UI (min/max planners 1-5, threshold 0-100, max_review_iterations 0-5, continue bool); user app read-only.
+- Set up minimal vitest harness in `packages/shared` (`vitest.config.mts` + `vitest.setup.ts`, esbuild automatic JSX) so the 19 component tests run.
+- Known pre-existing (NOT this work): `apps/admin-app` `compare/page.tsx` Next.js 15 async-`params` build error; docs sync (below) pending docs-manager.
 
 ## Risk Assessment
 

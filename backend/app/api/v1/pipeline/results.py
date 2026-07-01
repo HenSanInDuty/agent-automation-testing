@@ -13,7 +13,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Annotated, Optional
+
+# Sort key fallback for verifier docs that predate the created_at field.
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
@@ -137,14 +141,22 @@ async def get_node_result(
 
 
 async def _get_verification_payload(run_id: str) -> Optional[dict]:
-    """Return the latest report_verifier result payload for *run_id*, if any."""
+    """Return the MOST RECENT report_verifier result payload for *run_id*, if any.
+
+    A run may be re-executed, leaving several ``report_verifier`` documents;
+    the gate must read the newest so a stale verification cannot pass/block a
+    fresh export.
+    """
     results = await crud.get_pipeline_results(run_id)
-    for r in results:
-        if (r.agent_id or "") == "report_verifier":
-            output = r.output or {}
-            verification = output.get("report_verification") or output
-            if isinstance(verification, dict):
-                return verification
+    verifier_docs = [r for r in results if (r.agent_id or "") == "report_verifier"]
+    # Prefer the newest by created_at; fall back to document order when the
+    # field is absent (treat missing timestamps as oldest).
+    verifier_docs.sort(key=lambda r: getattr(r, "created_at", None) or _EPOCH)
+    for r in reversed(verifier_docs):
+        output = r.output or {}
+        verification = output.get("report_verification") or output
+        if isinstance(verification, dict):
+            return verification
     return None
 
 
@@ -240,6 +252,42 @@ async def export_report_docx(
     return FastAPIResponse(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/runs/{run_id}/export/pdf",
+    summary="Download pipeline report as PDF",
+    description=(
+        "Generates a PDF report (ReportLab). Same 409 verification gate as the "
+        "HTML/DOCX endpoints when the run uses the automation-testing-api "
+        "template; use `?force=true` for the admin override."
+    ),
+    response_class=Response,
+)
+async def export_report_pdf(
+    run_id: str,
+    force: bool = Query(default=False, description="Admin override — bypass verifier gate."),
+    _: object = Depends(get_current_user),
+) -> Response:
+    """Download the pipeline report as a PDF file."""
+    from fastapi.responses import Response as FastAPIResponse
+
+    from app.services.export_service import ExportService
+
+    await _get_run_or_404(run_id)
+    if not force:
+        await _enforce_verification_gate(run_id)
+    try:
+        service = ExportService(run_id)
+        pdf_bytes = await service.export_pdf()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    filename = f"auto-at-report-{run_id[:8]}.pdf"
+    return FastAPIResponse(
+        content=pdf_bytes,
+        media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

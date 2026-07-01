@@ -351,16 +351,30 @@ export interface ReportVerificationComponent {
   extra?: Record<string, unknown>;
 }
 
+/** Extra fields carried by the review_coverage verification component. */
+export interface ReviewCoverageExtra {
+  available: boolean;
+  coverage_percent: number;
+  threshold: number;
+  verdict: string;
+  accepted: boolean;
+  exhausted: boolean;
+}
+
 export interface ReportVerificationResponse {
   verified: boolean;
   components: {
     test_cases?: ReportVerificationComponent;
     results?: ReportVerificationComponent;
     unit_test_files?: ReportVerificationComponent;
+    /** Review coverage component added by adaptive pipeline (Phase 5). */
+    review_coverage?: ReportVerificationComponent;
     [k: string]: ReportVerificationComponent | undefined;
   };
   html_url?: string;
   docx_url?: string;
+  /** PDF export URL — available after adaptive pipeline completes (Phase 5). */
+  pdf_url?: string;
   summary?: string;
   /** False when no verifier output exists yet for the run. */
   available?: boolean;
@@ -372,7 +386,110 @@ export interface MDSpecValidationErrorPayload {
   code: string;
   missing_sections?: string[];
   missing_fields?: string[];
+  /** Per-field structured error details (Phase 5 adaptive pipeline). */
+  field_errors?: Array<{ field: string; message?: string }>;
   detail: string;
+}
+
+export interface APISpecConversionValidation {
+  valid: boolean;
+  code: string;
+  detail: string;
+  missing_sections: string[];
+  missing_fields: string[];
+  field_errors: Array<{
+    field: string;
+    code: string;
+    detail: string;
+  }>;
+  warnings: string[];
+}
+
+export interface APISpecConversionResponse {
+  filename: string;
+  markdown: string;
+  validation: APISpecConversionValidation;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adaptive API Test Planner — TestCase node output (Phase 5)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Coverage gap in a review iteration. */
+export interface PlannerCoverageGap {
+  obligation_id: string;
+  kind: string;
+  description: string;
+}
+
+/** One review iteration recorded by the review gate. */
+export interface PlannerReviewIteration {
+  iteration: number;
+  case_count: number;
+  coverage: {
+    total_required: number;
+    covered_required: number;
+    coverage_percent: number;
+    gaps: PlannerCoverageGap[];
+    unknown_obligation_ids: string[];
+  };
+  review: {
+    verdict: "approve" | "revise" | "reject";
+    evidence?: string;
+    gaps?: string[];
+    unsafe_assumptions?: string[];
+    feedback?: string;
+    fallback?: boolean;
+  };
+  accepted: boolean;
+  feedback_applied?: boolean;
+}
+
+/** Review gate summary stored in testcase node output. */
+export interface PlannerReviewGate {
+  coverage_threshold_percent: number;
+  max_review_iterations: number;
+  continue_on_exhaustion: boolean;
+  iterations: PlannerReviewIteration[];
+  selected_iteration: number | null;
+  final_coverage_percent: number | null;
+  final_verdict: "approve" | "revise" | "reject" | null;
+  accepted: boolean;
+  coverage_gate_exhausted: boolean;
+  warnings: string[];
+}
+
+/** Complexity analysis stored in testcase node output. */
+export interface PlannerComplexity {
+  score: number;
+  signals: Record<string, number>;
+  agent_count: number;
+  selected_roles: string[];
+  rationale?: string;
+}
+
+/** Obligation tracked for coverage. */
+export interface PlannerObligation {
+  id: string;
+  kind: string;
+  description: string;
+  evidence?: string;
+  required: boolean;
+}
+
+/**
+ * Output shape of the adaptive testcase planning node.
+ * All fields are optional — absent on legacy runs.
+ */
+export interface TestCaseNodeOutput {
+  test_cases?: unknown[];
+  coverage_summary?: unknown;
+  complexity?: PlannerComplexity | null;
+  obligations?: PlannerObligation[];
+  review_gate?: PlannerReviewGate | null;
+  planner_warnings?: string[];
+  assumptions?: string[];
+  duplicates_removed?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -402,6 +519,8 @@ export type WSEventType =
   | "node.failed"
   | "node.skipped"
   | "node.progress"
+  /** Emitted during adaptive test planning; carries iteration progress. */
+  | "planner.review_iteration"
   | "log";
 
 export interface WSEvent {

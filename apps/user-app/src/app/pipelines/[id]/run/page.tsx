@@ -9,12 +9,14 @@ export default function UserPipelineRunPage() {
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6">
-      {/* Simplified end-user mode: no LLM profile / run-control choices, results shown inline.
+      {/* Simplified end-user mode: no LLM profile selector, results shown inline.
+          A single "Stop" button is shown while running (cancelOnly) so end users
+          can halt a run; full Pause/Resume stays admin-only.
           DAG visualization stays admin-only (requires React Flow + builder nodes). */}
       <PipelineRunPage
         templateId={templateId}
         hideLlmProfile
-        hideRunControls
+        cancelOnly
         showResultsInline
         hideNodeResults
       />

@@ -37,6 +37,7 @@ mindmap
       POST /runs/{id}/cancel
       GET /runs/{id}/export/html
       GET /runs/{id}/export/docx
+      GET /runs/{id}/export/pdf (Phase 4)
     Admin
       LLM Profiles
         GET /admin/llm-profiles
@@ -211,32 +212,48 @@ sequenceDiagram
 
 ---
 
-## 6. Luồng Export Report
+## 6. Luồng Export Report (HTML / PDF / DOCX)
 
 ```mermaid
 flowchart LR
-    A["GET /pipeline/runs/{id}/export/html\nor /export/docx"]
+    A["GET /pipeline/runs/{id}/export/html\n or /export/pdf or /export/docx"]
     B["Fetch PipelineRunDocument"]
     C{"Status = completed?"}
     D["404 / 400 — run chưa hoàn thành"]
-    E["Fetch tất cả PipelineResultDocument\ncủa run này"]
+    E["ExportService._load_run_data()\nFetch tất cả PipelineResultDocument\n+ review_gate, obligations, execution summary"]
+    G["report_verifier gate\n(core: test_cases, results, unit_files)\nadvisory: review_coverage exhaustion"]
 
     F1["ExportService.export_html()\nJinja2 template render"]
-    F2["ExportService.export_docx()\nDocxReportBuilder\npython-docx"]
+    F2["ExportService.export_pdf()\nReportLab PDF builder\n(summary, coverage, review history, cases, results)"]
+    F3["ExportService.export_docx()\nDocxReportBuilder\npython-docx"]
 
-    G1["StreamingResponse\nContent-Type: text/html"]
-    G2["StreamingResponse\nContent-Type: application/vnd.openxmlformats..."]
+    H1["StreamingResponse\nContent-Type: text/html"]
+    H2["StreamingResponse\nContent-Type: application/pdf"]
+    H3["StreamingResponse\nContent-Type: application/vnd.openxmlformats..."]
+
+    Z["409 {error_type:report_verification,\ncomponents, message}\n(gate failed)\n\n?force=true (admin override)"]
 
     A --> B --> C
     C -- Không --> D
-    C -- Có --> E
-    E --> F1 --> G1
-    E --> F2 --> G2
+    C -- Có --> E --> G
+    G -- Passed --> F1 --> H1
+    G -- Passed --> F2 --> H2
+    G -- Passed --> F3 --> H3
+    G -- Failed (core) --> Z
 
     style D fill:#fee2e2,stroke:#ef4444
-    style G1 fill:#dcfce7,stroke:#22c55e
-    style G2 fill:#dcfce7,stroke:#22c55e
+    style Z fill:#fee2e2,stroke:#ef4444
+    style H1 fill:#dcfce7,stroke:#22c55e
+    style H2 fill:#dcfce7,stroke:#22c55e
+    style H3 fill:#dcfce7,stroke:#22c55e
 ```
+
+**Key differences (Phase 4):**
+- **Shared data source:** `_load_run_data()` resolves once; all three formats (HTML, PDF, DOCX) consume the same normalized context.
+- **PDF builder (ReportLab):** Renders sections: executive summary, deterministic coverage matrix, review iteration history, selected test cases, execution results, warnings.
+- **Multi-endpoint coverage:** The coverage matrix spans **every** endpoint declared in the MD spec — obligations are extracted per endpoint (responses, auth, fields/rules) plus spec-level headers once. A document with N endpoints contributes N endpoints' obligations to the denominator, so `coverage_percent` reflects the whole spec, not just the first endpoint.
+- **Review coverage (advisory):** An exhausted coverage gate (`coverage_gate_exhausted=true`) does **not** fail verification; instead, it surfaces a warning that is visible in all three formats and in the FE run-detail page.
+- **Header redaction:** Secret values are redacted before rendering into any export; placeholders like `Bearer ${TOKEN}` are preserved.
 
 ---
 
@@ -269,41 +286,59 @@ graph LR
     WS --> NodeEvents
 ```
 
-## Endpoint mới — Automation Testing API report verification
+## Endpoint — Automation Testing API Report Verification & Exports
 
-```
-GET /api/v1/pipeline/runs/{run_id}/report/verification
-→ 200 ReportVerificationResponse
-```
-
-Response shape:
-
+### GET /api/v1/pipeline/runs/{run_id}/report/verification
+**Response (200 OK):**
 ```json
 {
   "verified": true,
   "components": {
     "test_cases":      {"ok": true, "count": 23, "issues": []},
     "results":         {"ok": true, "count": 18, "issues": [], "extra": {"pass_rate": 82.0}},
-    "unit_test_files": {"ok": true, "count": 8, "issues": []}
+    "unit_test_files": {"ok": true, "count": 8, "issues": []},
+    "review_coverage": {"ok": true, "issues": [], "extra": {"coverage_percent": 90.5, "exhausted": false}}
   },
   "html_url": "runs/{run_id}/report.html",
+  "pdf_url":  "runs/{run_id}/report.pdf",
   "docx_url": "runs/{run_id}/report.docx",
   "summary": "Report ready for delivery",
   "available": true
 }
 ```
 
-```
-GET /api/v1/pipeline/runs/{run_id}/export/{html|docx}
-  - 200 file bytes when verified=true (or no verifier output exists for legacy runs)
-  - 409 {error_type:"report_verification", message, components} when verified=false
-  - ?force=true bypass gate (admin override)
+**Note:** `review_coverage` is **informational only** — an exhausted gate never fails verification. The three core components (test_cases, results, unit_test_files) remain the gating criteria.
+
+### GET /api/v1/pipeline/runs/{run_id}/export/{html|pdf|docx}
+**Success (200 OK):** File bytes with appropriate Content-Type and Content-Disposition.
+- `html` → `text/html; charset=utf-8`
+- `pdf` → `application/pdf`
+- `docx` → `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+
+**Gated Failure (409 Conflict):**
+```json
+{
+  "error_type": "report_verification",
+  "message": "Report components incomplete or invalid",
+  "components": {
+    "test_cases": {"ok": false, "issues": ["count=0"]},
+    "results": {"ok": true, "issues": []},
+    "unit_test_files": {"ok": true, "issues": []},
+    "review_coverage": {"ok": false, "issues": ["exhausted: true"]}
+  }
+}
 ```
 
-Structured node failure event:
+**Admin Override:**
+```
+GET /api/v1/pipeline/runs/{run_id}/export/html?force=true
+```
+Requires role `admin` or above. Bypasses the gate and returns the file even if verification fails.
+
+### Structured Node Failure Events
 
 ```
-node.failed
+WS node.failed
 {
   "node_id": "at-api-md-verifier",
   "error_type": "md_spec_validation",
@@ -312,6 +347,24 @@ node.failed
     "missing_sections": ["response"],
     "missing_fields": ["status_code"],
     "detail": "..."
+  }
+}
+```
+
+```
+WS node.completed (adaptive_planner_node)
+{
+  "node_id": "adaptive_planner",
+  "duration_ms": 45000,
+  "output_preview": {
+    "complexity": {"agent_count": 3, "selected_roles": ["positive", "auth_security", "boundary_data"]},
+    "review_gate": {
+      "final_coverage_percent": 92.0,
+      "final_verdict": "approve",
+      "coverage_gate_exhausted": false,
+      "warnings": []
+    },
+    "test_case_count": 34
   }
 }
 ```

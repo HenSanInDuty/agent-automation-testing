@@ -15,6 +15,7 @@ from fastapi import APIRouter
 
 from .artifacts import router as _artifacts_router
 from .control import router as _control_router
+from .conversions import router as _conversions_router
 from .results import router as _results_router
 from .runs import router as _runs_router
 
@@ -22,6 +23,7 @@ router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
 router.include_router(_runs_router)
 router.include_router(_control_router)
+router.include_router(_conversions_router)
 router.include_router(_results_router)
 router.include_router(_artifacts_router)
 

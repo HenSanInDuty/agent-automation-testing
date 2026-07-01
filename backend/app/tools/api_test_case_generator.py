@@ -45,36 +45,14 @@ from app.schemas.pipeline_io import (
     TestStep,
     TestType,
 )
-from app.tools.md_api_spec_validator import ParsedField, ParsedSpec
+from app.tools.md_api_spec_validator import ParsedField, ParsedRequest, ParsedSpec
+from app.tools.request_body_synthesizer import resolve_request_body
 
 logger = logging.getLogger(__name__)
 
 # Methods that carry a request body — the only ones for which we emit
 # field-validation cases.
 _METHODS_WITH_BODY = {"POST", "PUT", "PATCH"}
-
-# Plausible sample values per declared type. Picked to be both valid for
-# the field AND distinct enough that swapping types triggers binding errors.
-_SAMPLE_VALID: dict[str, Any] = {
-    "string": "sample",
-    "str": "sample",
-    "text": "sample",
-    "int": 1,
-    "integer": 1,
-    "uint": 1,
-    "long": 1,
-    "float": 1.5,
-    "number": 1.5,
-    "double": 1.5,
-    "bool": True,
-    "boolean": True,
-    "date": "2026-01-25",
-    "datetime": "2026-01-25T08:00:00Z",
-    "time": "08:00",
-    "object": {},
-    "array": [],
-    "json": {},
-}
 
 # Wrong-type values used to provoke 400 binding errors. Keyed by the
 # declared field type — for ``string`` we send an int, for ``bool`` we
@@ -99,11 +77,17 @@ _SAMPLE_WRONG_TYPE: dict[str, Any] = {
 
 _RE_PATH_PARAM = re.compile(r"[:{](\w+)[}]?")
 
+# Concrete id substituted into path params (`:id` / `{id}`) for happy-path and
+# validation cases — a literal `:id` would never match a real route. The
+# not-found case uses a deliberately non-existent id instead (see section 4).
+_SAMPLE_PATH_ID = "1"
+
 
 def generate_test_cases(
     parsed: ParsedSpec,
     document_content: str = "",
     requirement_ids: Optional[list[str]] = None,
+    body_seeds: Optional[dict[str, dict[str, Any]]] = None,
 ) -> TestCaseOutput:
     """Build a deterministic :class:`TestCaseOutput` from a parsed MD spec.
 
@@ -115,35 +99,116 @@ def generate_test_cases(
         requirement_ids:   Optional traceability link. The first id is
                            attached to every generated test case so
                            coverage analysis downstream still works.
+        body_seeds:        Optional LLM-refined request bodies keyed by
+                           ``"<METHOD> <path>"``. When a key matches an
+                           endpoint, its values overlay the deterministic body
+                           so happy-path / validation cases ship realistic
+                           data. Absent / failed synthesis leaves the
+                           deterministic body intact.
 
     Returns:
         :class:`TestCaseOutput` (model — call ``.model_dump()`` for storage).
     """
-    endpoint = parsed.endpoint
-    request = parsed.request
-    responses = parsed.responses
-
     base_url = parsed.base_url
-    full_url = (base_url.rstrip("/") + endpoint.path) if base_url else endpoint.path
-    method = (endpoint.method or "GET").upper()
     requirement_id = (requirement_ids[0] if requirement_ids else "REQ-001")
     executable = bool(base_url)
+
+    cases: list[TestCase] = []
+    counter = 1
+    endpoint_paths: list[str] = []
+    # Shared chaining context: collection base path → {create_tc, var}. Populated
+    # by a POST create case and consumed by item (`/:id`) cases processed later.
+    chain: dict[str, dict[str, str]] = {}
+    seeds = body_seeds or {}
+    for ep in parsed.endpoints:
+        ep_cases, counter = _cases_for_endpoint(
+            ep, base_url, parsed.headers, requirement_id, executable, counter,
+            chain, seeds,
+        )
+        cases.extend(ep_cases)
+        if ep.endpoint.path:
+            endpoint_paths.append(ep.endpoint.path)
+
+    return _assemble_output(
+        cases=cases,
+        endpoint_count=len(parsed.endpoints),
+        endpoint_paths=endpoint_paths,
+        requirement_ids=requirement_ids,
+        executable=executable,
+    )
+
+
+def _cases_for_endpoint(
+    ep: Any,
+    base_url: str,
+    spec_headers: list,
+    requirement_id: str,
+    executable: bool,
+    counter: int,
+    chain: dict[str, dict[str, str]],
+    body_seeds: dict[str, dict[str, Any]],
+) -> tuple[list[TestCase], int]:
+    """Build the deterministic case matrix for ONE endpoint.
+
+    The *counter* is threaded in and out so ``TC-NNN`` ids stay globally unique
+    across every endpoint in the spec. *chain* carries cross-endpoint create →
+    item linkage so a `/:id` case reuses the id captured from its POST create.
+    *body_seeds* carries optional LLM-refined bodies keyed by ``"<METHOD> <path>"``.
+    """
+    endpoint = ep.endpoint
+    request = ep.request
+    responses = ep.responses
+
+    method = (endpoint.method or "GET").upper()
+    seed = body_seeds.get(f"{method} {endpoint.path}")
 
     declared_statuses = {r.status_code for r in responses}
     has_4xx = any(400 <= s < 500 for s in declared_statuses)
     has_404 = 404 in declared_statuses
     has_path_param = bool(_RE_PATH_PARAM.search(endpoint.path or ""))
 
-    cases: list[TestCase] = []
-    counter = 1
+    # Chaining: an item endpoint (`/api/tasks/:id`) reuses the id captured from
+    # the create (POST) of its collection when one exists; otherwise it falls
+    # back to a sample id. The 404 case never chains (it needs a missing id).
+    collection_base = _collection_base(endpoint.path)
+    is_create = method == "POST" and not has_path_param
+    link = chain.get(collection_base) if has_path_param else None
+    if link:
+        id_token = "{" + link["var"] + "}"
+        chain_depends = [link["create_tc"]]
+        path_note = (
+            f" Path id `{{{link['var']}}}` is captured from the create response "
+            f"of {link['create_tc']}."
+        )
+    elif has_path_param:
+        id_token = _SAMPLE_PATH_ID
+        chain_depends = []
+        path_note = (
+            f" Path param resolved to sample id `{_SAMPLE_PATH_ID}`; "
+            "requires that resource to exist."
+        )
+    else:
+        id_token = _SAMPLE_PATH_ID
+        chain_depends = []
+        path_note = ""
 
-    valid_body = _build_valid_body(request.body_fields)
+    # Substitute on the PATH only, then join the base URL — substituting on a
+    # full URL would corrupt the `:port` (e.g. `:8080` → the id token).
+    resolved_path = (
+        _substitute_path_param(endpoint.path, id_token)
+        if has_path_param else endpoint.path
+    )
+    resolved_url = (base_url.rstrip("/") + resolved_path) if base_url else resolved_path
+
+    cases: list[TestCase] = []
+
+    valid_body = _build_valid_body(request, seed)
     valid_headers: dict[str, str] = {}
     if request.content_type:
         valid_headers["Content-Type"] = request.content_type
     elif method in _METHODS_WITH_BODY:
         valid_headers["Content-Type"] = "application/json"
-    for header in parsed.headers:
+    for header in spec_headers:
         if header.name.lower() == "content-type":
             continue
         env_name = re.sub(r"[^A-Z0-9]+", "_", header.name.upper()).strip("_")
@@ -153,17 +218,24 @@ def generate_test_cases(
     for resp in responses:
         if not (200 <= resp.status_code < 300):
             continue
+        case_id = f"TC-{counter:03d}"
+        # A POST create exposes its `id` so later item cases can chain off it.
+        extract: dict[str, str] = {}
+        if is_create and collection_base not in chain:
+            var = _var_for(collection_base)
+            extract = {var: "id"}
+            chain[collection_base] = {"create_tc": case_id, "var": var}
         cases.append(
             TestCase(
-                id=f"TC-{counter:03d}",
+                id=case_id,
                 requirement_id=requirement_id,
                 title=f"{method} {endpoint.path} — happy path expects {resp.status_code}",
                 description=(
                     f"Send a valid {method} request to {endpoint.path}. "
                     f"Backend must return {resp.status_code}."
                 ),
-                preconditions=f"Target API reachable at {base_url or '<base-url>'}",
-                steps=_build_happy_steps(method, full_url, resp.status_code),
+                preconditions=f"Target API reachable at {base_url or '<base-url>'}.{path_note}",
+                steps=_build_happy_steps(method, resolved_url, resp.status_code),
                 expected_result=(
                     f"HTTP {resp.status_code} with response body matching the "
                     "declared schema."
@@ -172,7 +244,7 @@ def generate_test_cases(
                 category=TestCategory.POSITIVE,
                 priority="high",
                 tags=["happy-path", "rule-based"],
-                api_endpoint=endpoint.path,
+                api_endpoint=resolved_path,
                 http_method=method,
                 request_headers=valid_headers or None,
                 request_body=valid_body if method in _METHODS_WITH_BODY else None,
@@ -181,6 +253,8 @@ def generate_test_cases(
                 executable=executable,
                 classification_confidence=1.0,
                 skip_reason=None if executable else "No Base URL declared in MD spec.",
+                depends_on=list(chain_depends),
+                extract=extract,
             )
         )
         counter += 1
@@ -205,9 +279,9 @@ def generate_test_cases(
                         f"Send a {method} request that omits the required "
                         f"`{field.name}` field. Backend must reject with 400."
                     ),
-                    preconditions=f"Target API reachable at {base_url or '<base-url>'}",
+                    preconditions=f"Target API reachable at {base_url or '<base-url>'}.{path_note}",
                     steps=_build_validation_steps(
-                        method, full_url, field.name, "omitted"
+                        method, resolved_url, field.name, "omitted"
                     ),
                     expected_result=(
                         f"HTTP 400 with an error message referencing the "
@@ -217,7 +291,7 @@ def generate_test_cases(
                     category=TestCategory.NEGATIVE,
                     priority="medium",
                     tags=["validation", "required-field", "rule-based"],
-                    api_endpoint=endpoint.path,
+                    api_endpoint=resolved_path,
                     http_method=method,
                     request_headers=valid_headers or None,
                     request_body=partial_body,
@@ -226,6 +300,7 @@ def generate_test_cases(
                     executable=executable,
                     classification_confidence=1.0,
                     skip_reason=None if executable else "No Base URL declared in MD spec.",
+                    depends_on=list(chain_depends),
                 )
             )
             counter += 1
@@ -252,9 +327,9 @@ def generate_test_cases(
                         f"{type(wrong_value).__name__}). Backend must reject "
                         "with 400."
                     ),
-                    preconditions=f"Target API reachable at {base_url or '<base-url>'}",
+                    preconditions=f"Target API reachable at {base_url or '<base-url>'}.{path_note}",
                     steps=_build_validation_steps(
-                        method, full_url, field.name, "wrong type"
+                        method, resolved_url, field.name, "wrong type"
                     ),
                     expected_result=(
                         "HTTP 400 with a JSON binding / validation error."
@@ -263,7 +338,7 @@ def generate_test_cases(
                     category=TestCategory.NEGATIVE,
                     priority="medium",
                     tags=["validation", "type-mismatch", "rule-based"],
-                    api_endpoint=endpoint.path,
+                    api_endpoint=resolved_path,
                     http_method=method,
                     request_headers=valid_headers or None,
                     request_body=mutated,
@@ -272,14 +347,17 @@ def generate_test_cases(
                     executable=executable,
                     classification_confidence=1.0,
                     skip_reason=None if executable else "No Base URL declared in MD spec.",
+                    depends_on=list(chain_depends),
                 )
             )
             counter += 1
 
     # ── 4. Path-param 404 ─────────────────────────────────────────────────
     if has_path_param and has_404:
-        unknown_url = _substitute_path_param(full_url, "999999999")
         unknown_path = _substitute_path_param(endpoint.path, "999999999")
+        unknown_url = (
+            (base_url.rstrip("/") + unknown_path) if base_url else unknown_path
+        )
         cases.append(
             TestCase(
                 id=f"TC-{counter:03d}",
@@ -311,7 +389,23 @@ def generate_test_cases(
         )
         counter += 1
 
-    # ── Coverage & assembly ────────────────────────────────────────────────
+    return cases, counter
+
+
+def _assemble_output(
+    *,
+    cases: list[TestCase],
+    endpoint_count: int,
+    endpoint_paths: list[str],
+    requirement_ids: Optional[list[str]],
+    executable: bool,
+) -> TestCaseOutput:
+    """Wrap the accumulated multi-endpoint cases into a :class:`TestCaseOutput`.
+
+    The authoritative obligation-coverage gate lives in
+    ``services/api_test_planning/coverage.py``; this requirement-level
+    ``CoverageSummary`` is a human-facing rollup only.
+    """
     coverage = CoverageSummary(
         total_requirements=max(1, len(requirement_ids or [])),
         covered_requirements=1 if cases else 0,
@@ -324,24 +418,19 @@ def generate_test_cases(
             "negative": sum(1 for c in cases if c.category == TestCategory.NEGATIVE),
         },
         coverage_gaps=(
-            [] if cases
-            else [f"No test cases generated for {method} {endpoint.path}"]
+            [] if cases else ["No test cases generated from the parsed spec."]
         ),
     )
 
     notes: list[str] = [
         f"Rule-based generator: {len(cases)} test case(s) from "
-        f"{method} {endpoint.path}.",
+        f"{endpoint_count} endpoint(s) — "
+        f"{', '.join(dict.fromkeys(endpoint_paths)) or 'no paths'}.",
     ]
     if not executable:
         notes.append(
             "Base URL not found in MD spec — cases marked executable=False; "
             "execution step will skip them."
-        )
-    if not has_4xx:
-        notes.append(
-            "Spec declares no 4xx response — validation test cases were "
-            "not emitted."
         )
 
     return TestCaseOutput(
@@ -373,21 +462,49 @@ def generate_test_cases(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _build_valid_body(fields: list[ParsedField]) -> dict[str, Any]:
-    body: dict[str, Any] = {}
-    for f in fields:
-        body[f.name] = _sample_valid_value(f.type)
+def _build_valid_body(
+    request: ParsedRequest,
+    seed: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Build a representative request body for happy-path / validation cases.
+
+    The deterministic :func:`request_body_synthesizer.resolve_request_body`
+    handles both spec formats (contract §3.2): a JSON example block has its
+    schema-placeholder tokens (``"YYYY-MM-DD"``, ``"HH:mm"``, ``"string"`` …)
+    replaced with valid values while real example values pass through; a
+    markdown field table is sampled per declared type.
+
+    When *seed* is supplied (an LLM-refined body), its values overlay the
+    deterministic body so each present field ships realistic data. Missing keys
+    always retain the deterministic value, so the body is never left incomplete.
+    """
+    body = resolve_request_body(request)
+    if isinstance(seed, dict):
+        for key, value in seed.items():
+            if value is not None:
+                body[key] = value
     return body
-
-
-def _sample_valid_value(field_type: str) -> Any:
-    key = (field_type or "").lower().strip()
-    return _SAMPLE_VALID.get(key, "sample")
 
 
 def _wrong_type_value(field_type: str) -> Any:
     key = (field_type or "").lower().strip()
     return _SAMPLE_WRONG_TYPE.get(key)
+
+
+def _collection_base(path: str) -> str:
+    """Strip a trailing path-param segment: ``/api/tasks/:id`` → ``/api/tasks``.
+
+    Used to match an item endpoint back to its collection's create (POST) so a
+    captured id can be reused.
+    """
+    return re.sub(r"/[:{][^/]+$", "", path or "")
+
+
+def _var_for(base: str) -> str:
+    """Chain variable name for a collection base, e.g. ``/api/tasks`` → ``tasks_id``."""
+    segment = (base or "").rstrip("/").split("/")[-1] or "resource"
+    segment = re.sub(r"[^A-Za-z0-9]+", "_", segment).strip("_") or "resource"
+    return f"{segment}_id"
 
 
 def _substitute_path_param(path: str, value: str) -> str:

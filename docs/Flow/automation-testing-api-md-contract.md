@@ -88,7 +88,10 @@ Bắt buộc ≥ 1 status code dạng `### 201 Created` hoặc `- 201 Created: {
 - 401 Unauthorized
 ```
 
-Status code: regex `\b[1-5]\d{2}\b` (100–599).
+Status code: regex `\b[1-5]\d{2}\b` (100–599) trên **dòng prose** (vd `- 200 OK`,
+`### 201 Created`, `- HTTP Status: 200`). Số nằm **bên trong** khối JSON example
+(``` ```json ... ``` ```) bị bỏ qua — để giá trị dữ liệu như `"rate": 100.0`
+không bị nhận nhầm thành status. Vì vậy mỗi status phải được khai ngoài fence.
 
 ## 4. Multi-endpoint files
 

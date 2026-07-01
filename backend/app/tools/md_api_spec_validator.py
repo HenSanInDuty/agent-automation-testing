@@ -25,7 +25,7 @@ import re
 from typing import Any, Optional
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants — contract v1
@@ -88,13 +88,66 @@ class ParsedHeader(BaseModel):
     required: bool = False
 
 
-class ParsedSpec(BaseModel):
-    base_url: str = ""
+class ParsedEndpointSpec(BaseModel):
+    """One endpoint's method/path/auth + its request body and responses."""
+
     endpoint: ParsedEndpoint = Field(default_factory=ParsedEndpoint)
     request: ParsedRequest = Field(default_factory=ParsedRequest)
     responses: list[ParsedResponse] = Field(default_factory=list)
     response_body: str = ""
+
+
+class ParsedSpec(BaseModel):
+    """Multi-endpoint parsed spec. ``base_url`` and ``headers`` are spec-level
+    (shared); every declared endpoint lives in ``endpoints``.
+
+    A backward-compatible surface (the ``endpoint``/``request``/``responses``/
+    ``response_body`` read-only properties plus a legacy-kwarg fold) keeps every
+    existing single-endpoint caller and test working without edits.
+    """
+
+    base_url: str = ""
+    endpoints: list[ParsedEndpointSpec] = Field(default_factory=list)
     headers: list[ParsedHeader] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fold_legacy_single_endpoint(cls, data: Any) -> Any:
+        """Fold legacy ``endpoint=``/``request=``/``responses=`` constructor
+        kwargs into a one-element ``endpoints`` list.
+
+        Only triggers when no ``endpoints`` is supplied AND at least one legacy
+        key is present — a re-loaded ``model_dump()`` (which carries
+        ``endpoints``) is left untouched, so the round-trip is stable.
+        """
+        if not isinstance(data, dict) or data.get("endpoints"):
+            return data
+        legacy_keys = ("endpoint", "request", "responses", "response_body")
+        if any(key in data for key in legacy_keys):
+            folded = {key: data.pop(key) for key in legacy_keys if key in data}
+            data["endpoints"] = [folded]
+        return data
+
+    # ── Backward-compat read-only surface (resolves to the first endpoint) ──
+    @property
+    def _first(self) -> ParsedEndpointSpec:
+        return self.endpoints[0] if self.endpoints else ParsedEndpointSpec()
+
+    @property
+    def endpoint(self) -> ParsedEndpoint:
+        return self._first.endpoint
+
+    @property
+    def request(self) -> ParsedRequest:
+        return self._first.request
+
+    @property
+    def responses(self) -> list[ParsedResponse]:
+        return self._first.responses
+
+    @property
+    def response_body(self) -> str:
+        return self._first.response_body
 
 
 class FieldViolation(BaseModel):
@@ -141,15 +194,73 @@ def validate_md_api_spec(
         could be located, even if the spec is invalid.
     """
     synonyms = _merge_synonyms(extra_synonyms)
-    sections = _extract_sections(text, synonyms)
-    parsed = ParsedSpec(base_url=_parse_base_url(text))
+    spec_headers_body, groups = _extract_endpoint_groups(text, synonyms)
+    base_url = _parse_base_url(text)
     violations: list[FieldViolation] = []
     missing_sections: list[str] = []
+    endpoint_specs: list[ParsedEndpointSpec] = []
 
-    # ── 1. Endpoint section ────────────────────────────────────────────────
+    # ── 1. Endpoint groups ─────────────────────────────────────────────────
+    # An empty / endpoint-less document still reports the single-endpoint
+    # "missing endpoint + response" gap set (validating an empty group).
+    for group in groups or [{}]:
+        spec, ep_violations, ep_missing = _validate_endpoint_group(group)
+        endpoint_specs.append(spec)
+        violations.extend(ep_violations)
+        missing_sections.extend(ep_missing)
+
+    # ── 2. Spec-level base URL (shared across all endpoints) ───────────────
+    if not base_url or not _is_valid_base_url(base_url):
+        code = "MD_SPEC_MISSING_BASE_URL" if not base_url else "MD_SPEC_INVALID_BASE_URL"
+        violations.append(
+            _violation("base_url", code, "Base URL must be an absolute http(s) URL.")
+        )
+
+    # ── 3. Spec-level headers (shared across all endpoints) ────────────────
+    headers, header_conflicts = _parse_headers(spec_headers_body)
+    if not spec_headers_body:
+        missing_sections.append("headers")
+    if not headers:
+        violations.append(
+            _violation("headers", "MD_SPEC_MISSING_HEADERS", "Declare at least one request header name or schema; secret values belong in runtime credentials.")
+        )
+    for header_name in header_conflicts:
+        violations.append(
+            _violation(
+                f"headers.{header_name.lower()}",
+                "MD_SPEC_CONFLICTING_HEADER",
+                f"Header {header_name!r} is declared more than once with conflicting schema metadata.",
+            )
+        )
+
+    parsed = ParsedSpec(
+        base_url=base_url, endpoints=endpoint_specs, headers=headers
+    )
+    return _result_from_violations(
+        parsed=parsed,
+        violations=violations,
+        missing_sections=missing_sections,
+        strict=strict,
+    )
+
+
+def _validate_endpoint_group(
+    sections: dict[str, str],
+) -> tuple[ParsedEndpointSpec, list[FieldViolation], list[str]]:
+    """Validate one endpoint group's endpoint/request/response sections.
+
+    Returns the parsed :class:`ParsedEndpointSpec` plus the violations and
+    missing-section names it produced. Violation field codes stay flat
+    (``endpoint.method`` etc.) so single-endpoint callers see identical codes.
+    """
+    spec = ParsedEndpointSpec()
+    violations: list[FieldViolation] = []
+    missing: list[str] = []
+
+    # ── Endpoint section ───────────────────────────────────────────────────
     endpoint_text = sections.get("endpoint", "")
     if not endpoint_text:
-        missing_sections.append("endpoint")
+        missing.append("endpoint")
         violations.extend(
             [
                 _violation("endpoint.method", "MD_SPEC_MISSING_ENDPOINT", "Endpoint method is required."),
@@ -158,7 +269,7 @@ def validate_md_api_spec(
         )
     else:
         endpoint, ep_missing = _parse_endpoint(endpoint_text)
-        parsed.endpoint = endpoint
+        spec.endpoint = endpoint
         for field in ep_missing:
             canonical = f"endpoint.{field.lower()}"
             violations.append(
@@ -177,25 +288,30 @@ def validate_md_api_spec(
                 _violation("endpoint.path", "MD_SPEC_INVALID_PATH", "Endpoint path must start with '/'.")
             )
 
-    # ── 2. Request section ─────────────────────────────────────────────────
+    # ── Request section ────────────────────────────────────────────────────
+    # A request body is only meaningful for methods that carry one. GET/DELETE/
+    # HEAD/OPTIONS legitimately have no body, so requiring one for them would
+    # reject otherwise-valid specs.
+    requires_body = (spec.endpoint.method or "").upper() in _METHODS_WITH_BODY
     request_text = sections.get("request", "")
     if not request_text:
-        missing_sections.append("request")
-        violations.append(
-            _violation("request.body", "MD_SPEC_MISSING_REQUEST_BODY", "A non-empty request body schema is required for every method.")
-        )
+        if requires_body:
+            missing.append("request")
+            violations.append(
+                _violation("request.body", "MD_SPEC_MISSING_REQUEST_BODY", "A non-empty request body schema is required for this method.")
+            )
     else:
-        req, req_missing = _parse_request(request_text)
-        parsed.request = req
-        if not req.body_fields and not req.raw_body_schema:
+        req, _req_missing = _parse_request(request_text)
+        spec.request = req
+        if requires_body and not req.body_fields and not req.raw_body_schema:
             violations.append(
                 _violation("request.body", "MD_SPEC_MISSING_REQUEST_BODY", "Request body schema must contain fields or a JSON block.")
             )
 
-    # ── 3. Response section ────────────────────────────────────────────────
+    # ── Response section ───────────────────────────────────────────────────
     response_text = sections.get("response", "")
     if not response_text:
-        missing_sections.append("response")
+        missing.append("response")
         violations.extend(
             [
                 _violation("response.status", "MD_SPEC_MISSING_RESPONSE_STATUS", "At least one response status is required."),
@@ -203,46 +319,18 @@ def validate_md_api_spec(
             ]
         )
     else:
-        parsed.responses = _parse_responses(response_text)
-        parsed.response_body = _extract_response_body(response_text, parsed.responses)
-        if not parsed.responses:
+        spec.responses = _parse_responses(response_text)
+        spec.response_body = _extract_response_body(response_text, spec.responses)
+        if not spec.responses:
             violations.append(
                 _violation("response.status", "MD_SPEC_MISSING_RESPONSE_STATUS", "Response section must contain an HTTP status code.")
             )
-        if not parsed.response_body:
+        if not spec.response_body:
             violations.append(
                 _violation("response.body", "MD_SPEC_MISSING_RESPONSE_BODY", "Response section must contain a JSON body or schema.")
             )
 
-    if not parsed.base_url or not _is_valid_base_url(parsed.base_url):
-        code = "MD_SPEC_MISSING_BASE_URL" if not parsed.base_url else "MD_SPEC_INVALID_BASE_URL"
-        violations.append(
-            _violation("base_url", code, "Base URL must be an absolute http(s) URL.")
-        )
-
-    headers_text = sections.get("headers", "")
-    parsed.headers, header_conflicts = _parse_headers(headers_text)
-    if not headers_text:
-        missing_sections.append("headers")
-    if not parsed.headers:
-        violations.append(
-            _violation("headers", "MD_SPEC_MISSING_HEADERS", "Declare at least one request header name or schema; secret values belong in runtime credentials.")
-        )
-    for header_name in header_conflicts:
-        violations.append(
-            _violation(
-                f"headers.{header_name.lower()}",
-                "MD_SPEC_CONFLICTING_HEADER",
-                f"Header {header_name!r} is declared more than once with conflicting schema metadata.",
-            )
-        )
-
-    return _result_from_violations(
-        parsed=parsed,
-        violations=violations,
-        missing_sections=missing_sections,
-        strict=strict,
-    )
+    return spec, violations, missing
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -305,11 +393,20 @@ def _is_valid_base_url(value: str) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
-def _extract_sections(
+def _extract_endpoint_groups(
     text: str,
     synonyms: dict[str, list[str]],
-) -> dict[str, str]:
-    """Split *text* by H2/H3 headings, return canonical_key → body."""
+) -> tuple[str, list[dict[str, str]]]:
+    """Split *text* into one section group per declared endpoint.
+
+    Each ``endpoint`` heading (``### Endpoint``, ``## API``, ``## Route`` …)
+    starts a new group; the ``request``/``response`` headings that follow it —
+    up to the next endpoint heading — belong to that group (first-wins within a
+    group). The spec-level ``headers`` table is shared and returned separately,
+    never folded into an endpoint group.
+
+    Returns ``(spec_headers_body, [ {endpoint, request, response}, … ])``.
+    """
     # Compile a reverse map: alias_lower → canonical_key
     alias_to_canonical: dict[str, str] = {}
     for canonical, aliases in synonyms.items():
@@ -319,7 +416,10 @@ def _extract_sections(
     # Match H2 and H3 headings (## or ###)
     heading_re = re.compile(r"(?m)^(#{2,3})\s+(.+?)\s*$")
     matches = list(heading_re.finditer(text))
-    sections: dict[str, str] = {}
+
+    spec_headers_body = ""
+    groups: list[dict[str, str]] = []
+    current: Optional[dict[str, str]] = None
 
     for idx, m in enumerate(matches):
         title_raw = m.group(2).strip()
@@ -334,13 +434,23 @@ def _extract_sections(
         body_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
         body = text[body_start:body_end].strip()
 
-        # Multi-endpoint: only record the FIRST occurrence per canonical section.
-        # The full multi-endpoint mode can be re-enabled when downstream nodes
-        # support array specs (out of scope for v1).
-        if canonical not in sections:
-            sections[canonical] = body
+        if canonical == "headers":
+            # Spec-level, shared — keep the first declared table only.
+            if not spec_headers_body:
+                spec_headers_body = body
+            continue
+        if canonical == "endpoint":
+            # Each endpoint heading opens a fresh group.
+            current = {"endpoint": body}
+            groups.append(current)
+            continue
+        # request / response — attach to the current group (first-wins within).
+        if current is None:
+            current = {}
+            groups.append(current)
+        current.setdefault(canonical, body)
 
-    return sections
+    return spec_headers_body, groups
 
 
 def _parse_endpoint(text: str) -> tuple[ParsedEndpoint, list[str]]:
@@ -547,7 +657,12 @@ def _split_table_row(line: str) -> list[str]:
 
 
 def _extract_first_code_block(text: str, lang_hint: str = "") -> str:
-    pattern = r"```" + (lang_hint or "[a-zA-Z]*") + r"\s*\n([\s\S]*?)\n```"
+    # Fenced blocks nested under a list item (e.g. "- JSON Body:") are indented,
+    # so both the info-string line and the closing fence may carry leading
+    # whitespace. Tolerate that instead of requiring column-0 fences.
+    pattern = (
+        r"```" + (lang_hint or "[a-zA-Z]*") + r"\s*\n([\s\S]*?)\n[ \t]*```"
+    )
     m = re.search(pattern, text)
     if m:
         return m.group(1).strip()
@@ -558,7 +673,16 @@ def _parse_responses(text: str) -> list[ParsedResponse]:
     responses: list[ParsedResponse] = []
     seen: set[int] = set()
 
+    in_fence = False
     for line in text.splitlines():
+        # Status codes are declared on prose lines (e.g. "HTTP Status: 200").
+        # Numeric values inside a fenced JSON example (e.g. "rate": 100.0) must
+        # not be mistaken for HTTP statuses, so skip fenced code blocks.
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         for match in _RE_STATUS_CODE.finditer(line):
             code = int(match.group(1))
             if code in seen:

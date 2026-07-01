@@ -116,15 +116,17 @@ class StorageService:
         run_id: str,
         html_bytes: bytes | None = None,
         docx_bytes: bytes | None = None,
+        pdf_bytes: bytes | None = None,
     ) -> dict[str, str]:
-        """Upload the final HTML/DOCX report for a pipeline run.
+        """Upload the final HTML/DOCX/PDF report for a pipeline run.
 
-        Used by :class:`~app.crews.export_crew.ExportCrew`. Either argument
-        may be ``None`` if only one format is to be uploaded.
+        Used by :class:`~app.crews.export_crew.ExportCrew`. Any argument may be
+        ``None`` to skip that format.
 
         Returns:
-            Mapping ``{"html": object_name, "docx": object_name}`` (keys
-            omitted when the corresponding bytes argument is None).
+            Mapping with object names per uploaded format (``"html"``,
+            ``"docx"``, ``"pdf"``); keys are omitted when the corresponding
+            bytes argument is None.
         """
         out: dict[str, str] = {}
         if html_bytes is not None:
@@ -142,6 +144,10 @@ class StorageService:
                 ),
             )
             out["docx"] = name
+        if pdf_bytes is not None:
+            name = f"runs/{run_id}/report.pdf"
+            self.upload_bytes(name, pdf_bytes, content_type="application/pdf")
+            out["pdf"] = name
         return out
 
     # ── Download / presigned ──────────────────────────────────────────────────

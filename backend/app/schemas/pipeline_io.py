@@ -181,6 +181,38 @@ class TestCase(BaseModel):
         description="Populated when ExecutionCrew filters this case out.",
     )
 
+    # Adaptive multi-agent planner provenance (adaptive-api-testing-pipeline).
+    # All additive with safe defaults so the rule-based generator and existing
+    # downstream consumers keep working unchanged.
+    obligation_ids: list[str] = Field(
+        default_factory=list,
+        description="IDs of source obligations this case satisfies (traceability).",
+    )
+    source_role: str = Field(
+        default="baseline",
+        description="Origin of the case: 'baseline' or a planner role slug.",
+    )
+    is_assumption: bool = Field(
+        default=False,
+        description="True when the case asserts behaviour not explicitly stated "
+        "in the source document (invented edge case).",
+    )
+
+    # Request chaining (stateful execution). A create case can expose values from
+    # its response via ``extract`` (variable_name → response body field); a
+    # dependent case references them as ``{variable_name}`` placeholders inside
+    # ``api_endpoint`` and lists the producing case in ``depends_on`` so the
+    # runner executes it first and substitutes the captured value at runtime.
+    depends_on: list[str] = Field(
+        default_factory=list,
+        description="TC ids that must run before this case (chaining order).",
+    )
+    extract: dict[str, str] = Field(
+        default_factory=dict,
+        description="variable_name → response body field to capture after this "
+        "case runs, for later cases to reference as {variable_name}.",
+    )
+
 
 class CoverageSummary(BaseModel):
     """Coverage metrics for the generated test suite."""
@@ -222,11 +254,193 @@ class TestCaseOutput(BaseModel):
     risks: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
 
+    # Adaptive multi-agent planner metadata (adaptive-api-testing-pipeline).
+    # Optional/additive: the rule-based generator leaves these at defaults.
+    complexity: Optional["ComplexityDecision"] = Field(
+        default=None,
+        description="Deterministic complexity decision that selected the planners.",
+    )
+    obligations: list["SourceObligation"] = Field(
+        default_factory=list,
+        description="Normalized source obligations every case maps back to.",
+    )
+    planner_warnings: list[str] = Field(
+        default_factory=list,
+        description="Visible warnings (e.g. an agent failed; baseline retained).",
+    )
+    assumptions: list[str] = Field(
+        default_factory=list,
+        description="Invented behaviours flagged across the consolidated plan.",
+    )
+    duplicates_removed: int = Field(
+        default=0,
+        description="Semantic duplicates dropped during consolidation.",
+    )
+    review_gate: Optional["ReviewGateSummary"] = Field(
+        default=None,
+        description="Senior-review coverage-gate audit (bounded loop outcome).",
+    )
+
     @model_validator(mode="after")
     def sync_total(self) -> "TestCaseOutput":
         if self.total_test_cases == 0 and self.test_cases:
             self.total_test_cases = len(self.test_cases)
         return self
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 (adaptive) – Multi-agent planning metadata
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PlannerRole(str, Enum):
+    """Specialised planner concerns, listed in fixed selection priority order."""
+
+    POSITIVE = "positive"
+    NEGATIVE_SCHEMA = "negative_schema"
+    AUTH_SECURITY = "auth_security"
+    BOUNDARY_DATA = "boundary_data"
+    RESILIENCE_IDEMPOTENCY = "resilience_idempotency"
+
+
+class ComplexityDecision(BaseModel):
+    """Deterministic, explainable decision of how many planners to run."""
+
+    score: int = 0
+    signals: dict[str, int] = Field(
+        default_factory=dict,
+        description="Raw counted signals (endpoints, parameters, responses, …).",
+    )
+    agent_count: int = Field(default=1, ge=1, le=5)
+    selected_roles: list[PlannerRole] = Field(default_factory=list)
+    rationale: str = ""
+
+
+class SourceObligation(BaseModel):
+    """A single normalized obligation extracted from the source document."""
+
+    id: str = Field(description="OBL-001, OBL-002, …")
+    kind: str = Field(
+        description="response | header | auth | field | rule | parameter"
+    )
+    description: str = ""
+    evidence: str = Field(default="", description="Short source-derived evidence.")
+    required: bool = Field(
+        default=True,
+        description="True when coverage of this obligation is mandatory. "
+        "Optional/accepted signals (e.g. non-required headers) are False so "
+        "they never inflate the deterministic coverage score.",
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2.6 (adaptive) – Senior coverage review loop
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class ReviewVerdict(str, Enum):
+    """Senior reviewer's qualitative verdict on a consolidated plan."""
+
+    APPROVE = "approve"
+    REVISE = "revise"
+    REJECT = "reject"
+
+
+class CoverageGap(BaseModel):
+    """A single required obligation left uncovered by the plan."""
+
+    obligation_id: str
+    kind: str = ""
+    description: str = ""
+
+
+class CoverageReport(BaseModel):
+    """Deterministic obligation-to-test coverage, computed from mappings only.
+
+    The score is reproducible from the persisted obligation list and the
+    ``obligation_ids`` on each test case — never an LLM self-assessment.
+    """
+
+    total_required: int = 0
+    covered_required: int = 0
+    coverage_percent: float = 0.0
+    gaps: list[CoverageGap] = Field(default_factory=list)
+    unknown_obligation_ids: list[str] = Field(
+        default_factory=list,
+        description="Obligation ids cited by cases that are not in the inventory.",
+    )
+
+    @model_validator(mode="after")
+    def compute_percent(self) -> "CoverageReport":
+        if self.coverage_percent == 0.0:
+            if self.total_required == 0:
+                # No required obligations → vacuously fully covered.
+                self.coverage_percent = 100.0
+            else:
+                self.coverage_percent = round(
+                    self.covered_required / self.total_required * 100, 1
+                )
+        return self
+
+
+class SeniorReviewResult(BaseModel):
+    """Qualitative senior review of a consolidated plan.
+
+    Advisory only: the reviewer may reject but cannot fabricate numeric
+    coverage. When the reviewer times out or returns invalid output, a
+    deterministic fallback verdict is produced and ``fallback=True``.
+    """
+
+    verdict: ReviewVerdict = ReviewVerdict.APPROVE
+    evidence: str = ""
+    gaps: list[str] = Field(
+        default_factory=list,
+        description="Missing edge cases / scenarios the reviewer identified.",
+    )
+    unsafe_assumptions: list[str] = Field(default_factory=list)
+    feedback: str = Field(
+        default="",
+        description="Targeted, actionable feedback fed into the next planning iteration.",
+    )
+    fallback: bool = Field(
+        default=False,
+        description="True when reviewer failed/mocked and a deterministic "
+        "coverage-only verdict was substituted.",
+    )
+
+
+class ReviewIteration(BaseModel):
+    """A single planning→coverage→review attempt, persisted for audit."""
+
+    iteration: int = 0
+    case_count: int = 0
+    coverage: CoverageReport = Field(default_factory=CoverageReport)
+    review: SeniorReviewResult = Field(default_factory=SeniorReviewResult)
+    accepted: bool = False
+    feedback_applied: str = Field(
+        default="",
+        description="Feedback fed INTO this iteration (empty for the first).",
+    )
+
+
+class ReviewGateSummary(BaseModel):
+    """Complete bounded-loop audit + the selected outcome."""
+
+    coverage_threshold_percent: float = 90.0
+    max_review_iterations: int = 3
+    continue_on_exhaustion: bool = True
+    iterations: list[ReviewIteration] = Field(default_factory=list)
+    selected_iteration: int = 0
+    final_coverage_percent: float = 0.0
+    final_verdict: ReviewVerdict = ReviewVerdict.APPROVE
+    accepted: bool = False
+    coverage_gate_exhausted: bool = False
+    warnings: list[str] = Field(default_factory=list)
+
+
+# Resolve the forward references used in TestCaseOutput now that the adaptive
+# planner models exist in the module namespace.
+TestCaseOutput.model_rebuild()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -249,6 +463,11 @@ class TestExecutionResult(BaseModel):
     skip_reason: Optional[str] = Field(
         default=None,
         description="Set when the case was filtered out (e.g. executable=false).",
+    )
+    obligation_ids: list[str] = Field(
+        default_factory=list,
+        description="Obligations the source case satisfies — carried onto the "
+        "result so MongoDB can reconstruct how each result maps to the plan.",
     )
 
 

@@ -108,17 +108,17 @@ class ApiTestCaseCrew(BaseCrew):
             requirement_ids=requirement_ids,
         )
 
+        endpoint_count = len(parsed.endpoints)
         self._emit_log(
             f"Rule-based generator produced {output.total_test_cases} "
-            f"test case(s) for {parsed.endpoint.method} "
-            f"{parsed.endpoint.path}.",
+            f"test case(s) across {endpoint_count} endpoint(s).",
             level="info",
         )
         self._emit_agent_completed(
             "api_test_case_generator",
             output_preview=(
                 f"{output.total_test_cases} case(s) · "
-                f"{parsed.endpoint.method} {parsed.endpoint.path}"
+                f"{endpoint_count} endpoint(s)"
             ),
         )
 

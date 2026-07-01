@@ -68,6 +68,10 @@ class ReportVerifierCrew(BaseCrew):
             )
         pass_rate = _summary.get("pass_rate") if isinstance(_summary, dict) else None
 
+        review_gate = input_data.get("review_gate")
+        if not isinstance(review_gate, dict):
+            review_gate = (input_data.get("testcase_output") or {}).get("review_gate")
+
         result = verify_report(
             test_cases=test_cases,
             results=results,
@@ -75,8 +79,11 @@ class ReportVerifierCrew(BaseCrew):
             pass_rate=pass_rate,
             html_bytes=input_data.get("_html_bytes") or b"",
             docx_bytes=input_data.get("_docx_bytes") or b"",
+            pdf_bytes=input_data.get("_pdf_bytes") or b"",
             html_url=input_data.get("html_path") or "",
             docx_url=input_data.get("docx_path") or "",
+            pdf_url=input_data.get("pdf_path") or "",
+            review_gate=review_gate if isinstance(review_gate, dict) else None,
         )
 
         components_dump = {k: v.model_dump() for k, v in result.components.items()}
@@ -85,6 +92,7 @@ class ReportVerifierCrew(BaseCrew):
             "components": components_dump,
             "html_url": result.html_url,
             "docx_url": result.docx_url,
+            "pdf_url": result.pdf_url,
             "summary": result.summary,
         }
 
@@ -117,4 +125,5 @@ class ReportVerifierCrew(BaseCrew):
         # Strip raw bytes — they should not be persisted in PipelineResultDocument.
         out.pop("_html_bytes", None)
         out.pop("_docx_bytes", None)
+        out.pop("_pdf_bytes", None)
         return out

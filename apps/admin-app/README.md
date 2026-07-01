@@ -1,7 +1,26 @@
-# Auto-AT Frontend
+# Auto-AT Admin App
 
 > **Auto-AT** — Multi-Agent Automated Testing System
 > Next.js 15 · React 19 · Tailwind CSS v4 · TypeScript · WebSocket + SSE · Zustand · @xyflow/react
+
+---
+
+## 🆕 V4 Changes (Phases 3–5: Adaptive API Testing Pipeline)
+
+V4 extends the admin app with support for the adaptive multi-agent planner and review coverage gates:
+
+| # | Feature | Summary |
+|---|---------|---------|
+| 1 | **Adaptive Planner Node Config UI** | Node properties panel for `adaptive_planner` node now exposes config fields: `min_planner_agents` (1-5), `max_planner_agents` (1-5), `coverage_threshold_percent` (0-100), `max_review_iterations` (0-5), `continue_on_review_exhaustion` (bool). Bounded input validation prevents invalid configurations. |
+| 2 | **Admin-Only Node Config** | Adaptive planner config is editable **in admin app only**. User app (`auto-at/apps/user-app`) exposes read-only run progress and structured validator errors via shared components. |
+| 3 | **PDF Export** | Shared export controls now include PDF download button alongside HTML/DOCX (Phase 4). Gate status and review-coverage advisory visible on run-detail page. |
+| 4 | **Structured Validator Errors** | New `ValidatorFailureChecklist` shared component displays missing required fields with guidance when doc validation fails. Admin sees full error detail; fallback for legacy runs. |
+
+**UI Components Added (Shared):**
+
+- `PlanningReviewSummary.tsx` — Compact display of complexity decision, agent count, iteration/coverage, and exhaustion warning.
+- `ValidatorFailureChecklist.tsx` — Checklist of missing required fields for MD spec validation failures.
+- Gated PDF button in `ReportVerificationCard.tsx`.
 
 ---
 

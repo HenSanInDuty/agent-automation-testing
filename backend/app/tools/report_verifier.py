@@ -44,6 +44,7 @@ class VerificationResult(BaseModel):
     components: dict[str, ComponentCheck] = Field(default_factory=dict)
     html_url: str = ""
     docx_url: str = ""
+    pdf_url: str = ""
     summary: str = ""
 
 
@@ -59,10 +60,18 @@ def verify_report(
     pass_rate: Optional[float] = None,
     html_bytes: bytes = b"",
     docx_bytes: bytes = b"",
+    pdf_bytes: bytes = b"",
     html_url: str = "",
     docx_url: str = "",
+    pdf_url: str = "",
+    review_gate: Optional[dict[str, Any]] = None,
 ) -> VerificationResult:
-    """Run the 3-component verification on the final artifacts."""
+    """Run the component verification on the final artifacts.
+
+    The 3 core components (test cases / results / unit test files) gate the
+    download. ``review_coverage`` is **informational** — an exhausted coverage
+    gate must NOT block delivery (it surfaces a warning instead).
+    """
     test_cases = list(test_cases or [])
     results = list(results or [])
     unit_test_files = list(unit_test_files or [])
@@ -71,7 +80,7 @@ def verify_report(
     res_check = _check_results(results, pass_rate)
     utf_check = _check_unit_test_files(unit_test_files)
 
-    # When HTML/DOCX bytes are supplied, do a minimal size sanity check so the
+    # When export bytes are supplied, do a minimal size sanity check so the
     # verifier surfaces obviously broken exports.
     if html_bytes and len(html_bytes) < 200:
         res_check.issues.append(
@@ -83,14 +92,21 @@ def verify_report(
             f"DOCX report suspiciously small ({len(docx_bytes)} bytes)"
         )
         res_check.ok = False
+    if pdf_bytes and len(pdf_bytes) < 1000:
+        res_check.issues.append(
+            f"PDF report suspiciously small ({len(pdf_bytes)} bytes)"
+        )
+        res_check.ok = False
 
     components = {
         "test_cases": tc_check,
         "results": res_check,
         "unit_test_files": utf_check,
+        "review_coverage": _check_review_coverage(review_gate),
     }
 
-    verified = all(c.ok for c in components.values())
+    # Only the 3 core components gate delivery; review_coverage is advisory.
+    verified = tc_check.ok and res_check.ok and utf_check.ok
     summary = (
         "Report ready for delivery"
         if verified
@@ -102,8 +118,35 @@ def verify_report(
         components=components,
         html_url=html_url,
         docx_url=docx_url,
+        pdf_url=pdf_url,
         summary=summary,
     )
+
+
+def _check_review_coverage(review_gate: Optional[dict[str, Any]]) -> ComponentCheck:
+    """Informational check: record coverage / exhaustion without gating.
+
+    A missing gate (legacy run) is fine. An exhausted gate records a warning
+    issue but stays ``ok`` so the run still delivers its best-available plan.
+    """
+    chk = ComponentCheck(ok=True)
+    if not isinstance(review_gate, dict):
+        chk.extra["available"] = False
+        return chk
+    chk.extra["available"] = True
+    chk.extra["coverage_percent"] = review_gate.get("final_coverage_percent")
+    chk.extra["threshold"] = review_gate.get("coverage_threshold_percent")
+    chk.extra["verdict"] = review_gate.get("final_verdict")
+    chk.extra["accepted"] = review_gate.get("accepted")
+    chk.count = len(review_gate.get("iterations") or [])
+    if review_gate.get("coverage_gate_exhausted"):
+        chk.extra["exhausted"] = True
+        chk.issues.append(
+            "Coverage gate exhausted — delivered best-available plan "
+            f"({review_gate.get('final_coverage_percent')}% vs "
+            f"{review_gate.get('coverage_threshold_percent')}% threshold)."
+        )
+    return chk
 
 
 # ─────────────────────────────────────────────────────────────────────────────

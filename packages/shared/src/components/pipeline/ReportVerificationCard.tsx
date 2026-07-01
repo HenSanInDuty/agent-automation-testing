@@ -3,9 +3,10 @@
  * ──────────────────────
  * Card that surfaces the 3-component verification result for a run that uses
  * the `automation-testing-api` pipeline template. Renders:
- *   - Badge per component (test_cases / results / unit_test_files) with count + ✓/✗
+ *   - Badge per component (test_cases / results / unit_test_files / review_coverage) with count + ✓/✗
  *   - Collapsible Issues list
- *   - Download HTML / DOCX buttons (disabled when verification has not passed)
+ *   - Download HTML / DOCX / PDF buttons (disabled when verification has not passed)
+ *   - Force-download buttons for admin (allowForceDownload=true)
  *
  * Pure presentational + thin hook usage. No app-specific state.
  */
@@ -33,6 +34,7 @@ const COMPONENT_LABELS: Record<string, string> = {
   test_cases: "Test cases",
   results: "Execution results",
   unit_test_files: "Unit test files",
+  review_coverage: "Review coverage",
 };
 
 export function ReportVerificationCard({
@@ -117,8 +119,10 @@ export function ReportVerificationCard({
       </header>
 
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 4 }}>
-        {(["test_cases", "results", "unit_test_files"] as const).map((key) => {
+        {(["test_cases", "results", "unit_test_files", "review_coverage"] as const).map((key) => {
           const c: ReportVerificationComponent | undefined = components[key];
+          // Skip optional components that are absent (review_coverage only present for adaptive runs)
+          if (key === "review_coverage" && !c) return null;
           return (
             <li
               key={key}
@@ -175,6 +179,12 @@ export function ReportVerificationCard({
           disabled={buildDisabled}
           tooltip={tooltip}
         />
+        <DownloadButton
+          label="Tải PDF"
+          onClick={() => pipelineApi.downloadExportPdf(runId)}
+          disabled={buildDisabled}
+          tooltip={buildDisabled ? tooltip : "Tải báo cáo PDF đã được verify."}
+        />
         {allowForceDownload && buildDisabled && (
           <>
             <DownloadButton
@@ -188,6 +198,12 @@ export function ReportVerificationCard({
               onClick={() => pipelineApi.downloadExportDocx(runId, true)}
               disabled={false}
               tooltip="Admin override — bỏ qua verifier"
+            />
+            <DownloadButton
+              label="Tải PDF (force)"
+              onClick={() => pipelineApi.downloadExportPdf(runId, true)}
+              disabled={false}
+              tooltip="Admin override — bỏ qua verifier (PDF)"
             />
           </>
         )}

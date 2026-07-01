@@ -62,6 +62,16 @@ class ApiTestRunnerCrew(BaseCrew):
         test_cases = list(input_data.get("test_cases") or [])
         document_content = str(input_data.get("document_content") or "")
 
+        # Source of truth for the base URL is the already-validated parsed spec
+        # (it accepts the bullet `- Base URL:` form); fall back to scraping the
+        # raw document only when the parsed spec is unavailable.
+        parsed_spec = input_data.get("md_spec_parsed")
+        base_url_override = (
+            (parsed_spec.get("base_url") or None)
+            if isinstance(parsed_spec, dict)
+            else None
+        )
+
         if not test_cases:
             self._emit_log(
                 "No test cases received — emitting empty execution output.",
@@ -79,9 +89,16 @@ class ApiTestRunnerCrew(BaseCrew):
                 },
             }
 
+        self._emit_log(
+            "Base URL resolved from "
+            + ("parsed spec" if base_url_override else "document")
+            + f": {base_url_override or '(scraped at runtime)'}",
+            level="info",
+        )
         output = execute_test_cases(
             test_cases=test_cases,
             document_content=document_content,
+            base_url_override=base_url_override,
         )
 
         summary = output.summary

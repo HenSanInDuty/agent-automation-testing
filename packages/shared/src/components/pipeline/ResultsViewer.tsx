@@ -33,6 +33,7 @@ import type {
   AgentRunResult,
   AgentRunStatus,
   PipelineStatus,
+  TestCaseNodeOutput,
 } from "../../types";
 import { toast } from "../../components/ui/Toast";
 import { PrettyOutput } from "./PrettyOutput";
@@ -45,6 +46,7 @@ import type {
 } from "./TestCasesTable";
 import { CoverageView } from "./CoverageView";
 import type { PreCoverage, PostCoverage } from "./CoverageView";
+import { PlanningReviewSummary } from "./PlanningReviewSummary";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -1018,6 +1020,23 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
     return null;
   }, [nodeResultsRaw]);
 
+  // ── Adaptive planning metadata (complexity + review gate) — Phase 5 ────────
+  // Only present on runs from the adaptive testcase planner. Absent → null.
+  const planningData = React.useMemo<Pick<TestCaseNodeOutput, "complexity" | "review_gate" | "planner_warnings"> | null>(() => {
+    for (const r of nodeResultsRaw ?? []) {
+      const out = (r as { output?: unknown }).output as TestCaseNodeOutput | undefined;
+      // Detect adaptive planner output by presence of complexity or review_gate
+      if (out && (out.complexity !== undefined || out.review_gate !== undefined)) {
+        return {
+          complexity: out.complexity ?? null,
+          review_gate: out.review_gate ?? null,
+          planner_warnings: out.planner_warnings ?? [],
+        };
+      }
+    }
+    return null;
+  }, [nodeResultsRaw]);
+
   // "Files" tab now lists Playwright artifacts for every run (synthesised from
   // DB output when MinIO is empty). Only V3-only "Nodes" stays gated.
   const visibleTabs =
@@ -1121,6 +1140,14 @@ export function ResultsViewer({ run, templateNodes, hideNodeResults = false }: R
         >
           {activeTab === "report" && (
             <div className="space-y-4">
+              {/* Additive planning/review summary — only rendered for adaptive runs */}
+              {planningData && (
+                <PlanningReviewSummary
+                  complexity={planningData.complexity}
+                  reviewGate={planningData.review_gate}
+                  plannerWarnings={planningData.planner_warnings}
+                />
+              )}
               <RunSummaryCard run={run} />
               {displayAgents.length > 0 ? (
                 displayAgents.map((agent) => (

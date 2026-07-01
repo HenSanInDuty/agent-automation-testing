@@ -11,6 +11,7 @@ auto_at.db
 
 # Test artifacts
 .pytest_cache/
+.pytest-tmp*/
 .coverage
 htmlcov/
 .tox/

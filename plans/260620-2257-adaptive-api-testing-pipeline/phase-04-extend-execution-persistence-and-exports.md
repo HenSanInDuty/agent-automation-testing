@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Extend execution persistence and exports"
-status: pending
+status: complete
 priority: P1
 dependencies: [3]
 ---
@@ -46,12 +46,21 @@ Reuse `PipelineResultDocument` node outputs; do not add a collection. The adapti
 
 ## Success Criteria
 
-- [ ] MongoDB reconstructs why a plan was selected and how each executed result maps to it.
-- [ ] Partial execution failures remain stored and appear in both reports.
-- [ ] HTML and PDF expose equivalent core data and correct MIME/disposition headers.
-- [ ] Verification failure returns existing structured 409 behavior for both formats.
-- [ ] No secret header value appears in MongoDB snapshots, logs, events, HTML, or PDF.
-- [ ] Export and runner unit/integration tests pass.
+- [x] MongoDB reconstructs why a plan was selected and how each executed result maps to it. (review_gate persisted in testcase node output; `obligation_ids` carried onto each TestExecutionResult.)
+- [x] Partial execution failures remain stored and appear in both reports.
+- [x] HTML and PDF expose equivalent core data (shared `_load_run_data` context) and correct MIME/disposition headers.
+- [x] Verification failure returns existing structured 409 behavior for HTML/DOCX/PDF (`_enforce_verification_gate`).
+- [x] No secret header value appears in MongoDB snapshots, logs, events, HTML, or PDF. (Redaction at planner output + export context; placeholders like `Bearer ${TOKEN}` preserved for executability.)
+- [x] Export and runner unit/integration tests pass.
+
+## Implementation Notes (sync-back)
+
+- New: `services/pdf_report_builder.py` (ReportLab), `tools/header_redaction.py`; dep `reportlab>=4.0.0`.
+- Fixed latent bug: `ExportService._classify_result` now matches DAG `node_id`/`agent_id` (runner stores `stage=node_id`), so the automation-testing-api pipeline's testcase/execution data actually reaches HTML/DOCX/PDF.
+- `report_verifier` gains informational `review_coverage` component (advisory — an exhausted gate never blocks delivery) + PDF size sanity + `pdf_url`.
+- `_get_verification_payload` now reads the most-recent verifier doc (correct on re-runs).
+- New endpoint `GET /runs/{run_id}/export/pdf`; `storage.upload_report` + export checksums extended for PDF.
+- Tests: `tests/test_execution_persistence_and_exports.py` (17).
 
 ## Risk Assessment
 

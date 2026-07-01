@@ -32,7 +32,9 @@ from app.tools.api_runner import run_api_request
 
 logger = logging.getLogger(__name__)
 
-_RE_BASE_URL = re.compile(r"(?im)^\s*Base\s*URL\s*[:=]\s*(\S+)")
+# Tolerate a leading list bullet (e.g. "- Base URL: …"), mirroring the
+# validator's pattern so document scraping never diverges from parsing.
+_RE_BASE_URL = re.compile(r"(?im)^\s*[-*]?\s*Base\s*URL\s*[:=]\s*(\S+)")
 
 
 def execute_test_cases(
@@ -73,13 +75,22 @@ def execute_test_cases(
             "No Base URL configured — all executable cases will be skipped."
         )
 
-    for tc in test_cases:
+    # Stateful chaining: run cases so each producer (a create with ``extract``)
+    # precedes its consumers, capture values from responses into ``context``, and
+    # substitute ``{var}`` placeholders in dependent endpoints at run time.
+    ordered_cases = _order_by_dependencies(test_cases)
+    context: dict[str, str] = {}
+
+    for tc in ordered_cases:
         if not isinstance(tc, dict):
             continue
 
         tc_id = str(tc.get("id") or "TC-?")
         executable = bool(tc.get("executable"))
         skip_reason = tc.get("skip_reason") or None
+        obligation_ids = [
+            str(o) for o in (tc.get("obligation_ids") or []) if isinstance(o, (str, int))
+        ]
 
         if not executable or not base_url:
             reason = skip_reason or ("No Base URL configured" if not base_url else "executable=false")
@@ -92,6 +103,29 @@ def execute_test_cases(
                     duration_ms=0.0,
                     actual_result=f"Skipped: {reason}",
                     skip_reason=reason,
+                    obligation_ids=obligation_ids,
+                )
+            )
+            continue
+
+        # Resolve any {var} placeholders from previously captured values. A
+        # missing value means the producer case failed or returned no id —
+        # skip rather than send a literal placeholder to the server.
+        endpoint, missing = _resolve_placeholders(
+            str(tc.get("api_endpoint") or ""), context
+        )
+        if missing:
+            reason = f"Unresolved chained value(s): {', '.join(sorted(set(missing)))}"
+            skipped += 1
+            skipped_reasons[reason] = skipped_reasons.get(reason, 0) + 1
+            results.append(
+                TestExecutionResult(
+                    test_case_id=tc_id,
+                    status=ExecutionStatus.SKIPPED,
+                    duration_ms=0.0,
+                    actual_result=f"Skipped: {reason}",
+                    skip_reason=reason,
+                    obligation_ids=obligation_ids,
                 )
             )
             continue
@@ -99,7 +133,6 @@ def execute_test_cases(
         runnable += 1
 
         method = str(tc.get("http_method") or "GET").upper()
-        endpoint = str(tc.get("api_endpoint") or "")
         url = _build_url(base_url, endpoint)
         headers = tc.get("request_headers") or None
         body = tc.get("request_body")
@@ -136,6 +169,14 @@ def execute_test_cases(
             )
 
         actual_body = runner_result.get("body")
+
+        # Capture chained values (e.g. a created resource id) for later cases.
+        extract = tc.get("extract")
+        if isinstance(extract, dict) and isinstance(actual_body, dict):
+            for var, field in extract.items():
+                if isinstance(field, str) and field in actual_body:
+                    context[str(var)] = str(actual_body[field])
+
         if actual_body is not None and not isinstance(actual_body, dict):
             # Wrap non-dict bodies so the schema accepts them
             actual_body = {"raw": actual_body}
@@ -150,6 +191,7 @@ def execute_test_cases(
                 actual_response=actual_body if isinstance(actual_body, dict) else None,
                 error_message=runner_error,
                 logs=[f"{method} {url} → {actual_code if actual_code is not None else 'ERR'}"],
+                obligation_ids=obligation_ids,
             )
         )
 
@@ -181,6 +223,62 @@ def execute_test_cases(
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+_PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
+
+
+def _resolve_placeholders(
+    text: str, context: dict[str, str]
+) -> tuple[str, list[str]]:
+    """Substitute ``{var}`` tokens from *context*; report any unresolved names."""
+    missing: list[str] = []
+
+    def _repl(match: "re.Match[str]") -> str:
+        key = match.group(1)
+        if key in context:
+            return str(context[key])
+        missing.append(key)
+        return match.group(0)
+
+    return _PLACEHOLDER_RE.sub(_repl, text or ""), missing
+
+
+def _order_by_dependencies(
+    test_cases: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Stable topological order so every ``depends_on`` producer runs first.
+
+    Cases without dependencies keep their original order; a dependent is moved
+    after the cases it needs. Cycles and unknown dependency ids are tolerated
+    (the offending edge is simply ignored) so a malformed plan never deadlocks.
+    """
+    by_id: dict[str, dict[str, Any]] = {
+        str(tc.get("id")): tc for tc in test_cases if isinstance(tc, dict)
+    }
+    ordered: list[dict[str, Any]] = []
+    visited: set[str] = set()
+    in_progress: set[str] = set()
+
+    def _visit(tc: dict[str, Any]) -> None:
+        tid = str(tc.get("id"))
+        if tid in visited or tid in in_progress:
+            return
+        in_progress.add(tid)
+        for dep in tc.get("depends_on") or []:
+            dep_tc = by_id.get(str(dep))
+            if dep_tc is not None:
+                _visit(dep_tc)
+        in_progress.discard(tid)
+        visited.add(tid)
+        ordered.append(tc)
+
+    for tc in test_cases:
+        if isinstance(tc, dict):
+            _visit(tc)
+        else:
+            ordered.append(tc)
+    return ordered
 
 
 def _extract_base_url(text: str) -> str:

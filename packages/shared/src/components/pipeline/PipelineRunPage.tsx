@@ -21,19 +21,32 @@ import {
   Sparkles,
   Hash,
   GitBranch,
+  MoreVertical,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { cn } from "../../lib/utils";
 import { usePipelineTemplate } from "../../hooks/usePipelineTemplates";
-import { useStartDagPipeline, usePipelineRun } from "../../hooks/usePipeline";
+import {
+  useStartDagPipeline,
+  usePipelineRun,
+  useCancelPipeline,
+} from "../../hooks/usePipeline";
 import { usePipelineStore } from "../../store/pipelineStore";
 import { DocumentUpload } from "../../components/pipeline/DocumentUpload";
+import { DocumentTemplateConverter } from "../../components/pipeline/DocumentTemplateConverter";
 import { LLMProfileSelector } from "../../components/pipeline/LLMProfileSelector";
 import { PipelineControls } from "../../components/pipeline/PipelineControls";
 import { ResultsViewer } from "../../components/pipeline/ResultsViewer";
+import {
+  ValidatorFailureChecklist,
+  parseMDSpecValidationError,
+} from "../../components/pipeline/ValidatorFailureChecklist";
+import { PlanningReviewSummary } from "../../components/pipeline/PlanningReviewSummary";
 import { Button } from "../../components/ui/Button";
 import { toast } from "../../components/ui/Toast";
-import type { PipelineStatus } from "../../types";
+import type { PipelineStatus, MDSpecValidationErrorPayload, TestCaseNodeOutput } from "../../types";
+import { pipelineApi } from "../../api/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design tokens
@@ -170,8 +183,17 @@ const LOADING_MESSAGES = [
   "Hoàn tất các bước cuối cùng…",
 ];
 
-function RunInProgressCard() {
+function RunInProgressCard({
+  onStop,
+  stopping = false,
+}: {
+  /** When provided, a kebab (⋮) menu with a "Stop" action is shown. */
+  onStop?: () => void;
+  /** Disables the Stop action while a cancel request is in flight. */
+  stopping?: boolean;
+}) {
   const [messageIdx, setMessageIdx] = React.useState(0);
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -196,6 +218,50 @@ function RunInProgressCard() {
             "radial-gradient(circle at 50% 0%, #135bec 0%, transparent 60%)",
         }}
       />
+
+      {/* ── Kebab menu (top-right) — Stop the running pipeline ─────────────── */}
+      {onStop && (
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Run options"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <MoreVertical className="w-4 h-4" aria-hidden="true" />
+          </button>
+          {menuOpen && (
+            <>
+              {/* Click-away backdrop */}
+              <div
+                className="fixed inset-0 z-10"
+                aria-hidden="true"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div
+                role="menu"
+                className="absolute right-0 mt-1 z-20 min-w-[8rem] rounded-lg border border-[#2b3b55] bg-[#141c2c] py-1 shadow-xl"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={stopping}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onStop();
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-300 hover:bg-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <XCircle className="w-4 h-4" aria-hidden="true" />
+                  {stopping ? "Stopping…" : "Stop"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
       <div className="relative flex flex-col items-center gap-5">
         <div className="relative">
           <div className="absolute inset-0 rounded-2xl bg-[#135bec]/25 blur-2xl animate-pulse" />
@@ -232,12 +298,18 @@ function TerminalSummaryCard({
   nodeStatuses,
   templateId,
   runData,
+  structuredError,
+  planningData,
 }: {
   status: PipelineStatus;
   runId: string;
   nodeStatuses: Record<string, string>;
   templateId: string;
   runData?: { duration_seconds?: number | null; error_message?: string | null };
+  /** Parsed MDSpecValidationErrorPayload when the run failed with a validator error. */
+  structuredError?: MDSpecValidationErrorPayload | null;
+  /** Planning metadata from adaptive testcase node (absent on legacy runs). */
+  planningData?: Pick<TestCaseNodeOutput, "complexity" | "review_gate" | "planner_warnings"> | null;
 }) {
   const completed = Object.values(nodeStatuses).filter(
     (s) => s === "completed",
@@ -328,15 +400,24 @@ function TerminalSummaryCard({
             </div>
           )}
 
-          {/* Error message */}
+          {/* Error — structured validator checklist or generic fallback */}
           {runData?.error_message && (
-            <div className="mt-4 rounded-lg border border-red-500/25 bg-red-500/[0.06] p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-red-300/80 mb-1">
-                Error
-              </p>
-              <p className="text-xs text-red-200 font-mono leading-relaxed whitespace-pre-wrap">
-                {runData.error_message}
-              </p>
+            <div className="mt-4">
+              <ValidatorFailureChecklist
+                structuredError={structuredError}
+                rawError={structuredError ? null : runData.error_message}
+              />
+            </div>
+          )}
+
+          {/* Compact planning status — only shown for adaptive pipeline runs */}
+          {planningData && (
+            <div className="mt-4">
+              <PlanningReviewSummary
+                complexity={planningData.complexity}
+                reviewGate={planningData.review_gate}
+                plannerWarnings={planningData.planner_warnings}
+              />
             </div>
           )}
 
@@ -544,6 +625,12 @@ export interface PipelineRunPageProps {
   hideLlmProfile?: boolean;
   /** Hide the Pause/Cancel controls shown while a run is in progress. */
   hideRunControls?: boolean;
+  /**
+   * Show a single "Stop" button instead of the full Pause/Cancel controls
+   * while a run is in progress. Intended for the simplified end-user view.
+   * Ignored when `hideRunControls` is set.
+   */
+  cancelOnly?: boolean;
   /** Render the full ResultsViewer inline once the run reaches a terminal state. */
   showResultsInline?: boolean;
   /** Hide the per-node ("Nodes") results tab in the inline ResultsViewer. */
@@ -554,11 +641,14 @@ export function PipelineRunPage({
   templateId,
   hideLlmProfile = false,
   hideRunControls = false,
+  cancelOnly = false,
   showResultsInline = false,
   hideNodeResults = false,
 }: PipelineRunPageProps) {
   // ── Local state ────────────────────────────────────────────────────────────
   const [file, setFile] = React.useState<File | null>(null);
+  const [startValidationError, setStartValidationError] =
+    React.useState<MDSpecValidationErrorPayload | null>(null);
   const [llmProfileId, setLlmProfileId] = React.useState<number | null>(null);
   const [logsOpen, setLogsOpen] = React.useState(false);
   const logsEndRef = React.useRef<HTMLDivElement | null>(null);
@@ -579,11 +669,13 @@ export function PipelineRunPage({
   const logMessages = usePipelineStore((s) => s.logMessages);
   const activeTemplateId = usePipelineStore((s) => s.activeTemplateId);
   const startSession = usePipelineStore((s) => s.startSession);
+  const clearSession = usePipelineStore((s) => s.clearSession);
   const syncRunStatus = usePipelineStore((s) => s.syncRunStatus);
   const connectWebSocket = usePipelineStore((s) => s.connectWebSocket);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const startMutation = useStartDagPipeline();
+  const cancelMutation = useCancelPipeline();
 
   // ── Live run data (HTTP polling fallback) ──────────────────────────────────
   const runBelongsHere = !!activeRunId && activeTemplateId === templateId;
@@ -628,7 +720,13 @@ export function PipelineRunPage({
       activeRunStatus === "paused" ||
       activeRunStatus === "pending");
   const isTerminalRun = hasActiveRun && isTerminal;
-  const canStartRun = !startMutation.isPending && !isActivelyRunning;
+  const requiresDocument = templateId === "automation-testing-api";
+  const hasPipelineMarkdown = Boolean(file?.name.match(/\.(md|markdown)$/i));
+  const isConvertedDocument = Boolean(file?.name.endsWith("-pipeline.md"));
+  const canStartRun =
+    !startMutation.isPending &&
+    !isActivelyRunning &&
+    (!requiresDocument || (file !== null && hasPipelineMarkdown));
 
   const runMeta = statusMeta(activeRunStatus);
 
@@ -644,9 +742,52 @@ export function PipelineRunPage({
     [template],
   );
 
+  // ── Node results — for structured error + planning data extraction ─────────
+  // Only fetched once the run reaches a terminal state (persisted data source of
+  // truth after refresh, per phase-05 spec). WS events may arrive out of order.
+  const { data: nodeResultsRaw } = useQuery({
+    queryKey: ["nodeResults", activeRunId],
+    queryFn: () => pipelineApi.getRunResults(String(activeRunId)),
+    enabled: isTerminalRun && !!activeRunId,
+    staleTime: 5 * 60_000,
+  });
+
+  // ── Parse MDSpecValidationErrorPayload from run error_message ─────────────
+  // The backend serialises the validator payload as JSON inside error_message.
+  const structuredError = React.useMemo<MDSpecValidationErrorPayload | null>(() => {
+    const msg = runData?.error_message;
+    if (!msg) return null;
+    try {
+      const parsed = JSON.parse(msg) as Partial<MDSpecValidationErrorPayload>;
+      if (parsed.error_type === "md_spec_validation") {
+        return parsed as MDSpecValidationErrorPayload;
+      }
+    } catch {
+      // Not a JSON payload — fall through to generic display
+    }
+    return null;
+  }, [runData?.error_message]);
+
+  // ── Extract adaptive planning metadata from persisted node results ─────────
+  const planningData = React.useMemo<Pick<TestCaseNodeOutput, "complexity" | "review_gate" | "planner_warnings"> | null>(() => {
+    if (!nodeResultsRaw) return null;
+    for (const r of nodeResultsRaw) {
+      const out = (r as { output?: unknown }).output as TestCaseNodeOutput | undefined;
+      if (out && (out.complexity !== undefined || out.review_gate !== undefined)) {
+        return {
+          complexity: out.complexity ?? null,
+          review_gate: out.review_gate ?? null,
+          planner_warnings: out.planner_warnings ?? [],
+        };
+      }
+    }
+    return null;
+  }, [nodeResultsRaw]);
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleRun = async () => {
     if (!canStartRun) return;
+    setStartValidationError(null);
     try {
       const result = await startMutation.mutateAsync({
         templateId,
@@ -663,10 +804,60 @@ export function PipelineRunPage({
         `Run ${runId.slice(0, 8)}… is now queued.`,
       );
     } catch (err) {
+      const validationError = parseMDSpecValidationError(
+        err instanceof Error ? err.message : err,
+      );
+      if (validationError) {
+        setStartValidationError(validationError);
+        const missingSections = validationError.missing_sections ?? [];
+        toast.error(
+          "Document is missing required API details",
+          missingSections.length > 0
+            ? `Missing sections: ${missingSections.join(", ")}. Review the checklist below.`
+            : "Review the validation checklist below and update the document.",
+        );
+        return;
+      }
       toast.error(
         "Failed to start pipeline",
         err instanceof Error ? err.message : "Unknown error.",
       );
+    }
+  };
+
+  // ── "Run again" after a terminal run ──────────────────────────────────────
+  // The uploaded document lives only in local component state, so after a page
+  // navigation/remount back to this route it is lost while the persisted store
+  // still reports a terminal run (inline results hide the upload control). To
+  // avoid a dead "Run again" button: re-run directly when the file is still in
+  // hand, otherwise clear the session so the upload form returns for a fresh run.
+  const handleRunAgain = () => {
+    if (canStartRun) {
+      void handleRun();
+      return;
+    }
+    setFile(null);
+    setStartValidationError(null);
+    clearSession();
+  };
+
+  // Stop the active run from the in-progress card's kebab menu. The cancel
+  // takes effect at the next layer boundary on the backend, but locally we
+  // reset the session immediately so the upload form returns — the selected
+  // file (local state) is preserved, everything else is cleared.
+  const handleStop = async () => {
+    if (!activeRunId) return;
+    try {
+      await cancelMutation.mutateAsync(activeRunId);
+      toast.warning("Pipeline stopped", "The pipeline run has been stopped.");
+    } catch (err) {
+      toast.error(
+        "Stop failed",
+        err instanceof Error ? err.message : "Could not stop the pipeline.",
+      );
+    } finally {
+      setStartValidationError(null);
+      clearSession();
     }
   };
 
@@ -793,17 +984,25 @@ export function PipelineRunPage({
               variant="primary"
               size="sm"
               loading={startMutation.isPending}
-              disabled={!canStartRun}
-              onClick={handleRun}
+              disabled={isActivelyRunning || startMutation.isPending}
+              onClick={handleRunAgain}
               leftIcon={
                 !startMutation.isPending ? (
                   <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
                 ) : undefined
               }
             >
-              {startMutation.isPending ? "Starting…" : "Run again"}
+              {startMutation.isPending
+                ? "Starting…"
+                : canStartRun
+                  ? "Run again"
+                  : "New run"}
             </Button>
           </div>
+
+          {startValidationError && (
+            <ValidatorFailureChecklist structuredError={startValidationError} />
+          )}
 
           {activeRunStatus && activeRunId && (
             <TerminalSummaryCard
@@ -812,6 +1011,8 @@ export function PipelineRunPage({
               nodeStatuses={nodeStatuses}
               templateId={templateId}
               runData={runData ?? undefined}
+              structuredError={structuredError}
+              planningData={planningData}
             />
           )}
 
@@ -832,14 +1033,54 @@ export function PipelineRunPage({
               <SectionHeader
                 icon={<FileText className="w-3.5 h-3.5" />}
                 title="Document"
-                hint="Optional input file"
+                hint={requiresDocument ? "Required Markdown API spec" : "Optional input file"}
               />
               <div className="p-4">
                 <DocumentUpload
                   file={file}
-                  onChange={setFile}
+                  onChange={(nextFile) => {
+                    setFile(nextFile);
+                    setStartValidationError(null);
+                  }}
                   disabled={isActivelyRunning || startMutation.isPending}
+                  accept={
+                    requiresDocument
+                      ? ".md,.markdown,.pdf,.docx,.txt,.csv,.xlsx,.xls"
+                      : undefined
+                  }
                 />
+                {requiresDocument && !file && (
+                  <p className="mt-2 text-xs text-amber-300/90" role="status">
+                    Upload one Markdown API specification before starting the pipeline.
+                  </p>
+                )}
+                {requiresDocument && file && !hasPipelineMarkdown && (
+                  <p className="mt-2 text-xs text-amber-300/90" role="status">
+                    Convert this document to Markdown before running the pipeline.
+                  </p>
+                )}
+                {requiresDocument && file && !isConvertedDocument && (
+                  <DocumentTemplateConverter
+                    sourceFile={file}
+                    llmProfileId={llmProfileId}
+                    disabled={isActivelyRunning || startMutation.isPending}
+                    onApply={(convertedFile) => {
+                      setFile(convertedFile);
+                      setStartValidationError(null);
+                    }}
+                  />
+                )}
+                {requiresDocument && isConvertedDocument && (
+                  <p className="mt-2 text-xs text-emerald-300" role="status">
+                    Pipeline-format document ready. You can start the run.
+                  </p>
+                )}
+                {startValidationError && (
+                  <ValidatorFailureChecklist
+                    structuredError={startValidationError}
+                    className="mt-3"
+                  />
+                )}
               </div>
             </section>
 
@@ -884,7 +1125,11 @@ export function PipelineRunPage({
                     : "Run Pipeline"}
               </Button>
 
+              {/* Full Pause/Cancel controls (admin). In cancelOnly (end-user)
+                  mode the run is stopped via the in-progress card's kebab menu
+                  instead, so the sidebar controls are suppressed. */}
               {!hideRunControls &&
+                !cancelOnly &&
                 hasActiveRun &&
                 activeRunStatus &&
                 !isTerminal &&
@@ -906,7 +1151,12 @@ export function PipelineRunPage({
           <div className="flex flex-col gap-4 min-w-0">
             {!hasActiveRun && <NoRunPlaceholder />}
 
-            {isActivelyRunning && <RunInProgressCard />}
+            {isActivelyRunning && (
+              <RunInProgressCard
+                onStop={cancelOnly ? handleStop : undefined}
+                stopping={cancelMutation.isPending}
+              />
+            )}
 
             {isTerminalRun && activeRunStatus && activeRunId && (
               <TerminalSummaryCard
@@ -915,6 +1165,8 @@ export function PipelineRunPage({
                 nodeStatuses={nodeStatuses}
                 templateId={templateId}
                 runData={runData ?? undefined}
+                structuredError={structuredError}
+                planningData={planningData}
               />
             )}
           </div>

@@ -6,6 +6,136 @@ import { Trash2, Settings, Zap, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AgentNodeData } from '@/store/builderStore';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AdaptivePlannerConfig — bounded config fields for the adaptive_api_test_planner
+// node. Only rendered when agentId === "adaptive_api_test_planner".
+// Admin-editable template defaults; validated in the UI before saving.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface AdaptivePlannerConfigProps {
+    overrides: Record<string, unknown>;
+    onChange: (patch: Record<string, unknown>) => void;
+}
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+}
+
+function AdaptivePlannerConfig({ overrides, onChange }: AdaptivePlannerConfigProps) {
+    const minAgents = Number(overrides.min_planner_agents ?? 1);
+    const maxAgents = Number(overrides.max_planner_agents ?? 5);
+    const threshold = Number(overrides.coverage_threshold_percent ?? 90);
+    const maxIter = Number(overrides.max_review_iterations ?? 3);
+    const continueOnExhaustion = Boolean(overrides.continue_on_exhaustion ?? true);
+
+    const inputCls = 'w-full px-3 py-1.5 text-sm bg-zinc-800 border border-zinc-600 rounded-md text-zinc-200 focus:outline-none focus:border-blue-500';
+    const labelCls = 'text-xs font-medium text-zinc-400';
+    const hintCls = 'text-[10px] text-zinc-600 mt-0.5';
+
+    return (
+        <section className="space-y-3 pt-3 border-t border-zinc-700">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-400">
+                Adaptive Planner Config
+            </p>
+
+            {/* min_planner_agents */}
+            <div className="space-y-1">
+                <label className={labelCls}>Min Planner Agents (1–5)</label>
+                <input
+                    type="number"
+                    value={minAgents}
+                    min={1}
+                    max={5}
+                    onChange={(e) => {
+                        const v = clamp(parseInt(e.target.value) || 1, 1, 5);
+                        onChange({ min_planner_agents: v, max_planner_agents: Math.max(v, maxAgents) });
+                    }}
+                    className={inputCls}
+                />
+                <p className={hintCls}>Minimum agents selected regardless of complexity score.</p>
+            </div>
+
+            {/* max_planner_agents */}
+            <div className="space-y-1">
+                <label className={labelCls}>Max Planner Agents (1–5)</label>
+                <input
+                    type="number"
+                    value={maxAgents}
+                    min={1}
+                    max={5}
+                    onChange={(e) => {
+                        const v = clamp(parseInt(e.target.value) || 5, 1, 5);
+                        onChange({ max_planner_agents: v, min_planner_agents: Math.min(v, minAgents) });
+                    }}
+                    className={inputCls}
+                />
+                {maxAgents < minAgents && (
+                    <p className="text-[10px] text-red-400 mt-0.5">Must be ≥ min agents ({minAgents}).</p>
+                )}
+            </div>
+
+            {/* coverage_threshold_percent */}
+            <div className="space-y-1">
+                <label className={labelCls}>Coverage Threshold % (0–100)</label>
+                <input
+                    type="number"
+                    value={threshold}
+                    min={0}
+                    max={100}
+                    onChange={(e) => {
+                        const v = clamp(parseInt(e.target.value) || 0, 0, 100);
+                        onChange({ coverage_threshold_percent: v });
+                    }}
+                    className={inputCls}
+                />
+                <p className={hintCls}>Senior reviewer approves when coverage_percent ≥ this value.</p>
+            </div>
+
+            {/* max_review_iterations */}
+            <div className="space-y-1">
+                <label className={labelCls}>Max Review Iterations (0–5)</label>
+                <input
+                    type="number"
+                    value={maxIter}
+                    min={0}
+                    max={5}
+                    onChange={(e) => {
+                        const v = clamp(parseInt(e.target.value) || 0, 0, 5);
+                        onChange({ max_review_iterations: v });
+                    }}
+                    className={inputCls}
+                />
+                <p className={hintCls}>Maximum refinement loops before the gate is exhausted.</p>
+            </div>
+
+            {/* continue_on_exhaustion */}
+            <div className="flex items-center justify-between py-1">
+                <div>
+                    <label className={labelCls}>Continue on Exhaustion</label>
+                    <p className={hintCls}>Accept best available result when gate exhausts.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => onChange({ continue_on_exhaustion: !continueOnExhaustion })}
+                    className={cn(
+                        'relative w-10 h-5 rounded-full transition-colors shrink-0',
+                        continueOnExhaustion ? 'bg-blue-600' : 'bg-zinc-700',
+                    )}
+                    aria-pressed={continueOnExhaustion}
+                    title={continueOnExhaustion ? 'Continue on exhaustion: ON' : 'Continue on exhaustion: OFF'}
+                >
+                    <span
+                        className={cn(
+                            'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform',
+                            continueOnExhaustion ? 'translate-x-5' : 'translate-x-0',
+                        )}
+                    />
+                </button>
+            </div>
+        </section>
+    );
+}
+
 export function NodePropertiesPanel({ nodeId }: { nodeId: string }) {
     const nodes = useBuilderStore((s) => s.nodes);
     const updateNodeData = useBuilderStore((s) => s.updateNodeData);
@@ -207,6 +337,21 @@ export function NodePropertiesPanel({ nodeId }: { nodeId: string }) {
                                 className="w-full px-3 py-1.5 text-sm bg-zinc-800 border border-zinc-600 rounded-md text-zinc-200 focus:outline-none focus:border-blue-500"
                             />
                         </section>
+
+                        {/* ── Adaptive Test Planner config (bounded defaults) ── */}
+                        {typedData.agentId === 'adaptive_api_test_planner' && (
+                            <AdaptivePlannerConfig
+                                overrides={typedData.configOverrides ?? {}}
+                                onChange={(patch) =>
+                                    updateNodeData(nodeId, {
+                                        configOverrides: {
+                                            ...(typedData.configOverrides ?? {}),
+                                            ...patch,
+                                        },
+                                    })
+                                }
+                            />
+                        )}
 
                         {/* Enabled toggle */}
                         <section className="flex items-center justify-between py-1">

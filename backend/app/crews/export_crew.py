@@ -9,6 +9,7 @@ the Automation Testing API DAG.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 from typing import Any, Optional
 
@@ -17,8 +18,12 @@ from app.crews.base_crew import BaseCrew, ProgressCallback
 logger = logging.getLogger(__name__)
 
 
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
 class ExportCrew(BaseCrew):
-    """Render HTML + DOCX and upload them to MinIO."""
+    """Render HTML + DOCX + PDF and upload them to MinIO."""
 
     stage = "reporting"
     agent_ids: list[str] = ["export_html_docx"]
@@ -43,9 +48,9 @@ class ExportCrew(BaseCrew):
         self._emit_agent_started("export_html_docx", "Report Export")
 
         try:
-            html_bytes, docx_bytes = self._run_async_from_thread(
+            html_bytes, docx_bytes, pdf_bytes = self._run_async_from_thread(
                 self._export_bytes(),
-                timeout=120,
+                timeout=180,
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception(
@@ -56,8 +61,10 @@ class ExportCrew(BaseCrew):
                 "export_ok": False,
                 "html_bytes_size": 0,
                 "docx_bytes_size": 0,
+                "pdf_bytes_size": 0,
                 "html_path": "",
                 "docx_path": "",
+                "pdf_path": "",
                 "error": str(exc),
                 **input_data,
             }
@@ -70,6 +77,7 @@ class ExportCrew(BaseCrew):
                 self._run_id,
                 html_bytes=html_bytes,
                 docx_bytes=docx_bytes,
+                pdf_bytes=pdf_bytes,
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning(
@@ -86,7 +94,7 @@ class ExportCrew(BaseCrew):
             "export_html_docx",
             output_preview=(
                 f"html={len(html_bytes):,}B docx={len(docx_bytes):,}B "
-                f"paths={paths}"
+                f"pdf={len(pdf_bytes):,}B paths={paths}"
             ),
         )
 
@@ -96,19 +104,29 @@ class ExportCrew(BaseCrew):
                 "export_ok": True,
                 "html_bytes_size": len(html_bytes),
                 "docx_bytes_size": len(docx_bytes),
+                "pdf_bytes_size": len(pdf_bytes),
                 "html_path": paths.get("html", ""),
                 "docx_path": paths.get("docx", ""),
+                "pdf_path": paths.get("pdf", ""),
+                # Checksums persisted for integrity / verification reporting.
+                "report_checksums": {
+                    "html": _sha256(html_bytes),
+                    "docx": _sha256(docx_bytes),
+                    "pdf": _sha256(pdf_bytes),
+                },
                 # Bytes carried through for in-process tests + verifier checks.
                 "_html_bytes": html_bytes,
                 "_docx_bytes": docx_bytes,
+                "_pdf_bytes": pdf_bytes,
             }
         )
         return out
 
-    async def _export_bytes(self) -> tuple[bytes, bytes]:
+    async def _export_bytes(self) -> tuple[bytes, bytes, bytes]:
         from app.services.export_service import ExportService
 
         service = ExportService(self._run_id)
         html_bytes = await service.export_html()
         docx_bytes = await service.export_docx()
-        return html_bytes, docx_bytes
+        pdf_bytes = await service.export_pdf()
+        return html_bytes, docx_bytes, pdf_bytes

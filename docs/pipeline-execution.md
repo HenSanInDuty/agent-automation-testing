@@ -198,33 +198,68 @@ graph LR
     INPUT -->|"reads file_path"| UP
 ```
 
-## 5. Template `automation-testing-api` (MD-only pipeline)
+## 5. Template `automation-testing-api` (Adaptive MD-API Pipeline, Phases 3-5)
 
-Pipeline mới (plan 260519-1430) chấp nhận file `.md` mô tả API và đảm bảo
-output cuối cùng có đủ 3 thành phần trước khi user tải xuống.
+`automation-testing-api` extends the baseline rule-based pipeline with adaptive multi-agent planning, a bounded senior-review coverage gate, and deterministic verification.
 
 ```mermaid
 flowchart TD
     A["📥 INPUT (.md file)"]
     B["md_api_spec_verifier\n(pure_python, retry=0)\n→ MDSpecValidationError\n  khi thiếu Endpoint/Request/Response"]
-    C["ingestion_pipeline"]
-    D["requirement → rule → scope → data_model →\ntest_condition → dependency → test_case_generator"]
-    E["test_level_classifier (NEW)\nrule-first tag: unit | integration | contract | e2e\nexecutable: bool"]
-    F["automation_agent → coverage_pre → report_pre"]
-    G["execution_orchestrator → env_adapter →\ntest_runner (filter executable=true) →\nexecution_logger → result_store"]
-    H["artifact_pipeline\n(unit test files)"]
-    I["coverage_analyzer → root_cause_analyzer → report_generator"]
-    J["export_html_docx (NEW)\nrender + upload report.html/.docx vào MinIO"]
-    K["report_verifier (NEW, retry=0)\nGuard: count test_cases > 0,\npass_rate present,\nunit test files parse-able"]
-    L["📤 OUTPUT (download + verification summary)"]
+    C["ingestion_pipeline\nrule-based requirement extraction"]
+    D["obligation_analyzer\n(new in Phase 3)\nNormalize required obligations"]
+    E["adaptive_planner_node (BOUNDED LOOP)\n├─ Baseline: rule-gen test cases\n├─ Complexity: compute agent count (1-5)\n├─ Planning: 1-5 agents per roles\n├─ Consolidate: dedup + debate\n├─ deterministic_coverage: obligation matching\n├─ senior_review: qualitative verdict\n├─ iterate: if below threshold + retries\n├─ select: best plan (exhaustion warning)\n└─ output: selected cases + review_gate audit"]
+    F["execution_orchestrator\ntest_runner (selected cases only)"]
+    G["result_store + artifact_pipeline\n(unit test files)"]
+    H["export_html_pdf_docx (Phase 4)\nrender + ReportLab PDF + upload MinIO"]
+    I["report_verifier (gated)\nCore components: test_cases, results, unit_files\nAdvisory: review_coverage (exhaustion warning)"]
+    J["📤 OUTPUT (gated download: HTML/PDF/DOCX)"]
 
-    A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> L
+    A --> B --> C --> D --> E --> F --> G --> H --> I --> J
 ```
 
-### Fail-fast guarantees
+**Adaptive Planner Loop (inside node E):**
+
+| Stage | Input | Decision/Action | Output |
+|-------|-------|-----------------|--------|
+| Baseline | Document + obligations | Rule-based generator | Initial test cases |
+| Complexity | Doc signals (endpoints, params, responses) | Deterministic scoring → 1–5 agents | Agent count + selected roles |
+| Planning | Obligations + feedback (if retry) | 1–5 CrewAI planners debate | Consolidated candidate cases |
+| Coverage | Cases + obligations | Obligation-to-case mapping | Coverage %, gaps list |
+| Senior Review | Plan + coverage + gaps | Qualitative assessment (approve/revise/reject) | Verdict + targeted feedback |
+| Iterate? | Coverage < threshold + retries left | Feed gaps back to planning | → Loop or select |
+| Select | All iterations (audit persisted) | Best-scoring iteration (no LLM choice) | Selected plan + exhausted flag |
+
+**Configuration (template node `config_overrides`, per-run `run_params` override):**
+
+```python
+min_planner_agents       = 1       # Range 1–5
+max_planner_agents       = 5       # Range 1–5, >= min
+coverage_threshold_percent = 90    # Range 0–100; gate passes on >=
+max_review_iterations    = 3       # Range 0–5; retry attempts after baseline
+continue_on_review_exhaustion = true # Continue with best plan + warning
+```
+
+### Deterministic Coverage
+
+Coverage is **never an LLM self-score**. It is computed from:
+1. **Obligations inventory** — normalized from source document (`SourceObligation.id`, `kind`, `required`).
+2. **Test case mappings** — each case lists `obligation_ids` it satisfies (traceability).
+3. **Formula** — `coverage_percent = covered_required / total_required * 100` (only `required=true` count).
+
+**Example:** If doc lists 10 required obligations and a consolidated plan cites 9 of them across its cases, coverage is 90%. Optional obligations (e.g., non-required headers) never inflate the score.
+
+### Header Redaction (Phase 4)
+
+Secret header **values** are redacted before persistence and export (MongoDB, WebSocket, logs, HTML, PDF); placeholders like `Bearer ${TOKEN}` are preserved for API executability.
+
+### Fail-fast Guarantees
 
 | Tình huống | Hành vi |
 |------------|---------|
 | MD thiếu section → `MDSpecValidationError` | Runner mark `failed`, **skip retry** (xem `is_structured_pipeline_error`); `error_message` là JSON `{error_type, code, missing_sections, missing_fields, detail}`; WS event `node.failed` mang `error_type` để FE render structured alert. |
-| Report thiếu component → `ReportVerificationError` | Mark `failed` không retry; FE GET `/report/verification` thấy `verified=false` + `issues[]`; nút Download HTML/DOCX disabled. |
-| Admin cần lấy file để debug | `GET /export/html?force=true` (yêu cầu role admin) bỏ qua gate. |
+| Base URL resolution (api_test_runner) | Runner ưu tiên `md_spec_parsed.base_url` (đã validate, chấp nhận dạng bullet `- Base URL:`) làm `base_url_override`; chỉ scrape lại từ raw document khi `md_spec_parsed` vắng mặt. Tránh skip toàn bộ case khi base_url khai báo dưới dạng bullet. |
+| Request chaining (api_test_runner) | Case path-param (`/api/tasks/:id`) không hardcode id: POST create khai `extract`, case item dùng placeholder `{var}` + `depends_on`. Runner sắp xếp producer chạy trước, bắt `id` từ response create vào context, thay `{var}` lúc chạy. Create fail → dependent bị **skip** với lý do `Unresolved chained value(s)`. Case 404 độc lập, dùng id không tồn tại. |
+| Coverage gate exhausted → `coverage_gate_exhausted=true` | Best-scoring iteration selected; run **continues** with warning. Report verifier flags as **advisory** — does not block PDF/HTML/DOCX download. Visible in FE run-detail page. |
+| Report thiếu component → `ReportVerificationError` (core only) | Mark `failed` không retry; FE GET `/report/verification` thấy `verified=false` + `issues[]` (test_cases, results, unit_files); nút Download HTML/DOCX disabled. **Review coverage** warning is advisory. |
+| Admin cần lấy file để debug | `GET /export/{html\|pdf\|docx}?force=true` (yêu cầu role admin) bỏ qua gate. |

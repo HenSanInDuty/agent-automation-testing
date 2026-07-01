@@ -5,7 +5,35 @@
 
 ---
 
-## 🆕 V3 Changes
+## 🆕 V4 Changes (Phases 3–5: Adaptive API Testing Pipeline)
+
+Auto-AT V4 extends the `automation-testing-api` pipeline with adaptive multi-agent planning, a bounded senior-review coverage gate, and deterministic verification:
+
+| # | Feature | Summary |
+|---|---------|---------|
+| 1 | **Adaptive Multi-Agent Planner** (Phase 3) | Baseline rule-based test generation → 1-5 specialized planning agents selected by document complexity → debate & consolidate → deterministic obligation-based coverage analysis → senior qualitative review → iterate on gaps up to `max_review_iterations` |
+| 2 | **Deterministic Coverage Gate** (Phase 3) | Coverage computed from normalized source obligations + test case mappings (never LLM self-scored). Threshold configurable (default 90%). Gate passes when coverage meets threshold or retries exhausted. |
+| 3 | **PDF Report Export** (Phase 4) | New `GET /runs/{run_id}/export/pdf` endpoint using ReportLab. Reports share normalized data with HTML/DOCX. Includes coverage matrix, review iteration audit, and execution results. |
+| 4 | **Header Redaction** (Phase 4) | Secret header values automatically redacted before persistence and export; placeholders like `Bearer ${TOKEN}` preserved for API executability. |
+| 5 | **Review Coverage Advisory** (Phase 4) | Report verification gates 3 core components (test_cases, results, unit_test_files). Review coverage exhaustion is advisory — never blocks download, visible as warning in all formats and UI. |
+| 6 | **UI Integration** (Phase 5) | New shared components for structured validator errors, planning/review progress display, and gated PDF downloads. Admin pipeline-builder exposes adaptive-node config UI. |
+
+**Key structural changes (V4):**
+
+| Added / Extended | Purpose |
+|------------------|---------|
+| `services/api_test_planning/coverage.py` | Deterministic obligation-to-case coverage computation |
+| `services/api_test_planning/review_loop.py` | Bounded iteration controller and fallback logic |
+| `crews/senior_api_test_reviewer_crew.py` | Senior qualitative review agent |
+| `services/pdf_report_builder.py` | ReportLab PDF report generation |
+| `tools/header_redaction.py` | Safe redaction of secret header values |
+| `schemas/pipeline_io.py` | New models: `ComplexityDecision`, `SourceObligation`, `CoverageReport`, `ReviewIteration`, `ReviewGateSummary`, `SeniorReviewResult` |
+| `/api/v1/pipeline/runs/{run_id}/export/pdf` | PDF export endpoint (gated) |
+| `/api/v1/pipeline/runs/{run_id}/report/verification` | Verification status including advisory review_coverage |
+
+---
+
+## V3 Changes
 
 Auto-AT V3 replaces the linear stage-based pipeline with a fully visual, **DAG-driven** pipeline system:
 
@@ -207,6 +235,18 @@ Used when no LLM profile is marked `is_default=true` in the database.
 | `INGESTION_CHUNK_SIZE` | `2000` | Character chunk size when splitting large requirement documents |
 | `INGESTION_CHUNK_OVERLAP` | `200` | Overlap between consecutive chunks |
 
+### Adaptive Multi-Agent Planner (Phase 3–5, `automation-testing-api` pipeline)
+
+These config keys configure the bounded coverage-review loop within the adaptive planner node. Set via node `config_overrides` in the Pipeline Template UI or per-run via `run_params`.
+
+| Config Key | Default | Range | Description |
+|------------|---------|-------|-------------|
+| `min_planner_agents` | `1` | 1–5 | Minimum planner agents to run (deterministic based on document complexity) |
+| `max_planner_agents` | `5` | 1–5 | Maximum planner agents; `>= min_planner_agents` |
+| `coverage_threshold_percent` | `90` | 0–100 | Gate passes when coverage `>=` this value (deterministic obligation-to-case mapping) |
+| `max_review_iterations` | `3` | 0–5 | Number of retry attempts after initial baseline plan |
+| `continue_on_review_exhaustion` | `true` | boolean | If `true`, execute best plan + warning when retries exhausted; if `false`, warning only (no hard failure) |
+
 ### Seeding
 
 | Variable | Default | Description |
@@ -256,8 +296,10 @@ All pipeline run routes are mounted under `/api/v1`.
 | `POST` | `/api/v1/pipeline/runs/{run_id}/cancel` | Request cancellation of an in-progress run |
 | `POST` | `/api/v1/pipeline/runs/{run_id}/pause` | Pause a running pipeline (takes effect between DAG layers) |
 | `POST` | `/api/v1/pipeline/runs/{run_id}/resume` | Resume a paused pipeline run |
-| `GET` | `/api/v1/pipeline/runs/{run_id}/export/html` | Export the run's report as a styled HTML document |
-| `GET` | `/api/v1/pipeline/runs/{run_id}/export/docx` | Export the run's report as a DOCX document |
+| `GET` | `/api/v1/pipeline/runs/{run_id}/export/html` | Export the run's report as a styled HTML document (gated by report verification) |
+| `GET` | `/api/v1/pipeline/runs/{run_id}/export/pdf` | 🆕 (Phase 4) Export the run's report as PDF using ReportLab; includes coverage audit and review history (gated by report verification) |
+| `GET` | `/api/v1/pipeline/runs/{run_id}/export/docx` | Export the run's report as a DOCX document (gated by report verification) |
+| 🆕 `GET` | `/api/v1/pipeline/runs/{run_id}/report/verification` | (Phase 4) Retrieve verification status of all report components (test_cases, results, unit_test_files, review_coverage). Advisory `review_coverage` flag never blocks delivery. |
 
 ### WebSocket (Updated — V3 Node Events)
 

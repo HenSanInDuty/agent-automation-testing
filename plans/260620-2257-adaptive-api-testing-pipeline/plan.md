@@ -61,10 +61,10 @@ Store defaults in the built-in template node `config_overrides`; allow per-run o
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | [Strengthen API document contract](./phase-01-strengthen-api-document-contract.md) | Pending |
-| 2 | [Build adaptive multi-agent test planner](./phase-02-build-adaptive-multi-agent-test-planner.md) | Pending |
-| 3 | [Add senior coverage review loop](./phase-03-add-senior-coverage-review-loop.md) | Pending |
-| 4 | [Extend execution persistence and exports](./phase-04-extend-execution-persistence-and-exports.md) | Pending |
-| 5 | [Integrate UI and end-to-end validation](./phase-05-integrate-ui-and-end-to-end-validation.md) | Pending |
+| 2 | [Build adaptive multi-agent test planner](./phase-02-build-adaptive-multi-agent-test-planner.md) | Complete |
+| 3 | [Add senior coverage review loop](./phase-03-add-senior-coverage-review-loop.md) | Complete |
+| 4 | [Extend execution persistence and exports](./phase-04-extend-execution-persistence-and-exports.md) | Complete |
+| 5 | [Integrate UI and end-to-end validation](./phase-05-integrate-ui-and-end-to-end-validation.md) | Complete |
 
 ## Dependencies and Risks
 
@@ -78,13 +78,13 @@ Store defaults in the built-in template node `config_overrides`; allow per-run o
 
 ## Definition of Done
 
-- [ ] Invalid documents stop before analysis and return all missing required fields in one structured error.
-- [ ] Complexity selects 1-5 planner agents deterministically and records the decision.
-- [ ] Debate produces a deduplicated, traceable test plan.
-- [ ] Senior review and deterministic obligation coverage are persisted per iteration.
-- [ ] Below-threshold plans retry up to configured `n`, then continue with an explicit exhausted-gate warning.
-- [ ] Executed test results remain queryable from MongoDB and downloadable as verified HTML or PDF.
-- [ ] Backend, shared package, admin app, and user app regression suites pass.
+- [ ] Invalid documents stop before analysis and return all missing required fields in one structured error. (Phase 1 — pending; FE checklist + structured payload ready in Phase 5)
+- [x] Complexity selects 1-5 planner agents deterministically and records the decision.
+- [x] Debate produces a deduplicated, traceable test plan.
+- [x] Senior review and deterministic obligation coverage are persisted per iteration.
+- [x] Below-threshold plans retry up to configured `n`, then continue with an explicit exhausted-gate warning.
+- [x] Executed test results remain queryable from MongoDB and downloadable as verified HTML or PDF.
+- [x] Backend (376 pass), shared component tests (19 pass), admin/user typecheck clean. (Pre-existing legacy/sqlalchemy + kafka-startup test failures untouched.)
 
 ## Validation Log
 

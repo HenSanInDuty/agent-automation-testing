@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 import type {
   AgentConfigByPipelineResponse,
+  APISpecConversionResponse,
   AgentConfigCreate,
   AgentConfigGroupedResponse,
   AgentConfigResponse,
@@ -160,6 +161,7 @@ export const llmProfilesApi = {
   setDefault: async (id: string): Promise<LLMProfileResponse> => {
     const { data } = await apiClient.post<LLMProfileResponse>(
       `/api/v1/admin/llm-profiles/${id}/set-default`,
+      {},
     );
     return data;
   },
@@ -231,6 +233,7 @@ export const agentConfigsApi = {
   reset: async (agentId: string): Promise<AgentConfigResetResponse> => {
     const { data } = await apiClient.post<AgentConfigResetResponse>(
       `/api/v1/admin/agent-configs/${agentId}/reset`,
+      {},
     );
     return data;
   },
@@ -239,6 +242,7 @@ export const agentConfigsApi = {
   resetAll: async (): Promise<{ message: string; count: number }> => {
     const { data } = await apiClient.post<{ message: string; count: number }>(
       "/api/v1/admin/agent-configs/reset-all",
+      {},
     );
     return data;
   },
@@ -281,6 +285,29 @@ export const agentConfigsApi = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const pipelineApi = {
+  /** Convert an arbitrary API document into the pipeline Markdown contract. */
+  convertDocument: async (
+    file: File,
+    baseUrl: string,
+    llmProfileId?: number | null,
+  ): Promise<APISpecConversionResponse> => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("base_url", baseUrl);
+    if (llmProfileId != null) {
+      form.append("llm_profile_id", String(llmProfileId));
+    }
+    const { data } = await apiClient.post<APISpecConversionResponse>(
+      "/api/v1/pipeline/spec-conversions",
+      form,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120_000,
+      },
+    );
+    return data;
+  },
+
   /**
    * POST /api/v1/pipeline/run
    * Upload a document file and start a pipeline run.
@@ -318,12 +345,27 @@ export const pipelineApi = {
     if (llmProfileId != null)
       form.append("llm_profile_id", String(llmProfileId));
     if (runParams) form.append("run_params", JSON.stringify(runParams));
-    const { data } = await apiClient.post<PipelineRunResponse>(
+    const response = await apiClient.post<
+      PipelineRunResponse | { detail?: unknown }
+    >(
       "/api/v1/pipeline/runs",
       form,
-      { headers: { "Content-Type": "multipart/form-data" }, timeout: 60_000 },
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 60_000,
+        // Keep FastAPI's structured validation payload for the run page.
+        validateStatus: (status) => status < 400 || status === 422,
+      },
     );
-    return data;
+    if (response.status === 422) {
+      const detail = (response.data as { detail?: unknown }).detail;
+      throw new Error(
+        typeof detail === "string"
+          ? detail
+          : JSON.stringify(detail ?? "Pipeline input validation failed."),
+      );
+    }
+    return response.data as PipelineRunResponse;
   },
 
   /** GET /api/v1/pipeline/runs */
@@ -359,6 +401,7 @@ export const pipelineApi = {
   cancelRun: async (runId: string): Promise<PipelineActionResponse> => {
     const { data } = await apiClient.post<PipelineActionResponse>(
       `/api/v1/pipeline/runs/${runId}/cancel`,
+      {},
     );
     return data;
   },
@@ -367,6 +410,7 @@ export const pipelineApi = {
   pauseRun: async (runId: string): Promise<PipelineActionResponse> => {
     const { data } = await apiClient.post<PipelineActionResponse>(
       `/api/v1/pipeline/runs/${runId}/pause`,
+      {},
     );
     return data;
   },
@@ -375,6 +419,7 @@ export const pipelineApi = {
   resumeRun: async (runId: string): Promise<PipelineActionResponse> => {
     const { data } = await apiClient.post<PipelineActionResponse>(
       `/api/v1/pipeline/runs/${runId}/resume`,
+      {},
     );
     return data;
   },
@@ -414,6 +459,25 @@ export const pipelineApi = {
       response.data,
       `auto-at-report-${runId.slice(0, 8)}.docx`,
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+  },
+
+  /** GET /api/v1/pipeline/runs/:run_id/export/pdf
+   *  Streams the PDF report as a blob and triggers a browser download.
+   *  Same 409 verification gate as html/docx; supports `?force=true` (admin).
+   */
+  downloadExportPdf: async (runId: string, force = false): Promise<void> => {
+    const response = await apiClient.get(
+      `/api/v1/pipeline/runs/${runId}/export/pdf`,
+      {
+        params: force ? { force: true } : undefined,
+        responseType: "blob",
+      },
+    );
+    triggerBrowserDownload(
+      response.data,
+      `auto-at-report-${runId.slice(0, 8)}.pdf`,
+      "application/pdf",
     );
   },
 
@@ -851,6 +915,7 @@ export const pipelineTemplatesApi = {
   archive: async (templateId: string): Promise<PipelineTemplate> => {
     const { data } = await apiClient.post<PipelineTemplate>(
       `/api/v1/pipeline-templates/${templateId}/archive`,
+      {},
     );
     return data;
   },
@@ -859,6 +924,7 @@ export const pipelineTemplatesApi = {
   validate: async (templateId: string): Promise<DAGValidationResult> => {
     const { data } = await apiClient.post<DAGValidationResult>(
       `/api/v1/pipeline-templates/${templateId}/validate`,
+      {},
     );
     return data;
   },

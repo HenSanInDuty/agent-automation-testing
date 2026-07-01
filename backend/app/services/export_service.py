@@ -24,6 +24,47 @@ from app.schemas.pipeline_io import (
     TestCaseOutput,
 )
 from app.services.docx_builder import DocxReportBuilder
+from app.tools.header_redaction import redact_cases
+
+# Node-output classification: the DAG runner stores ``stage = node_id`` (V3),
+# while the legacy V2 runner stored the canonical stage name. Match on agent_id
+# / node_id / legacy stage so exports work for BOTH the automation-testing-api
+# DAG and any legacy stage-keyed run.
+_AGENT_CATEGORY = {
+    "ingestion_pipeline": "ingestion",
+    "ingestion_agent": "ingestion",
+    "adaptive_api_test_planner": "testcase",
+    "api_test_case_generator": "testcase",
+    "test_case_generator": "testcase",
+    "api_test_runner": "execution",
+    "report_generator": "reporting",
+}
+_NODE_SUFFIX_CATEGORY = [
+    ("tc-generator", "testcase"),
+    ("test-runner", "execution"),
+    ("ingestion", "ingestion"),
+    ("report-gen", "reporting"),
+]
+_LEGACY_STAGES = {"ingestion", "testcase", "execution", "reporting"}
+
+
+def _classify_result(result: object) -> str | None:
+    """Map a PipelineResultDocument to a canonical export stage category.
+
+    Values are coerced to ``str`` so a mock / auto-created attribute (e.g. an
+    unset ``MagicMock`` field) cannot masquerade as a truthy node id.
+    """
+    agent_id = str(getattr(result, "agent_id", "") or "")
+    node_id = str(getattr(result, "node_id", "") or "")
+    stage = str(getattr(result, "stage", "") or "")
+    if agent_id in _AGENT_CATEGORY:
+        return _AGENT_CATEGORY[agent_id]
+    for suffix, category in _NODE_SUFFIX_CATEGORY:
+        if node_id.endswith(suffix):
+            return category
+    if stage in _LEGACY_STAGES:
+        return stage
+    return None
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Jinja2 environment – loaded once at module import time
@@ -119,6 +160,20 @@ class ExportService:
 
         return builder.build()
 
+    async def export_pdf(self) -> bytes:
+        """Build a PDF report from the same normalized context as HTML/DOCX.
+
+        Returns:
+            Raw bytes of the generated ``.pdf`` file.
+
+        Raises:
+            ValueError: If the run does not exist in the database.
+        """
+        from app.services.pdf_report_builder import build_pdf_report
+
+        data = await self._load_run_data()
+        return build_pdf_report(data)
+
     # ── Private helpers ───────────────────────────────────────────────────────
 
     async def _load_run_data(self) -> dict:
@@ -154,26 +209,27 @@ class ExportService:
 
         for result in results:
             output = result.output  # native BSON dict – no json.loads needed
+            category = _classify_result(result)
 
-            if result.stage == "ingestion":
+            if category == "ingestion":
                 try:
                     ingestion = IngestionOutput.model_validate(output)
                 except Exception:  # pylint: disable=broad-exception-caught
                     pass  # leave as None; template handles missing data gracefully
 
-            elif result.stage == "testcase":
+            elif category == "testcase":
                 try:
                     testcase = TestCaseOutput.model_validate(output)
                 except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
-            elif result.stage == "execution":
+            elif category == "execution":
                 try:
                     execution = ExecutionOutput.model_validate(output)
                 except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
-            elif result.stage == "reporting":
+            elif category == "reporting":
                 try:
                     report = PipelineReport.model_validate(output)
                 except Exception:  # pylint: disable=broad-exception-caught
@@ -193,9 +249,34 @@ class ExportService:
             "testcase": testcase.model_dump(mode="json") if testcase else None,
             "execution": execution.model_dump(mode="json") if execution else None,
             "report": report.model_dump(mode="json") if report else None,
+            # ── Adaptive-planner / review-gate context (additive) ─────────────
+            "complexity": (
+                testcase.complexity.model_dump(mode="json")
+                if testcase and testcase.complexity
+                else None
+            ),
+            "review_gate": (
+                testcase.review_gate.model_dump(mode="json")
+                if testcase and testcase.review_gate
+                else None
+            ),
+            "obligations": (
+                [o.model_dump(mode="json") for o in testcase.obligations]
+                if testcase
+                else []
+            ),
+            "planner_warnings": (testcase.planner_warnings if testcase else []),
+            "assumptions": (testcase.assumptions if testcase else []),
+            "coverage_gate_exhausted": bool(
+                testcase
+                and testcase.review_gate
+                and testcase.review_gate.coverage_gate_exhausted
+            ),
             # ── Convenience lists (pre-serialised for template iteration) ─────
+            # Header values are redacted defence-in-depth before they reach any
+            # rendered artifact (HTML / DOCX / PDF).
             "test_cases": (
-                [tc.model_dump(mode="json") for tc in testcase.test_cases]
+                redact_cases([tc.model_dump(mode="json") for tc in testcase.test_cases])
                 if testcase
                 else []
             ),

@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "Add senior coverage review loop"
-status: pending
+status: complete
 priority: P1
 dependencies: [2]
 ---
@@ -52,12 +52,19 @@ Gate passes only when deterministic coverage meets threshold and senior verdict 
 
 ## Success Criteria
 
-- [ ] Coverage is reproducible from persisted obligation mappings.
-- [ ] Below-threshold plan receives targeted feedback and is regenerated up to configured `n`.
-- [ ] Accepted plan stops early.
-- [ ] Exhaustion cannot fail the run when continuation is enabled; warning is explicit in DB, events, UI, and exports.
-- [ ] Reviewer timeout/invalid output follows a documented fallback and never causes an unbounded retry.
-- [ ] Test proves no-progress detection selects the best iteration deterministically.
+- [x] Coverage is reproducible from persisted obligation mappings.
+- [x] Below-threshold plan receives targeted feedback and is regenerated up to configured `n`.
+- [x] Accepted plan stops early.
+- [x] Exhaustion cannot fail the run when continuation is enabled; warning is explicit in DB, events, UI, and exports.
+- [x] Reviewer timeout/invalid output follows a documented fallback and never causes an unbounded retry.
+- [x] Test proves no-progress detection selects the best iteration deterministically.
+
+## Implementation Notes (sync-back)
+
+- New: `services/api_test_planning/coverage.py`, `review_loop.py`; `crews/senior_api_test_reviewer_crew.py`.
+- Config flows via node `config_overrides` injected into pure-python input under non-propagating `__node_config__`; per-run `run_params` override at input top-level. Defaults: threshold 90, max_review_iterations 3, continue_on_exhaustion true.
+- Open decision (M1): `continue_on_exhaustion=false` currently escalates the warning only; it does not fail the run (matches plan Unresolved Q2 "execute + warn"). Confirm if hard-fail is desired.
+- Tests: `tests/test_senior_coverage_review_loop.py` (24).
 
 ## Risk Assessment
 

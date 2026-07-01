@@ -20,9 +20,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.config import settings
 from app.db import crud
 
 logger = logging.getLogger(__name__)
+
+# Resolve the seeded Ollama endpoint from the environment so a Docker-hosted
+# backend reaches the host's Ollama (host.docker.internal) instead of pointing
+# at the container itself. Falls back to the local default for native runs.
+_DEFAULT_OLLAMA_BASE_URL = settings.DEFAULT_LLM_BASE_URL or settings.OLLAMA_BASE_URL
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Default LLM Profile
@@ -33,7 +39,7 @@ DEFAULT_LLM_PROFILE: dict[str, Any] = {
     "provider": "ollama",
     "model": "gemma4:e2b",
     "api_key": None,
-    "base_url": "http://localhost:11434",
+    "base_url": _DEFAULT_OLLAMA_BASE_URL,
     "temperature": 0.1,
     "max_tokens": 2048,
     "is_default": True,
@@ -657,6 +663,30 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         "is_custom": False,
         "tool_names": ["test_level_tagger"],
     },
+    # ── Stage: testcase — Request body synthesizer (LLM refinement) ───────────
+    {
+        "agent_id": "request_body_synthesizer",
+        "display_name": "Request Body Synthesizer",
+        "stage": "testcase",
+        "role": "API Request Body Synthesizer",
+        "goal": (
+            "Turn each body-carrying endpoint's declared fields, rules, and "
+            "spec example into ONE valid, domain-realistic happy-path request "
+            "body, keyed by '<METHOD> <path>'. Keep every field, honour the "
+            "declared type and rules, and replace schema placeholders "
+            "(\"string\", \"YYYY-MM-DD\", \"HH:mm\") with believable values. "
+            "Emit a strict JSON map — no prose, no markdown."
+        ),
+        "backstory": (
+            "You are a QA data engineer who knows that a happy-path test only "
+            "proves anything when its payload looks like real production data. "
+            "You never invent fields the schema does not declare, and you never "
+            "echo secret credential values. When unsure, you keep the "
+            "deterministic reference value rather than guessing wildly."
+        ),
+        "max_iter": 3,
+        "is_custom": False,
+    },
     # ── Stage: reporting — Export + Verifier ──────────────────────────────────
     {
         "agent_id": "export_html_docx",
@@ -698,6 +728,138 @@ DEFAULT_AGENT_CONFIGS: list[dict[str, Any]] = [
         "max_iter": 1,
         "is_custom": False,
         "tool_names": ["report_verifier"],
+    },
+    # ── Adaptive multi-agent planners (adaptive-api-testing-pipeline) ─────────
+    # Five specialised API test planners. The complexity decision selects 1-5
+    # of them in fixed priority order. Each emits a strict JSON test_cases
+    # array, maps cases to source obligations, and never echoes secret values.
+    {
+        "agent_id": "adaptive_planner_positive",
+        "display_name": "Positive Path Planner",
+        "stage": "testcase",
+        "role": "Positive-Path API Test Planner",
+        "goal": (
+            "Design valid happy-path API test cases covering every declared "
+            "2xx response: correct method, fully-populated request body, valid "
+            "headers, and the expected success status. Map each case to the "
+            "response obligation it satisfies. Emit a strict JSON object with a "
+            "top-level ``test_cases`` array — no prose, no markdown."
+        ),
+        "backstory": (
+            "You are a senior QA engineer who proves the contract works as "
+            "specified before anyone hunts for failures. You never invent "
+            "behaviour the spec does not state, and when you must, you flag it "
+            "as an assumption."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "adaptive_planner_negative_schema",
+        "display_name": "Negative / Schema Planner",
+        "stage": "testcase",
+        "role": "Negative & Schema-Validation API Test Planner",
+        "goal": (
+            "Design negative API test cases that must be rejected with a 4xx: "
+            "missing required fields, wrong types, malformed payloads, and "
+            "schema violations. One focused mutation per case, each linked to "
+            "the field/rule obligation it probes. Emit strict JSON with a "
+            "top-level ``test_cases`` array."
+        ),
+        "backstory": (
+            "You break inputs for a living. You think in equivalence classes of "
+            "invalidity and assert the precise rejection status the contract "
+            "promises, never echoing secret values."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "adaptive_planner_auth_security",
+        "display_name": "Auth / Security Planner",
+        "stage": "testcase",
+        "role": "Authentication & Authorization API Test Planner",
+        "goal": (
+            "Design auth/security API test cases: missing or invalid tokens and "
+            "missing required headers expecting 401/403, plus unauthorized "
+            "access attempts. Use placeholders like ${TOKEN} — never real "
+            "secret values. Map cases to auth/header obligations. Emit strict "
+            "JSON with a top-level ``test_cases`` array."
+        ),
+        "backstory": (
+            "You are a security-minded tester who assumes every endpoint is a "
+            "target. You verify the access boundary without ever leaking a "
+            "credential into a test artefact."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "adaptive_planner_boundary_data",
+        "display_name": "Boundary / Data Planner",
+        "stage": "testcase",
+        "role": "Boundary-Value & Data-Partition API Test Planner",
+        "goal": (
+            "Design boundary-value and equivalence-partition API test cases: "
+            "min/max lengths, empty/null, zero, and oversized inputs at the "
+            "edges of each validation rule. Map cases to the rule obligation "
+            "exercised. Emit strict JSON with a top-level ``test_cases`` array."
+        ),
+        "backstory": (
+            "You live at the edges where off-by-one defects hide. You pick the "
+            "exact boundary the rule defines and assert the behaviour on both "
+            "sides of it, flagging any edge the spec leaves unstated."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
+    },
+    {
+        "agent_id": "adaptive_planner_resilience",
+        "display_name": "Resilience / Idempotency Planner",
+        "stage": "testcase",
+        "role": "Resilience & Idempotency API Test Planner",
+        "goal": (
+            "Design resilience and idempotency API test cases: repeated and "
+            "duplicate requests, idempotent PUT/DELETE behaviour, and "
+            "unknown-id lookups expecting 404. Map each case to the relevant "
+            "obligation and flag invented behaviour as an assumption. Emit "
+            "strict JSON with a top-level ``test_cases`` array."
+        ),
+        "backstory": (
+            "You test what happens when the same request arrives twice, or the "
+            "target is missing. You distinguish guaranteed contract behaviour "
+            "from reasonable-but-unstated assumptions and label them honestly."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
+    },
+    # ── Senior coverage reviewer (adaptive-api-testing-pipeline) ──────────────
+    # One senior agent reviews the consolidated plan qualitatively. Numeric
+    # coverage stays deterministic; this agent may reject but never fabricates
+    # coverage. Its verdict + targeted feedback drive the bounded review loop.
+    {
+        "agent_id": "senior_api_test_reviewer",
+        "display_name": "Senior API Test Reviewer",
+        "stage": "testcase",
+        "role": "Senior API Test Plan Reviewer",
+        "goal": (
+            "Critically review a consolidated API test plan for correctness, "
+            "internal contradictions, unsafe assumptions, executability, and "
+            "missing edge cases. Return a strict JSON verdict "
+            "(approve|revise|reject) with concise evidence, identified gaps, "
+            "unsafe assumptions, and targeted, actionable feedback for the next "
+            "planning iteration. The numeric coverage is computed "
+            "deterministically and is authoritative — never restate or override "
+            "it. Emit no prose, no markdown, and never echo secret values."
+        ),
+        "backstory": (
+            "You are a principal QA engineer who signs off on test suites before "
+            "they run against real systems. You reject plans that are unsafe or "
+            "self-contradictory and give precise, fixable feedback, but you never "
+            "invent coverage numbers — the gate owns those."
+        ),
+        "max_iter": 5,
+        "is_custom": False,
     },
 ]
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1340,6 +1502,8 @@ async def seed_pipeline_templates() -> None:
             "Pipeline template '%s' already exists — skipping seed.",
             at_template["template_id"],
         )
+        # Upgrade an unchanged deployed v4 template to the adaptive planner.
+        await migrate_automation_testing_api_to_v5()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1483,12 +1647,23 @@ def _build_automation_testing_api_template() -> dict[str, Any]:
     tc_generator = _add_node(
         "at-api-tc-generator",
         "pure_python",
-        "api_test_case_generator",
-        "Test Case Generator",
-        "Rule-based generator: happy + required-field + type-mismatch + 404",
-        timeout=60,
+        "adaptive_api_test_planner",
+        "Adaptive Test Planner",
+        "Baseline rule-based cases + 1-5 complexity-selected planner agents + "
+        "debate + deterministic consolidation + bounded senior-review gate",
+        timeout=600,
         retry=0,
     )
+    # Adaptive-planner + review-gate defaults (configuration contract). Per-run
+    # overrides validated via run_params take precedence at runtime; these are
+    # the admin-editable template defaults snapshotted into the run result.
+    nodes[-1]["config_overrides"] = {
+        "min_planner_agents": 1,
+        "max_planner_agents": 5,
+        "coverage_threshold_percent": 90,
+        "max_review_iterations": 3,
+        "continue_on_exhaustion": True,
+    }
     _edge(req_analyzer, tc_generator)
 
     # Layer 5 — tag executable flag on each case
@@ -1584,13 +1759,92 @@ def _build_automation_testing_api_template() -> dict[str, Any]:
             "test case generation → executable filter → API execution → unit "
             "test files → final report → verified HTML/DOCX download"
         ),
-        "version": 4,
+        "version": 5,
         "is_builtin": False,
         "is_archived": False,
         "tags": ["automation-testing", "api", "md"],
         "nodes": nodes,
         "edges": edges,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fingerprint-guarded migration: upgrade an unchanged shipped v4 template to v5
+# (adaptive-api-testing-pipeline). A user-customised DAG is never overwritten.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Fingerprint of the shipped v4 ``at-api-tc-generator`` node — the only thing
+# the v5 migration changes. We match on the node's pre-upgrade identity so a
+# DAG whose generator node a user has retitled/rewired is left untouched.
+_SHIPPED_V4_TC_GENERATOR = {
+    "node_id": "at-api-tc-generator",
+    "agent_id": "api_test_case_generator",
+    "node_type": "pure_python",
+}
+
+
+def _is_unchanged_shipped_v4_generator(nodes: list[dict[str, Any]]) -> bool:
+    """True only when the generator node still matches the shipped v4 identity."""
+    for node in nodes:
+        if node.get("node_id") != _SHIPPED_V4_TC_GENERATOR["node_id"]:
+            continue
+        return all(
+            node.get(key) == value
+            for key, value in _SHIPPED_V4_TC_GENERATOR.items()
+            if key != "node_id"
+        )
+    return False
+
+
+async def migrate_automation_testing_api_to_v5() -> None:
+    """Swap the rule-based generator node for the adaptive planner, in place.
+
+    Idempotent and safe:
+      * Fresh installs are seeded at v5 by :func:`seed_pipeline_templates`.
+      * A deployed, unchanged v4 template is upgraded to v5 (node agent_id +
+        label + timeout updated, version bumped).
+      * A template at v5+ is a no-op.
+      * A customised v4 DAG (generator node retitled/rewired) is left untouched
+        with an actionable warning so an operator can migrate it deliberately.
+    """
+    template_id = "automation-testing-api"
+    existing = await crud.get_pipeline_template(template_id)
+    if existing is None:
+        return  # seeding will create v5 directly
+
+    data = existing.model_dump() if hasattr(existing, "model_dump") else dict(existing)
+    current_version = int(data.get("version") or 0)
+    if current_version >= 5:
+        return  # already migrated
+
+    nodes = data.get("nodes") or []
+    if not _is_unchanged_shipped_v4_generator(nodes):
+        logger.warning(
+            "Template '%s' (v%d) has a customised test-case generator node; "
+            "skipping automatic v5 adaptive-planner migration. Re-point the "
+            "'at-api-tc-generator' node's agent_id to 'adaptive_api_test_planner' "
+            "manually to adopt the multi-agent planner.",
+            template_id, current_version,
+        )
+        return
+
+    target = _build_automation_testing_api_template()
+    # update_pipeline_template owns the version field (it auto-increments to
+    # doc.version + 1), so we deliberately do not pass an explicit version —
+    # an unchanged shipped v4 template therefore lands at v5.
+    updated = await crud.update_pipeline_template(
+        template_id,
+        {
+            "nodes": target["nodes"],
+            "edges": target["edges"],
+            "description": target["description"],
+        },
+    )
+    new_version = getattr(updated, "version", current_version + 1)
+    logger.info(
+        "Migrated template '%s' v%d → v%d (adaptive multi-agent planner).",
+        template_id, current_version, new_version,
+    )
 
 
 async def seed_all() -> None:

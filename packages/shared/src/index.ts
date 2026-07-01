@@ -47,6 +47,8 @@ export * from "./components/pipeline/ResultsViewer";
 export * from "./components/pipeline/RunHistory";
 export * from "./components/pipeline/ReportVerificationCard";
 export * from "./components/pipeline/StageResultsPanel";
+export * from "./components/pipeline/PlanningReviewSummary";
+export * from "./components/pipeline/ValidatorFailureChecklist";
 
 // Pipelines components
 export * from "./components/pipelines/PipelineTemplateCard";

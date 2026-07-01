@@ -1,7 +1,7 @@
 ---
 phase: 2
 title: "Build adaptive multi-agent test planner"
-status: pending
+status: complete
 priority: P1
 dependencies: [1]
 ---
@@ -47,13 +47,13 @@ Create an `AdaptiveApiTestPlannerCrew` using existing `AgentFactory` configurati
 
 ## Success Criteria
 
-- [ ] Same document/config always selects the same count and roles.
-- [ ] Simple fixture selects one agent; complex fixture selects five.
-- [ ] At least one critique round occurs when two or more agents run.
-- [ ] Invalid agent JSON is rejected or quarantined.
-- [ ] Final plan has unique IDs, obligation links, provenance, assumptions, and executable request data.
-- [ ] Agent failure still yields baseline cases and a visible warning.
-- [ ] Fresh and safely upgradable installs receive the template; customized templates remain untouched with an actionable warning.
+- [x] Same document/config always selects the same count and roles.
+- [x] Simple fixture selects one agent; complex fixture selects five.
+- [x] At least one critique round occurs when two or more agents run.
+- [x] Invalid agent JSON is rejected or quarantined.
+- [x] Final plan has unique IDs, obligation links, provenance, assumptions, and executable request data.
+- [x] Agent failure still yields baseline cases and a visible warning.
+- [x] Fresh and safely upgradable installs receive the template; customized templates remain untouched with an actionable warning.
 
 ## Risk Assessment
 

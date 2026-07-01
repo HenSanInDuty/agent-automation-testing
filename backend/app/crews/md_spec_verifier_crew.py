@@ -129,12 +129,13 @@ class MDSpecVerifierCrew(BaseCrew):
                 field_errors=[item.model_dump() for item in result.field_errors],
             )
 
+        endpoints = result.parsed.endpoints
+        response_total = sum(len(ep.responses) for ep in endpoints)
         self._emit_agent_completed(
             "md_api_spec_verifier",
             output_preview=(
-                f"valid · {result.parsed.endpoint.method} "
-                f"{result.parsed.endpoint.path} · "
-                f"{len(result.parsed.responses)} response(s)"
+                f"valid · {len(endpoints)} endpoint(s) · "
+                f"{response_total} response(s)"
             ),
         )
 
