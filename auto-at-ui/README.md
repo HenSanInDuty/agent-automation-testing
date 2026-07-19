@@ -11,6 +11,21 @@ Production-oriented multi-agent testing platform. The platform keeps execution d
 
 See [architecture.md](docs/architecture.md) and [ADR-001](docs/adr/001-platform-architecture.md).
 
+## Tech stack
+
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| Control plane | Python 3.12, FastAPI, Uvicorn | REST API, orchestration boundary, and platform health endpoints. |
+| Python tooling | uv, Ruff, Pytest | Dependency locking, virtual environments, linting, and tests. |
+| AI assistance | LangChain, LangChain Ollama | Agent-assisted planning and triage; deterministic execution remains outside the LLM. |
+| Dashboard | Next.js 15, React 19, TypeScript | Web dashboard (currently a scaffold). |
+| Web UI runner | Playwright, TypeScript | Browser automation adapter (currently a scaffold). |
+| Primary database | PostgreSQL 17 | Source of truth for future application, tenancy, audit, and test data. |
+| Cache / queue support | Redis 7 | Cache, coordination, and future background-job support. |
+| Artifact storage | MinIO (S3-compatible) | Stores screenshots, videos, reports, and other execution artifacts in the `auto-at-artifacts` bucket. |
+| Containers | Docker Compose | Runs the control plane and local backing services together. |
+| Future workflow engine | Temporal | Planned durable workflow, retry, and approval orchestration; not included in the local stack yet. |
+
 ## Local development
 
 Install [uv](https://docs.astral.sh/uv/) and Node.js 22+, then:
@@ -20,18 +35,24 @@ uv sync --all-groups
 uv run uvicorn main:app --reload --app-dir apps/control-plane
 ```
 
-Open `http://127.0.0.1:8000/docs`. Run checks with:
+Open `http://127.0.0.1:7000/docs`. Run checks with:
 
 ```bash
 uv run ruff check .
 uv run pytest
 ```
 
-Start local backing services when they are needed:
+Start the complete local stack (control plane, PostgreSQL, Redis, and MinIO):
 
 ```bash
-docker compose up -d postgres redis minio
+docker compose up --build
 ```
+
+The control-plane API is available at `http://localhost:7000/docs`, PostgreSQL at
+`localhost:5432`, Redis at `localhost:6379`, and the MinIO console at
+`http://localhost:9001`. Docker Compose creates the `auto-at-artifacts` bucket before
+starting the control plane. Copy `.env.example` to `.env` to override local credentials,
+ports, or the Ollama endpoint.
 
 Temporal is deliberately an external dependency in this first scaffold. Use Temporal Cloud for production or its official self-hosted deployment chart; the control plane will integrate through a dedicated workflow module rather than exposing workflow state as application state.
 

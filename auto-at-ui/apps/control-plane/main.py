@@ -1,3 +1,4 @@
+# Đây là file để chạy fastapi, đồng thời chỉ khai báo route name lớn cho toàn bộ các api
 from api.v1.router import router as v1_router
 from api.v1.routes.health import router as health_router
 from config import get_settings
