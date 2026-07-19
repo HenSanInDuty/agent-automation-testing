@@ -1,0 +1,53 @@
+[project]
+name = "auto-at-platform"
+version = "0.1.0"
+description = "Multi-agent automation-testing control plane"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "langchain>=1.3.14",
+    "langchain-ollama>=1.1.0",
+    "pydantic>=2.10,<3.0",
+    "pydantic-settings>=2.7,<3.0",
+    "uvicorn[standard]>=0.34,<1.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1.0",
+    "pytest>=8.3,<9.0",
+    "pytest-asyncio>=0.25,<1.0",
+    "ruff>=0.9,<1.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["apps/control-plane", "packages/contracts/src"]
+
+[tool.basedpyright]
+include = ["apps/control-plane", "packages/contracts/src", "tests"]
+pythonVersion = "3.12"
+
+[[tool.basedpyright.executionEnvironments]]
+root = "apps/control-plane"
+extraPaths = ["packages/contracts/src"]
+
+[[tool.basedpyright.executionEnvironments]]
+root = "packages/contracts/src"
+
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+extraPaths = ["apps/control-plane", "packages/contracts/src"]
+
+[tool.uv.sources]
