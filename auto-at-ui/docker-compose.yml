@@ -22,9 +22,6 @@ services:
       WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "${CONTROL_PLANE_PORT:-7000}:7000"
-    volumes:
-      - ./apps/control-plane:/app/apps/control-plane
-      - ./packages/contracts:/app/packages/contracts
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,7 +33,7 @@ services:
       - "host.docker.internal:host-gateway"
     command: >
       uv run --no-sync uvicorn main:app --app-dir apps/control-plane
-      --host 0.0.0.0 --port 7000 --reload
+      --host 0.0.0.0 --port 7000
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7000/healthz')"]
       interval: 10s

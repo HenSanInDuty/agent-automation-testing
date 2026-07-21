@@ -1,6 +1,6 @@
 # Phase 0 — Architecture and decisions
 
-**Status:** in progress  
+**Status:** done
 **Prerequisite:** none  
 **Exit:** an agreed local threat model and provider-neutral boundaries; all team
 members can trace one Web UI test run end to end.
@@ -14,16 +14,16 @@ members can trace one Web UI test run end to end.
 
 ## Checklist
 
-- [ ] Read the README, both architecture documents, and ADR-001; redraw the
+- [x] Read the README, both architecture documents, and ADR-001; redraw the
   target flow in our own words.
 - [x] Read the execution contract; identify common fields and target-specific
   `runner_config`.
-- [ ] Walk through the current FastAPI composition, settings boundary, runner
+- [x] Walk through the current FastAPI composition, settings boundary, runner
   port, and proposal approval rule.
-- [ ] Confirm first-release scope: Web UI only; API/Game are future adapters.
-- [ ] Write a local threat model: tenant boundary, secrets/PII, artifact access,
+- [x] Confirm first-release scope: Web UI only; API/Game are future adapters.
+- [x] Write a local threat model: tenant boundary, secrets/PII, artifact access,
   agent authority, duplicate retries, and auditability.
-- [ ] Record ADR decisions or explicit deferrals for LLM, identity/RBAC,
+- [x] Record ADR decisions or explicit deferrals for LLM, identity/RBAC,
   workflow engine, deployment/tenant model, and retention/deletion policy.
 
 ## Decision boundary
@@ -54,3 +54,11 @@ direction before their respective production-like phases: LLM provider/model and
 data budget (Phase 4), authentication provider and RBAC model (Phase 6),
 workflow engine/deployment mode (Phase 3), cloud/tenant model, and production
 artifact/log retention policy (Phase 6).
+
+| Decision | Current record | Revisit by |
+| --- | --- | --- |
+| LLM provider/model, data budget and rate limits | Deferred; only a provider-neutral agent port and redaction boundary are permitted. | Phase 4 |
+| Identity provider and RBAC model | Deferred; local development has one trusted developer and must not define production authorization. | Phase 6 |
+| Workflow engine and deployment mode | Deferred; workflow remains a port and local services do not establish the production choice. | Phase 3 |
+| Cloud/deployment and tenant model | Deferred; no cloud or multi-tenant assumption is encoded in the contract. | Before production-like deployment |
+| Artifact/log retention and deletion | Deferred; local artifact policy is not a production retention policy. | Phase 6 |

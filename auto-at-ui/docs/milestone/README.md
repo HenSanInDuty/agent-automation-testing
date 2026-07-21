@@ -12,15 +12,15 @@ they arise, so explanations do not need to be repeated in later phases.
 
 | Progress | Phase | Product outcome |
 | --- | --- | --- |
-| In progress | [ ] [Phase 0 — architecture and decisions](phase-00-architecture-and-decisions.md) | Shared vocabulary, invariants, ADR decisions, and local threat model |
-| [ ] | [Phase 1 — control-plane foundation](phase-01-control-plane-foundation.md) | Persisted run lifecycle, audit trail, outbox, and HTTP API |
+| Done | [x] [Phase 0 — architecture and decisions](phase-00-architecture-and-decisions.md) | Shared vocabulary, invariants, ADR decisions, and local threat model |
+| Done | [x] [Phase 1 — control-plane foundation](phase-01-control-plane-foundation.md) | Persisted run lifecycle, audit trail, outbox, and HTTP API |
 | [ ] | [Phase 2 — Web UI vertical slice](phase-02-web-ui-vertical-slice.md) | A deterministic Playwright run with stored evidence |
 | [ ] | [Phase 3 — durable orchestration](phase-03-durable-orchestration.md) | Safe retries, timeouts, cancellation, and idempotent delivery |
 | [ ] | [Phase 4 — governed intelligence](phase-04-governed-intelligence.md) | Redacted triage/healing proposals with an explicit approval boundary |
 | [ ] | [Phase 5 — thesis benchmark](phase-05-thesis-benchmark.md) | Repeatable baseline, comparison, ablation, and result manifest |
 | [ ] | [Phase 6 — product hardening](phase-06-product-hardening.md) | Dashboard, RBAC, telemetry, CI/CD, and operational quality gates |
 
-**Overall progress:** 0/7 phases complete; Phase 0 is in progress.
+**Overall progress:** 2/7 phases complete; Phase 2 is next.
 
 ## How status is maintained
 
