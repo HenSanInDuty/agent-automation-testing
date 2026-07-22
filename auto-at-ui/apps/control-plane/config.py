@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "auto-at-artifacts"
     minio_secure: bool = False
+    runner_dispatch_enabled: bool = False
+    playwright_worker_url: str = "http://127.0.0.1:7100"
+    artifact_root: str = "/tmp/auto-at-artifacts"
 
 
 @lru_cache

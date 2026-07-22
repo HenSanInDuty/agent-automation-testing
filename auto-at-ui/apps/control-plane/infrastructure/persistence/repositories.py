@@ -139,11 +139,23 @@ class SqlAlchemyArtifactRepository:
                 kind=model.kind,
                 uri=model.uri,
                 checksum=model.checksum,
-                size=model.size,
+            size=model.size,
+                content_type=model.content_type,
                 retention_until=model.retention_until,
             )
             for model in self._session.scalars(statement)
         ]
+
+    def add(self, artifact: ArtifactRecord) -> None:
+        self._session.add(
+            ArtifactModel(
+                id=artifact.id, tenant_id=artifact.tenant_id, run_id=artifact.run_id,
+                kind=artifact.kind, uri=artifact.uri, checksum=artifact.checksum,
+                size=artifact.size, content_type=artifact.content_type,
+                retention_until=artifact.retention_until,
+            )
+        )
+        self._session.flush()
 
 
 class SqlAlchemyAuditEventRepository:

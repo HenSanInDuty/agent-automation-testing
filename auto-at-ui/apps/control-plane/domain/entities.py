@@ -39,6 +39,7 @@ class ArtifactRecord:
     uri: str
     checksum: str
     size: int
+    content_type: str | None = None
     retention_until: datetime | None = None
 
 

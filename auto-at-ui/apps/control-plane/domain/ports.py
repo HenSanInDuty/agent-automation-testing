@@ -3,7 +3,7 @@
 from typing import Protocol
 from uuid import UUID
 
-from auto_at.contracts.execution import TestExecutionResult
+from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
 
 from domain.entities import ApprovalRecord, ArtifactRecord, Project, ProposalRecord, TestCase
 from domain.runs import AuditEvent, OutboxEvent, TestRun
@@ -33,6 +33,10 @@ class ArtifactRepository(Protocol):
     def list_for_run(self, tenant_id: str, run_id: UUID) -> list[ArtifactRecord]: ...
 
     def add(self, artifact: ArtifactRecord) -> None: ...
+
+
+class RunnerTransport(Protocol):
+    def execute(self, request: "TestExecutionRequest") -> TestExecutionResult: ...
 
 
 class ProposalRepository(Protocol):

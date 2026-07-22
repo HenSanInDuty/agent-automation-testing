@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -26,7 +26,7 @@ class ArtifactPolicy(BaseModel):
 
 
 class TestExecutionRequest(BaseModel):
-    contract_version: str = "v1"
+    contract_version: Literal["v1"] = "v1"
     run_id: UUID = Field(default_factory=uuid4)
     correlation_id: UUID = Field(default_factory=uuid4)
     project_id: UUID
@@ -45,7 +45,7 @@ class Artifact(BaseModel):
 
 
 class TestExecutionResult(BaseModel):
-    contract_version: str = "v1"
+    contract_version: Literal["v1"] = "v1"
     run_id: UUID
     correlation_id: UUID
     status: RunStatus

@@ -4,12 +4,13 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 from auto_at.contracts.events import EventType
-from auto_at.contracts.execution import TestExecutionResult
+from auto_at.contracts.execution import ArtifactPolicy, TestExecutionRequest, TestExecutionResult
 from domain.entities import ArtifactRecord
 from domain.ports import (
     ArtifactRepository,
     AuditEventRepository,
     OutboxEventRepository,
+    RunnerTransport,
     RunRepository,
 )
 from domain.runs import AuditEvent, OutboxEvent, TestRun
@@ -118,3 +119,35 @@ class RecordDeterministicResult:
         run = GetRun(self._runs).execute(tenant_id, result.run_id)
         self._runs.save_result(run, result)
         return run
+
+
+class DispatchRun:
+    """Dispatch through a port; the worker remains the sole terminal verdict authority."""
+
+    def __init__(self, runs: RunRepository, transport: RunnerTransport) -> None:
+        self._runs = runs
+        self._transport = transport
+
+    def execute(
+        self,
+        tenant_id: str,
+        run_id: UUID,
+        *,
+        target_url: str | None,
+        runner_config: dict[str, object],
+        artifact_policy: ArtifactPolicy,
+    ) -> tuple[TestRun, TestExecutionRequest, TestExecutionResult]:
+        run = GetRun(self._runs).execute(tenant_id, run_id)
+        request = TestExecutionRequest(
+            run_id=run.id,
+            correlation_id=run.correlation_id,
+            project_id=run.project_id,
+            test_case_id=run.test_case_id,
+            target_type="web_ui",
+            target_url=target_url,
+            revision=run.revision,
+            runner_config=runner_config,
+            artifact_policy=artifact_policy,
+        )
+        result = self._transport.execute(request)
+        return run, request, result

@@ -53,6 +53,7 @@ class ArtifactModel(TenantRecord, Base):
     uri: Mapped[str] = mapped_column(Text)
     checksum: Mapped[str] = mapped_column(String(128))
     size: Mapped[int] = mapped_column()
+    content_type: Mapped[str | None] = mapped_column(String(200))
     retention_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 

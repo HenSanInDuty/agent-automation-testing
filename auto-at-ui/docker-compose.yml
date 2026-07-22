@@ -19,6 +19,9 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-auto-at-artifacts}
       MINIO_SECURE: "false"
+      RUNNER_DISPATCH_ENABLED: "true"
+      PLAYWRIGHT_WORKER_URL: http://playwright-worker:7100
+      ARTIFACT_ROOT: /artifacts
       WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "${CONTROL_PLANE_PORT:-7000}:7000"
@@ -31,6 +34,8 @@ services:
         condition: service_completed_successfully
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - execution-artifacts:/artifacts
     command: >
       uv run --no-sync uvicorn main:app --app-dir apps/control-plane
       --host 0.0.0.0 --port 7000
@@ -40,6 +45,19 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    restart: unless-stopped
+
+  playwright-worker:
+    build:
+      context: ./workers/playwright
+      dockerfile: Dockerfile
+    environment:
+      ARTIFACT_ROOT: /artifacts
+      PORT: 7100
+    volumes:
+      - execution-artifacts:/artifacts
+    expose:
+      - "7100"
     restart: unless-stopped
 
   postgres:
@@ -108,3 +126,4 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  execution-artifacts:
