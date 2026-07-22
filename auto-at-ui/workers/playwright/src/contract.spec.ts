@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 
 import { validateExecutionRequestV1, validateExecutionResultV1 } from "./contract.js";
+import { configOf } from "./execute.js";
 
 const fixtures = new URL("../../../packages/contracts/fixtures/execution-v1/", import.meta.url);
 
@@ -28,4 +29,21 @@ test("rejects a request with an unsupported contract version", () => {
   expect(() => validateExecutionRequestV1({ contract_version: "v2" })).toThrow(
     "invalid TestExecutionRequest v1",
   );
+});
+
+test("normalizes the supported Web UI configuration", async () => {
+  const request = validateExecutionRequestV1(await fixture("request.web-ui.json"));
+
+  expect(configOf(request)).toMatchObject({
+    browser: "chromium",
+    step_timeout_ms: 10_000,
+    timeout_ms: 60_000,
+  });
+});
+
+test("rejects an unsafe or malformed Web UI step", async () => {
+  const request = validateExecutionRequestV1(await fixture("request.web-ui.json"));
+  request.runner_config.steps = [{ action: "goto", url: "file:///etc/passwd" }];
+
+  expect(() => configOf(request)).toThrow("goto step url must use http or https");
 });

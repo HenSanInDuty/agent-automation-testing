@@ -15,7 +15,12 @@ RUN uv sync --frozen --no-dev
 
 COPY apps/control-plane ./apps/control-plane
 COPY packages/contracts ./packages/contracts
+COPY alembic.ini ./
+COPY migrations ./migrations
+COPY docker-entrypoint.sh ./
+RUN chmod 755 /app/docker-entrypoint.sh
 
 EXPOSE 7000
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["uv", "run", "--no-sync", "uvicorn", "main:app", "--app-dir", "apps/control-plane", "--host", "0.0.0.0", "--port", "7000"]
