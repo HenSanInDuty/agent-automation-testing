@@ -58,7 +58,9 @@ def test_create_run_queues_a_run_and_outbox_event() -> None:
     assert len(outbox.events) == 1
     event = next(iter(outbox.events.values()))
     assert event.event_type == "test.run.requested.v1"
-    assert event.payload == {"run_id": str(run.id)}
+    assert event.payload["run_id"] == str(run.id)
+    assert event.payload["request"]["run_id"] == str(run.id)
+    assert event.payload["request"]["correlation_id"] == str(run.correlation_id)
     assert audits.events[0].action == "run.created"
 
 

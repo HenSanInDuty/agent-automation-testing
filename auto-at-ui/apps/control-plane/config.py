@@ -25,6 +25,16 @@ class Settings(BaseSettings):
     runner_dispatch_enabled: bool = False
     playwright_worker_url: str = "http://127.0.0.1:7100"
     artifact_root: str = "/tmp/auto-at-artifacts"
+    temporal_enabled: bool = False
+    temporal_address: str = "127.0.0.1:7233"
+    temporal_namespace: str = "auto-at-local"
+    temporal_task_queue: str = "auto-at-run-dispatch-v1"
+    temporal_outbox_poll_interval_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
+    temporal_enabled: bool = False
+    temporal_address: str = "127.0.0.1:7233"
+    temporal_namespace: str = "auto-at-local"
+    temporal_task_queue: str = "auto-at-run-dispatch-v1"
+    temporal_outbox_poll_interval_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
 
 
 @lru_cache

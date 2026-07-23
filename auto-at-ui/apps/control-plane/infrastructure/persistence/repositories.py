@@ -1,5 +1,6 @@
 """Tenant-scoped SQLAlchemy implementations of domain persistence ports."""
 
+from datetime import datetime
 from uuid import UUID
 
 from auto_at.contracts.execution import TestExecutionResult
@@ -121,6 +122,35 @@ class SqlAlchemyOutboxEventRepository:
             )
         )
         self._session.flush()
+
+    def list_unpublished(self, limit: int) -> list[OutboxEvent]:
+        statement = (
+            select(OutboxEventModel)
+            .where(OutboxEventModel.published_at.is_(None))
+            .order_by(OutboxEventModel.id)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        return [
+            OutboxEvent(
+                id=model.id,
+                tenant_id=model.tenant_id,
+                event_type=model.event_type,
+                schema_version=model.schema_version,
+                correlation_id=model.correlation_id,
+                causation_id=model.causation_id,
+                idempotency_key=model.idempotency_key,
+                payload=model.payload,
+            )
+            for model in self._session.scalars(statement)
+        ]
+
+    def mark_published(self, event_id: UUID, published_at: datetime) -> None:
+        self._session.execute(
+            update(OutboxEventModel)
+            .where(OutboxEventModel.id == event_id, OutboxEventModel.published_at.is_(None))
+            .values(published_at=published_at)
+        )
 
 
 class SqlAlchemyArtifactRepository:

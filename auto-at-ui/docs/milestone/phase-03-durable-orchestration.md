@@ -1,18 +1,19 @@
 # Phase 3 — Durable orchestration
 
-**Status:** planned  
+**Status:** in progress
 **Prerequisite:** Phase 2 complete and an approved workflow ADR  
 **Exit:** dispatch, retry, timeout, cancellation, and duplicate delivery are
 safe and observable.
 
 ## Checklist
 
-- [ ] Approve and record the workflow-engine/deployment ADR before adding its
+- [x] Approve and record the workflow-engine/deployment ADR before adding its
   vendor SDK.
-- [ ] Implement outbox publication and at-least-once-safe event consumption.
-- [ ] Implement workflow dispatch, worker acknowledgement, result recording,
+- [x] Implement local outbox publication and at-least-once-safe workflow start
+  using a stable workflow ID per run.
+- [x] Implement workflow dispatch, worker acknowledgement, result recording,
   and artifact handoff through ports.
-- [ ] Retry transient/infrastructure errors only; never retry known functional
+- [x] Retry transient/infrastructure errors only; never retry known functional
   failures.
 - [ ] Implement bounded retry/backoff, step timeout, run deadline, cancellation
   propagation, and worker notification.
@@ -30,3 +31,8 @@ no business outcome twice.
 
 Focused workflow tests plus integration tests with injected timeout and duplicate
 event scenarios.
+
+**Progress validation (2026-07-23):** local Compose ran Temporal Server/UI and
+the Temporal worker. A `POST /api/v1/runs` health-check test moved from `queued`
+to `passed` through outbox publication, a Temporal workflow, the Playwright
+worker, verified artifact handling, and deterministic result persistence.

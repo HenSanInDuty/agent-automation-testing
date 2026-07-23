@@ -19,9 +19,13 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-auto-at-artifacts}
       MINIO_SECURE: "false"
-      RUNNER_DISPATCH_ENABLED: "true"
+      RUNNER_DISPATCH_ENABLED: "false"
       PLAYWRIGHT_WORKER_URL: http://playwright-worker:7100
       ARTIFACT_ROOT: /artifacts
+      TEMPORAL_ENABLED: "true"
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-auto-at-local}
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-auto-at-run-dispatch-v1}
       WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "${CONTROL_PLANE_PORT:-7000}:7000"
@@ -32,6 +36,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      temporal:
+        condition: service_started
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -60,6 +66,34 @@ services:
       - "7100"
     restart: unless-stopped
 
+  temporal-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-auto_at}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-auto_at}
+      PLAYWRIGHT_WORKER_URL: http://playwright-worker:7100
+      ARTIFACT_ROOT: /artifacts
+      TEMPORAL_ENABLED: "true"
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-auto-at-local}
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-auto-at-run-dispatch-v1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      playwright-worker:
+        condition: service_started
+    volumes:
+      - execution-artifacts:/artifacts
+    entrypoint: []
+    command: uv run --no-sync python -m infrastructure.workflows.temporal_worker
+    restart: unless-stopped
+
   postgres:
     image: postgres:17-alpine
     environment:
@@ -75,6 +109,50 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+
+  temporal-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: ${TEMPORAL_POSTGRES_PASSWORD:-temporal-local-development-only}
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: ${TEMPORAL_POSTGRES_PASSWORD:-temporal-local-development-only}
+      POSTGRES_SEEDS: temporal-postgres
+      DEFAULT_NAMESPACE: ${TEMPORAL_NAMESPACE:-auto-at-local}
+      DEFAULT_NAMESPACE_RETENTION: 1d
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+    restart: unless-stopped
+
+  temporal-ui:
+    image: temporalio/ui:2.40.0
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_UI_PORT: 8080
+    depends_on:
+      temporal:
+        condition: service_started
+    ports:
+      - "${TEMPORAL_UI_PORT:-8080}:8080"
     restart: unless-stopped
 
   redis:
@@ -124,6 +202,7 @@ services:
 
 volumes:
   postgres-data:
+  temporal-postgres-data:
   redis-data:
   minio-data:
   execution-artifacts:

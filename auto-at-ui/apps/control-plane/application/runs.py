@@ -1,10 +1,16 @@
 """Use cases for the deterministic test-run lifecycle."""
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from auto_at.contracts.events import EventType
-from auto_at.contracts.execution import ArtifactPolicy, TestExecutionRequest, TestExecutionResult
+from auto_at.contracts.execution import (
+    ArtifactPolicy,
+    TargetType,
+    TestExecutionRequest,
+    TestExecutionResult,
+)
 from domain.entities import ArtifactRecord
 from domain.ports import (
     ArtifactRepository,
@@ -12,6 +18,7 @@ from domain.ports import (
     OutboxEventRepository,
     RunnerTransport,
     RunRepository,
+    WorkflowStarter,
 )
 from domain.runs import AuditEvent, OutboxEvent, TestRun
 
@@ -32,6 +39,10 @@ class CreateRunCommand:
     revision: str
     correlation_id: UUID
     idempotency_key: str
+    target_type: TargetType = TargetType.WEB_UI
+    target_url: str | None = None
+    runner_config: dict[str, object] | None = None
+    artifact_policy: ArtifactPolicy | None = None
 
 
 class CreateRun:
@@ -65,6 +76,17 @@ class CreateRun:
             revision=command.revision,
             correlation_id=command.correlation_id,
         )
+        request = TestExecutionRequest(
+            run_id=run.id,
+            correlation_id=run.correlation_id,
+            project_id=run.project_id,
+            test_case_id=run.test_case_id,
+            target_type=command.target_type,
+            target_url=command.target_url,
+            revision=run.revision,
+            runner_config=command.runner_config or {},
+            artifact_policy=command.artifact_policy or ArtifactPolicy(),
+        )
         self._runs.add(run)
         self._audits.append(
             AuditEvent(
@@ -86,7 +108,7 @@ class CreateRun:
                 correlation_id=command.correlation_id,
                 causation_id=None,
                 idempotency_key=command.idempotency_key,
-                payload={"run_id": str(run.id)},
+                payload={"run_id": str(run.id), "request": request.model_dump(mode="json")},
             )
         )
         return run
@@ -131,23 +153,30 @@ class DispatchRun:
     def execute(
         self,
         tenant_id: str,
-        run_id: UUID,
-        *,
-        target_url: str | None,
-        runner_config: dict[str, object],
-        artifact_policy: ArtifactPolicy,
-    ) -> tuple[TestRun, TestExecutionRequest, TestExecutionResult]:
-        run = GetRun(self._runs).execute(tenant_id, run_id)
-        request = TestExecutionRequest(
-            run_id=run.id,
-            correlation_id=run.correlation_id,
-            project_id=run.project_id,
-            test_case_id=run.test_case_id,
-            target_type="web_ui",
-            target_url=target_url,
-            revision=run.revision,
-            runner_config=runner_config,
-            artifact_policy=artifact_policy,
-        )
+        request: TestExecutionRequest,
+    ) -> tuple[TestRun, TestExecutionResult]:
+        run = GetRun(self._runs).execute(tenant_id, request.run_id)
+        if request.correlation_id != run.correlation_id:
+            raise ValueError("request correlation_id does not match the queued run")
+        if request.project_id != run.project_id or request.revision != run.revision:
+            raise ValueError("request does not match the queued run")
         result = self._transport.execute(request)
-        return run, request, result
+        return run, result
+
+
+class PublishOutbox:
+    """Publish committed run events. The backend supplies at-least-once delivery."""
+
+    def __init__(self, outbox: OutboxEventRepository, workflows: WorkflowStarter) -> None:
+        self._outbox = outbox
+        self._workflows = workflows
+
+    async def execute(self, limit: int = 100) -> int:
+        published = 0
+        for event in self._outbox.list_unpublished(limit):
+            if event.event_type != EventType.TEST_RUN_REQUESTED.value:
+                continue
+            await self._workflows.start_run(event)
+            self._outbox.mark_published(event.id, datetime.now(UTC))
+            published += 1
+        return published

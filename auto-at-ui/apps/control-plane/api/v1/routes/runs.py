@@ -12,7 +12,12 @@ from application.runs import (
     RecordDeterministicResult,
     RunNotFoundError,
 )
-from auto_at.contracts.execution import ArtifactPolicy, TargetType, TestExecutionResult
+from auto_at.contracts.execution import (
+    ArtifactPolicy,
+    TargetType,
+    TestExecutionRequest,
+    TestExecutionResult,
+)
 from config import Settings, get_settings
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import FileResponse
@@ -81,6 +86,10 @@ def create_run(
                 revision=payload.revision,
                 correlation_id=payload.correlation_id,
                 idempotency_key=idempotency_key,
+                target_type=payload.target_type,
+                target_url=payload.target_url,
+                runner_config=payload.runner_config,
+                artifact_policy=payload.artifact_policy,
             )
         )
     response = RunResponse(
@@ -100,14 +109,21 @@ def create_run(
         with transactional_session(create_session_factory(settings)) as session:
             runs = SqlAlchemyRunRepository(session)
             artifacts = SqlAlchemyArtifactRepository(session)
-            dispatched_run, _, result = DispatchRun(
+            dispatched_run, result = DispatchRun(
                 runs, HttpPlaywrightTransport(settings.playwright_worker_url)
             ).execute(
                 tenant_id,
-                run.id,
-                target_url=payload.target_url,
-                runner_config=payload.runner_config,
-                artifact_policy=payload.artifact_policy,
+                TestExecutionRequest(
+                    run_id=run.id,
+                    correlation_id=run.correlation_id,
+                    project_id=run.project_id,
+                    test_case_id=run.test_case_id,
+                    target_type=payload.target_type,
+                    target_url=payload.target_url,
+                    revision=run.revision,
+                    runner_config=payload.runner_config,
+                    artifact_policy=payload.artifact_policy,
+                ),
             )
             VerifiedLocalArtifactPort(settings.artifact_root, artifacts).persist_result_artifacts(
                 tenant_id, result, payload.artifact_policy.retain_days

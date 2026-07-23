@@ -24,7 +24,7 @@ See [architecture.md](docs/architecture.md) and [ADR-001](docs/adr/001-platform-
 | Cache / queue support | Redis 7 | Cache, coordination, and future background-job support. |
 | Artifact storage | MinIO (S3-compatible) | Stores screenshots, videos, reports, and other execution artifacts in the `auto-at-artifacts` bucket. |
 | Containers | Docker Compose | Runs the control plane and local backing services together. |
-| Future workflow engine | Temporal | Planned durable workflow, retry, and approval orchestration; not included in the local stack yet. |
+| Workflow engine | Temporal | Local self-hosted development backend for durable run dispatch; production deployment remains undecided. |
 
 ## Local development
 
@@ -54,7 +54,10 @@ The control-plane API is available at `http://localhost:7000/docs`, PostgreSQL a
 starting the control plane. Copy `.env.example` to `.env` to override local credentials,
 ports, or the Ollama endpoint.
 
-Temporal is deliberately an external dependency in this first scaffold. Use Temporal Cloud for production or its official self-hosted deployment chart; the control plane will integrate through a dedicated workflow module rather than exposing workflow state as application state.
+Docker Compose also starts a local Temporal Server and UI at `http://localhost:8080`.
+Temporal is behind a dedicated workflow adapter; production may use Temporal Cloud,
+self-hosted Temporal, or another implementation without changing the HTTP or runner
+contracts.
 
 ## Repository layout
 

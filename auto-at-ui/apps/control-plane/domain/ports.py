@@ -1,5 +1,6 @@
 """Persistence boundaries owned by the domain and implemented by infrastructure."""
 
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -61,3 +62,13 @@ class OutboxEventRepository(Protocol):
     ) -> OutboxEvent | None: ...
 
     def append(self, event: OutboxEvent) -> None: ...
+
+    def list_unpublished(self, limit: int) -> list[OutboxEvent]: ...
+
+    def mark_published(self, event_id: UUID, published_at: datetime) -> None: ...
+
+
+class WorkflowStarter(Protocol):
+    """Starts durable orchestration without exposing a vendor SDK to application code."""
+
+    async def start_run(self, event: OutboxEvent) -> None: ...
