@@ -21,9 +21,13 @@ class InMemoryOutbox:
 class RecordingWorkflowStarter:
     def __init__(self) -> None:
         self.started: list[OutboxEvent] = []
+        self.cancelled: list[OutboxEvent] = []
 
     async def start_run(self, event: OutboxEvent) -> None:
         self.started.append(event)
+
+    async def cancel_run(self, event: OutboxEvent) -> None:
+        self.cancelled.append(event)
 
 
 def requested_event() -> OutboxEvent:
@@ -71,3 +75,43 @@ def test_publisher_leaves_other_event_types_unpublished() -> None:
     assert workflows.started == [event]
     assert ignored.id not in outbox.published
     assert event.id in outbox.published
+
+
+def test_publisher_delivers_a_run_cancellation_once() -> None:
+    event = requested_event()
+    event = OutboxEvent(
+        id=event.id,
+        tenant_id=event.tenant_id,
+        event_type="test.run.cancelled.v1",
+        schema_version=event.schema_version,
+        correlation_id=event.correlation_id,
+        causation_id=event.causation_id,
+        idempotency_key="cancel:one",
+        payload={"run_id": event.payload["run_id"]},
+    )
+    outbox = InMemoryOutbox([event])
+    workflows = RecordingWorkflowStarter()
+
+    assert asyncio.run(PublishOutbox(outbox, workflows).execute()) == 1
+    assert workflows.cancelled == [event]
+    assert event.id in outbox.published
+
+
+def test_publisher_starts_a_run_before_delivering_its_cancellation() -> None:
+    requested = requested_event()
+    cancelled = OutboxEvent(
+        id=uuid4(),
+        tenant_id=requested.tenant_id,
+        event_type="test.run.cancelled.v1",
+        schema_version=requested.schema_version,
+        correlation_id=requested.correlation_id,
+        causation_id=None,
+        idempotency_key="cancel:after-start",
+        payload={"run_id": requested.payload["run_id"]},
+    )
+    outbox = InMemoryOutbox([cancelled, requested])
+    workflows = RecordingWorkflowStarter()
+
+    assert asyncio.run(PublishOutbox(outbox, workflows).execute()) == 2
+    assert workflows.started == [requested]
+    assert workflows.cancelled == [cancelled]

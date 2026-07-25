@@ -68,6 +68,21 @@ class SqlAlchemyRunRepository:
         if self._session.execute(statement).rowcount != 1:
             raise ConcurrentRunUpdateError("test run was updated by another transaction")
 
+    def cancel(self, run: TestRun) -> None:
+        expected_version = run.version
+        run.cancel()
+        statement = (
+            update(TestRunModel)
+            .where(
+                TestRunModel.id == run.id,
+                TestRunModel.tenant_id == run.tenant_id,
+                TestRunModel.version == expected_version,
+            )
+            .values(status=run.status.value, version=run.version)
+        )
+        if self._session.execute(statement).rowcount != 1:
+            raise ConcurrentRunUpdateError("test run was updated by another transaction")
+
     @staticmethod
     def _to_domain(model: TestRunModel) -> TestRun:
         result = None if model.result is None else TestExecutionResult.model_validate(model.result)

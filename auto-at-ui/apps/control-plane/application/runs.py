@@ -20,7 +20,7 @@ from domain.ports import (
     RunRepository,
     WorkflowStarter,
 )
-from domain.runs import AuditEvent, OutboxEvent, TestRun
+from domain.runs import TERMINAL_STATUSES, AuditEvent, OutboxEvent, TestRun
 
 
 class IdempotencyConflictError(ValueError):
@@ -108,7 +108,11 @@ class CreateRun:
                 correlation_id=command.correlation_id,
                 causation_id=None,
                 idempotency_key=command.idempotency_key,
-                payload={"run_id": str(run.id), "request": request.model_dump(mode="json")},
+                payload={
+                    "run_id": str(run.id),
+                    "request": request.model_dump(mode="json"),
+                    "requested_at": datetime.now(UTC).isoformat(),
+                },
             )
         )
         return run
@@ -139,7 +143,58 @@ class RecordDeterministicResult:
 
     def execute(self, tenant_id: str, result: TestExecutionResult) -> TestRun:
         run = GetRun(self._runs).execute(tenant_id, result.run_id)
+        if run.status in TERMINAL_STATUSES:
+            if run.result == result:
+                return run
+            raise ValueError("a terminal run cannot receive a different result")
         self._runs.save_result(run, result)
+        return run
+
+
+class CancelRun:
+    """Persist cancellation before asking the workflow plane to stop execution."""
+
+    def __init__(
+        self,
+        runs: RunRepository,
+        outbox: OutboxEventRepository,
+        audits: AuditEventRepository,
+    ) -> None:
+        self._runs = runs
+        self._outbox = outbox
+        self._audits = audits
+
+    def execute(self, tenant_id: str, run_id: UUID, idempotency_key: str) -> TestRun:
+        existing = self._outbox.get_by_idempotency_key(tenant_id, idempotency_key)
+        if existing is not None:
+            if existing.event_type != EventType.TEST_RUN_CANCELLED.value:
+                raise IdempotencyConflictError("idempotency key belongs to another command")
+            return GetRun(self._runs).execute(tenant_id, run_id)
+
+        run = GetRun(self._runs).execute(tenant_id, run_id)
+        self._runs.cancel(run)
+        event = OutboxEvent(
+            id=uuid4(),
+            tenant_id=tenant_id,
+            event_type=EventType.TEST_RUN_CANCELLED.value,
+            schema_version="v1",
+            correlation_id=run.correlation_id,
+            causation_id=None,
+            idempotency_key=idempotency_key,
+            payload={"run_id": str(run.id)},
+        )
+        self._outbox.append(event)
+        self._audits.append(
+            AuditEvent(
+                id=uuid4(),
+                tenant_id=tenant_id,
+                actor="system",
+                action="run.cancelled",
+                entity_type="test_run",
+                entity_id=run.id,
+                correlation_id=run.correlation_id,
+            )
+        )
         return run
 
 
@@ -156,6 +211,8 @@ class DispatchRun:
         request: TestExecutionRequest,
     ) -> tuple[TestRun, TestExecutionResult]:
         run = GetRun(self._runs).execute(tenant_id, request.run_id)
+        if run.status in TERMINAL_STATUSES:
+            raise ValueError("a terminal run cannot be dispatched")
         if request.correlation_id != run.correlation_id:
             raise ValueError("request correlation_id does not match the queued run")
         if request.project_id != run.project_id or request.revision != run.revision:
@@ -173,10 +230,21 @@ class PublishOutbox:
 
     async def execute(self, limit: int = 100) -> int:
         published = 0
-        for event in self._outbox.list_unpublished(limit):
-            if event.event_type != EventType.TEST_RUN_REQUESTED.value:
+        event_order = {
+            EventType.TEST_RUN_REQUESTED.value: 0,
+            EventType.TEST_RUN_CANCELLED.value: 1,
+        }
+        events = sorted(
+            self._outbox.list_unpublished(limit),
+            key=lambda event: event_order.get(event.event_type, 2),
+        )
+        for event in events:
+            if event.event_type == EventType.TEST_RUN_REQUESTED.value:
+                await self._workflows.start_run(event)
+            elif event.event_type == EventType.TEST_RUN_CANCELLED.value:
+                await self._workflows.cancel_run(event)
+            else:
                 continue
-            await self._workflows.start_run(event)
             self._outbox.mark_published(event.id, datetime.now(UTC))
             published += 1
         return published

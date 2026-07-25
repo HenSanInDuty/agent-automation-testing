@@ -60,6 +60,17 @@ def test_runner_result_for_another_run_is_rejected() -> None:
         run.record_runner_result(result)
 
 
+def test_cancellation_is_terminal_without_inventing_a_runner_result() -> None:
+    run = make_run()
+
+    run.cancel()
+
+    assert run.status is RunLifecycleStatus.CANCELLED
+    assert run.result is None
+    with pytest.raises(RunStateError, match="terminal"):
+        run.cancel()
+
+
 def test_audit_event_is_append_only() -> None:
     event = AuditEvent(
         id=uuid4(),

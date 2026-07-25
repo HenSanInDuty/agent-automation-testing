@@ -19,7 +19,7 @@ safe and observable.
   propagation, and worker notification.
 - [ ] Prove duplicate request/completion events cannot duplicate runs, terminal
   results, proposals, or approvals.
-- [ ] Emit correlation-aware queue-delay, retry, timeout, and cancellation data.
+- [x] Emit correlation-aware queue-delay, retry, timeout, and cancellation data.
 
 ## Completion demonstration
 

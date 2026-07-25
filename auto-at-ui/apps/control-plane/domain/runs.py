@@ -18,6 +18,7 @@ class RunLifecycleStatus(StrEnum):
     FAILED = "failed"
     ERRORED = "errored"
     SKIPPED = "skipped"
+    CANCELLED = "cancelled"
 
 
 TERMINAL_STATUSES = frozenset(
@@ -26,6 +27,7 @@ TERMINAL_STATUSES = frozenset(
         RunLifecycleStatus.FAILED,
         RunLifecycleStatus.ERRORED,
         RunLifecycleStatus.SKIPPED,
+        RunLifecycleStatus.CANCELLED,
     }
 )
 
@@ -84,6 +86,13 @@ class TestRun:
 
         self.result = result
         self.status = RunLifecycleStatus(result.status.value)
+        self.version += 1
+
+    def cancel(self) -> None:
+        """Stop a run without inventing a runner verdict."""
+        if self.status in TERMINAL_STATUSES:
+            raise RunStateError("a terminal run cannot be cancelled")
+        self.status = RunLifecycleStatus.CANCELLED
         self.version += 1
 
 

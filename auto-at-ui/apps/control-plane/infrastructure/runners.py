@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.error import URLError
@@ -12,6 +13,8 @@ from uuid import uuid4
 from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
 from domain.entities import ArtifactRecord
 from domain.ports import ArtifactRepository
+
+logger = logging.getLogger(__name__)
 
 
 class RunnerUnavailableError(RuntimeError):
@@ -33,7 +36,15 @@ class HttpPlaywrightTransport:
                 timeout=self._timeout_seconds,
             ) as response:
                 return TestExecutionResult.model_validate_json(response.read())
-        except (URLError, TimeoutError, ValueError) as error:
+        except TimeoutError as error:
+            logger.warning(
+                "run.timeout run_id=%s correlation_id=%s timeout_seconds=%s",
+                request.run_id,
+                request.correlation_id,
+                self._timeout_seconds,
+            )
+            raise RunnerUnavailableError("Playwright worker timed out") from error
+        except (URLError, ValueError) as error:
             raise RunnerUnavailableError(
                 "Playwright worker did not return a valid result"
             ) from error

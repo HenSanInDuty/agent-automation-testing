@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 from application.runs import (
+    CancelRun,
     CreateRun,
     CreateRunCommand,
     DispatchRun,
@@ -163,6 +164,37 @@ def get_run(
     )
 
 
+@router.post("/{run_id}/cancel", response_model=RunResponse)
+def cancel_run(
+    run_id: UUID,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> RunResponse:
+    """Persist a cancellation command and deliver it through the outbox."""
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            run = CancelRun(
+                SqlAlchemyRunRepository(session),
+                SqlAlchemyOutboxEventRepository(session),
+                SqlAlchemyAuditEventRepository(session),
+            ).execute(tenant_id, run_id, idempotency_key)
+        except RunNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Run cannot be cancelled."
+            ) from error
+    return RunResponse(
+        id=run.id,
+        correlation_id=run.correlation_id,
+        status=run.status.value,
+        revision=run.revision,
+    )
+
+
 @router.get("/{run_id}/artifacts", response_model=list[ArtifactResponse])
 def list_artifacts(
     run_id: UUID,
@@ -226,6 +258,11 @@ def record_result(
         except RunNotFoundError as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Run already has a different terminal result.",
             ) from error
     return RunResponse(
         id=run.id,

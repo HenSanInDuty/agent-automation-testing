@@ -1,5 +1,7 @@
 """Temporal implementation of the local durable run-dispatch workflow."""
 
+import logging
+
 from application.runs import DispatchRun, RecordDeterministicResult
 from auto_at.contracts.execution import TestExecutionRequest
 from config import Settings
@@ -16,12 +18,22 @@ from infrastructure.persistence.session import create_session_factory, transacti
 from infrastructure.runners import HttpPlaywrightTransport, VerifiedLocalArtifactPort
 from infrastructure.workflows.definitions import RunWorkflowInput, TestRunWorkflow
 
+logger = logging.getLogger(__name__)
+
 
 @activity.defn(name="auto-at.dispatch-test-run.v1")
 def dispatch_test_run(payload: RunWorkflowInput) -> dict[str, str]:
     """Activity that persists only the observed runner result as terminal state."""
     settings = Settings()
     request = TestExecutionRequest.model_validate(payload.request)
+    attempt = activity.info().attempt
+    if attempt > 1:
+        logger.warning(
+            "run.retry run_id=%s correlation_id=%s attempt=%s",
+            request.run_id,
+            request.correlation_id,
+            attempt,
+        )
     with transactional_session(create_session_factory(settings)) as session:
         runs = SqlAlchemyRunRepository(session)
         run, result = DispatchRun(
@@ -49,9 +61,32 @@ class TemporalWorkflowStarter:
         try:
             await self._client.start_workflow(
                 TestRunWorkflow.run,
-                RunWorkflowInput(tenant_id=event.tenant_id, request=request),
+                RunWorkflowInput(
+                    tenant_id=event.tenant_id,
+                    request=request,
+                    requested_at=event.payload.get("requested_at"),
+                    activity_timeout_seconds=self._settings.temporal_activity_timeout_seconds,
+                    run_deadline_seconds=self._settings.temporal_run_deadline_seconds,
+                    retry_initial_interval_seconds=(
+                        self._settings.temporal_retry_initial_interval_seconds
+                    ),
+                    retry_maximum_interval_seconds=(
+                        self._settings.temporal_retry_maximum_interval_seconds
+                    ),
+                    retry_maximum_attempts=self._settings.temporal_retry_maximum_attempts,
+                ),
                 id=f"auto-at-run-{run_id}",
                 task_queue=self._settings.temporal_task_queue,
             )
         except WorkflowAlreadyStartedError:
             return
+
+    async def cancel_run(self, event: OutboxEvent) -> None:
+        """Request cancellation for the stable workflow ID associated with a run."""
+        run_id = str(event.payload["run_id"])
+        logger.info(
+            "run.cancellation.requested run_id=%s correlation_id=%s",
+            run_id,
+            event.correlation_id,
+        )
+        await self._client.get_workflow_handle(f"auto-at-run-{run_id}").cancel()
