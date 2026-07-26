@@ -6,6 +6,10 @@
   "scripts": {
     "dashboard:dev": "pnpm --filter @auto-at/dashboard dev",
     "playwright:test": "pnpm --filter @auto-at/playwright-worker test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "typescript-eslint": "^8.65.0"
   }
 }
-

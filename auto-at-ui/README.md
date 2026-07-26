@@ -59,6 +59,39 @@ Temporal is behind a dedicated workflow adapter; production may use Temporal Clo
 self-hosted Temporal, or another implementation without changing the HTTP or runner
 contracts.
 
+## Run a basic pipeline
+
+This local path creates one deterministic run, records a passed result, and
+inspects its correlated evidence. It uses the self-hosted stack and local RBAC
+adapter only; do not use the development actor headers outside local mode.
+
+1. Start services and apply migrations:
+
+   ```bash
+   docker compose up -d --build
+   docker compose exec -T control-plane uv run --no-sync alembic upgrade head
+   ```
+
+2. Seed the project and test case expected by the collection. The commands are
+   idempotent and use the default local credentials from `docker-compose.yml`:
+
+   ```bash
+   docker compose exec -T postgres psql -U auto_at -d auto_at -c "INSERT INTO projects (id, tenant_id, name, default_target) VALUES ('11111111-1111-4111-8111-111111111111', 'demo-tenant', 'Postman demo', 'web_ui') ON CONFLICT (id) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, name = EXCLUDED.name, default_target = EXCLUDED.default_target;"
+   docker compose exec -T postgres psql -U auto_at -d auto_at -c "INSERT INTO test_cases (id, tenant_id, project_id, target_type, revision, specification) VALUES ('demo-healthz', 'demo-tenant', '11111111-1111-4111-8111-111111111111', 'web_ui', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '{}'::jsonb) ON CONFLICT (id) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, project_id = EXCLUDED.project_id, target_type = EXCLUDED.target_type, revision = EXCLUDED.revision, specification = EXCLUDED.specification;"
+   ```
+
+3. Import [the Phase 6 Postman collection](docs/hoppscotch/auto-at-phase-1.postman_collection.json).
+   Keep its default local variables, then send these requests in order:
+
+   - `Health and operations / Health check`
+   - `Basic deterministic pipeline / Create run` — this saves `run_id` and
+     `correlation_id` as collection variables.
+   - `Get correlated run`, `Record passed deterministic result`, then `List run artifacts`.
+   - `Operations summary` confirms the audited tenant-visible totals.
+
+Use `Proposal review` only with an existing proposal ID. Its reviewer header is
+intentional: a service identity cannot approve or reject a proposal.
+
 ## Repository layout
 
 ```text

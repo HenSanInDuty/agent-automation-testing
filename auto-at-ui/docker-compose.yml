@@ -66,6 +66,16 @@ services:
       - "7100"
     restart: unless-stopped
 
+  benchmark-target:
+    image: node:22-alpine
+    working_dir: /benchmark
+    command: node server.mjs
+    volumes:
+      - ./benchmarks/targets/web-ui:/benchmark:ro
+    expose:
+      - "7200"
+    restart: unless-stopped
+
   temporal-worker:
     build:
       context: .

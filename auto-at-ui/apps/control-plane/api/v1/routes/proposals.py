@@ -5,6 +5,13 @@ from uuid import UUID
 
 from application.proposals import DecideProposal, ProposalNotFoundError
 from config import Settings, get_settings
+from domain.authorization import (
+    AuthorizationError,
+    Permission,
+    Principal,
+    actor_for_tenant,
+    require,
+)
 from domain.entities import ApprovalStateError
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from infrastructure.persistence.repositories import (
@@ -12,9 +19,12 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyAuditEventRepository,
     SqlAlchemyOutboxEventRepository,
     SqlAlchemyProposalRepository,
+    SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
 from pydantic import BaseModel, Field
+
+from api.v1.dependencies.authorization import current_principal
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -46,12 +56,23 @@ class ProposalResponse(BaseModel):
 def get_proposal(
     proposal_id: UUID,
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ProposalResponse:
     with transactional_session(create_session_factory(settings)) as session:
         proposal = SqlAlchemyProposalRepository(session).get(tenant_id, proposal_id)
     if proposal is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found.")
+    with create_session_factory(settings)() as session:
+        run = SqlAlchemyRunRepository(session).get(tenant_id, proposal.run_id)
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found.")
+    try:
+        require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+    except AuthorizationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found."
+        ) from error
     return ProposalResponse(
         id=proposal.id,
         run_id=proposal.run_id,
@@ -68,11 +89,19 @@ def decide_proposal(
     proposal_id: UUID,
     payload: ProposalDecisionRequest,
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
-    reviewer_id: Annotated[str, Header(alias="X-Reviewer-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ProposalDecisionResponse:
     with transactional_session(create_session_factory(settings)) as session:
         try:
+            proposal = SqlAlchemyProposalRepository(session).get(tenant_id, proposal_id)
+            if proposal is None:
+                raise ProposalNotFoundError(proposal_id)
+            run = SqlAlchemyRunRepository(session).get(tenant_id, proposal.run_id)
+            if run is None:
+                raise ProposalNotFoundError(proposal_id)
+            actor = actor_for_tenant(principal, tenant_id, run.project_id)
+            require(actor, Permission.DECIDE_PROPOSAL)
             decision = DecideProposal(
                 SqlAlchemyProposalRepository(session),
                 SqlAlchemyApprovalRepository(session),
@@ -82,10 +111,14 @@ def decide_proposal(
                 tenant_id=tenant_id,
                 proposal_id=proposal_id,
                 approved=payload.approved,
-                decided_by=reviewer_id,
+                decided_by=actor.subject,
                 reason=payload.reason,
             )
         except ProposalNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found."
+            ) from error
+        except AuthorizationError as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found."
             ) from error

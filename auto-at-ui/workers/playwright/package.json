@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "lint": "eslint src",
     "test": "playwright test",
     "typecheck": "tsc --noEmit",
     "start": "tsx src/server.ts"

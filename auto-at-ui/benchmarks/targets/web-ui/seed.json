@@ -1,0 +1,7 @@
+{
+  "seed": "benchmark-seed-v1",
+  "user": "benchmark-user",
+  "password": "not-a-secret-fixture",
+  "locale": "en-US",
+  "timezone": "UTC"
+}

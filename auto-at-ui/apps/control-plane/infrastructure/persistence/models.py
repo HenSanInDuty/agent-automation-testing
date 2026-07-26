@@ -86,7 +86,7 @@ class ApprovalModel(TenantRecord, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     proposal_id: Mapped[UUID] = mapped_column(ForeignKey("agent_proposals.id"))
     proposal_version: Mapped[int] = mapped_column()
-    approved: Mapped[bool]
+    approved: Mapped[bool] = mapped_column()
     decided_by: Mapped[str] = mapped_column(String(200))
     reason: Mapped[str | None] = mapped_column(Text)
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -109,7 +109,7 @@ class OutboxEventModel(TenantRecord, Base):
     event_type: Mapped[str] = mapped_column(String(200))
     schema_version: Mapped[str] = mapped_column(String(20))
     correlation_id: Mapped[UUID] = mapped_column(index=True)
-    causation_id: Mapped[UUID | None]
+    causation_id: Mapped[UUID | None] = mapped_column()
     idempotency_key: Mapped[str] = mapped_column(String(200), unique=True)
     payload: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

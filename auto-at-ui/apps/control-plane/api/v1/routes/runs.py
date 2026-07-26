@@ -21,8 +21,16 @@ from auto_at.contracts.execution import (
     TestExecutionResult,
 )
 from config import Settings, get_settings
+from domain.authorization import (
+    AuthorizationError,
+    Permission,
+    Principal,
+    actor_for_tenant,
+    require,
+)
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import FileResponse
+from infrastructure.observability import current_trace_context
 from infrastructure.persistence.repositories import (
     SqlAlchemyArtifactRepository,
     SqlAlchemyAuditEventRepository,
@@ -35,7 +43,9 @@ from infrastructure.runners import (
     RunnerUnavailableError,
     VerifiedLocalArtifactPort,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
+
+from api.v1.dependencies.authorization import current_principal
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
@@ -72,9 +82,20 @@ def create_run(
     payload: CreateRunRequest,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RunResponse:
     """Create a queued run and requested outbox event in one database transaction."""
+    try:
+        require(actor_for_tenant(principal, tenant_id, payload.project_id), Permission.CREATE_RUN)
+    except AuthorizationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found."
+        ) from error
+    trace = current_trace_context()
+    runner_config = dict(payload.runner_config)
+    if trace is not None:
+        runner_config["traceparent"] = trace.traceparent()
     with transactional_session(create_session_factory(settings)) as session:
         run = CreateRun(
             SqlAlchemyRunRepository(session),
@@ -90,7 +111,7 @@ def create_run(
                 idempotency_key=idempotency_key,
                 target_type=payload.target_type,
                 target_url=payload.target_url,
-                runner_config=payload.runner_config,
+                runner_config=runner_config,
                 artifact_policy=payload.artifact_policy,
             )
         )
@@ -121,9 +142,9 @@ def create_run(
                     project_id=run.project_id,
                     test_case_id=run.test_case_id,
                     target_type=payload.target_type,
-                    target_url=payload.target_url,
+                    target_url=HttpUrl(payload.target_url) if payload.target_url else None,
                     revision=run.revision,
-                    runner_config=payload.runner_config,
+                    runner_config=runner_config,
                     artifact_policy=payload.artifact_policy,
                 ),
             )
@@ -148,12 +169,19 @@ def create_run(
 def get_run(
     run_id: UUID,
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RunResponse:
     with create_session_factory(settings)() as session:
         try:
             run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
         except RunNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+        try:
+            require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+        except AuthorizationError as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
             ) from error
@@ -170,17 +198,27 @@ def cancel_run(
     run_id: UUID,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RunResponse:
     """Persist a cancellation command and deliver it through the outbox."""
     with transactional_session(create_session_factory(settings)) as session:
         try:
+            existing_run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(
+                actor_for_tenant(principal, tenant_id, existing_run.project_id),
+                Permission.CANCEL_RUN,
+            )
             run = CancelRun(
                 SqlAlchemyRunRepository(session),
                 SqlAlchemyOutboxEventRepository(session),
                 SqlAlchemyAuditEventRepository(session),
             ).execute(tenant_id, run_id, idempotency_key)
         except RunNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+        except AuthorizationError as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
             ) from error
@@ -200,9 +238,17 @@ def cancel_run(
 def list_artifacts(
     run_id: UUID,
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[ArtifactResponse]:
     with create_session_factory(settings)() as session:
+        try:
+            run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+        except (RunNotFoundError, AuthorizationError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
         artifacts = ListArtifacts(SqlAlchemyArtifactRepository(session)).execute(tenant_id, run_id)
     return [
         ArtifactResponse(
@@ -222,9 +268,17 @@ def download_artifact(
     run_id: UUID,
     artifact_id: UUID,
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> FileResponse:
     with create_session_factory(settings)() as session:
+        try:
+            run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+        except (RunNotFoundError, AuthorizationError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
         artifacts = ListArtifacts(SqlAlchemyArtifactRepository(session)).execute(tenant_id, run_id)
     artifact = next((item for item in artifacts if item.id == artifact_id), None)
     if artifact is None:
@@ -244,6 +298,7 @@ def record_result(
     run_id: UUID,
     payload: TestExecutionResult,
     tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RunResponse:
     if payload.run_id != run_id:
@@ -253,6 +308,11 @@ def record_result(
         )
     with transactional_session(create_session_factory(settings)) as session:
         try:
+            existing_run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(
+                actor_for_tenant(principal, tenant_id, existing_run.project_id),
+                Permission.CREATE_RUN,
+            )
             run = RecordDeterministicResult(SqlAlchemyRunRepository(session)).execute(
                 tenant_id, payload
             )
@@ -260,6 +320,10 @@ def record_result(
                 SqlAlchemyOutboxEventRepository(session), SqlAlchemyAuditEventRepository(session)
             ).execute(run)
         except RunNotFoundError as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+        except AuthorizationError as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
             ) from error

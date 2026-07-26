@@ -105,6 +105,8 @@ def test_create_run_commits_run_audit_and_outbox_atomically() -> None:
         assert audit is not None
         assert outbox is not None and outbox.payload["run_id"] == str(run_id)
         assert outbox.payload["request"]["run_id"] == str(run_id)
+        traceparent = outbox.payload["request"]["runner_config"]["traceparent"]
+        assert isinstance(traceparent, str) and len(traceparent.split("-")) == 4
     finally:
         with Session(engine) as session:
             if run_id is not None:

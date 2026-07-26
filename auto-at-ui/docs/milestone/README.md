@@ -17,10 +17,10 @@ they arise, so explanations do not need to be repeated in later phases.
 | Done | [x] [Phase 2 — Web UI vertical slice](phase-02-web-ui-vertical-slice.md) | A deterministic Playwright run with stored evidence |
 | Done | [x] [Phase 3 — durable orchestration](phase-03-durable-orchestration.md) | Safe retries, timeouts, cancellation, and idempotent delivery |
 | [x] | [Phase 4 — governed intelligence](phase-04-governed-intelligence.md) | Redacted triage/healing proposals with an explicit approval boundary |
-| [ ] | [Phase 5 — thesis benchmark](phase-05-thesis-benchmark.md) | Repeatable baseline, comparison, ablation, and result manifest |
-| [ ] | [Phase 6 — product hardening](phase-06-product-hardening.md) | Dashboard, RBAC, telemetry, CI/CD, and operational quality gates |
+| Done | [x] [Phase 5 — thesis benchmark](phase-05-thesis-benchmark.md) | Repeatable baseline, comparison, ablation, and result manifest |
+| Done | [x] [Phase 6 — product hardening](phase-06-product-hardening.md) | Dashboard, RBAC, telemetry, CI/CD, and operational quality gates |
 
-**Overall progress:** 5/7 phases complete; Phase 5 is next.
+**Overall progress:** 7/7 phases complete.
 
 ## How status is maintained
 

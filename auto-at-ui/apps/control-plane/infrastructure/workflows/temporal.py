@@ -20,6 +20,10 @@ from infrastructure.persistence.session import create_session_factory, transacti
 from infrastructure.runners import HttpPlaywrightTransport, VerifiedLocalArtifactPort
 from infrastructure.workflows.definitions import RunWorkflowInput, TestRunWorkflow
 
+
+def _requested_at(value: object) -> str | None:
+    return value if isinstance(value, str) else None
+
 logger = logging.getLogger(__name__)
 
 
@@ -69,7 +73,7 @@ class TemporalWorkflowStarter:
                 RunWorkflowInput(
                     tenant_id=event.tenant_id,
                     request=request,
-                    requested_at=event.payload.get("requested_at"),
+                    requested_at=_requested_at(event.payload.get("requested_at")),
                     activity_timeout_seconds=self._settings.temporal_activity_timeout_seconds,
                     run_deadline_seconds=self._settings.temporal_run_deadline_seconds,
                     retry_initial_interval_seconds=(

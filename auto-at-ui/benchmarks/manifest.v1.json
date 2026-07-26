@@ -1,0 +1,131 @@
+{
+  "contract_version": "v1",
+  "id": "web-ui-thesis-controlled-v1",
+  "pins": {
+    "browser": "chromium@playwright-1.50.1",
+    "runner_image": "auto-at-playwright-worker:0.1.0",
+    "test_revision": "5a1e3d7c9b2f4a60817293bc4d5e6f708192a3b4",
+    "environment": {
+      "locale": "en-US",
+      "timezone": "UTC",
+      "target_url": "http://benchmark-target:7200",
+      "viewport": "1280x720"
+    }
+  },
+  "repetitions": 3,
+  "reproducibility_tolerance_ms": 0,
+  "scenarios": [
+    {
+      "id": "locator-renamed-submit",
+      "fault_type": "locator",
+      "title": "Renamed submit locator",
+      "target": "controlled-login",
+      "inputs": {"path": "/locator", "selector": "#legacy-submit"},
+      "seed": "benchmark-seed-v1",
+      "expected": {"baseline_status": "failed", "root_cause": "test", "healing_applicable": true},
+      "evidence_references": ["benchmark://locator-renamed-submit/dom.html", "benchmark://locator-renamed-submit/step-history.json"],
+      "observations": {
+        "baseline": {},
+        "single_agent_triage": {"predicted_root_cause": "test", "triage_ms": 140, "token_cost_usd": 0.002, "evidence_used": ["benchmark://locator-renamed-submit/step-history.json"]},
+        "multi_agent_triage_healing": {"predicted_root_cause": "test", "healing_proposed": true, "healing_validated": true, "triage_ms": 210, "recovery_ms": 90, "token_cost_usd": 0.005},
+        "selected_evidence_ablation": {"predicted_root_cause": "unknown", "triage_ms": 105, "token_cost_usd": 0.001, "evidence_used": ["benchmark://locator-renamed-submit/step-history.json"]}
+      }
+    },
+    {
+      "id": "dom-wrapper-change",
+      "fault_type": "dom",
+      "title": "DOM wrapper invalidates brittle selector",
+      "target": "controlled-login",
+      "inputs": {"path": "/dom", "selector": "form > button"},
+      "seed": "benchmark-seed-v1",
+      "expected": {"baseline_status": "failed", "root_cause": "test", "healing_applicable": true},
+      "evidence_references": ["benchmark://dom-wrapper-change/dom.html", "benchmark://dom-wrapper-change/screenshot.png"],
+      "observations": {
+        "baseline": {},
+        "single_agent_triage": {"predicted_root_cause": "test", "triage_ms": 150, "token_cost_usd": 0.002},
+        "multi_agent_triage_healing": {"predicted_root_cause": "test", "healing_proposed": true, "healing_validated": true, "triage_ms": 220, "recovery_ms": 100, "token_cost_usd": 0.005},
+        "selected_evidence_ablation": {"predicted_root_cause": "test", "triage_ms": 110, "token_cost_usd": 0.001}
+      }
+    },
+    {
+      "id": "text-regression",
+      "fault_type": "text",
+      "title": "Product confirmation text regresses",
+      "target": "controlled-login",
+      "inputs": {"path": "/text", "expected_text": "Welcome back"},
+      "seed": "benchmark-seed-v1",
+      "expected": {"baseline_status": "failed", "root_cause": "product", "healing_applicable": false},
+      "evidence_references": ["benchmark://text-regression/dom.html", "benchmark://text-regression/console.json"],
+      "observations": {
+        "baseline": {},
+        "single_agent_triage": {"predicted_root_cause": "product", "triage_ms": 155, "token_cost_usd": 0.002},
+        "multi_agent_triage_healing": {"predicted_root_cause": "product", "triage_ms": 225, "token_cost_usd": 0.005},
+        "selected_evidence_ablation": {"predicted_root_cause": "test", "triage_ms": 115, "token_cost_usd": 0.001}
+      }
+    },
+    {
+      "id": "timing-budget",
+      "fault_type": "timing",
+      "title": "Response exceeds configured test budget",
+      "target": "controlled-login",
+      "inputs": {"path": "/timing", "step_timeout_ms": "100"},
+      "seed": "benchmark-seed-v1",
+      "expected": {"baseline_status": "failed", "root_cause": "environment", "healing_applicable": false},
+      "evidence_references": ["benchmark://timing-budget/network.json", "benchmark://timing-budget/step-history.json"],
+      "observations": {
+        "baseline": {},
+        "single_agent_triage": {"predicted_root_cause": "environment", "triage_ms": 160, "token_cost_usd": 0.002},
+        "multi_agent_triage_healing": {"predicted_root_cause": "environment", "healing_proposed": true, "healing_validated": false, "triage_ms": 230, "token_cost_usd": 0.005},
+        "selected_evidence_ablation": {"predicted_root_cause": "unknown", "triage_ms": 120, "token_cost_usd": 0.001}
+      }
+    },
+    {
+      "id": "product-auth-denied",
+      "fault_type": "product",
+      "title": "Valid credentials are rejected",
+      "target": "controlled-login",
+      "inputs": {"path": "/product", "user": "benchmark-user"},
+      "seed": "benchmark-seed-v1",
+      "expected": {"baseline_status": "failed", "root_cause": "product", "healing_applicable": false},
+      "evidence_references": ["benchmark://product-auth-denied/dom.html", "benchmark://product-auth-denied/network.json"],
+      "observations": {
+        "baseline": {},
+        "single_agent_triage": {"predicted_root_cause": "product", "triage_ms": 165, "token_cost_usd": 0.002},
+        "multi_agent_triage_healing": {"predicted_root_cause": "product", "triage_ms": 235, "token_cost_usd": 0.005},
+        "selected_evidence_ablation": {"predicted_root_cause": "environment", "triage_ms": 125, "token_cost_usd": 0.001}
+      }
+    },
+    {
+      "id": "environment-service-down",
+      "fault_type": "environment",
+      "title": "Required dependency is unavailable",
+      "target": "controlled-login",
+      "inputs": {"path": "/environment", "dependency": "identity"},
+      "seed": "benchmark-seed-v1",
+      "expected": {"baseline_status": "errored", "root_cause": "environment", "healing_applicable": false},
+      "evidence_references": ["benchmark://environment-service-down/network.json", "benchmark://environment-service-down/console.json"],
+      "observations": {
+        "baseline": {},
+        "single_agent_triage": {"predicted_root_cause": "environment", "triage_ms": 170, "token_cost_usd": 0.002},
+        "multi_agent_triage_healing": {"predicted_root_cause": "environment", "triage_ms": 240, "token_cost_usd": 0.005},
+        "selected_evidence_ablation": {"predicted_root_cause": "environment", "triage_ms": 130, "token_cost_usd": 0.001}
+      }
+    },
+    {
+      "id": "flaky-race-condition",
+      "fault_type": "flaky",
+      "title": "Seeded intermittent render race",
+      "target": "controlled-login",
+      "inputs": {"path": "/flaky", "seed": "benchmark-seed-v1"},
+      "seed": "benchmark-seed-v1",
+      "expected": {"baseline_status": "failed", "root_cause": "flaky", "healing_applicable": false},
+      "evidence_references": ["benchmark://flaky-race-condition/trace.zip", "benchmark://flaky-race-condition/step-history.json"],
+      "observations": {
+        "baseline": {},
+        "single_agent_triage": {"predicted_root_cause": "flaky", "triage_ms": 175, "token_cost_usd": 0.002},
+        "multi_agent_triage_healing": {"predicted_root_cause": "flaky", "triage_ms": 245, "token_cost_usd": 0.005},
+        "selected_evidence_ablation": {"predicted_root_cause": "test", "triage_ms": 135, "token_cost_usd": 0.001}
+      }
+    }
+  ]
+}

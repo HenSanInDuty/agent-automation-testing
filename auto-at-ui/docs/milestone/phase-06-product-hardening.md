@@ -1,25 +1,25 @@
 # Phase 6 — Product hardening
 
-**Status:** planned  
+**Status:** complete
 **Prerequisite:** Phase 5 complete and approved auth/deployment/retention ADRs  
 **Exit:** the product has an operable dashboard, enforced authorization,
 observability, delivery pipeline, and documented production posture.
 
 ## Checklist
 
-- [ ] Approve identity/RBAC, deployment/tenant isolation, artifact/log
+- [x] Approve identity/RBAC, deployment/tenant isolation, artifact/log
   retention, and deletion policies before production-like integration.
-- [ ] Implement dashboard views for projects, tests, runs, artifacts, proposals,
+- [x] Implement dashboard views for projects, tests, runs, artifacts, proposals,
   approvals, and audit history; no browser-side business rules/direct DB access.
-- [ ] Implement `Actor`/`Principal` adapter, project/tenant authorization in
+- [x] Implement `Actor`/`Principal` adapter, project/tenant authorization in
   application queries, and approval permissions.
-- [ ] Add OpenTelemetry-compatible traces API -> workflow -> worker -> agent;
+- [x] Add OpenTelemetry-compatible traces API -> workflow -> worker -> agent;
   attach correlation ID to logs, spans, and artifact metadata.
-- [ ] Export queue-delay, duration, retries, failure class, artifact failure,
+- [x] Export queue-delay, duration, retries, failure class, artifact failure,
   agent latency/cost, proposal acceptance, and false-healing metrics.
-- [ ] Add CI gates: Python lint/test/type check, TypeScript lint/type check/
+- [x] Add CI gates: Python lint/test/type check, TypeScript lint/type check/
   contract tests, Compose integration, secret/dependency scans, reproducibility.
-- [ ] Document SLOs, alerts, runbooks, backup/recovery, deployment, and
+- [x] Document SLOs, alerts, runbooks, backup/recovery, deployment, and
   operational ownership.
 
 ## Completion demonstration

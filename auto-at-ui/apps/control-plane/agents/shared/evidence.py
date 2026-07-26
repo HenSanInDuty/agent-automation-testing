@@ -35,7 +35,7 @@ def build_evidence_bundle(
     input_hash = sha256(
         dumps(bundle_without_hash, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-    return EvidenceBundle(input_hash=input_hash, **bundle_without_hash)
+    return EvidenceBundle.model_validate({"input_hash": input_hash, **bundle_without_hash})
 
 
 def _artifact_references(

@@ -1,12 +1,14 @@
 """Tenant-scoped SQLAlchemy implementations of domain persistence ports."""
 
 from datetime import datetime
+from typing import cast
 from uuid import UUID
 
+from auto_at.contracts.agent import ProposalKind
 from auto_at.contracts.execution import TestExecutionResult
 from domain.entities import ApprovalRecord, ArtifactRecord, ProposalRecord
 from domain.runs import AuditEvent, OutboxEvent, RunLifecycleStatus, TestRun
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.orm import Session
 
 from infrastructure.persistence.models import (
@@ -68,7 +70,7 @@ class SqlAlchemyRunRepository:
                 version=run.version,
             )
         )
-        if self._session.execute(statement).rowcount != 1:
+        if cast(CursorResult[object], self._session.execute(statement)).rowcount != 1:
             raise ConcurrentRunUpdateError("test run was updated by another transaction")
 
     def cancel(self, run: TestRun) -> None:
@@ -83,7 +85,7 @@ class SqlAlchemyRunRepository:
             )
             .values(status=run.status.value, version=run.version)
         )
-        if self._session.execute(statement).rowcount != 1:
+        if cast(CursorResult[object], self._session.execute(statement)).rowcount != 1:
             raise ConcurrentRunUpdateError("test run was updated by another transaction")
 
     @staticmethod
@@ -223,7 +225,7 @@ class SqlAlchemyProposalRepository:
             tenant_id=model.tenant_id,
             run_id=model.run_id,
             correlation_id=model.correlation_id,
-            kind=model.kind,
+            kind=ProposalKind(model.kind),
             proposal_version=model.proposal_version,
             summary=model.summary,
             created_at=model.created_at,

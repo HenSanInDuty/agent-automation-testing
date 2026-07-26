@@ -23,6 +23,7 @@ from domain.ports import (
     WorkflowStarter,
 )
 from domain.runs import TERMINAL_STATUSES, AuditEvent, OutboxEvent, TestRun
+from pydantic import HttpUrl
 
 
 class IdempotencyConflictError(ValueError):
@@ -84,7 +85,7 @@ class CreateRun:
             project_id=run.project_id,
             test_case_id=run.test_case_id,
             target_type=command.target_type,
-            target_url=command.target_url,
+            target_url=HttpUrl(command.target_url) if command.target_url else None,
             revision=run.revision,
             runner_config=command.runner_config or {},
             artifact_policy=command.artifact_policy or ArtifactPolicy(),

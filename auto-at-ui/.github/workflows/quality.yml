@@ -1,0 +1,38 @@
+name: quality
+
+on: [push, pull_request]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --all-groups --frozen
+      - run: uv run ruff check .
+      - run: uv run pytest
+      - run: uv run basedpyright --level error apps/control-plane packages/contracts/src
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @auto-at/dashboard lint
+      - run: pnpm --filter @auto-at/dashboard typecheck
+      - run: pnpm --filter @auto-at/playwright-worker lint
+      - run: pnpm --filter @auto-at/playwright-worker typecheck
+      - run: pnpm --filter @auto-at/playwright-worker test
+  integration-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --all-groups --frozen
+      - run: docker compose config
+      - run: docker compose up -d --build --wait control-plane playwright-worker
+      - run: uv run pytest tests/test_playwright_worker_compose.py
+      - uses: gitleaks/gitleaks-action@v2
+      - uses: actions/dependency-review-action@v4
