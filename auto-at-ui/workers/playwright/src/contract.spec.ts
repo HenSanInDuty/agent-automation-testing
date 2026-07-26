@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 
 import { validateExecutionRequestV1, validateExecutionResultV1 } from "./contract.js";
-import { configOf } from "./execute.js";
+import { configOf, executeRequest, ExecutionCancelledError } from "./execute.js";
 
 const fixtures = new URL("../../../packages/contracts/fixtures/execution-v1/", import.meta.url);
 
@@ -46,4 +46,14 @@ test("rejects an unsafe or malformed Web UI step", async () => {
   request.runner_config.steps = [{ action: "goto", url: "file:///etc/passwd" }];
 
   expect(() => configOf(request)).toThrow("goto step url must use http or https");
+});
+
+test("stops before launching a browser when the run was already cancelled", async () => {
+  const request = await fixture("request.web-ui.json");
+  const controller = new AbortController();
+  controller.abort();
+
+  await expect(executeRequest(request, "/artifacts", controller.signal)).rejects.toBeInstanceOf(
+    ExecutionCancelledError,
+  );
 });

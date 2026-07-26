@@ -3,6 +3,7 @@ from infrastructure.persistence.models import Base
 
 def test_control_plane_schema_contains_tenant_scoped_aggregates() -> None:
     expected_tables = {
+        "configs",
         "projects",
         "test_cases",
         "test_runs",

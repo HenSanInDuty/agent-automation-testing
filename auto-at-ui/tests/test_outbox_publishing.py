@@ -30,6 +30,14 @@ class RecordingWorkflowStarter:
         self.cancelled.append(event)
 
 
+class RecordingTriageHandler:
+    def __init__(self) -> None:
+        self.events: list[OutboxEvent] = []
+
+    async def execute(self, event: OutboxEvent) -> None:
+        self.events.append(event)
+
+
 def requested_event() -> OutboxEvent:
     run_id = uuid4()
     return OutboxEvent(
@@ -75,6 +83,27 @@ def test_publisher_leaves_other_event_types_unpublished() -> None:
     assert workflows.started == [event]
     assert ignored.id not in outbox.published
     assert event.id in outbox.published
+
+
+def test_publisher_delivers_triage_events_when_a_triage_handler_is_configured() -> None:
+    event = OutboxEvent(
+        id=uuid4(),
+        tenant_id="tenant-a",
+        event_type="agent.triage.requested.v1",
+        schema_version="v1",
+        correlation_id=uuid4(),
+        causation_id=None,
+        idempotency_key="triage:one",
+        payload={"run_id": str(uuid4())},
+    )
+    outbox = InMemoryOutbox([event])
+    workflows = RecordingWorkflowStarter()
+    triage = RecordingTriageHandler()
+
+    assert asyncio.run(PublishOutbox(outbox, workflows, triage).execute()) == 1
+    assert triage.events == [event]
+    assert event.id in outbox.published
+    assert asyncio.run(PublishOutbox(outbox, workflows, triage).execute()) == 0
 
 
 def test_publisher_delivers_a_run_cancellation_once() -> None:

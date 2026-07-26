@@ -11,6 +11,7 @@ from application.runs import (
     GetRun,
     ListArtifacts,
     RecordDeterministicResult,
+    RequestFailureTriage,
     RunNotFoundError,
 )
 from auto_at.contracts.execution import (
@@ -255,6 +256,9 @@ def record_result(
             run = RecordDeterministicResult(SqlAlchemyRunRepository(session)).execute(
                 tenant_id, payload
             )
+            RequestFailureTriage(
+                SqlAlchemyOutboxEventRepository(session), SqlAlchemyAuditEventRepository(session)
+            ).execute(run)
         except RunNotFoundError as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."

@@ -2,7 +2,7 @@
 
 import logging
 
-from application.runs import DispatchRun, RecordDeterministicResult
+from application.runs import DispatchRun, RecordDeterministicResult, RequestFailureTriage
 from auto_at.contracts.execution import TestExecutionRequest
 from config import Settings
 from domain.runs import OutboxEvent
@@ -12,6 +12,8 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from infrastructure.persistence.repositories import (
     SqlAlchemyArtifactRepository,
+    SqlAlchemyAuditEventRepository,
+    SqlAlchemyOutboxEventRepository,
     SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
@@ -42,7 +44,10 @@ def dispatch_test_run(payload: RunWorkflowInput) -> dict[str, str]:
         VerifiedLocalArtifactPort(
             settings.artifact_root, SqlAlchemyArtifactRepository(session)
         ).persist_result_artifacts(payload.tenant_id, result, request.artifact_policy.retain_days)
-        RecordDeterministicResult(runs).execute(payload.tenant_id, result)
+        run = RecordDeterministicResult(runs).execute(payload.tenant_id, result)
+        RequestFailureTriage(
+            SqlAlchemyOutboxEventRepository(session), SqlAlchemyAuditEventRepository(session)
+        ).execute(run)
     return {"run_id": str(run.id), "status": result.status.value}
 
 
@@ -82,7 +87,7 @@ class TemporalWorkflowStarter:
             return
 
     async def cancel_run(self, event: OutboxEvent) -> None:
-        """Request cancellation for the stable workflow ID associated with a run."""
+        """Propagate durable cancellation to both the workflow and worker."""
         run_id = str(event.payload["run_id"])
         logger.info(
             "run.cancellation.requested run_id=%s correlation_id=%s",
@@ -90,3 +95,4 @@ class TemporalWorkflowStarter:
             event.correlation_id,
         )
         await self._client.get_workflow_handle(f"auto-at-run-{run_id}").cancel()
+        HttpPlaywrightTransport(self._settings.playwright_worker_url).cancel(run_id)

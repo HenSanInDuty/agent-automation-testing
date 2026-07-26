@@ -15,6 +15,20 @@ class Settings(BaseSettings):
     port: int = Field(default=7000, ge=1, le=65535)
     ollama_model: str = "ollama:devstral-2"
     ollama_base_url: str = "http://127.0.0.1:11434"
+    openrouter_api_key: str | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    agent_provider: str = "openrouter"
+    agent_model: str = "openai/gpt-5-mini"
+    agent_fallback_enabled: bool = False
+    agent_fallback_provider: str | None = None
+    agent_fallback_model: str | None = None
+    agent_evidence_metadata_enabled: bool = True
+    agent_evidence_redacted_text_enabled: bool = True
+    agent_evidence_screenshots_enabled: bool = False
+    agent_step_max_tokens: int = Field(default=8_000, ge=1, le=100_000)
+    agent_max_steps_per_run: int = Field(default=2, ge=1, le=10)
+    agent_max_evidence_bytes_per_step: int = Field(default=250_000, ge=1_024, le=5_000_000)
+    agent_max_concurrency: int = Field(default=1, ge=1, le=100)
     database_url: str = "postgresql://auto_at:local-development-only@127.0.0.1:5432/auto_at"
     redis_url: str = "redis://127.0.0.1:6379/0"
     minio_endpoint: str = "127.0.0.1:9000"

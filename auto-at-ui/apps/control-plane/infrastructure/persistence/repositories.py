@@ -4,14 +4,17 @@ from datetime import datetime
 from uuid import UUID
 
 from auto_at.contracts.execution import TestExecutionResult
-from domain.entities import ArtifactRecord
+from domain.entities import ApprovalRecord, ArtifactRecord, ProposalRecord
 from domain.runs import AuditEvent, OutboxEvent, RunLifecycleStatus, TestRun
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from infrastructure.persistence.models import (
+    AgentProposalModel,
+    ApprovalModel,
     ArtifactModel,
     AuditEventModel,
+    ConfigurationModel,
     OutboxEventModel,
     TestRunModel,
 )
@@ -203,6 +206,90 @@ class SqlAlchemyArtifactRepository:
         self._session.flush()
 
 
+class SqlAlchemyProposalRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get(self, tenant_id: str, proposal_id: UUID) -> ProposalRecord | None:
+        model = self._session.scalar(
+            select(AgentProposalModel).where(
+                AgentProposalModel.id == proposal_id, AgentProposalModel.tenant_id == tenant_id
+            )
+        )
+        if model is None:
+            return None
+        return ProposalRecord(
+            id=model.id,
+            tenant_id=model.tenant_id,
+            run_id=model.run_id,
+            correlation_id=model.correlation_id,
+            kind=model.kind,
+            proposal_version=model.proposal_version,
+            summary=model.summary,
+            created_at=model.created_at,
+            payload=model.proposal,
+        )
+
+    def add(self, proposal: ProposalRecord) -> None:
+        self._session.add(
+            AgentProposalModel(
+                id=proposal.id,
+                tenant_id=proposal.tenant_id,
+                run_id=proposal.run_id,
+                correlation_id=proposal.correlation_id,
+                kind=proposal.kind.value,
+                proposal_version=proposal.proposal_version,
+                summary=proposal.summary,
+                proposal=proposal.payload,
+                created_at=proposal.created_at,
+            )
+        )
+        self._session.flush()
+
+
+class SqlAlchemyApprovalRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get_final(
+        self, tenant_id: str, proposal_id: UUID, proposal_version: int
+    ) -> ApprovalRecord | None:
+        model = self._session.scalar(
+            select(ApprovalModel).where(
+                ApprovalModel.proposal_id == proposal_id,
+                ApprovalModel.proposal_version == proposal_version,
+                ApprovalModel.tenant_id == tenant_id,
+            )
+        )
+        if model is None:
+            return None
+        return ApprovalRecord(
+            id=model.id,
+            tenant_id=model.tenant_id,
+            proposal_id=model.proposal_id,
+            proposal_version=model.proposal_version,
+            approved=model.approved,
+            decided_by=model.decided_by,
+            decided_at=model.decided_at,
+            reason=model.reason,
+        )
+
+    def add(self, approval: ApprovalRecord) -> None:
+        self._session.add(
+            ApprovalModel(
+                id=approval.id,
+                proposal_id=approval.proposal_id,
+                proposal_version=approval.proposal_version,
+                approved=approval.approved,
+                decided_by=approval.decided_by,
+                reason=approval.reason,
+                decided_at=approval.decided_at,
+                tenant_id=approval.tenant_id,
+            )
+        )
+        self._session.flush()
+
+
 class SqlAlchemyAuditEventRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -219,4 +306,29 @@ class SqlAlchemyAuditEventRepository:
                 correlation_id=event.correlation_id,
             )
         )
+        self._session.flush()
+
+
+class SqlAlchemyConfigurationRepository:
+    """Database storage for validated, non-secret tenant configuration."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get(self, tenant_id: str, key: str) -> dict[str, object] | None:
+        statement = select(ConfigurationModel).where(
+            ConfigurationModel.tenant_id == tenant_id, ConfigurationModel.key == key
+        )
+        model = self._session.scalar(statement)
+        return None if model is None else model.value
+
+    def set(self, tenant_id: str, key: str, value: dict[str, object]) -> None:
+        statement = select(ConfigurationModel).where(
+            ConfigurationModel.tenant_id == tenant_id, ConfigurationModel.key == key
+        )
+        model = self._session.scalar(statement)
+        if model is None:
+            self._session.add(ConfigurationModel(tenant_id=tenant_id, key=key, value=value))
+        else:
+            model.value = value
         self._session.flush()

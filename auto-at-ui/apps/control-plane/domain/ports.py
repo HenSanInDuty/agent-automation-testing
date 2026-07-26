@@ -49,7 +49,9 @@ class ProposalRepository(Protocol):
 
 
 class ApprovalRepository(Protocol):
-    def get_final(self, proposal_id: UUID, proposal_version: int) -> ApprovalRecord | None: ...
+    def get_final(
+        self, tenant_id: str, proposal_id: UUID, proposal_version: int
+    ) -> ApprovalRecord | None: ...
 
     def add(self, approval: ApprovalRecord) -> None: ...
 
@@ -76,3 +78,15 @@ class WorkflowStarter(Protocol):
     async def start_run(self, event: OutboxEvent) -> None: ...
 
     async def cancel_run(self, event: OutboxEvent) -> None: ...
+
+
+class TriageEventHandler(Protocol):
+    async def execute(self, event: OutboxEvent) -> object: ...
+
+
+class ConfigurationRepository(Protocol):
+    """Non-secret values editable later through tenant administration."""
+
+    def get(self, tenant_id: str, key: str) -> dict[str, object] | None: ...
+
+    def set(self, tenant_id: str, key: str, value: dict[str, object]) -> None: ...

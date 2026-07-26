@@ -27,3 +27,34 @@ def test_transport_logs_correlation_data_when_the_worker_times_out(monkeypatch, 
     assert f"run_id={request.run_id}" in caplog.text
     assert f"correlation_id={request.correlation_id}" in caplog.text
     assert "timeout_seconds=12" in caplog.text
+
+
+def test_transport_posts_an_idempotent_cancellation_command(monkeypatch) -> None:
+    observed: dict[str, object] = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def request(url, data, headers):
+        observed["url"] = url
+        observed["data"] = data
+        observed["headers"] = headers
+        return object()
+
+    def opened(value, timeout):
+        observed["request"] = value
+        observed["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr("infrastructure.runners.Request", request)
+    monkeypatch.setattr("infrastructure.runners.urlopen", opened)
+
+    HttpPlaywrightTransport("http://worker", timeout_seconds=12).cancel("run-1")
+
+    assert observed["url"] == "http://worker/cancel"
+    assert observed["data"] == b'{"run_id": "run-1"}'
+    assert observed["timeout"] == 12

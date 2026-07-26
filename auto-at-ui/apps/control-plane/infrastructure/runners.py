@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlparse
 from urllib.request import Request, urlopen
 from uuid import uuid4
@@ -47,6 +47,28 @@ class HttpPlaywrightTransport:
         except (URLError, ValueError) as error:
             raise RunnerUnavailableError(
                 "Playwright worker did not return a valid result"
+            ) from error
+
+    def cancel(self, run_id: str) -> None:
+        """Notify the worker that a durable cancellation reached an active run.
+
+        The endpoint is deliberately idempotent: a worker may receive this more
+        than once when the outbox publisher retries an unacknowledged delivery.
+        """
+        body = json.dumps({"run_id": run_id}).encode()
+        try:
+            with urlopen(
+                Request(
+                    f"{self._url.removesuffix('/execute')}/cancel",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                ),
+                timeout=self._timeout_seconds,
+            ):
+                return
+        except (HTTPError, URLError, TimeoutError) as error:
+            raise RunnerUnavailableError(
+                "Playwright worker cancellation was not acknowledged"
             ) from error
 
 

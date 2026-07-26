@@ -53,6 +53,7 @@ class ProposalRecord:
     proposal_version: int
     summary: str
     created_at: datetime
+    payload: dict[str, object] = field(default_factory=dict)
     final_approval: "ApprovalRecord | None" = None
 
     @classmethod
@@ -65,6 +66,7 @@ class ProposalRecord:
         kind: ProposalKind,
         proposal_version: int,
         summary: str,
+        payload: dict[str, object] | None = None,
     ) -> "ProposalRecord":
         if proposal_version < 1:
             raise ValueError("proposal_version must be positive")
@@ -77,31 +79,36 @@ class ProposalRecord:
             proposal_version=proposal_version,
             summary=summary,
             created_at=datetime.now(UTC),
+            payload=payload or {},
         )
 
 
 @dataclass(frozen=True)
 class ApprovalRecord:
     id: UUID
+    tenant_id: str
     proposal_id: UUID
     proposal_version: int
     approved: bool
     decided_by: str
     decided_at: datetime
+    reason: str | None = None
 
     @classmethod
     def decide(
-        cls, proposal: ProposalRecord, *, approved: bool, decided_by: str
+        cls, proposal: ProposalRecord, *, approved: bool, decided_by: str, reason: str | None = None
     ) -> "ApprovalRecord":
         if proposal.final_approval is not None:
             raise ApprovalStateError("a proposal version already has a final approval")
         decision = cls(
             id=uuid4(),
+            tenant_id=proposal.tenant_id,
             proposal_id=proposal.id,
             proposal_version=proposal.proposal_version,
             approved=approved,
             decided_by=decided_by,
             decided_at=datetime.now(UTC),
+            reason=reason,
         )
         proposal.final_approval = decision
         return decision

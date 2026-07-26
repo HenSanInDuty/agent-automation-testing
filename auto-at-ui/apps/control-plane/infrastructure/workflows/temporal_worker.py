@@ -5,11 +5,17 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from application.runs import PublishOutbox
+from application.triage_events import TriageEventProcessor
 from config import Settings
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from infrastructure.persistence.repositories import SqlAlchemyOutboxEventRepository
+from infrastructure.persistence.repositories import (
+    SqlAlchemyConfigurationRepository,
+    SqlAlchemyOutboxEventRepository,
+    SqlAlchemyProposalRepository,
+    SqlAlchemyRunRepository,
+)
 from infrastructure.persistence.session import create_session_factory, transactional_session
 from infrastructure.workflows.temporal import (
     TemporalWorkflowStarter,
@@ -28,7 +34,14 @@ async def publish_forever(client: Client, settings: Settings) -> None:
         try:
             with transactional_session(session_factory) as session:
                 published = await PublishOutbox(
-                    SqlAlchemyOutboxEventRepository(session), starter
+                    SqlAlchemyOutboxEventRepository(session),
+                    starter,
+                    TriageEventProcessor(
+                        SqlAlchemyRunRepository(session),
+                        SqlAlchemyConfigurationRepository(session),
+                        SqlAlchemyProposalRepository(session),
+                        settings,
+                    ),
                 ).execute()
             if published:
                 logger.info("published %s run event(s) to Temporal", published)

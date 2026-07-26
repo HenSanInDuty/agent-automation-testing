@@ -27,6 +27,7 @@ const MAX_STEPS = 100;
 const MAX_TIMEOUT_MS = 10 * 60_000;
 
 class ExecutionTimeoutError extends Error {}
+export class ExecutionCancelledError extends Error {}
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -102,10 +103,15 @@ async function performStep(page: Page, step: Step, timeout: number): Promise<voi
   else if (step.action === "click") await page.locator(step.selector).click({ timeout });
 }
 
-async function withinTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+async function withinTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let removeAbortListener: (() => void) | undefined;
   try {
-    return await Promise.race([
+    const operations: Promise<T>[] = [
       operation,
       new Promise<T>((_, reject) => {
         timer = setTimeout(
@@ -113,15 +119,28 @@ async function withinTimeout<T>(operation: Promise<T>, timeoutMs: number): Promi
           timeoutMs,
         );
       }),
-    ]);
+    ];
+    if (signal !== undefined) {
+      if (signal.aborted) throw new ExecutionCancelledError("Browser run was cancelled.");
+      operations.push(
+        new Promise<T>((_, reject) => {
+          const abort = () => reject(new ExecutionCancelledError("Browser run was cancelled."));
+          signal.addEventListener("abort", abort, { once: true });
+          removeAbortListener = () => signal.removeEventListener("abort", abort);
+        }),
+      );
+    }
+    return await Promise.race(operations);
   } finally {
     if (timer !== undefined) clearTimeout(timer);
+    removeAbortListener?.();
   }
 }
 
-export async function executeRequest(value: unknown, artifactRoot = process.env.ARTIFACT_ROOT ?? "/artifacts"): Promise<ExecutionResultV1> {
+export async function executeRequest(value: unknown, artifactRoot = process.env.ARTIFACT_ROOT ?? "/artifacts", signal?: AbortSignal): Promise<ExecutionResultV1> {
   const request = validateExecutionRequestV1(value);
   const config = configOf(request);
+  if (signal?.aborted) throw new ExecutionCancelledError("Browser run was cancelled.");
   const startedAt = new Date().toISOString();
   const artifacts: ExecutionResultV1["artifacts"] = [];
   const evidence: Record<string, { checksum: string; size: number }> = {};
@@ -153,10 +172,12 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
           }
         }
       })(),
-      config.timeout_ms,
+      config.timeout_ms, signal,
     );
   } catch (error) {
-    if (error instanceof ExecutionTimeoutError) {
+    if (error instanceof ExecutionCancelledError) {
+      throw error;
+    } else if (error instanceof ExecutionTimeoutError) {
       status = "failed";
       summary = error.message;
     } else {

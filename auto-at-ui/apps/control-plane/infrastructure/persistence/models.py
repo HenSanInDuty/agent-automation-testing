@@ -16,6 +16,16 @@ class TenantRecord:
     tenant_id: Mapped[str] = mapped_column(String(200), index=True)
 
 
+class ConfigurationModel(TenantRecord, Base):
+    """Non-secret configuration, scoped for a future tenant-admin UI."""
+
+    __tablename__ = "configs"
+    __table_args__ = (UniqueConstraint("tenant_id", "key"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    key: Mapped[str] = mapped_column(String(200))
+    value: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+
+
 class ProjectModel(TenantRecord, Base):
     __tablename__ = "projects"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -67,6 +77,7 @@ class AgentProposalModel(TenantRecord, Base):
     proposal_version: Mapped[int] = mapped_column(default=1)
     summary: Mapped[str] = mapped_column(Text)
     proposal: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class ApprovalModel(TenantRecord, Base):
@@ -78,6 +89,7 @@ class ApprovalModel(TenantRecord, Base):
     approved: Mapped[bool]
     decided_by: Mapped[str] = mapped_column(String(200))
     reason: Mapped[str | None] = mapped_column(Text)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class AuditEventModel(TenantRecord, Base):

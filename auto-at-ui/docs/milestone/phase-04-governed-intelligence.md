@@ -1,30 +1,30 @@
 # Phase 4 — Governed intelligence
 
-**Status:** planned  
+**Status:** complete
 **Prerequisite:** Phase 3 complete and approved LLM/data-governance ADR  
 **Exit:** triage and healing produce evaluated, redacted, auditable proposals
 that cannot alter a verdict or source without named human approval.
 
 ## Checklist
 
-- [ ] Approve LLM/provider, permitted data classification, model/prompt
+- [x] Approve LLM/provider, permitted data classification, model/prompt
   versioning, rate limits, token/cost budget, evaluation data, and fallback.
-- [ ] Implement recursive redaction for headers, cookies, query/form/JSON data,
+- [x] Implement recursive redaction for headers, cookies, query/form/JSON data,
   URLs, logs, and evidence metadata; store policy version and input hash.
-- [ ] Normalize worker evidence into a bounded typed `EvidenceBundle`; keep raw
+- [x] Normalize worker evidence into a bounded typed `EvidenceBundle`; keep raw
   binary evidence in artifact storage only.
-- [ ] Define `TestIntent`, `TaskSpecification`, triage result, and
+- [x] Define `TestIntent`, `TaskSpecification`, triage result, and
   `HealingProposal` schemas with provenance, confidence, evidence references,
   and stop conditions.
-- [ ] Implement advisory, schema-validated triage for product/test/environment/
+- [x] Implement advisory, schema-validated triage for product/test/environment/
   flaky categories; never change run status.
-- [ ] Implement ranked healing proposals only; grant no source write, merge,
+- [x] Implement ranked healing proposals only; grant no source write, merge,
   shell, database, or browser-profile authority to the agent.
-- [ ] Implement immutable approve/reject API, reviewer identity, reason, audit
+- [x] Implement immutable approve/reject API, reviewer identity, reason, audit
   event, and approved-change review-branch flow.
-- [ ] Require an independent deterministic rerun before promoting locator
+- [x] Require an independent deterministic rerun before promoting locator
   knowledge or episodic memory.
-- [ ] Test redaction, budget exhaustion, provider outage, approval enforcement,
+- [x] Test redaction, budget exhaustion, provider outage, approval enforcement,
   and false-healing rejection.
 
 ## Completion demonstration
@@ -37,3 +37,16 @@ only after deterministic rerun validation.
 
 Python/evaluator fixtures, redaction/security tests, and failure-to-proposal-to-
 approved-rerun integration test.
+
+**Progress validation (2026-07-26):** ADR-003 selects an OpenRouter gateway
+behind a provider-neutral model port. Non-secret runtime policy is stored in a
+tenant-scoped `configs` table for the future admin UI; credentials remain in
+environment/secret storage. Evidence modes, fallback, per-step token/evidence
+guards, and concurrency are configurable.
+
+**Completion validation (2026-07-26):** A live OpenRouter fixture produced and
+persisted a redacted advisory triage proposal while the deterministic run
+remained `failed`; its evidence recorded redaction policy `v1` and an input
+hash, with no proposed source change. `uv run pytest --basetemp
+D:\\tmp\\auto-at-pytest` passed 61 tests, Playwright worker typecheck passed,
+and its six tests passed. Database migration head is `d4f7c8a9b2e3`.

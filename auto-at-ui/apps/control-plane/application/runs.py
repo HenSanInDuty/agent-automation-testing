@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from auto_at.contracts.events import EventType
 from auto_at.contracts.execution import (
     ArtifactPolicy,
+    RunStatus,
     TargetType,
     TestExecutionRequest,
     TestExecutionResult,
@@ -18,6 +19,7 @@ from domain.ports import (
     OutboxEventRepository,
     RunnerTransport,
     RunRepository,
+    TriageEventHandler,
     WorkflowStarter,
 )
 from domain.runs import TERMINAL_STATUSES, AuditEvent, OutboxEvent, TestRun
@@ -151,6 +153,46 @@ class RecordDeterministicResult:
         return run
 
 
+class RequestFailureTriage:
+    """Queue advisory triage after an observed failure without mutating its verdict."""
+
+    def __init__(self, outbox: OutboxEventRepository, audits: AuditEventRepository) -> None:
+        self._outbox = outbox
+        self._audits = audits
+
+    def execute(self, run: TestRun) -> None:
+        if run.result is None or run.result.status not in {
+            RunStatus.FAILED,
+            RunStatus.ERRORED,
+        }:
+            return
+        idempotency_key = f"triage:{run.id}:v1"
+        if self._outbox.get_by_idempotency_key(run.tenant_id, idempotency_key) is not None:
+            return
+        event = OutboxEvent(
+            id=uuid4(),
+            tenant_id=run.tenant_id,
+            event_type=EventType.AGENT_TRIAGE_REQUESTED.value,
+            schema_version="v1",
+            correlation_id=run.correlation_id,
+            causation_id=None,
+            idempotency_key=idempotency_key,
+            payload={"run_id": str(run.id)},
+        )
+        self._outbox.append(event)
+        self._audits.append(
+            AuditEvent(
+                id=uuid4(),
+                tenant_id=run.tenant_id,
+                actor="system",
+                action="triage.requested",
+                entity_type="test_run",
+                entity_id=run.id,
+                correlation_id=run.correlation_id,
+            )
+        )
+
+
 class CancelRun:
     """Persist cancellation before asking the workflow plane to stop execution."""
 
@@ -224,9 +266,15 @@ class DispatchRun:
 class PublishOutbox:
     """Publish committed run events. The backend supplies at-least-once delivery."""
 
-    def __init__(self, outbox: OutboxEventRepository, workflows: WorkflowStarter) -> None:
+    def __init__(
+        self,
+        outbox: OutboxEventRepository,
+        workflows: WorkflowStarter,
+        triage: TriageEventHandler | None = None,
+    ) -> None:
         self._outbox = outbox
         self._workflows = workflows
+        self._triage = triage
 
     async def execute(self, limit: int = 100) -> int:
         published = 0
@@ -243,6 +291,11 @@ class PublishOutbox:
                 await self._workflows.start_run(event)
             elif event.event_type == EventType.TEST_RUN_CANCELLED.value:
                 await self._workflows.cancel_run(event)
+            elif (
+                event.event_type == EventType.AGENT_TRIAGE_REQUESTED.value
+                and self._triage is not None
+            ):
+                await self._triage.execute(event)
             else:
                 continue
             self._outbox.mark_published(event.id, datetime.now(UTC))

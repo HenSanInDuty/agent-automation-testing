@@ -6,11 +6,13 @@ from application.runs import (
     GetRun,
     ListArtifacts,
     RecordDeterministicResult,
+    RequestFailureTriage,
     RunNotFoundError,
 )
 from auto_at.contracts.execution import RunStatus
 from auto_at.contracts.execution import TestExecutionResult as ExecutionResult
 from domain.entities import ArtifactRecord
+from domain.runs import OutboxEvent
 from domain.runs import TestRun as DomainTestRun
 
 
@@ -82,6 +84,49 @@ def test_recording_an_identical_terminal_result_is_idempotent() -> None:
     assert first is second
     assert second.status.value == "passed"
     assert second.version == 2
+
+
+def test_failed_run_queues_one_advisory_triage_event() -> None:
+    class Outbox:
+        def __init__(self) -> None:
+            self.events: list[OutboxEvent] = []
+
+        def get_by_idempotency_key(
+            self, tenant_id: str, idempotency_key: str
+        ) -> OutboxEvent | None:
+            return next(
+                (event for event in self.events if event.idempotency_key == idempotency_key), None
+            )
+
+        def append(self, event: OutboxEvent) -> None:
+            self.events.append(event)
+
+    class Audits:
+        def __init__(self) -> None:
+            self.events = []
+
+        def append(self, event: object) -> None:
+            self.events.append(event)
+
+    run = make_run()
+    result = ExecutionResult(
+        run_id=run.id,
+        correlation_id=run.correlation_id,
+        status=RunStatus.FAILED,
+        started_at="2026-07-26T00:00:00Z",
+        completed_at="2026-07-26T00:00:01Z",
+        summary="Failed.",
+    )
+    RecordDeterministicResult(InMemoryRuns(run)).execute("tenant-a", result)
+    outbox = Outbox()
+    audits = Audits()
+    use_case = RequestFailureTriage(outbox, audits)
+
+    use_case.execute(run)
+    use_case.execute(run)
+
+    assert [event.event_type for event in outbox.events] == ["agent.triage.requested.v1"]
+    assert len(audits.events) == 1
 
 
 def test_list_artifacts_is_scoped_to_the_run_and_tenant() -> None:
