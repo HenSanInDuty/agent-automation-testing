@@ -53,6 +53,21 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+      args:
+        NEXT_PUBLIC_CONTROL_PLANE_URL: http://localhost:${CONTROL_PLANE_PORT:-7000}
+    environment:
+      NEXT_PUBLIC_CONTROL_PLANE_URL: http://localhost:${CONTROL_PLANE_PORT:-7000}
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    restart: unless-stopped
+
   playwright-worker:
     build:
       context: ./workers/playwright

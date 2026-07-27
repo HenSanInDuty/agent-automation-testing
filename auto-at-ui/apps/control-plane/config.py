@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     app_name: str = "Auto-AT Control Plane"
     environment: str = "local"
     auth_mode: str = "local"
+    dashboard_cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
     port: int = Field(default=7000, ge=1, le=65535)
     ollama_model: str = "ollama:devstral-2"
     ollama_base_url: str = "http://127.0.0.1:11434"

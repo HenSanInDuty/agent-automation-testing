@@ -10,3 +10,8 @@ node_modules
 dist
 playwright-report
 test-results
+**/node_modules
+**/.next
+**/dist
+**/playwright-report
+**/test-results

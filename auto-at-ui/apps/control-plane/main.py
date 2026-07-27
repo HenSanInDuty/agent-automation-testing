@@ -5,6 +5,7 @@ from api.v1.router import router as v1_router
 from api.v1.routes.health import router as health_router
 from config import get_settings
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from infrastructure.observability import metrics, trace_context
 
@@ -14,6 +15,20 @@ app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     description="API boundary for multi-agent automation testing.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.dashboard_cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=[
+        "Content-Type",
+        "Idempotency-Key",
+        "X-Actor-Id",
+        "X-Actor-Roles",
+        "X-Tenant-Id",
+    ],
 )
 
 

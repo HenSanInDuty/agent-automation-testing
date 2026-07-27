@@ -42,17 +42,17 @@ uv run ruff check .
 uv run pytest
 ```
 
-Start the complete local stack (control plane, PostgreSQL, Redis, and MinIO):
+Start the complete local stack (control plane, dashboard, PostgreSQL, Redis, and MinIO):
 
 ```bash
 docker compose up --build
 ```
 
-The control-plane API is available at `http://localhost:7000/docs`, PostgreSQL at
-`localhost:5432`, Redis at `localhost:6379`, and the MinIO console at
-`http://localhost:9001`. Docker Compose creates the `auto-at-artifacts` bucket before
-starting the control plane. Copy `.env.example` to `.env` to override local credentials,
-ports, or the Ollama endpoint.
+The control-plane API is available at `http://localhost:7000/docs`, the dashboard at
+`http://localhost:3000`, PostgreSQL at `localhost:5432`, Redis at `localhost:6379`,
+and the MinIO console at `http://localhost:9001`. Docker Compose creates the
+`auto-at-artifacts` bucket before starting the control plane. Copy `.env.example` to
+`.env` to override local credentials, ports, or the Ollama endpoint.
 
 Docker Compose also starts a local Temporal Server and UI at `http://localhost:8080`.
 Temporal is behind a dedicated workflow adapter; production may use Temporal Cloud,
@@ -143,7 +143,7 @@ docker compose logs -f temporal-worker
 
 ```text
 apps/control-plane/       FastAPI API and orchestration boundary
-apps/dashboard/           Next.js dashboard (placeholder)
+apps/dashboard/           Next.js dashboard for governed test review
 workers/playwright/       TypeScript Playwright execution adapter
 packages/contracts/       Target-neutral Python runner contracts
 docs/                     Architecture and ADRs
