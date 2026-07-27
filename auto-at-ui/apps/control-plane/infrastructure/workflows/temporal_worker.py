@@ -4,6 +4,7 @@ import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
+from application.generation_events import GenerationEventProcessor
 from application.runs import PublishOutbox
 from application.triage_events import TriageEventProcessor
 from config import Settings
@@ -11,7 +12,9 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from infrastructure.persistence.repositories import (
+    SqlAlchemyAuditEventRepository,
     SqlAlchemyConfigurationRepository,
+    SqlAlchemyGenerationRepository,
     SqlAlchemyOutboxEventRepository,
     SqlAlchemyProposalRepository,
     SqlAlchemyRunRepository,
@@ -40,6 +43,12 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         SqlAlchemyRunRepository(session),
                         SqlAlchemyConfigurationRepository(session),
                         SqlAlchemyProposalRepository(session),
+                        settings,
+                    ),
+                    GenerationEventProcessor(
+                        SqlAlchemyGenerationRepository(session),
+                        SqlAlchemyConfigurationRepository(session),
+                        SqlAlchemyAuditEventRepository(session),
                         settings,
                     ),
                 ).execute()

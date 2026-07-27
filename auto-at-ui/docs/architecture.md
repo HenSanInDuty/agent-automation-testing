@@ -33,3 +33,14 @@ Initial adapters:
 - Require human approval for generated or healed test changes.
 - Propagate `correlation_id` through API, workflow, agent, runner, and artifact events.
 
+## Governed generation experience
+
+The dashboard is a thin API client for the generated-test lifecycle. It submits
+a project, allowed target URL, and natural-language request; polls only the
+control-plane-owned request states; and renders the returned redacted request,
+draft source/hash, provenance, assumptions, stop conditions, safe failure, and
+linked deterministic evidence. It never applies redaction or authorization
+rules in the browser. A decision request reaches the same immutable API flow
+as all other clients; only the control plane can create the versioned test case
+and its single v1 run.
+

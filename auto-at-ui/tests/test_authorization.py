@@ -46,3 +46,28 @@ def test_tenant_admin_can_manage_tenant() -> None:
     )
 
     require(actor_for_tenant(principal, "tenant-a"), Permission.MANAGE_TENANT)
+
+
+def test_contributor_can_submit_and_decide_generated_drafts_but_reviewer_cannot() -> None:
+    project_id = uuid4()
+    contributor = Principal(
+        subject="contributor-1",
+        tenant_roles={},
+        project_roles={
+            ("tenant-a", project_id): frozenset({Role.CONTRIBUTOR}),
+        },
+    )
+    actor = actor_for_tenant(contributor, "tenant-a", project_id)
+
+    require(actor, Permission.SUBMIT_GENERATION)
+    require(actor, Permission.DECIDE_GENERATION)
+
+    reviewer = Principal(
+        subject="reviewer-1",
+        tenant_roles={},
+        project_roles={
+            ("tenant-a", project_id): frozenset({Role.REVIEWER}),
+        },
+    )
+    with pytest.raises(AuthorizationError):
+        require(actor_for_tenant(reviewer, "tenant-a", project_id), Permission.DECIDE_GENERATION)

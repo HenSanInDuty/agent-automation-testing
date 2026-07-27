@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "ef1b062c-c8b2-4b72-8daf-f5f8bec1c0a2",
     "name": "Auto-AT — Phase 6 product hardening",
-    "description": "Import into Postman or Hoppscotch. Run the requests in Basic pipeline order after following README.md. Local authentication is supplied by X-Actor-Id and X-Actor-Roles; production requires the OIDC adapter. Create run saves run_id and correlation_id automatically.",
+    "description": "Import into Postman or Hoppscotch. Local authentication is supplied by X-Actor-Id and X-Actor-Roles; production requires the OIDC adapter. Create run saves run_id and correlation_id automatically. In Temporal mode, let the Temporal worker record the runner result; do not POST a manual result for the same run.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,9 +12,20 @@
     { "key": "actor_roles", "value": "tenant_admin" },
     { "key": "project_id", "value": "11111111-1111-4111-8111-111111111111" },
     { "key": "test_case_id", "value": "demo-healthz" },
+    { "key": "web_test_url", "value": "https://example.com" },
+    { "key": "web_expected_text", "value": "Example Domain" },
     { "key": "run_id", "value": "REPLACE_AFTER_CREATE_RUN" },
     { "key": "correlation_id", "value": "22222222-2222-4222-8222-222222222222" },
-    { "key": "proposal_id", "value": "REPLACE_WITH_EXISTING_PROPOSAL_UUID" }
+    { "key": "step_history_artifact_id", "value": "REPLACE_AFTER_LIST_ARTIFACTS" },
+    { "key": "dom_fragment_artifact_id", "value": "REPLACE_AFTER_LIST_ARTIFACTS" },
+    { "key": "accessibility_artifact_id", "value": "REPLACE_AFTER_LIST_ARTIFACTS" },
+    { "key": "console_errors_artifact_id", "value": "REPLACE_AFTER_LIST_ARTIFACTS" },
+    { "key": "network_failures_artifact_id", "value": "REPLACE_AFTER_LIST_ARTIFACTS" },
+    { "key": "proposal_id", "value": "REPLACE_WITH_EXISTING_PROPOSAL_UUID" },
+    { "key": "generation_request_id", "value": "REPLACE_AFTER_GENERATION_SUBMIT" },
+    { "key": "generated_draft_id", "value": "REPLACE_AFTER_GENERATION_COMPLETES" },
+    { "key": "generated_test_case_id", "value": "REPLACE_AFTER_GENERATION_APPROVAL" },
+    { "key": "generated_run_id", "value": "REPLACE_AFTER_GENERATION_APPROVAL" }
   ],
   "item": [
     {
@@ -91,24 +102,30 @@
           }
         },
         {
-          "name": "Record passed deterministic result",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
-              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
-              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"contract_version\": \"v1\",\n  \"run_id\": \"{{run_id}}\",\n  \"correlation_id\": \"{{correlation_id}}\",\n  \"status\": \"passed\",\n  \"started_at\": \"2026-07-21T10:00:00Z\",\n  \"completed_at\": \"2026-07-21T10:00:01Z\",\n  \"summary\": \"Manual deterministic result.\",\n  \"artifacts\": [],\n  \"runner_metadata\": {}\n}"
-            },
-            "url": "{{base_url}}/api/v1/runs/{{run_id}}/result"
-          }
-        },
-        {
           "name": "List run artifacts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const variablesByKind = {",
+                  "    'step-history': 'step_history_artifact_id',",
+                  "    'dom-fragment': 'dom_fragment_artifact_id',",
+                  "    accessibility: 'accessibility_artifact_id',",
+                  "    'console-errors': 'console_errors_artifact_id',",
+                  "    'network-failures': 'network_failures_artifact_id'",
+                  "  };",
+                  "  for (const artifact of pm.response.json()) {",
+                  "    const variableName = variablesByKind[artifact.kind];",
+                  "    if (variableName) pm.collectionVariables.set(variableName, artifact.id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -118,6 +135,241 @@
             ],
             "url": "{{base_url}}/api/v1/runs/{{run_id}}/artifacts"
           }
+        },
+        {
+          "name": "Download step history",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
+            ],
+            "url": "{{base_url}}/api/v1/runs/{{run_id}}/artifacts/{{step_history_artifact_id}}"
+          }
+        },
+        {
+          "name": "Download DOM fragment",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
+            ],
+            "url": "{{base_url}}/api/v1/runs/{{run_id}}/artifacts/{{dom_fragment_artifact_id}}"
+          }
+        },
+        {
+          "name": "Download accessibility tree",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
+            ],
+            "url": "{{base_url}}/api/v1/runs/{{run_id}}/artifacts/{{accessibility_artifact_id}}"
+          }
+        },
+        {
+          "name": "Download console errors",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
+            ],
+            "url": "{{base_url}}/api/v1/runs/{{run_id}}/artifacts/{{console_errors_artifact_id}}"
+          }
+        },
+        {
+          "name": "Download network failures",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
+            ],
+            "url": "{{base_url}}/api/v1/runs/{{run_id}}/artifacts/{{network_failures_artifact_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Real web UI execution",
+      "description": "Use exactly one dispatcher. In Temporal mode, set RUNNER_DISPATCH_ENABLED=false and keep the Temporal worker running. In direct mode, stop the Temporal outbox worker. This request saves the run ID for the report requests.",
+      "item": [
+        {
+          "name": "Run example.com in Playwright",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const run = pm.response.json();",
+                  "  pm.collectionVariables.set('run_id', run.id);",
+                  "  pm.collectionVariables.set('correlation_id', run.correlation_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" },
+              { "key": "Idempotency-Key", "value": "postman-web-ui-{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"test_case_id\": \"{{test_case_id}}\",\n  \"revision\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"target_type\": \"web_ui\",\n  \"target_url\": \"{{web_test_url}}\",\n  \"runner_config\": {\n    \"browser\": \"chromium\",\n    \"step_timeout_ms\": 10000,\n    \"timeout_ms\": 60000,\n    \"steps\": [\n      { \"action\": \"goto\", \"url\": \"{{web_test_url}}\" },\n      { \"action\": \"expect_text\", \"text\": \"{{web_expected_text}}\" }\n    ]\n  },\n  \"artifact_policy\": {\n    \"screenshot_on_failure\": true,\n    \"trace_on_failure\": true,\n    \"video_on_failure\": true,\n    \"retain_days\": 30\n  }\n}"
+            },
+            "url": "{{base_url}}/api/v1/runs"
+          }
+        },
+        {
+          "name": "Get web UI run report",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
+            ],
+            "url": "{{base_url}}/api/v1/runs/{{run_id}}"
+          }
+        },
+        {
+          "name": "List web UI report artifacts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const variablesByKind = {",
+                  "    'step-history': 'step_history_artifact_id',",
+                  "    'dom-fragment': 'dom_fragment_artifact_id',",
+                  "    accessibility: 'accessibility_artifact_id',",
+                  "    'console-errors': 'console_errors_artifact_id',",
+                  "    'network-failures': 'network_failures_artifact_id'",
+                  "  };",
+                  "  for (const artifact of pm.response.json()) {",
+                  "    const variableName = variablesByKind[artifact.kind];",
+                  "    if (variableName) pm.collectionVariables.set(variableName, artifact.id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "{{actor_roles}}" }
+            ],
+            "url": "{{base_url}}/api/v1/runs/{{run_id}}/artifacts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Governed test generation",
+      "description": "Requires an allowed project origin and a contributor, project administrator, or tenant administrator. Poll until the request is completed, inspect the redacted request and draft, then make one immutable decision. Approval creates one versioned test case and one deterministic v1 run.",
+      "item": [
+        {
+          "name": "Set generation origin policy (administrator only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "tenant_admin" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"allowed_origins\": [\"{{web_test_url}}\"]\n}" },
+            "url": "{{base_url}}/api/v1/test-generations/projects/{{project_id}}/policy"
+          }
+        },
+        {
+          "name": "Submit generation request",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (pm.response.code === 202) {",
+            "  pm.collectionVariables.set('generation_request_id', pm.response.json().id);",
+            "}"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "generation-{{$guid}}" },
+              { "key": "X-Tenant-Id", "value": "{{tenant_id}}" },
+              { "key": "X-Actor-Id", "value": "{{actor_id}}" },
+              { "key": "X-Actor-Roles", "value": "contributor" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"target_url\": \"{{web_test_url}}\",\n  \"request\": \"Verify the example page heading is visible.\"\n}" },
+            "url": "{{base_url}}/api/v1/test-generations"
+          }
+        },
+        {
+          "name": "Poll generation request",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (pm.response.code === 200 && pm.response.json().draft_id) {",
+            "  pm.collectionVariables.set('generated_draft_id', pm.response.json().draft_id);",
+            "}"
+          ] } }],
+          "request": { "method": "GET", "header": [
+            { "key": "X-Tenant-Id", "value": "{{tenant_id}}" }, { "key": "X-Actor-Id", "value": "{{actor_id}}" }, { "key": "X-Actor-Roles", "value": "contributor" }
+          ], "url": "{{base_url}}/api/v1/test-generations/requests/{{generation_request_id}}" }
+        },
+        {
+          "name": "Inspect generated draft",
+          "request": { "method": "GET", "header": [
+            { "key": "X-Tenant-Id", "value": "{{tenant_id}}" }, { "key": "X-Actor-Id", "value": "{{actor_id}}" }, { "key": "X-Actor-Roles", "value": "contributor" }
+          ], "url": "{{base_url}}/api/v1/test-generations/drafts/{{generated_draft_id}}" }
+        },
+        {
+          "name": "Approve draft and dispatch one v1 run",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (pm.response.code === 200) {",
+            "  const draft = pm.response.json();",
+            "  pm.collectionVariables.set('generated_test_case_id', draft.linked_test_case_id);",
+            "  pm.collectionVariables.set('generated_run_id', draft.linked_run_id);",
+            "}"
+          ] } }],
+          "request": { "method": "POST", "header": [
+            { "key": "Content-Type", "value": "application/json" }, { "key": "X-Tenant-Id", "value": "{{tenant_id}}" }, { "key": "X-Actor-Id", "value": "{{actor_id}}" }, { "key": "X-Actor-Roles", "value": "contributor" }
+          ], "body": { "mode": "raw", "raw": "{\n  \"approved\": true,\n  \"reason\": \"Reviewed generated source and assumptions.\"\n}" }, "url": "{{base_url}}/api/v1/test-generations/drafts/{{generated_draft_id}}/decision" }
+        },
+        {
+          "name": "Reject draft (immutable final decision)",
+          "description": "Use this instead of approval for a separate pending-review draft. A decision cannot be changed or repeated with a different outcome.",
+          "request": { "method": "POST", "header": [
+            { "key": "Content-Type", "value": "application/json" }, { "key": "X-Tenant-Id", "value": "{{tenant_id}}" }, { "key": "X-Actor-Id", "value": "{{actor_id}}" }, { "key": "X-Actor-Roles", "value": "contributor" }
+          ], "body": { "mode": "raw", "raw": "{\n  \"approved\": false,\n  \"reason\": \"The source does not meet the requested acceptance criteria.\"\n}" }, "url": "{{base_url}}/api/v1/test-generations/drafts/{{generated_draft_id}}/decision" }
+        },
+        {
+          "name": "Get approved generated run",
+          "request": { "method": "GET", "header": [
+            { "key": "X-Tenant-Id", "value": "{{tenant_id}}" }, { "key": "X-Actor-Id", "value": "{{actor_id}}" }, { "key": "X-Actor-Roles", "value": "contributor" }
+          ], "url": "{{base_url}}/api/v1/runs/{{generated_run_id}}" }
+        },
+        {
+          "name": "List approved generated run evidence",
+          "request": { "method": "GET", "header": [
+            { "key": "X-Tenant-Id", "value": "{{tenant_id}}" }, { "key": "X-Actor-Id", "value": "{{actor_id}}" }, { "key": "X-Actor-Roles", "value": "contributor" }
+          ], "url": "{{base_url}}/api/v1/runs/{{generated_run_id}}/artifacts" }
         }
       ]
     },

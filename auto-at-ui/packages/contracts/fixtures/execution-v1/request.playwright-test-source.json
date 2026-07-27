@@ -1,0 +1,22 @@
+{
+  "contract_version": "v1",
+  "run_id": "d319c10d-e2ce-4e24-a905-a50c7f16f6bc",
+  "correlation_id": "889dfc9c-b50e-444a-a67b-e5ee56673fa5",
+  "project_id": "11111111-1111-4111-8111-111111111111",
+  "test_case_id": "generated-checkout",
+  "target_type": "web_ui",
+  "target_url": "https://example.test",
+  "revision": "b4f61a164c29f38b7af4d6e4e0a77ad2",
+  "runner_config": {
+    "mode": "playwright_test_source",
+    "playwright_test_source": "import { test, expect } from '@playwright/test';\n\ntest('home page', async ({ page }) => {\n  await page.goto('https://example.test');\n  await expect(page).toHaveTitle(/Example/);\n});\n",
+    "source_hash": "cdde1f6bda1ba2316f524ec8744a4390a05d8f348af0fb9521db1c1ba17b2e5d",
+    "allowed_origins": ["https://example.test"]
+  },
+  "artifact_policy": {
+    "trace_on_failure": true,
+    "video_on_failure": true,
+    "screenshot_on_failure": true,
+    "retain_days": 30
+  }
+}

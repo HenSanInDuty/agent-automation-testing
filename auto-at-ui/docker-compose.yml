@@ -19,7 +19,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-auto-at-artifacts}
       MINIO_SECURE: "false"
-      RUNNER_DISPATCH_ENABLED: "false"
+      RUNNER_DISPATCH_ENABLED: "true"
       PLAYWRIGHT_WORKER_URL: http://playwright-worker:7100
       ARTIFACT_ROOT: /artifacts
       TEMPORAL_ENABLED: "true"
@@ -60,6 +60,16 @@ services:
     environment:
       ARTIFACT_ROOT: /artifacts
       PORT: 7100
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=512m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.0
     volumes:
       - execution-artifacts:/artifacts
     expose:

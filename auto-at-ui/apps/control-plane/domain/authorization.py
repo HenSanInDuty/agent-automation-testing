@@ -25,11 +25,21 @@ class Permission(StrEnum):
     DECIDE_PROPOSAL = "decide_proposal"
     MANAGE_PROJECT = "manage_project"
     MANAGE_TENANT = "manage_tenant"
+    SUBMIT_GENERATION = "submit_generation"
+    DECIDE_GENERATION = "decide_generation"
 
 
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.VIEWER: frozenset({Permission.READ}),
-    Role.CONTRIBUTOR: frozenset({Permission.READ, Permission.CREATE_RUN, Permission.CANCEL_RUN}),
+    Role.CONTRIBUTOR: frozenset(
+        {
+            Permission.READ,
+            Permission.CREATE_RUN,
+            Permission.CANCEL_RUN,
+            Permission.SUBMIT_GENERATION,
+            Permission.DECIDE_GENERATION,
+        }
+    ),
     Role.REVIEWER: frozenset({Permission.READ, Permission.DECIDE_PROPOSAL}),
     Role.PROJECT_ADMIN: frozenset(
         {
@@ -38,6 +48,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.CANCEL_RUN,
             Permission.DECIDE_PROPOSAL,
             Permission.MANAGE_PROJECT,
+            Permission.SUBMIT_GENERATION,
+            Permission.DECIDE_GENERATION,
         }
     ),
     Role.TENANT_ADMIN: frozenset(
@@ -48,6 +60,8 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.DECIDE_PROPOSAL,
             Permission.MANAGE_PROJECT,
             Permission.MANAGE_TENANT,
+            Permission.SUBMIT_GENERATION,
+            Permission.DECIDE_GENERATION,
         }
     ),
     Role.SERVICE: frozenset({Permission.READ, Permission.CREATE_RUN, Permission.CANCEL_RUN}),

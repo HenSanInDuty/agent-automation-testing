@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 
 from auto_at.contracts.execution import (
+    PlaywrightTestSourceMode,
+)
+from auto_at.contracts.execution import (
     TestExecutionRequest as ExecutionRequest,
 )
 from auto_at.contracts.execution import (
@@ -33,3 +36,11 @@ def test_passed_result_fixture_validates_against_execution_contract_v1() -> None
     assert result.contract_version == "v1"
     assert result.status == "passed"
     assert result.artifacts[0].content_type == "application/zip"
+
+
+def test_generated_test_request_fixture_validates_against_execution_contract_v1() -> None:
+    request = ExecutionRequest.model_validate(load_fixture("request.playwright-test-source.json"))
+    config = PlaywrightTestSourceMode.model_validate(request.runner_config)
+
+    assert request.contract_version == "v1"
+    assert config.mode == "playwright_test_source"

@@ -38,6 +38,10 @@ class RecordingTriageHandler:
         self.events.append(event)
 
 
+class RecordingGenerationHandler(RecordingTriageHandler):
+    pass
+
+
 def requested_event() -> OutboxEvent:
     run_id = uuid4()
     return OutboxEvent(
@@ -124,6 +128,26 @@ def test_publisher_delivers_a_run_cancellation_once() -> None:
     assert asyncio.run(PublishOutbox(outbox, workflows).execute()) == 1
     assert workflows.cancelled == [event]
     assert event.id in outbox.published
+
+
+def test_publisher_delivers_generation_events_only_when_a_handler_is_configured() -> None:
+    event = OutboxEvent(
+        id=uuid4(),
+        tenant_id="tenant-a",
+        event_type="agent.test_generation.requested.v1",
+        schema_version="v1",
+        correlation_id=uuid4(),
+        causation_id=None,
+        idempotency_key="generation:one",
+        payload={"request_id": str(uuid4())},
+    )
+    outbox = InMemoryOutbox([event])
+    handler = RecordingGenerationHandler()
+
+    assert asyncio.run(PublishOutbox(outbox, RecordingWorkflowStarter()).execute()) == 0
+    publisher = PublishOutbox(outbox, RecordingWorkflowStarter(), generation=handler)
+    assert asyncio.run(publisher.execute()) == 1
+    assert handler.events == [event]
 
 
 def test_publisher_starts_a_run_before_delivering_its_cancellation() -> None:

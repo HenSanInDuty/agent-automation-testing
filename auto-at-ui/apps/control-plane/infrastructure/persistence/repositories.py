@@ -17,9 +17,117 @@ from infrastructure.persistence.models import (
     ArtifactModel,
     AuditEventModel,
     ConfigurationModel,
+    GeneratedTestDecisionModel,
+    GeneratedTestDraftModel,
+    GenerationRequestModel,
     OutboxEventModel,
+    ProjectExecutionPolicyModel,
+    TestCaseModel,
     TestRunModel,
 )
+
+
+class SqlAlchemyGenerationRepository:
+    """Tenant-scoped persistence for governed generated-test records."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get_request_by_key(self, tenant_id: str, key: str) -> GenerationRequestModel | None:
+        return self._session.scalar(
+            select(GenerationRequestModel).where(
+                GenerationRequestModel.tenant_id == tenant_id,
+                GenerationRequestModel.idempotency_key == key,
+            )
+        )
+
+    def get_request(self, tenant_id: str, request_id: UUID) -> GenerationRequestModel | None:
+        return self._session.scalar(
+            select(GenerationRequestModel).where(
+                GenerationRequestModel.tenant_id == tenant_id,
+                GenerationRequestModel.id == request_id,
+            )
+        )
+
+    def claim_queued_request(
+        self, tenant_id: str, request_id: UUID
+    ) -> GenerationRequestModel | None:
+        """Atomically claim queued work; retries never invoke a model twice."""
+        model = self._session.scalar(
+            select(GenerationRequestModel)
+            .where(
+                GenerationRequestModel.tenant_id == tenant_id,
+                GenerationRequestModel.id == request_id,
+            )
+            .with_for_update()
+        )
+        if model is None or model.state != "queued":
+            return None
+        model.state = "generating"
+        self._session.flush()
+        return model
+
+    def add_request(self, model: GenerationRequestModel) -> None:
+        self._session.add(model)
+        self._session.flush()
+
+    def get_draft(self, tenant_id: str, draft_id: UUID) -> GeneratedTestDraftModel | None:
+        return self._session.scalar(
+            select(GeneratedTestDraftModel).where(
+                GeneratedTestDraftModel.tenant_id == tenant_id,
+                GeneratedTestDraftModel.id == draft_id,
+            )
+        )
+
+    def get_draft_for_request(
+        self, tenant_id: str, request_id: UUID
+    ) -> GeneratedTestDraftModel | None:
+        return self._session.scalar(
+            select(GeneratedTestDraftModel).where(
+                GeneratedTestDraftModel.tenant_id == tenant_id,
+                GeneratedTestDraftModel.planning_request_id == request_id,
+            )
+        )
+
+    def add_draft(self, model: GeneratedTestDraftModel) -> None:
+        self._session.add(model)
+        self._session.flush()
+
+    def get_decision(self, tenant_id: str, draft_id: UUID) -> GeneratedTestDecisionModel | None:
+        return self._session.scalar(
+            select(GeneratedTestDecisionModel).where(
+                GeneratedTestDecisionModel.tenant_id == tenant_id,
+                GeneratedTestDecisionModel.draft_id == draft_id,
+            )
+        )
+
+    def add_decision(self, model: GeneratedTestDecisionModel) -> None:
+        self._session.add(model)
+        self._session.flush()
+
+    def get_policy(self, tenant_id: str, project_id: UUID) -> ProjectExecutionPolicyModel | None:
+        return self._session.scalar(
+            select(ProjectExecutionPolicyModel).where(
+                ProjectExecutionPolicyModel.tenant_id == tenant_id,
+                ProjectExecutionPolicyModel.project_id == project_id,
+            )
+        )
+
+    def set_policy(self, tenant_id: str, project_id: UUID, origins: list[str]) -> None:
+        model = self.get_policy(tenant_id, project_id)
+        if model is None:
+            self._session.add(
+                ProjectExecutionPolicyModel(
+                    tenant_id=tenant_id, project_id=project_id, allowed_origins=origins
+                )
+            )
+        else:
+            model.allowed_origins = origins
+        self._session.flush()
+
+    def add_test_case(self, model: TestCaseModel) -> None:
+        self._session.add(model)
+        self._session.flush()
 
 
 class ConcurrentRunUpdateError(RuntimeError):
@@ -189,7 +297,7 @@ class SqlAlchemyArtifactRepository:
                 kind=model.kind,
                 uri=model.uri,
                 checksum=model.checksum,
-            size=model.size,
+                size=model.size,
                 content_type=model.content_type,
                 retention_until=model.retention_until,
             )
@@ -199,9 +307,14 @@ class SqlAlchemyArtifactRepository:
     def add(self, artifact: ArtifactRecord) -> None:
         self._session.add(
             ArtifactModel(
-                id=artifact.id, tenant_id=artifact.tenant_id, run_id=artifact.run_id,
-                kind=artifact.kind, uri=artifact.uri, checksum=artifact.checksum,
-                size=artifact.size, content_type=artifact.content_type,
+                id=artifact.id,
+                tenant_id=artifact.tenant_id,
+                run_id=artifact.run_id,
+                kind=artifact.kind,
+                uri=artifact.uri,
+                checksum=artifact.checksum,
+                size=artifact.size,
+                content_type=artifact.content_type,
                 retention_until=artifact.retention_until,
             )
         )

@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     agent_max_steps_per_run: int = Field(default=2, ge=1, le=10)
     agent_max_evidence_bytes_per_step: int = Field(default=250_000, ge=1_024, le=5_000_000)
     agent_max_concurrency: int = Field(default=1, ge=1, le=100)
+    agent_generation_max_tokens: int = Field(default=4_000, ge=1, le=100_000)
+    agent_generation_max_concurrency: int = Field(default=1, ge=1, le=100)
+    agent_generation_max_requests_per_minute: int = Field(default=10, ge=1, le=10_000)
+    agent_generation_max_cost_usd: float = Field(default=1.0, gt=0, le=1_000)
+    agent_generation_prompt_version: str = "test-generation-v1"
+    agent_generation_redaction_policy_version: str = "generation-redaction-v1"
     database_url: str = "postgresql://auto_at:local-development-only@127.0.0.1:5432/auto_at"
     redis_url: str = "redis://127.0.0.1:6379/0"
     minio_endpoint: str = "127.0.0.1:9000"

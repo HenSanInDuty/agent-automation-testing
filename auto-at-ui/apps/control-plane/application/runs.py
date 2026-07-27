@@ -272,10 +272,12 @@ class PublishOutbox:
         outbox: OutboxEventRepository,
         workflows: WorkflowStarter,
         triage: TriageEventHandler | None = None,
+        generation: TriageEventHandler | None = None,
     ) -> None:
         self._outbox = outbox
         self._workflows = workflows
         self._triage = triage
+        self._generation = generation
 
     async def execute(self, limit: int = 100) -> int:
         published = 0
@@ -297,6 +299,11 @@ class PublishOutbox:
                 and self._triage is not None
             ):
                 await self._triage.execute(event)
+            elif (
+                event.event_type == "agent.test_generation.requested.v1"
+                and self._generation is not None
+            ):
+                await self._generation.execute(event)
             else:
                 continue
             self._outbox.mark_published(event.id, datetime.now(UTC))

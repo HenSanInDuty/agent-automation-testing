@@ -1,8 +1,40 @@
+from __future__ import annotations
+
+import hashlib
+import re
 from enum import StrEnum
 from typing import Any, Literal
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+
+_SHA256 = r"^[a-f0-9]{64}$"
+_DISALLOWED_SOURCE_PATTERNS = (
+    re.compile(r"\b(?:require|eval|Function|fetch|XMLHttpRequest|WebSocket|Worker)\b"),
+    re.compile(r"\b(?:process|Buffer|__dirname|__filename)\b"),
+    re.compile(r"\b(?:child_process|cluster|dgram|dns|fs|net|tls|vm|worker_threads)\b"),
+    re.compile(r"\bimport\s*\("),
+)
+_IMPORT_PATTERN = re.compile(
+    r"\b(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?(?P<quote>['\"])(?P<module>[^'\"]+)(?P=quote)"
+)
+
+
+def sha256_text(value: str) -> str:
+    """Return the lowercase SHA-256 digest used by v1 text-bearing contracts."""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def validate_playwright_test_source(value: str) -> str:
+    """Reject source that exceeds the deliberately narrow generated-test subset."""
+    for pattern in _DISALLOWED_SOURCE_PATTERNS:
+        if pattern.search(value):
+            raise ValueError("generated source uses a prohibited API")
+    for match in _IMPORT_PATTERN.finditer(value):
+        if match.group("module") != "@playwright/test":
+            raise ValueError("generated source may import only @playwright/test")
+    return value
 
 
 class TargetType(StrEnum):
@@ -36,6 +68,36 @@ class TestExecutionRequest(BaseModel):
     revision: str = Field(min_length=7, max_length=128)
     runner_config: dict[str, Any] = Field(default_factory=dict)
     artifact_policy: ArtifactPolicy = Field(default_factory=ArtifactPolicy)
+
+
+class PlaywrightTestSourceMode(BaseModel):
+    """Validated v1 runner configuration for approved generated source."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["playwright_test_source"] = "playwright_test_source"
+    playwright_test_source: str = Field(min_length=1, max_length=100_000)
+    source_hash: str = Field(pattern=_SHA256)
+    allowed_origins: list[str] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_source(self) -> PlaywrightTestSourceMode:
+        validate_playwright_test_source(self.playwright_test_source)
+        if self.source_hash != sha256_text(self.playwright_test_source):
+            raise ValueError("source_hash must match playwright_test_source")
+        for origin in self.allowed_origins:
+            parsed = urlsplit(origin)
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.path not in {"", "/"}
+                or parsed.query
+                or parsed.fragment
+                or parsed.username
+                or parsed.password
+            ):
+                raise ValueError("allowed_origins must contain canonical HTTP(S) origins")
+        return self
 
 
 class Artifact(BaseModel):

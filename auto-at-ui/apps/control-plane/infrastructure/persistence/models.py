@@ -42,6 +42,54 @@ class TestCaseModel(TenantRecord, Base):
     specification: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
 
 
+class ProjectExecutionPolicyModel(TenantRecord, Base):
+    __tablename__ = "project_execution_policies"
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), primary_key=True)
+    allowed_origins: Mapped[list[str]] = mapped_column(JSONB, default=list)
+
+
+class GenerationRequestModel(TenantRecord, Base):
+    __tablename__ = "generation_requests"
+    __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), index=True)
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    target_url: Mapped[str] = mapped_column(Text)
+    redacted_request: Mapped[str] = mapped_column(Text)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    state: Mapped[str] = mapped_column(String(32), index=True)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    idempotency_key: Mapped[str] = mapped_column(String(200))
+
+
+class GeneratedTestDraftModel(TenantRecord, Base):
+    __tablename__ = "generated_test_drafts"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    planning_request_id: Mapped[UUID] = mapped_column(
+        ForeignKey("generation_requests.id"), unique=True
+    )
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    state: Mapped[str] = mapped_column(String(32), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    playwright_test_source: Mapped[str] = mapped_column(Text)
+    source_hash: Mapped[str] = mapped_column(String(64))
+    assumptions: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    stop_conditions: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    provenance: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    linked_test_case_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    linked_run_id: Mapped[UUID | None] = mapped_column(nullable=True)
+
+
+class GeneratedTestDecisionModel(TenantRecord, Base):
+    __tablename__ = "generated_test_decisions"
+    __table_args__ = (UniqueConstraint("draft_id"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    draft_id: Mapped[UUID] = mapped_column(ForeignKey("generated_test_drafts.id"))
+    approved: Mapped[bool] = mapped_column()
+    decided_by: Mapped[str] = mapped_column(String(200))
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class TestRunModel(TenantRecord, Base):
     __tablename__ = "test_runs"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

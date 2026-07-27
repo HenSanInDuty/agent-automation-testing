@@ -1,12 +1,15 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { spawn } from "node:child_process";
 import { chromium, type Page } from "@playwright/test";
 
 import {
   type ExecutionRequestV1,
   type ExecutionResultV1,
   validateExecutionRequestV1,
+  validatePlaywrightTestSourceMode,
 } from "./contract.js";
 
 export type Step =
@@ -137,8 +140,92 @@ async function withinTimeout<T>(
   }
 }
 
+function policyResult(request: ExecutionRequestV1, startedAt: string, reason: string): ExecutionResultV1 {
+  return {
+    contract_version: "v1", run_id: request.run_id, correlation_id: request.correlation_id,
+    status: "errored", started_at: startedAt, completed_at: new Date().toISOString(),
+    summary: "Generated source blocked by execution policy.", artifacts: [],
+    runner_metadata: { browser: "chromium", source_hash: String(request.runner_config.source_hash ?? ""), policy_blocked: true, policy_reason: reason, evidence: {} },
+  };
+}
+
+async function filesBelow(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  return (await Promise.all(entries.map(async (entry) => {
+    const path = join(directory, entry.name);
+    return entry.isDirectory() ? filesBelow(path) : [path];
+  }))).flat();
+}
+
+async function executePlaywrightTestSource(
+  request: ExecutionRequestV1, artifactRoot: string, signal?: AbortSignal,
+): Promise<ExecutionResultV1> {
+  const startedAt = new Date().toISOString();
+  let config;
+  try {
+    config = validatePlaywrightTestSourceMode(request.runner_config);
+  } catch (error) {
+    return policyResult(request, startedAt, error instanceof Error ? error.message : String(error));
+  }
+  if (signal?.aborted) throw new ExecutionCancelledError("Browser run was cancelled.");
+  const workspace = await mkdtemp(join(tmpdir(), "auto-at-generated-"));
+  const artifacts: ExecutionResultV1["artifacts"] = [];
+  const evidence: Record<string, { checksum: string; size: number }> = {};
+  try {
+    const resultDirectory = join(workspace, "test-results");
+    const policyEvidence = join(workspace, "origin-policy.json");
+    await writeFile(join(workspace, "generated.spec.ts"), config.playwright_test_source, { mode: 0o400 });
+    await writeFile(join(workspace, "package.json"), "{\"type\":\"module\"}\n", { mode: 0o400 });
+    await symlink("/worker/node_modules", join(workspace, "node_modules"), "junction");
+    await writeFile(join(workspace, "playwright.config.ts"), `import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: '.', testMatch: 'generated.spec.ts', outputDir: ${JSON.stringify(resultDirectory)}, timeout: 60000, workers: 1, use: { trace: 'retain-on-failure', video: 'retain-on-failure', screenshot: 'only-on-failure', serviceWorkers: 'block' } });\n`, { mode: 0o400 });
+    const runner = "/worker/node_modules/@playwright/test/cli.js";
+    const guard = "/worker/src/origin-guard.cjs";
+    const child = spawn(process.execPath, [runner, "test", "--config=playwright.config.ts", "--reporter=line"], {
+      cwd: workspace,
+      env: {
+        PATH: process.env.PATH ?? "", HOME: workspace, TMPDIR: workspace,
+        PLAYWRIGHT_ALLOWED_ORIGINS: JSON.stringify(config.allowed_origins),
+        PLAYWRIGHT_POLICY_EVIDENCE: policyEvidence,
+        NODE_OPTIONS: `--require ${guard}`,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const output: Buffer[] = [];
+    child.stdout.on("data", (chunk: Buffer) => output.push(chunk));
+    child.stderr.on("data", (chunk: Buffer) => output.push(chunk));
+    const exit = await withinTimeout(new Promise<number | null>((resolveExit, reject) => {
+      child.once("error", reject); child.once("exit", resolveExit);
+    }), 65_000, signal).catch((error) => { child.kill("SIGKILL"); throw error; });
+    const policy = await readFile(policyEvidence, "utf8").catch(() => "[]");
+    const blocked = policy !== "[]";
+    const result = blocked ? policyResult(request, startedAt, "origin outside project allowlist") : {
+      contract_version: "v1" as const, run_id: request.run_id, correlation_id: request.correlation_id,
+      status: exit === 0 ? "passed" as const : "failed" as const, started_at: startedAt,
+      completed_at: new Date().toISOString(), summary: exit === 0 ? "Playwright Test passed." : "Playwright Test reported a failure.",
+      artifacts, runner_metadata: { browser: "chromium", playwright_version: "1.50.1", source_hash: config.source_hash, policy_blocked: false, evidence },
+    };
+    await addEvidence(artifactRoot, request.run_id, "playwright-output", "txt", "text/plain", Buffer.concat(output), artifacts, evidence);
+    await addEvidence(artifactRoot, request.run_id, "origin-policy", "json", "application/json", policy, artifacts, evidence);
+    for (const file of await filesBelow(resultDirectory)) {
+      const extension = file.split(".").pop() ?? "bin";
+      await addEvidence(artifactRoot, request.run_id, `playwright-${artifacts.length}`, extension, "application/octet-stream", await readFile(file), artifacts, evidence);
+    }
+    result.artifacts = artifacts;
+    result.runner_metadata.evidence = evidence;
+    return result;
+  } catch (error) {
+    if (error instanceof ExecutionCancelledError) throw error;
+    return policyResult(request, startedAt, error instanceof Error ? error.message : String(error));
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+}
+
 export async function executeRequest(value: unknown, artifactRoot = process.env.ARTIFACT_ROOT ?? "/artifacts", signal?: AbortSignal): Promise<ExecutionResultV1> {
   const request = validateExecutionRequestV1(value);
+  if (request.runner_config.mode === "playwright_test_source") {
+    return executePlaywrightTestSource(request, artifactRoot, signal);
+  }
   const config = configOf(request);
   if (signal?.aborted) throw new ExecutionCancelledError("Browser run was cancelled.");
   const startedAt = new Date().toISOString();

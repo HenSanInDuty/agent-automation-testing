@@ -10,11 +10,34 @@ or deletion failures, and an approval-boundary violation.
 
 The control plane exposes the self-hosted scrape endpoint at `/metrics`. It
 publishes queue delay, run duration, retry count, failure class, artifact
-failure, agent latency/cost, proposal acceptance, and false-healing counters;
-configure the in-network collector to scrape it and alert using the thresholds
-above. The dashboard reads only the authorized `/api/v1/operations/summary`
-API. Configure `CONTROL_PLANE_URL` and `DASHBOARD_TENANT_ID` on its server;
-never provide database credentials to the browser.
+failure, agent latency/cost, proposal acceptance, and false-healing counters.
+For generated tests, additionally track request state totals/age, planner
+policy failures, pending-review age, approval/rejection totals, and time from
+approval to deterministic terminal result. Configure the in-network collector
+to scrape it and alert on a generation request stuck in `queued`/`generating`,
+an unusual policy-failure rate, or a pending review that exceeds its agreed
+service target.
+
+The dashboard reads and changes data only through the authorized control-plane
+API. Its public API URL is `NEXT_PUBLIC_CONTROL_PLANE_URL`; browser identity
+headers exist only for the local development adapter and must never substitute
+for production OIDC. Never provide database credentials, provider keys, or
+unredacted requests to the browser.
+
+## Generated-test acceptance scenario
+
+With the local Compose stack running and migrations applied, use the
+`Governed test generation` folder in
+`docs/hoppscotch/auto-at-phase-1.postman_collection.json` in this order:
+set the project policy, submit, poll to `completed`, inspect the draft, then
+approve. The Temporal worker dispatches exactly one v1 run; inspect its linked
+run ID and artifacts through the existing run endpoints. This scenario requires
+the already-configured generation model gateway and a non-secret credential in
+the local environment. It must be run against an allowed public target only.
+Use a contributor, project administrator, or tenant administrator for approval;
+a reviewer-only or service role must be rejected. Repeating a different final
+decision must return the immutable-decision conflict and must not create a
+second run.
 
 ## Incident and recovery
 
