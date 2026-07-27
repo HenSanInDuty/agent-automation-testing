@@ -86,11 +86,58 @@ adapter only; do not use the development actor headers outside local mode.
    - `Health and operations / Health check`
    - `Basic deterministic pipeline / Create run` — this saves `run_id` and
      `correlation_id` as collection variables.
-   - `Get correlated run`, `Record passed deterministic result`, then `List run artifacts`.
+   - `Get correlated run`, then `List run artifacts`.
    - `Operations summary` confirms the audited tenant-visible totals.
 
 Use `Proposal review` only with an existing proposal ID. Its reviewer header is
 intentional: a service identity cannot approve or reject a proposal.
+
+## Generate, review, and run a Playwright test
+
+The generated-test flow is advisory until a human approves the draft. It never
+changes a source repository and the Playwright worker remains the sole authority
+for the test verdict.
+
+1. Configure a non-secret local credential for the already-selected generation
+   model gateway, start Compose, and apply migrations as described above. Use
+   only a public target that is permitted by the project origin policy.
+
+2. In the imported Postman/Hoppscotch collection, open `Governed test
+   generation` and send `Set generation origin policy (administrator only)`.
+   This normalizes and stores the target origin allowlist for the project.
+
+3. Send `Submit generation request`. The response is accepted with a
+   `generation_request_id`; it does not yet run a test. Send `Poll generation
+   request` until its `state` is terminal:
+
+   - `queued`: waiting for the generation worker.
+   - `generating`: planner is producing a bounded draft.
+   - `completed`: a `generated_draft_id` is available.
+   - `failed`: inspect the safe `failure_reason`; it intentionally excludes
+     provider diagnostics and secrets.
+
+4. Send `Inspect generated draft`. Review `playwright_test_source`,
+   `source_hash`, `assumptions`, `stop_conditions`, and `provenance`. Do not
+   approve a draft whose assumptions or source do not meet the intended test.
+
+5. For an acceptable draft, send `Approve draft and dispatch one v1 run`.
+   The response is immutable and the collection stores `generated_test_case_id`
+   and `generated_run_id`. To decline a different pending draft, use `Reject
+   draft (immutable final decision)` instead. Contributors, project
+   administrators, and tenant administrators can decide drafts; reviewer-only
+   and service identities cannot.
+
+6. Send `Get approved generated run` until the deterministic status is
+   terminal, then send `List approved generated run evidence`. The artifacts
+   contain the runner evidence (for example trace, screenshot, video, console,
+   and network output) needed to inspect a failure. The same flow is available
+   in the dashboard, which polls only `queued` and `generating` requests.
+
+For live local diagnostics, follow the generation worker log:
+
+```bash
+docker compose logs -f temporal-worker
+```
 
 ## Repository layout
 
