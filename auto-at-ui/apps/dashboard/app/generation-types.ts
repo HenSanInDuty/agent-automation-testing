@@ -30,5 +30,3 @@ export type GeneratedDraft = {
 
 export type Run = { id: string; correlation_id: string; status: string; revision: string };
 export type Artifact = { id: string; kind: string; uri: string; checksum: string; size: number; content_type: string | null };
-
-export type DashboardIdentity = { tenantId: string; actorId: string; roles: string };

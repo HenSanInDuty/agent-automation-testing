@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     app_name: str = "Auto-AT Control Plane"
     environment: str = "local"
     auth_mode: str = "local"
+    session_cookie_name: str = "auto_at_session"
+    csrf_cookie_name: str = "auto_at_csrf"
+    session_ttl_seconds: int = Field(default=28_800, ge=300, le=2_592_000)
+    auth_login_max_attempts: int = Field(default=5, ge=1, le=100)
+    auth_login_window_seconds: int = Field(default=60, ge=1, le=3_600)
     dashboard_cors_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

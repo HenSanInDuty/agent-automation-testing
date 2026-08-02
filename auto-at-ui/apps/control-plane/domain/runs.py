@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from uuid import UUID, uuid4
 
-from auto_at.contracts.execution import TestExecutionResult
+from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
 
 
 class RunStateError(ValueError):
@@ -44,6 +44,7 @@ class TestRun:
     correlation_id: UUID
     status: RunLifecycleStatus = RunLifecycleStatus.QUEUED
     result: TestExecutionResult | None = None
+    request: TestExecutionRequest | None = None
     version: int = 1
 
     @classmethod

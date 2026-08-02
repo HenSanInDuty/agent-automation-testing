@@ -20,7 +20,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.dashboard_cors_origins,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "OPTIONS"],
     allow_headers=[
         "Content-Type",
@@ -28,6 +28,7 @@ app.add_middleware(
         "X-Actor-Id",
         "X-Actor-Roles",
         "X-Tenant-Id",
+        "X-CSRF-Token",
     ],
 )
 

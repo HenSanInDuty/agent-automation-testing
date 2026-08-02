@@ -12,8 +12,11 @@ def test_control_plane_schema_contains_tenant_scoped_aggregates() -> None:
         "approvals",
         "audit_events",
         "outbox_events",
+        "users",
+        "tenant_memberships",
+        "sessions",
     }
 
     assert expected_tables <= set(Base.metadata.tables)
-    for table_name in expected_tables:
+    for table_name in expected_tables - {"users", "sessions"}:
         assert "tenant_id" in Base.metadata.tables[table_name].c

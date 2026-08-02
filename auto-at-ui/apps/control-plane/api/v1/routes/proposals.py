@@ -13,7 +13,7 @@ from domain.authorization import (
     require,
 )
 from domain.entities import ApprovalStateError
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from infrastructure.persistence.repositories import (
     SqlAlchemyApprovalRepository,
     SqlAlchemyAuditEventRepository,
@@ -24,7 +24,7 @@ from infrastructure.persistence.repositories import (
 from infrastructure.persistence.session import create_session_factory, transactional_session
 from pydantic import BaseModel, Field
 
-from api.v1.dependencies.authorization import current_principal
+from api.v1.dependencies.authorization import current_principal, current_tenant
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -55,7 +55,7 @@ class ProposalResponse(BaseModel):
 @router.get("/{proposal_id}", response_model=ProposalResponse)
 def get_proposal(
     proposal_id: UUID,
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ProposalResponse:
@@ -88,7 +88,7 @@ def get_proposal(
 def decide_proposal(
     proposal_id: UUID,
     payload: ProposalDecisionRequest,
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ProposalDecisionResponse:

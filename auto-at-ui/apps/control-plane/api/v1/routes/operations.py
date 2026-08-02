@@ -10,7 +10,7 @@ from domain.authorization import (
     actor_for_tenant,
     require,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from infrastructure.persistence.models import (
     AgentProposalModel,
     ApprovalModel,
@@ -24,7 +24,7 @@ from infrastructure.persistence.session import create_session_factory
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from api.v1.dependencies.authorization import current_principal
+from api.v1.dependencies.authorization import current_principal, current_tenant
 
 router = APIRouter(prefix="/operations", tags=["operations"])
 
@@ -41,7 +41,7 @@ class OperationsSummary(BaseModel):
 
 @router.get("/summary", response_model=OperationsSummary)
 def summary(
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> OperationsSummary:

@@ -59,6 +59,23 @@ Temporal is behind a dedicated workflow adapter; production may use Temporal Clo
 self-hosted Temporal, or another implementation without changing the HTTP or runner
 contracts.
 
+## Bootstrap dashboard access
+
+Apply migrations, then create the first tenant administrator. The password is
+temporary and must satisfy the displayed policy; the first sign-in requires a
+replacement password.
+
+```bash
+uv run python apps/control-plane/cli.py bootstrap-admin \
+  --tenant demo-tenant --email admin@example.test
+```
+
+Open `http://localhost:3000/login`, sign in with the tenant, email, and
+temporary password, then use **Admin → Users** to provision collaborators.
+The temporary password is displayed once and is never persisted in the
+dashboard. Dashboard requests use an HttpOnly session cookie and CSRF token;
+the legacy development identity headers remain only for local API compatibility.
+
 ## Run a basic pipeline
 
 This local path creates one deterministic run, records a passed result, and

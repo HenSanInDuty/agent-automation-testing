@@ -30,6 +30,8 @@ services:
     ports:
       - "${CONTROL_PLANE_PORT:-7000}:7000"
     depends_on:
+      artifact-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -75,6 +77,9 @@ services:
     environment:
       ARTIFACT_ROOT: /artifacts
       PORT: 7100
+    depends_on:
+      artifact-init:
+        condition: service_completed_successfully
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=512m
@@ -90,6 +95,13 @@ services:
     expose:
       - "7100"
     restart: unless-stopped
+
+  artifact-init:
+    image: busybox:1.37
+    command: ["sh", "-c", "mkdir -p /artifacts && chown -R 1001:1001 /artifacts"]
+    volumes:
+      - execution-artifacts:/artifacts
+    restart: "no"
 
   benchmark-target:
     image: node:22-alpine
@@ -117,6 +129,8 @@ services:
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-auto-at-local}
       TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-auto-at-run-dispatch-v1}
     depends_on:
+      artifact-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       temporal:

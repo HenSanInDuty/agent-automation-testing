@@ -33,11 +33,10 @@ def test_create_run_requires_an_idempotency_key() -> None:
     assert any(error["loc"][-1] == "Idempotency-Key" for error in response.json()["detail"])
 
 
-def test_get_run_requires_a_tenant_header() -> None:
+def test_get_run_requires_authentication() -> None:
     response = TestClient(app).get(f"/api/v1/runs/{uuid4()}")
 
-    assert response.status_code == 422
-    assert any(error["loc"][-1] == "X-Tenant-Id" for error in response.json()["detail"])
+    assert response.status_code == 401
 
 
 def test_create_run_commits_run_audit_and_outbox_atomically() -> None:

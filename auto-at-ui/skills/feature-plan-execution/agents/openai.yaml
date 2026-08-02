@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Plan Execution"
+  short_description: "Implement approved phases and maintain plan progress"
+  default_prompt: "Use $feature-plan-execution to implement the next approved phase from this feature plan."

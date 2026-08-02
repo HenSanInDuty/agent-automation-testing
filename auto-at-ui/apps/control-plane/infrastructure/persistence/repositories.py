@@ -1,12 +1,13 @@
 """Tenant-scoped SQLAlchemy implementations of domain persistence ports."""
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import cast
 from uuid import UUID
 
 from auto_at.contracts.agent import ProposalKind
-from auto_at.contracts.execution import TestExecutionResult
-from domain.entities import ApprovalRecord, ArtifactRecord, ProposalRecord
+from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
+from domain.entities import ApprovalRecord, ArtifactRecord, Project, ProposalRecord, TestCase
 from domain.runs import AuditEvent, OutboxEvent, RunLifecycleStatus, TestRun
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.orm import Session
@@ -22,9 +23,107 @@ from infrastructure.persistence.models import (
     GenerationRequestModel,
     OutboxEventModel,
     ProjectExecutionPolicyModel,
+    ProjectModel,
     TestCaseModel,
     TestRunModel,
 )
+
+
+class SqlAlchemyCatalogRepository:
+    """Tenant-scoped project and immutable test-case catalog persistence."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get_project(self, tenant_id: str, project_id: UUID) -> Project | None:
+        model = self._session.scalar(
+            select(ProjectModel).where(
+                ProjectModel.tenant_id == tenant_id, ProjectModel.id == project_id
+            )
+        )
+        return (
+            None
+            if model is None
+            else Project(model.id, model.tenant_id, model.name, model.default_target)
+        )
+
+    def list_projects(self, tenant_id: str, query: str | None = None) -> list[Project]:
+        statement = (
+            select(ProjectModel)
+            .where(ProjectModel.tenant_id == tenant_id)
+            .order_by(ProjectModel.name)
+        )
+        if query:
+            statement = statement.where(ProjectModel.name.ilike(f"%{query}%"))
+        return [
+            Project(item.id, item.tenant_id, item.name, item.default_target)
+            for item in self._session.scalars(statement)
+        ]
+
+    def add_project(self, project: Project) -> None:
+        self._session.add(
+            ProjectModel(
+                id=project.id,
+                tenant_id=project.tenant_id,
+                name=project.name,
+                default_target=project.default_target.value,
+            )
+        )
+        self._session.flush()
+
+    def get_test_case(self, tenant_id: str, test_case_id: str) -> TestCase | None:
+        model = self._session.scalar(
+            select(TestCaseModel).where(
+                TestCaseModel.tenant_id == tenant_id, TestCaseModel.id == test_case_id
+            )
+        )
+        return (
+            None
+            if model is None
+            else TestCase(
+                model.id,
+                model.tenant_id,
+                model.project_id,
+                model.target_type,
+                model.revision,
+                model.specification,
+            )
+        )
+
+    def list_test_cases(
+        self, tenant_id: str, project_id: UUID, query: str | None = None
+    ) -> list[TestCase]:
+        statement = (
+            select(TestCaseModel)
+            .where(TestCaseModel.tenant_id == tenant_id, TestCaseModel.project_id == project_id)
+            .order_by(TestCaseModel.id)
+        )
+        if query:
+            statement = statement.where(TestCaseModel.id.ilike(f"%{query}%"))
+        return [
+            TestCase(
+                item.id,
+                item.tenant_id,
+                item.project_id,
+                item.target_type,
+                item.revision,
+                item.specification,
+            )
+            for item in self._session.scalars(statement)
+        ]
+
+    def add_test_case(self, test_case: TestCase) -> None:
+        self._session.add(
+            TestCaseModel(
+                id=test_case.id,
+                tenant_id=test_case.tenant_id,
+                project_id=test_case.project_id,
+                target_type=test_case.target_type.value,
+                revision=test_case.revision,
+                specification=test_case.specification,
+            )
+        )
+        self._session.flush()
 
 
 class SqlAlchemyGenerationRepository:
@@ -134,6 +233,12 @@ class ConcurrentRunUpdateError(RuntimeError):
     """Raised when the expected optimistic version no longer matches."""
 
 
+@dataclass(frozen=True)
+class RunListItem:
+    run: TestRun
+    created_at: datetime
+
+
 class SqlAlchemyRunRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -148,7 +253,7 @@ class SqlAlchemyRunRepository:
                 revision=run.revision,
                 status=run.status.value,
                 correlation_id=run.correlation_id,
-                request=None,
+                request=None if run.request is None else run.request.model_dump(mode="json"),
                 result=None,
                 version=run.version,
             )
@@ -161,6 +266,17 @@ class SqlAlchemyRunRepository:
         )
         model = self._session.scalar(statement)
         return None if model is None else self._to_domain(model)
+
+    def list(self, tenant_id: str) -> list[RunListItem]:
+        statement = (
+            select(TestRunModel)
+            .where(TestRunModel.tenant_id == tenant_id)
+            .order_by(TestRunModel.created_at.desc(), TestRunModel.id.desc())
+        )
+        return [
+            RunListItem(self._to_domain(model), model.created_at)
+            for model in self._session.scalars(statement)
+        ]
 
     def save_result(self, run: TestRun, result: TestExecutionResult) -> None:
         expected_version = run.version
@@ -199,6 +315,9 @@ class SqlAlchemyRunRepository:
     @staticmethod
     def _to_domain(model: TestRunModel) -> TestRun:
         result = None if model.result is None else TestExecutionResult.model_validate(model.result)
+        request = (
+            None if model.request is None else TestExecutionRequest.model_validate(model.request)
+        )
         return TestRun(
             id=model.id,
             tenant_id=model.tenant_id,
@@ -209,6 +328,7 @@ class SqlAlchemyRunRepository:
             status=RunLifecycleStatus(model.status),
             result=result,
             version=model.version,
+            request=request,
         )
 
 

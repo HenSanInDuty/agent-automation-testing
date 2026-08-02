@@ -1,15 +1,18 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { CodeBlock } from "./components/code-block";
+import { ConfirmDialog } from "./components/confirm-dialog";
+import { PageHeader } from "./components/page-header";
+import { EmptyState, LoadingState } from "./components/states";
+import { StatusBadge } from "./components/status-badge";
 import { ControlPlaneError, decideDraft, getArtifacts, getDraft, getGenerationRequest, getRun, setPolicy, submitGeneration } from "./generation-api";
 import { shouldPollGeneration } from "./generation-polling";
-import type { Artifact, DashboardIdentity, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
+import type { Artifact, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
 
-const initialIdentity: DashboardIdentity = { tenantId: "demo-tenant", actorId: "local-developer", roles: "contributor" };
 function errorMessage(error: unknown) { return error instanceof ControlPlaneError ? error.message : "The control plane is unavailable. Try again later."; }
 
 export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
-  const [identity, setIdentity] = useState(initialIdentity);
   const [projectId, setProjectId] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
   const [naturalRequest, setNaturalRequest] = useState("");
@@ -20,78 +23,58 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [reason, setReason] = useState("");
   const [notice, setNotice] = useState("");
+  const [decision, setDecision] = useState<boolean | null>(null);
+  const [isDeciding, setIsDeciding] = useState(false);
   const canDecide = useMemo(() => draft?.state === "pending_review", [draft]);
 
   useEffect(() => {
     if (!generation || !shouldPollGeneration(generation.state)) return;
     const timer = window.setInterval(async () => {
-      try { setGeneration(await getGenerationRequest(apiUrl, identity, generation.id)); }
+      try { setGeneration(await getGenerationRequest(apiUrl, generation.id)); }
       catch (error) { setNotice(errorMessage(error)); }
     }, 2000);
     return () => window.clearInterval(timer);
-  }, [apiUrl, generation, identity]);
+  }, [apiUrl, generation]);
 
   useEffect(() => {
     if (!generation?.draft_id || draft?.id === generation.draft_id) return;
-    getDraft(apiUrl, identity, generation.draft_id).then(setDraft).catch((error) => setNotice(errorMessage(error)));
-  }, [apiUrl, draft?.id, generation?.draft_id, identity]);
+    getDraft(apiUrl, generation.draft_id).then(setDraft).catch((error) => setNotice(errorMessage(error)));
+  }, [apiUrl, draft?.id, generation?.draft_id]);
 
   useEffect(() => {
     if (!draft?.linked_run_id) return;
-    Promise.all([getRun(apiUrl, identity, draft.linked_run_id), getArtifacts(apiUrl, identity, draft.linked_run_id)])
+    Promise.all([getRun(apiUrl, draft.linked_run_id), getArtifacts(apiUrl, draft.linked_run_id)])
       .then(([nextRun, nextArtifacts]) => { setRun(nextRun); setArtifacts(nextArtifacts); })
       .catch((error) => setNotice(errorMessage(error)));
-  }, [apiUrl, draft?.linked_run_id, identity]);
+  }, [apiUrl, draft?.linked_run_id]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setNotice(""); setDraft(null); setRun(null); setArtifacts([]);
-    try { setGeneration(await submitGeneration(apiUrl, identity, { project_id: projectId, target_url: targetUrl, request: naturalRequest })); }
+    try { setGeneration(await submitGeneration(apiUrl, { project_id: projectId, target_url: targetUrl, request: naturalRequest })); }
     catch (error) { setNotice(errorMessage(error)); }
   }
   async function decide(approved: boolean) {
     if (!draft) return;
-    try { setDraft(await decideDraft(apiUrl, identity, draft.id, approved, reason)); setNotice(approved ? "Draft approved. The control plane created one deterministic run." : "Draft rejected. This final decision is immutable."); }
+    setIsDeciding(true);
+    try { setDraft(await decideDraft(apiUrl, draft.id, approved, reason)); setNotice(approved ? "Draft approved. The control plane created one deterministic run." : "Draft rejected. This final decision is immutable."); setDecision(null); }
     catch (error) { setNotice(errorMessage(error)); }
+    finally { setIsDeciding(false); }
   }
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    try { const policy = await setPolicy(apiUrl, identity, projectId, origins.split(/\s|,/).filter(Boolean)); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
+    try { const policy = await setPolicy(apiUrl, projectId, origins.split(/\s|,/).filter(Boolean)); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
     catch (error) { setNotice(errorMessage(error)); }
   }
 
-  return <main>
-    <h1>Generated test review</h1>
-    <p>The dashboard sends requests to the control plane; it does not redact, authorize, generate, approve, or execute tests itself.</p>
-    <fieldset><legend>Local development identity</legend>
-      <label>Tenant <input value={identity.tenantId} onChange={(e) => setIdentity({ ...identity, tenantId: e.target.value })} /></label>
-      <label>Actor <input value={identity.actorId} onChange={(e) => setIdentity({ ...identity, actorId: e.target.value })} /></label>
-      <label>Roles <input value={identity.roles} onChange={(e) => setIdentity({ ...identity, roles: e.target.value })} /></label>
-    </fieldset>
-    <form onSubmit={submit}><h2>Request a Playwright test</h2>
-      <label>Project ID <input required value={projectId} onChange={(e) => setProjectId(e.target.value)} /></label>
-      <label>Target URL <input required type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} /></label>
-      <label>Natural-language request <textarea required value={naturalRequest} onChange={(e) => setNaturalRequest(e.target.value)} /></label>
-      <button type="submit">Submit for generation</button>
-    </form>
-    <form onSubmit={savePolicy}><h2>Project policy (administrators only)</h2>
-      <label>Allowed origins <input required placeholder="https://example.com" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label>
-      <button type="submit">Save allowed origins</button>
-    </form>
-    {notice && <p role="alert">{notice}</p>}
-    {generation && <section aria-label="Generation request"><h2>Generation request</h2>
-      <p>Status: <strong>{generation.state}</strong></p><p>Request: {generation.redacted_request}</p><p>Request hash: <code>{generation.request_hash}</code></p>
-      {generation.failure_reason && <p>Safe failure: {generation.failure_reason}</p>}
-    </section>}
-    {draft && <section aria-label="Generated draft"><h2>{draft.title}</h2><p>Draft status: <strong>{draft.state}</strong></p>
-      <p>Source hash: <code>{draft.source_hash}</code></p><pre>{draft.playwright_test_source}</pre>
-      <h3>Assumptions</h3><ul>{draft.assumptions.map((item) => <li key={item}>{item}</li>)}</ul>
-      <h3>Stop conditions</h3><ul>{draft.stop_conditions.map((item) => <li key={item}>{item}</li>)}</ul>
-      <h3>Provenance</h3><pre>{JSON.stringify(draft.provenance, null, 2)}</pre>
-      {canDecide && <><label>Decision reason <input value={reason} onChange={(e) => setReason(e.target.value)} /></label><button onClick={() => decide(true)}>Approve and dispatch once</button><button onClick={() => decide(false)}>Reject draft</button></>}
-      {draft.linked_test_case_id && <p>Versioned test case: <code>{draft.linked_test_case_id}</code></p>}
-    </section>}
-    {run && <section aria-label="Deterministic run"><h2>Deterministic v1 run</h2><p>Run: <code>{run.id}</code> ({run.status})</p><p>Correlation: <code>{run.correlation_id}</code></p>
-      <h3>Evidence</h3><ul>{artifacts.map((artifact) => <li key={artifact.id}>{artifact.kind}: <code>{artifact.checksum}</code> ({artifact.size} bytes)</li>)}</ul>
-    </section>}
-  </main>;
+  return <><PageHeader eyebrow="Governed intelligence" title="Agent workspace" description="Request a bounded Playwright draft, inspect the control-plane response, then make one auditable decision." />
+    <section className="workspace-section"><h2>Request a Playwright test</h2><p>The dashboard is an API client: it never authorizes, redacts, generates, approves, or executes a test itself.</p>
+      <form onSubmit={submit} className="form-grid"><label className="field">Project ID <input required value={projectId} onChange={(e) => setProjectId(e.target.value)} /></label><label className="field">Target URL <input required type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} /></label><label className="field form-grid--one">Natural-language request <textarea required value={naturalRequest} onChange={(e) => setNaturalRequest(e.target.value)} /></label><div className="form-actions"><button className="button" type="submit">Submit for generation</button></div></form>
+    </section>
+    <section className="workspace-section"><h2>Project policy</h2><p>Only project administrators can save an origin allowlist.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><div className="form-actions"><button className="button button--secondary" type="submit">Save allowed origins</button></div></form></section>
+    {notice && <p className={`notice ${notice.includes("unavailable") ? "notice--error" : ""}`} role="alert">{notice}</p>}
+    {generation && <section className="workspace-section" aria-label="Generation request"><div className="section-heading"><h2>Generation request</h2><StatusBadge status={generation.state} /></div><ul className="detail-list"><li>Request: {generation.redacted_request}</li><li>Request hash: <code>{generation.request_hash}</code></li>{generation.failure_reason && <li>Safe failure: {generation.failure_reason}</li>}</ul>{shouldPollGeneration(generation.state) && <LoadingState title="Generation is in progress" />}</section>}
+    {draft && <section className="workspace-section" aria-label="Generated draft"><div className="section-heading"><h2>{draft.title}</h2><StatusBadge status={draft.state} /></div><p>Source hash: <code>{draft.source_hash}</code></p><CodeBlock label="Generated Playwright source">{draft.playwright_test_source}</CodeBlock><h3>Assumptions</h3><ul className="stack-list">{draft.assumptions.map((item) => <li key={item}>{item}</li>)}</ul><h3>Stop conditions</h3><ul className="stack-list">{draft.stop_conditions.map((item) => <li key={item}>{item}</li>)}</ul><h3>Provenance</h3><CodeBlock label="Draft provenance">{JSON.stringify(draft.provenance, null, 2)}</CodeBlock>{canDecide && <div className="form-grid form-grid--one"><label className="field">Decision reason <input value={reason} onChange={(e) => setReason(e.target.value)} /></label><div className="button-row"><button type="button" className="button" onClick={() => setDecision(true)}>Approve and dispatch once</button><button type="button" className="button button--danger" onClick={() => setDecision(false)}>Reject draft</button></div></div>}{draft.linked_test_case_id && <p>Versioned test case: <code>{draft.linked_test_case_id}</code></p>}</section>}
+    {run && <section className="workspace-section" aria-label="Deterministic run"><div className="section-heading"><h2>Deterministic v1 run</h2><StatusBadge status={run.status} /></div><ul className="detail-list"><li>Run: <code>{run.id}</code></li><li>Correlation: <code>{run.correlation_id}</code></li></ul><h3>Evidence</h3>{artifacts.length ? <ul className="stack-list">{artifacts.map((artifact) => <li key={artifact.id}>{artifact.kind}: <code>{artifact.checksum}</code> ({artifact.size} bytes)</li>)}</ul> : <EmptyState title="No evidence has been recorded">Artifacts are published by the deterministic runner when the configured artifact policy requires them.</EmptyState>}</section>}
+    <ConfirmDialog open={decision !== null} title={decision ? "Approve this draft?" : "Reject this draft?"} description={decision ? "Approval is final and creates one deterministic v1 run." : "Rejection is final and cannot be changed later."} confirmLabel={decision ? "Approve and dispatch" : "Reject draft"} onConfirm={() => { if (decision !== null) void decide(decision); }} onCancel={() => setDecision(null)} busy={isDeciding} />
+  </>;
 }

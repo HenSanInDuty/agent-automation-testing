@@ -90,6 +90,7 @@ class CreateRun:
             runner_config=command.runner_config or {},
             artifact_policy=command.artifact_policy or ArtifactPolicy(),
         )
+        run.request = request
         self._runs.add(run)
         self._audits.append(
             AuditEvent(

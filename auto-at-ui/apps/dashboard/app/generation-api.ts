@@ -1,57 +1,31 @@
-import type { Artifact, DashboardIdentity, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
+import { apiRequest, idempotencyKey } from "./api-client.ts";
+import type { Artifact, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
+export { ControlPlaneError } from "./api-client.ts";
 
-export class ControlPlaneError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
-function headers(identity: DashboardIdentity, extra: HeadersInit = {}): Headers {
-  return new Headers({
-    "Content-Type": "application/json",
-    "X-Tenant-Id": identity.tenantId,
-    "X-Actor-Id": identity.actorId,
-    "X-Actor-Roles": identity.roles,
-    ...extra,
+export function submitGeneration(apiUrl: string, payload: { project_id: string; target_url: string; request: string }) {
+  return apiRequest<GenerationRequest>(apiUrl, "/api/v1/test-generations", {
+    method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify(payload),
   });
 }
-
-async function request<T>(url: string, identity: DashboardIdentity, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(url, { ...init, headers: headers(identity, init.headers) });
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as { detail?: string } | null;
-    throw new ControlPlaneError(response.status, body?.detail ?? "The control plane rejected this request.");
-  }
-  return response.json() as Promise<T>;
+export function getGenerationRequest(apiUrl: string, id: string) {
+  return apiRequest<GenerationRequest>(apiUrl, `/api/v1/test-generations/requests/${id}`);
 }
-
-export function submitGeneration(apiUrl: string, identity: DashboardIdentity, payload: { project_id: string; target_url: string; request: string }) {
-  return request<GenerationRequest>(`${apiUrl}/api/v1/test-generations`, identity, {
-    method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(payload),
-  });
+export function getDraft(apiUrl: string, id: string) {
+  return apiRequest<GeneratedDraft>(apiUrl, `/api/v1/test-generations/drafts/${id}`);
 }
-export function getGenerationRequest(apiUrl: string, identity: DashboardIdentity, id: string) {
-  return request<GenerationRequest>(`${apiUrl}/api/v1/test-generations/requests/${id}`, identity);
-}
-export function getDraft(apiUrl: string, identity: DashboardIdentity, id: string) {
-  return request<GeneratedDraft>(`${apiUrl}/api/v1/test-generations/drafts/${id}`, identity);
-}
-export function decideDraft(apiUrl: string, identity: DashboardIdentity, id: string, approved: boolean, reason: string) {
-  return request<GeneratedDraft>(`${apiUrl}/api/v1/test-generations/drafts/${id}/decision`, identity, {
+export function decideDraft(apiUrl: string, id: string, approved: boolean, reason: string) {
+  return apiRequest<GeneratedDraft>(apiUrl, `/api/v1/test-generations/drafts/${id}/decision`, {
     method: "POST", body: JSON.stringify({ approved, reason: reason || null }),
   });
 }
-export function setPolicy(apiUrl: string, identity: DashboardIdentity, projectId: string, allowed_origins: string[]) {
-  return request<{ allowed_origins: string[] }>(`${apiUrl}/api/v1/test-generations/projects/${projectId}/policy`, identity, {
+export function setPolicy(apiUrl: string, projectId: string, allowed_origins: string[]) {
+  return apiRequest<{ allowed_origins: string[] }>(apiUrl, `/api/v1/test-generations/projects/${projectId}/policy`, {
     method: "PUT", body: JSON.stringify({ allowed_origins }),
   });
 }
-export function getRun(apiUrl: string, identity: DashboardIdentity, id: string) {
-  return request<Run>(`${apiUrl}/api/v1/runs/${id}`, identity);
+export function getRun(apiUrl: string, id: string) {
+  return apiRequest<Run>(apiUrl, `/api/v1/runs/${id}`);
 }
-export function getArtifacts(apiUrl: string, identity: DashboardIdentity, runId: string) {
-  return request<Artifact[]>(`${apiUrl}/api/v1/runs/${runId}/artifacts`, identity);
+export function getArtifacts(apiUrl: string, runId: string) {
+  return apiRequest<Artifact[]>(apiUrl, `/api/v1/runs/${runId}/artifacts`);
 }

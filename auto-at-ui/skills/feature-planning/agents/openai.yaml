@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Planning"
+  short_description: "Scout code and create phased feature plans"
+  default_prompt: "Use $feature-planning to scout this repository and create a detailed feature plan."

@@ -28,7 +28,7 @@ from infrastructure.persistence.repositories import (
 from infrastructure.persistence.session import create_session_factory, transactional_session
 from pydantic import BaseModel, Field
 
-from api.v1.dependencies.authorization import current_principal
+from api.v1.dependencies.authorization import current_principal, current_tenant
 
 router = APIRouter(prefix="/test-generations", tags=["test-generations"])
 
@@ -114,7 +114,7 @@ def _draft_response(draft: object) -> DraftResponse:
 def set_policy(
     project_id: UUID,
     payload: PolicyRequest,
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> PolicyRequest:
@@ -134,7 +134,7 @@ def set_policy(
 def submit(
     payload: SubmitRequest,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RequestResponse:
@@ -166,7 +166,7 @@ def submit(
 @router.get("/requests/{request_id}", response_model=RequestResponse)
 def get_request(
     request_id: UUID,
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RequestResponse:
@@ -185,7 +185,7 @@ def get_request(
 @router.get("/drafts/{draft_id}", response_model=DraftResponse)
 def get_draft(
     draft_id: UUID,
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DraftResponse:
@@ -208,7 +208,7 @@ def get_draft(
 def decide(
     draft_id: UUID,
     payload: DecisionRequest,
-    tenant_id: Annotated[str, Header(alias="X-Tenant-Id", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DraftResponse:
