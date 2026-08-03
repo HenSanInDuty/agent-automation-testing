@@ -44,7 +44,12 @@ createServer(async (request, response) => {
     try {
       reportProgress(payload, "validation", "running", "Worker accepted the execution request.");
       reportProgress(payload, "browser.launch", "running", "Browser execution is starting.");
-      const result = await executeRequest(payload, process.env.ARTIFACT_ROOT ?? "/artifacts", controller.signal);
+      const result = await executeRequest(
+        payload,
+        process.env.ARTIFACT_ROOT ?? "/artifacts",
+        controller.signal,
+        (stage, status, summary) => reportProgress(payload, stage, status, summary),
+      );
       reportProgress(payload, "terminal", result.status, "Worker returned its deterministic result.");
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(result));
     } finally {

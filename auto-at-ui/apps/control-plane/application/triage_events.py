@@ -1,12 +1,19 @@
 """Consumes durable triage requests without granting agent execution authority."""
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from agents.shared.openrouter import create_language_model
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, resolve_agent_runtime
 from agents.triage.executor import TriageExecutionOutcome, execute_triage
 from config import Settings
-from domain.ports import ConfigurationRepository, ProposalRepository, RunRepository
+from domain.activity import ActivityEvent
+from domain.ports import (
+    ActivityEventRepository,
+    ConfigurationRepository,
+    ProposalRepository,
+    RunRepository,
+)
 from domain.runs import OutboxEvent
 
 from application.runs import GetRun
@@ -20,11 +27,13 @@ class TriageEventProcessor:
         configurations: ConfigurationRepository,
         proposals: ProposalRepository,
         settings: Settings,
+        activities: ActivityEventRepository | None = None,
     ) -> None:
         self._runs = runs
         self._configurations = configurations
         self._proposals = proposals
         self._settings = settings
+        self._activities = activities
 
     async def execute(self, event: OutboxEvent) -> TriageExecutionOutcome:
         if event.event_type != "agent.triage.requested.v1":
@@ -33,6 +42,7 @@ class TriageEventProcessor:
         if not isinstance(run_id, str):
             raise ValueError("triage event is missing run_id")
         run = GetRun(self._runs).execute(event.tenant_id, UUID(run_id))
+        self._record(run, "requested", "running", "Failure triage started.")
         if run.result is None:
             return TriageExecutionOutcome(
                 status="unavailable", detail="run has no deterministic result"
@@ -55,6 +65,7 @@ class TriageEventProcessor:
                 fallback = create_language_model(self._settings, fallback_runtime)
             outcome = await execute_triage(run.result, runtime, primary, fallback)
         except ValueError:
+            self._record(run, "unavailable", "info", "Triage provider is unavailable.")
             return TriageExecutionOutcome(
                 status="unavailable", detail="triage provider is not configured"
             )
@@ -65,4 +76,15 @@ class TriageEventProcessor:
                 proposal=outcome.proposal,
                 runtime=runtime,
             )
+            self._record(run, "proposal", "passed", "Advisory triage proposal was recorded.")
+        else:
+            self._record(run, "completed", "info", "Triage completed without a proposal.")
         return outcome
+
+    def _record(self, run, stage: str, status: str, summary: str) -> None:
+        if self._activities is not None:
+            self._activities.append(ActivityEvent.create(
+                tenant_id=run.tenant_id, run_id=run.id, correlation_id=run.correlation_id,
+                source="triage", stage=stage, status=status, safe_summary=summary,
+                occurred_at=datetime.now(UTC),
+            ))

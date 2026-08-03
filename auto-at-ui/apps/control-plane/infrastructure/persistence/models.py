@@ -205,7 +205,9 @@ class ActivityEventModel(TenantRecord, Base):
         ),
     )
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    run_id: Mapped[UUID | None] = mapped_column(ForeignKey("test_runs.id"), nullable=True)
+    run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("test_runs.id", ondelete="CASCADE"), nullable=True
+    )
     correlation_id: Mapped[UUID] = mapped_column(index=True)
     source: Mapped[str] = mapped_column(String(32))
     stage: Mapped[str] = mapped_column(String(100))

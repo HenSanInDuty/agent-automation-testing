@@ -31,6 +31,7 @@ const MAX_TIMEOUT_MS = 10 * 60_000;
 
 class ExecutionTimeoutError extends Error {}
 export class ExecutionCancelledError extends Error {}
+export type ProgressReporter = (stage: string, status: string, safeSummary: string) => void;
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -221,7 +222,7 @@ async function executePlaywrightTestSource(
   }
 }
 
-export async function executeRequest(value: unknown, artifactRoot = process.env.ARTIFACT_ROOT ?? "/artifacts", signal?: AbortSignal): Promise<ExecutionResultV1> {
+export async function executeRequest(value: unknown, artifactRoot = process.env.ARTIFACT_ROOT ?? "/artifacts", signal?: AbortSignal, report?: ProgressReporter): Promise<ExecutionResultV1> {
   const request = validateExecutionRequestV1(value);
   if (request.runner_config.mode === "playwright_test_source") {
     return executePlaywrightTestSource(request, artifactRoot, signal);
@@ -235,6 +236,7 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
   const consoleErrors: string[] = [];
   const networkFailures: string[] = [];
   const browser = await chromium.launch({ headless: true });
+  report?.("browser.launched", "running", "Browser launched.");
   const context = await browser.newContext({ recordVideo: request.artifact_policy.video_on_failure ? { dir: join(artifactRoot, request.run_id, "video") } : undefined });
   const page = await context.newPage();
   const video = page.video();
@@ -246,15 +248,18 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
   try {
     await withinTimeout(
       (async () => {
-        for (const step of config.steps) {
+        for (const [index, step] of config.steps.entries()) {
           try {
+            report?.(`browser.todo.${index + 1}`, "running", `Browser todo step ${index + 1} started.`);
             await performStep(page, step, config.step_timeout_ms);
             steps.push({ step, status: "passed" });
+            report?.(`browser.todo.${index + 1}`, "passed", `Browser todo step ${index + 1} passed.`);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             steps.push({ step, status: "failed", error: message });
             status = "failed";
             summary = `Browser step failed: ${step.action}.`;
+            report?.(`browser.todo.${index + 1}`, "failed", `Browser todo step ${index + 1} failed.`);
             break;
           }
         }
@@ -272,6 +277,7 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
       summary = error instanceof Error ? error.message : String(error);
     }
   } finally {
+    report?.("evidence.collection", "running", "Collecting configured evidence.");
     const snapshot = await page.locator("body").innerText().catch(() => "");
     const dom = await page.locator("body").evaluate((body) => body.outerHTML.slice(0, 20_000)).catch(() => "");
     const accessibility = await page.accessibility.snapshot().catch(() => null);
@@ -301,6 +307,7 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
       }
     }
     await browser.close();
+    report?.("evidence.collection", "passed", "Evidence collection completed.");
   }
   return { contract_version: "v1", run_id: request.run_id, correlation_id: request.correlation_id, status, started_at: startedAt, completed_at: new Date().toISOString(), summary, artifacts, runner_metadata: { browser: "chromium", playwright_version: "1.50.1", steps, console_errors: consoleErrors, network_failures: networkFailures, evidence } };
 }

@@ -133,10 +133,10 @@ history; durable UI dispatch; authenticated worker progress; and safe run/agent
 timeline presentation. Existing v1 request/result verdict semantics remain
 unchanged.
 
-Validation note 2026-08-02: focused activity/run unit tests passed and dashboard
-and worker typechecks passed. The full Python suite timed out while waiting for
-local backing services; Docker Desktop is not running (the local engine pipe is
-unavailable), so Compose lifecycle/callback acceptance cannot currently run.
+Validation note 2026-08-03: Compose control-plane is healthy after applying the
+activity timeline and merge/cascade migrations. `uv run ruff check .` and
+`uv run pytest --basetemp D:\\tmp\\auto-at-m4-full` passed (95 tests); dashboard
+lint/typecheck/test passed (7 tests); and Playwright worker typecheck passed.
 
 - [ ] Add an append-only `activity_events` table and migration with tenant,
   run nullable/required-by-source, correlation ID, source, stage, status,

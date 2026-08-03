@@ -113,6 +113,16 @@ class CreateRun:
                 source="control_plane", stage="run.created", status="queued",
                 safe_summary="Run queued for durable dispatch.", occurred_at=datetime.now(UTC),
             ))
+            steps = request.runner_config.get("steps")
+            if isinstance(steps, list):
+                for index, _ in enumerate(steps, start=1):
+                    self._activities.append(ActivityEvent.create(
+                        tenant_id=command.tenant_id, run_id=run.id,
+                        correlation_id=run.correlation_id, source="control_plane",
+                        stage=f"browser.todo.{index}", status="queued",
+                        safe_summary=f"Browser todo step {index} queued.",
+                        occurred_at=datetime.now(UTC), metadata={"step_index": index},
+                    ))
         self._outbox.append(
             OutboxEvent(
                 id=uuid4(),

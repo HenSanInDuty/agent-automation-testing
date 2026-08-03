@@ -43,8 +43,9 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                     TriageEventProcessor(
                         SqlAlchemyRunRepository(session),
                         SqlAlchemyConfigurationRepository(session),
-                        SqlAlchemyProposalRepository(session),
-                        settings,
+                    SqlAlchemyProposalRepository(session),
+                    settings,
+                    SqlAlchemyActivityEventRepository(session),
                     ),
                     GenerationEventProcessor(
                         SqlAlchemyGenerationRepository(session),
