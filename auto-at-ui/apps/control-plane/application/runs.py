@@ -12,8 +12,10 @@ from auto_at.contracts.execution import (
     TestExecutionRequest,
     TestExecutionResult,
 )
+from domain.activity import ActivityEvent
 from domain.entities import ArtifactRecord
 from domain.ports import (
+    ActivityEventRepository,
     ArtifactRepository,
     AuditEventRepository,
     OutboxEventRepository,
@@ -56,10 +58,12 @@ class CreateRun:
         runs: RunRepository,
         outbox: OutboxEventRepository,
         audits: AuditEventRepository,
+        activities: ActivityEventRepository | None = None,
     ) -> None:
         self._runs = runs
         self._outbox = outbox
         self._audits = audits
+        self._activities = activities
 
     def execute(self, command: CreateRunCommand) -> TestRun:
         existing_event = self._outbox.get_by_idempotency_key(
@@ -103,6 +107,12 @@ class CreateRun:
                 correlation_id=command.correlation_id,
             )
         )
+        if self._activities is not None:
+            self._activities.append(ActivityEvent.create(
+                tenant_id=command.tenant_id, run_id=run.id, correlation_id=run.correlation_id,
+                source="control_plane", stage="run.created", status="queued",
+                safe_summary="Run queued for durable dispatch.", occurred_at=datetime.now(UTC),
+            ))
         self._outbox.append(
             OutboxEvent(
                 id=uuid4(),
@@ -203,10 +213,12 @@ class CancelRun:
         runs: RunRepository,
         outbox: OutboxEventRepository,
         audits: AuditEventRepository,
+        activities: ActivityEventRepository | None = None,
     ) -> None:
         self._runs = runs
         self._outbox = outbox
         self._audits = audits
+        self._activities = activities
 
     def execute(self, tenant_id: str, run_id: UUID, idempotency_key: str) -> TestRun:
         existing = self._outbox.get_by_idempotency_key(tenant_id, idempotency_key)
@@ -239,6 +251,12 @@ class CancelRun:
                 correlation_id=run.correlation_id,
             )
         )
+        if self._activities is not None:
+            self._activities.append(ActivityEvent.create(
+                tenant_id=tenant_id, run_id=run.id, correlation_id=run.correlation_id,
+                source="control_plane", stage="run.cancelled", status="cancelled",
+                safe_summary="Run cancellation was requested.", occurred_at=datetime.now(UTC),
+            ))
         return run
 
 

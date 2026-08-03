@@ -126,7 +126,17 @@ The implementation adds the catalog and run route boundaries, tenant-scoped
 persistence queries, immutable request capture, the `created_at` migration, and
 dashboard project/test selection plus run list/detail/evidence views. M4 remains next.
 
-## M4 — Live pipeline and Browser Agent todo — planned
+## M4 — Live pipeline and Browser Agent todo — in progress
+
+Started 2026-08-02 22:52:08 +07:00. Scope: additive, target-neutral activity
+history; durable UI dispatch; authenticated worker progress; and safe run/agent
+timeline presentation. Existing v1 request/result verdict semantics remain
+unchanged.
+
+Validation note 2026-08-02: focused activity/run unit tests passed and dashboard
+and worker typechecks passed. The full Python suite timed out while waiting for
+local backing services; Docker Desktop is not running (the local engine pipe is
+unavailable), so Compose lifecycle/callback acceptance cannot currently run.
 
 - [ ] Add an append-only `activity_events` table and migration with tenant,
   run nullable/required-by-source, correlation ID, source, stage, status,
@@ -163,7 +173,14 @@ dashboard project/test selection plus run list/detail/evidence views. M4 remains
 Exit criterion: a user sees what control-plane, agent, and browser worker are
 doing during a run without exposing secret or changing the verdict authority.
 
-## M5 — Agent workspace and governed review — planned
+## M5 — Agent workspace and governed review — blocked
+
+Blocked 2026-08-02 22:45:23 +07:00: M4 remains planned and its activity-event,
+correlation-timeline, and live-generation lifecycle outputs are explicit M5
+dependencies. Checkout reconnaissance confirmed no `activity_events` persistence,
+SSE/correlation timeline, or Browser Agent progress implementation exists. User
+direction is required to either complete M4 first or explicitly revise the
+milestone dependency before M5 implementation begins. No production code changed.
 
 - [ ] Add read endpoints and list/filter APIs for generation requests, drafts,
   reviewable proposals, and approvals, all scoped through the existing project

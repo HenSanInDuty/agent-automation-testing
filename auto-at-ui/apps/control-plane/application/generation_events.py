@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from uuid import UUID
 
 from agents.generation.planner import plan_test
@@ -16,6 +17,8 @@ from auto_at.contracts.generation import (
     TestGenerationPlanningRequest,
 )
 from config import Settings
+from domain.activity import ActivityEvent
+from domain.ports import ActivityEventRepository
 from domain.runs import AuditEvent, OutboxEvent
 from infrastructure.persistence.repositories import (
     SqlAlchemyAuditEventRepository,
@@ -37,11 +40,13 @@ class GenerationEventProcessor:
         configurations: SqlAlchemyConfigurationRepository,
         audits: SqlAlchemyAuditEventRepository,
         settings: Settings,
+        activities: ActivityEventRepository | None = None,
     ) -> None:
         self._repository = repository
         self._configurations = configurations
         self._audits = audits
         self._settings = settings
+        self._activities = activities
 
     async def execute(self, event: OutboxEvent) -> str:
         if event.event_type != "agent.test_generation.requested.v1":
@@ -53,6 +58,7 @@ class GenerationEventProcessor:
         request = self._repository.claim_queued_request(event.tenant_id, request_id)
         if request is None:
             return "already_processed"
+        self._record(request, "claim", "running", "Generation request was claimed.")
         self._audits.append(
             AuditEvent(
                 id=UUID(int=event.id.int ^ request_id.int),
@@ -91,6 +97,7 @@ class GenerationEventProcessor:
             ):
                 raise ValueError("generation token budget is exhausted")
             model = create_language_model(self._settings, runtime)
+            self._record(request, "model", "running", "Generation model is producing a draft.")
             output = await plan_test(
                 model,
                 planning_request,
@@ -124,6 +131,7 @@ class GenerationEventProcessor:
                 request_id,
                 request.correlation_id,
             )
+            self._record(request, "completed", "passed", "Generation draft passed validation.")
             return "completed"
         except Exception as error:
             if isinstance(error, (KeyboardInterrupt, SystemExit)):
@@ -148,4 +156,13 @@ class GenerationEventProcessor:
                 request.correlation_id,
                 type(error).__name__,
             )
+            self._record(request, "failed", "failed", "Generation failed safely.")
             return "failed"
+
+    def _record(self, request, stage: str, status: str, summary: str) -> None:
+        if self._activities is not None:
+            self._activities.append(ActivityEvent.create(
+                tenant_id=request.tenant_id, correlation_id=request.correlation_id,
+                source="generation", stage=stage, status=status, safe_summary=summary,
+                occurred_at=datetime.now(UTC), metadata={"request_id": str(request.id)},
+            ))

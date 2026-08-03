@@ -7,12 +7,14 @@ from uuid import UUID
 
 from auto_at.contracts.agent import ProposalKind
 from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
+from domain.activity import ActivityEvent
 from domain.entities import ApprovalRecord, ArtifactRecord, Project, ProposalRecord, TestCase
 from domain.runs import AuditEvent, OutboxEvent, RunLifecycleStatus, TestRun
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.orm import Session
 
 from infrastructure.persistence.models import (
+    ActivityEventModel,
     AgentProposalModel,
     ApprovalModel,
     ArtifactModel,
@@ -542,6 +544,45 @@ class SqlAlchemyAuditEventRepository:
             )
         )
         self._session.flush()
+
+
+class SqlAlchemyActivityEventRepository:
+    """Append-only tenant-scoped observability timeline."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def append(self, event: ActivityEvent) -> None:
+        self._session.add(ActivityEventModel(
+            id=event.id, tenant_id=event.tenant_id, run_id=event.run_id,
+            correlation_id=event.correlation_id, source=event.source, stage=event.stage,
+            status=event.status,
+            safe_summary=event.safe_summary,
+            event_metadata=event.metadata,
+            occurred_at=event.occurred_at,
+        ))
+        self._session.flush()
+
+    def list(
+        self, tenant_id: str, *, run_id: UUID | None = None,
+        correlation_id: UUID | None = None, after: datetime | None = None,
+    ) -> list[ActivityEvent]:
+        statement = select(ActivityEventModel).where(ActivityEventModel.tenant_id == tenant_id)
+        if run_id is not None:
+            statement = statement.where(ActivityEventModel.run_id == run_id)
+        if correlation_id is not None:
+            statement = statement.where(ActivityEventModel.correlation_id == correlation_id)
+        if after is not None:
+            statement = statement.where(ActivityEventModel.occurred_at > after)
+        statement = statement.order_by(ActivityEventModel.occurred_at, ActivityEventModel.id)
+        return [ActivityEvent(
+            id=item.id, tenant_id=item.tenant_id, run_id=item.run_id,
+            correlation_id=item.correlation_id, source=item.source, stage=item.stage,
+            status=item.status,
+            safe_summary=item.safe_summary,
+            metadata=item.event_metadata,
+            occurred_at=item.occurred_at,
+        ) for item in self._session.scalars(statement)]
 
 
 class SqlAlchemyConfigurationRepository:

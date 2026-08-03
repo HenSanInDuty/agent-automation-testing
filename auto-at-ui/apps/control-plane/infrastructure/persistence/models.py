@@ -193,6 +193,30 @@ class AuditEventModel(TenantRecord, Base):
     correlation_id: Mapped[UUID] = mapped_column(index=True)
 
 
+class ActivityEventModel(TenantRecord, Base):
+    __tablename__ = "activity_events"
+    __table_args__ = (
+        Index("ix_activity_events_run_timeline", "tenant_id", "run_id", "occurred_at"),
+        Index(
+            "ix_activity_events_correlation_timeline",
+            "tenant_id",
+            "correlation_id",
+            "occurred_at",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    run_id: Mapped[UUID | None] = mapped_column(ForeignKey("test_runs.id"), nullable=True)
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    source: Mapped[str] = mapped_column(String(32))
+    stage: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(32))
+    safe_summary: Mapped[str] = mapped_column(Text)
+    event_metadata: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, default=dict)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
 class OutboxEventModel(TenantRecord, Base):
     __tablename__ = "outbox_events"
     __table_args__ = (Index("ix_outbox_events_unpublished", "published_at"),)

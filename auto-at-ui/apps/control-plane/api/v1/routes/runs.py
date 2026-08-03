@@ -8,19 +8,13 @@ from application.runs import (
     CancelRun,
     CreateRun,
     CreateRunCommand,
-    DispatchRun,
     GetRun,
     ListArtifacts,
     RecordDeterministicResult,
     RequestFailureTriage,
     RunNotFoundError,
 )
-from auto_at.contracts.execution import (
-    ArtifactPolicy,
-    TargetType,
-    TestExecutionRequest,
-    TestExecutionResult,
-)
+from auto_at.contracts.execution import ArtifactPolicy, TargetType, TestExecutionResult
 from config import Settings, get_settings
 from domain.authorization import (
     AuthorizationError,
@@ -33,6 +27,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from infrastructure.observability import current_trace_context
 from infrastructure.persistence.repositories import (
+    SqlAlchemyActivityEventRepository,
     SqlAlchemyArtifactRepository,
     SqlAlchemyAuditEventRepository,
     SqlAlchemyCatalogRepository,
@@ -40,12 +35,8 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
-from infrastructure.runners import (
-    HttpPlaywrightTransport,
-    RunnerUnavailableError,
-    VerifiedLocalArtifactPort,
-)
-from pydantic import BaseModel, Field, HttpUrl
+from infrastructure.runners import VerifiedLocalArtifactPort
+from pydantic import BaseModel, Field
 
 from api.v1.dependencies.authorization import current_principal, current_tenant, require_csrf
 
@@ -156,6 +147,7 @@ def create_run(
             SqlAlchemyRunRepository(session),
             SqlAlchemyOutboxEventRepository(session),
             SqlAlchemyAuditEventRepository(session),
+            SqlAlchemyActivityEventRepository(session),
         ).execute(
             CreateRunCommand(
                 tenant_id=tenant_id,
@@ -170,44 +162,9 @@ def create_run(
                 artifact_policy=payload.artifact_policy,
             )
         )
-    response = _run_response(run)
-    if not settings.runner_dispatch_enabled:
-        return response
-    if payload.target_type != TargetType.WEB_UI:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Only web_ui is available.",
-        )
-    try:
-        with transactional_session(create_session_factory(settings)) as session:
-            runs = SqlAlchemyRunRepository(session)
-            artifacts = SqlAlchemyArtifactRepository(session)
-            dispatched_run, result = DispatchRun(
-                runs, HttpPlaywrightTransport(settings.playwright_worker_url)
-            ).execute(
-                tenant_id,
-                TestExecutionRequest(
-                    run_id=run.id,
-                    correlation_id=run.correlation_id,
-                    project_id=run.project_id,
-                    test_case_id=run.test_case_id,
-                    target_type=payload.target_type,
-                    target_url=HttpUrl(payload.target_url) if payload.target_url else None,
-                    revision=run.revision,
-                    runner_config=runner_config,
-                    artifact_policy=payload.artifact_policy,
-                ),
-            )
-            VerifiedLocalArtifactPort(settings.artifact_root, artifacts).persist_result_artifacts(
-                tenant_id, result, payload.artifact_policy.retain_days
-            )
-            runs.save_result(dispatched_run, result)
-        return _run_response(dispatched_run)
-    except RunnerUnavailableError as error:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Playwright worker unavailable.",
-        ) from error
+    # UI creation is always asynchronous: the outbox publisher starts the durable
+    # workflow after this transaction commits. The runner remains verdict authority.
+    return _run_response(run)
 
 
 @router.get("/{run_id}", response_model=RunResponse)
@@ -300,6 +257,7 @@ def cancel_run(
                 SqlAlchemyRunRepository(session),
                 SqlAlchemyOutboxEventRepository(session),
                 SqlAlchemyAuditEventRepository(session),
+                SqlAlchemyActivityEventRepository(session),
             ).execute(tenant_id, run_id, idempotency_key)
         except RunNotFoundError as error:
             raise HTTPException(

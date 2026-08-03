@@ -6,6 +6,7 @@ from uuid import UUID
 
 from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
 
+from domain.activity import ActivityEvent
 from domain.entities import ApprovalRecord, ArtifactRecord, Project, ProposalRecord, TestCase
 from domain.runs import AuditEvent, OutboxEvent, TestRun
 
@@ -58,6 +59,19 @@ class ApprovalRepository(Protocol):
 
 class AuditEventRepository(Protocol):
     def append(self, event: AuditEvent) -> None: ...
+
+
+class ActivityEventRepository(Protocol):
+    def append(self, event: ActivityEvent) -> None: ...
+
+    def list(
+        self,
+        tenant_id: str,
+        *,
+        run_id: UUID | None = None,
+        correlation_id: UUID | None = None,
+        after: datetime | None = None,
+    ) -> list[ActivityEvent]: ...
 
 
 class OutboxEventRepository(Protocol):

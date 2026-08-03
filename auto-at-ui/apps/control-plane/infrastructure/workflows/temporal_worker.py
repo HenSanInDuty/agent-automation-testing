@@ -12,6 +12,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from infrastructure.persistence.repositories import (
+    SqlAlchemyActivityEventRepository,
     SqlAlchemyAuditEventRepository,
     SqlAlchemyConfigurationRepository,
     SqlAlchemyGenerationRepository,
@@ -50,6 +51,7 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         SqlAlchemyConfigurationRepository(session),
                         SqlAlchemyAuditEventRepository(session),
                         settings,
+                        SqlAlchemyActivityEventRepository(session),
                     ),
                 ).execute()
             if published:

@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     minio_secure: bool = False
     runner_dispatch_enabled: bool = False
     playwright_worker_url: str = "http://127.0.0.1:7100"
+    worker_progress_callback_secret: str | None = None
     artifact_root: str = "/tmp/auto-at-artifacts"
     temporal_enabled: bool = False
     temporal_address: str = "127.0.0.1:7233"

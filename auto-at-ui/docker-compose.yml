@@ -21,6 +21,7 @@ services:
       MINIO_SECURE: "false"
       RUNNER_DISPATCH_ENABLED: "true"
       PLAYWRIGHT_WORKER_URL: http://playwright-worker:7100
+      WORKER_PROGRESS_CALLBACK_SECRET: ${WORKER_PROGRESS_CALLBACK_SECRET:-}
       ARTIFACT_ROOT: /artifacts
       TEMPORAL_ENABLED: "true"
       TEMPORAL_ADDRESS: temporal:7233
@@ -77,6 +78,8 @@ services:
     environment:
       ARTIFACT_ROOT: /artifacts
       PORT: 7100
+      PROGRESS_CALLBACK_URL: http://control-plane:7000/api/v1/internal/worker-progress
+      PROGRESS_CALLBACK_SECRET: ${WORKER_PROGRESS_CALLBACK_SECRET:-}
     depends_on:
       artifact-init:
         condition: service_completed_successfully
