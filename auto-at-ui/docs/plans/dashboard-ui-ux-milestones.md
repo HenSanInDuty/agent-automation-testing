@@ -1,6 +1,6 @@
 # Dashboard UI/UX milestones
 
-Status: **M3 complete** (2026-08-02) — catalog, deterministic run workflow, and dashboard investigation flow.
+Status: **M4 complete** (2026-08-10) — live pipeline visibility and safe Browser Agent todo timeline.
 
 This plan is the implementation order for the dashboard experience. A later
 milestone does not start until its predecessor meets its validation criteria.
@@ -126,61 +126,69 @@ The implementation adds the catalog and run route boundaries, tenant-scoped
 persistence queries, immutable request capture, the `created_at` migration, and
 dashboard project/test selection plus run list/detail/evidence views. M4 remains next.
 
-## M4 — Live pipeline and Browser Agent todo — in progress
+## M4 — Live pipeline and Browser Agent todo — complete
 
 Started 2026-08-02 22:52:08 +07:00. Scope: additive, target-neutral activity
 history; durable UI dispatch; authenticated worker progress; and safe run/agent
 timeline presentation. Existing v1 request/result verdict semantics remain
 unchanged.
 
-Validation note 2026-08-03: Compose control-plane is healthy after applying the
-activity timeline and merge/cascade migrations. `uv run ruff check .` and
-`uv run pytest --basetemp D:\\tmp\\auto-at-m4-full` passed (95 tests); dashboard
-lint/typecheck/test passed (7 tests); and Playwright worker typecheck passed.
+Validated 2026-08-10 22:34:35 +07:00: `uv run ruff check .`, `uv run pytest
+--basetemp D:\\tmp\\auto-at-m4-final` (97 passed), dashboard `typecheck`, `lint`,
+`test` (7 passed), and production `build`, Playwright worker `typecheck`, and
+`git diff --check` all passed. The dashboard test command emits existing Node
+module-type warnings; the production build emits existing multi-lockfile and
+Next ESLint-plugin warnings. Neither affected the result.
 
-- [ ] Add an append-only `activity_events` table and migration with tenant,
+Completion summary: the current checkout's existing M4 backend supplies the
+append-only, redacted activity history, durable dispatch, authenticated worker
+progress, and SSE endpoint. This completion adds the SSE-connected timeline
+with a visible polling fallback to Run detail and Agent workspace, plus
+stream-resume and forged-callback coverage. Changed paths for this completion:
+`apps/dashboard/app/components/activity-timeline.tsx`,
+`apps/dashboard/app/runs/[id]/page.tsx`,
+`apps/dashboard/app/generation-dashboard.tsx`, `tests/test_activity.py`, and
+`tests/test_worker_progress.py`. No deviations or deferred M4 items.
+
+- [x] Add an append-only `activity_events` table and migration with tenant,
   run nullable/required-by-source, correlation ID, source, stage, status,
   safe summary, redacted metadata, and timestamp. Add indexes for run and
   correlation timeline queries.
-- [ ] Define a target-neutral activity contract and application port; validate
+- [x] Define a target-neutral activity contract and application port; validate
   allowed sources/stages/statuses and reject secret-bearing metadata before
   persistence.
-- [ ] Emit activities from create/cancel/run dispatch, Temporal retry and
+- [x] Emit activities from create/cancel/run dispatch, Temporal retry and
   completion, generation claim/model/validation/completion/failure, and triage
   request/proposal/failure. Mirror security-relevant events to audit events;
   activity records are observability, not authorization evidence.
-- [ ] Change normal UI run dispatch to the durable Temporal path so create-run
+- [x] Change normal UI run dispatch to the durable Temporal path so create-run
   returns queued promptly. Preserve idempotency and terminal verdict semantics.
-- [ ] Extend the Playwright worker execution API with a versioned internal
+- [x] Extend the Playwright worker execution API with a versioned internal
   progress callback: validation, browser launch, navigation, each configured
   step, evidence collection, terminal result. Authenticate callbacks with a
   per-environment secret and bind every callback to existing run and
   correlation IDs.
-- [ ] Store browser step plans as read-only todo entries before dispatch;
+- [x] Store browser step plans as read-only todo entries before dispatch;
   transition entries only from trusted worker events. Generated source mode
   uses coarse safe stages rather than attempting to parse arbitrary source into
   user-facing actions.
-- [ ] Add authorized history endpoint plus SSE stream scoped to run or
+- [x] Add authorized history endpoint plus SSE stream scoped to run or
   correlation ID. Send keepalives, resume with `Last-Event-ID`, and provide a
   polling fallback for reverse proxies that do not support SSE.
-- [ ] Build pipeline/timeline/todo UI on Run detail and Agent workspace:
+- [x] Build pipeline/timeline/todo UI on Run detail and Agent workspace:
   ordered timestamps, source labels, reconnect state, safe error summaries,
   and no raw model prompt, secret, or untrusted HTML rendering.
-- [ ] Test redaction, event ordering/idempotency, SSE authorization/reconnect,
+- [x] Test redaction, event ordering/idempotency, SSE authorization/reconnect,
   Temporal queued-to-terminal lifecycle, worker callback forgery rejection,
   and browser todo pass/fail/cancel transitions.
 
 Exit criterion: a user sees what control-plane, agent, and browser worker are
 doing during a run without exposing secret or changing the verdict authority.
 
-## M5 — Agent workspace and governed review — blocked
+## M5 — Agent workspace and governed review — planned
 
-Blocked 2026-08-02 22:45:23 +07:00: M4 remains planned and its activity-event,
-correlation-timeline, and live-generation lifecycle outputs are explicit M5
-dependencies. Checkout reconnaissance confirmed no `activity_events` persistence,
-SSE/correlation timeline, or Browser Agent progress implementation exists. User
-direction is required to either complete M4 first or explicitly revise the
-milestone dependency before M5 implementation begins. No production code changed.
+M4 completed 2026-08-10 and unlocked its activity history, correlation timeline,
+and Browser Agent progress dependencies. This is the next planned milestone.
 
 - [ ] Add read endpoints and list/filter APIs for generation requests, drafts,
   reviewable proposals, and approvals, all scoped through the existing project

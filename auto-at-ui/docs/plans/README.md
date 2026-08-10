@@ -10,7 +10,7 @@ checkbox, exit criterion, and stated validation passes.
 | Progress | Plan | Outcome |
 | --- | --- | --- |
 | 5/5 phases | [Test-generation agent](test-generation-agent/README.md) | Natural-language Web UI test drafting, human review, and deterministic Playwright execution |
-| 3/7 milestones | [Dashboard UI/UX](dashboard-ui-ux-milestones.md) | Authenticated operations dashboard, live pipeline visibility, and governed agent UX |
+| 4/7 milestones | [Dashboard UI/UX](dashboard-ui-ux-milestones.md) | Authenticated operations dashboard, live pipeline visibility, and governed agent UX |
 
 ## Status rules
 
