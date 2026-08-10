@@ -18,7 +18,7 @@ from domain.authorization import (
     actor_for_tenant,
     require,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from infrastructure.persistence.repositories import (
     SqlAlchemyAuditEventRepository,
     SqlAlchemyGenerationRepository,
@@ -65,6 +65,20 @@ class DraftResponse(BaseModel):
     provenance: dict[str, object]
     linked_test_case_id: str | None
     linked_run_id: UUID | None
+
+
+class GenerationListResponse(BaseModel):
+    items: list[RequestResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class DraftListResponse(BaseModel):
+    items: list[DraftResponse]
+    total: int
+    limit: int
+    offset: int
 
 
 class DecisionRequest(BaseModel):
@@ -182,6 +196,34 @@ def get_request(
         return _request_response(repository, request)
 
 
+@router.get("/requests", response_model=GenerationListResponse)
+def list_requests(
+    project_id: UUID | None = None,
+    state: Annotated[str | None, Query(max_length=32)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    tenant_id: Annotated[str, Depends(current_tenant)] = "",
+    principal: Annotated[Principal, Depends(current_principal)] = None,  # type: ignore[assignment]
+    settings: Annotated[Settings, Depends(get_settings)] = None,  # type: ignore[assignment]
+) -> GenerationListResponse:
+    with create_session_factory(settings)() as session:
+        repository = SqlAlchemyGenerationRepository(session)
+        visible = []
+        for request in repository.list_requests(tenant_id):
+            if project_id is not None and request.project_id != project_id:
+                continue
+            if state is not None and request.state != state:
+                continue
+            try:
+                require(actor_for_tenant(principal, tenant_id, request.project_id), Permission.READ)
+            except AuthorizationError:
+                continue
+            visible.append(_request_response(repository, request))
+    return GenerationListResponse(
+        items=visible[offset : offset + limit], total=len(visible), limit=limit, offset=offset
+    )
+
+
 @router.get("/drafts/{draft_id}", response_model=DraftResponse)
 def get_draft(
     draft_id: UUID,
@@ -202,6 +244,35 @@ def get_draft(
         except (GenerationNotFoundError, AuthorizationError) as error:
             raise HTTPException(status_code=404, detail="Generated draft not found.") from error
         return _draft_response(draft)
+
+
+@router.get("/drafts", response_model=DraftListResponse)
+def list_drafts(
+    project_id: UUID | None = None,
+    state: Annotated[str | None, Query(max_length=32)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    tenant_id: Annotated[str, Depends(current_tenant)] = "",
+    principal: Annotated[Principal, Depends(current_principal)] = None,  # type: ignore[assignment]
+    settings: Annotated[Settings, Depends(get_settings)] = None,  # type: ignore[assignment]
+) -> DraftListResponse:
+    with create_session_factory(settings)() as session:
+        repository = SqlAlchemyGenerationRepository(session)
+        visible = []
+        for draft in repository.list_drafts(tenant_id):
+            request = repository.get_request(tenant_id, draft.planning_request_id)
+            if request is None or (project_id is not None and request.project_id != project_id):
+                continue
+            if state is not None and draft.state != state:
+                continue
+            try:
+                require(actor_for_tenant(principal, tenant_id, request.project_id), Permission.READ)
+            except AuthorizationError:
+                continue
+            visible.append(_draft_response(draft))
+    return DraftListResponse(
+        items=visible[offset : offset + limit], total=len(visible), limit=limit, offset=offset
+    )
 
 
 @router.post("/drafts/{draft_id}/decision", response_model=DraftResponse)

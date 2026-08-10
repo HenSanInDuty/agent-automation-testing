@@ -1,6 +1,7 @@
 import { PageHeader } from "../components/page-header";
-import { EmptyState } from "../components/states";
+import { ReviewsDashboard } from "./reviews-dashboard";
 
 export default function ReviewsPage() {
-  return <><PageHeader eyebrow="Governance" title="Reviews" description="Review evidence-backed agent proposals and immutable decisions." /><EmptyState title="Review queue is coming next">The governed generation workflow remains available in Agent workspace while the shared review queue is introduced in M5.</EmptyState></>;
+  const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "http://localhost:7000";
+  return <><PageHeader eyebrow="Governance" title="Reviews" description="Review evidence-backed agent proposals and immutable decisions." /><ReviewsDashboard apiUrl={apiUrl} /></>;
 }

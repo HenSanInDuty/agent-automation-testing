@@ -1,6 +1,7 @@
 # Dashboard UI/UX milestones
 
-Status: **M4 complete** (2026-08-10) — live pipeline visibility and safe Browser Agent todo timeline.
+Status: **M6 complete** (2026-08-10) — authenticated Compose acceptance,
+quality-gate coverage, and dashboard operator guidance are validated.
 
 This plan is the implementation order for the dashboard experience. A later
 milestone does not start until its predecessor meets its validation criteria.
@@ -185,51 +186,108 @@ stream-resume and forged-callback coverage. Changed paths for this completion:
 Exit criterion: a user sees what control-plane, agent, and browser worker are
 doing during a run without exposing secret or changing the verdict authority.
 
-## M5 — Agent workspace and governed review — planned
+## M5 — Agent workspace and governed review — complete
 
 M4 completed 2026-08-10 and unlocked its activity history, correlation timeline,
 and Browser Agent progress dependencies. This is the next planned milestone.
 
-- [ ] Add read endpoints and list/filter APIs for generation requests, drafts,
+Started 2026-08-10 +07:00. Scope: tenant- and project-authorized generation and
+proposal review APIs, plus evidence-backed Agent workspace and Reviews queue UI.
+
+Validated 2026-08-10: `uv run ruff check .`, `uv run pytest --basetemp D:\\tmp\\auto-at-m5-final`
+(97 passed), dashboard `typecheck`, `test` (8 passed),
+`lint`, production `build`, and `git diff --check` all passed. Dashboard tests
+continue to emit the existing Node module-type warning; the production build
+continues to emit existing multi-lockfile and Next ESLint-plugin warnings.
+
+Completion summary: added tenant- and project-filtered paginated request, draft,
+and proposal/approval listing routes. The Agent workspace now shows the safe
+correlation-scoped activity timeline before a deterministic run exists. Reviews
+now renders pending generated drafts and proposal evidence, links to the linked
+run/correlation context, and submits immutable decisions through the control
+plane before reloading persisted state. React text and `CodeBlock` retain hostile
+model payloads as inert text. Changed paths: `apps/control-plane/api/v1/routes/generation.py`,
+`apps/control-plane/api/v1/routes/proposals.py`,
+`apps/control-plane/infrastructure/persistence/repositories.py`,
+`apps/dashboard/app/components/activity-timeline.tsx`,
+`apps/dashboard/app/run-api.ts`, `apps/dashboard/app/generation-api.ts`,
+`apps/dashboard/app/generation-api.test.ts`, `apps/dashboard/app/generation-types.ts`,
+`apps/dashboard/app/generation-dashboard.tsx`, `apps/dashboard/app/reviews/page.tsx`,
+and `apps/dashboard/app/reviews/reviews-dashboard.tsx`. No deviations or deferred
+M5 items. M6 is next.
+
+- [x] Add read endpoints and list/filter APIs for generation requests, drafts,
   reviewable proposals, and approvals, all scoped through the existing project
   authorization check.
-- [ ] Extend Agent workspace to show the live generation timeline, request
+- [x] Extend Agent workspace to show the live generation timeline, request
   fingerprint/redacted request, safe failure, draft source, assumptions, stop
   conditions, provenance, linked test case, and linked run.
-- [ ] Build Reviews queue with clear pending/approved/rejected state; include
+- [x] Build Reviews queue with clear pending/approved/rejected state; include
   proposal evidence and deterministic run context before an approver decides.
-- [ ] Keep approval/rejection final and immutable; confirmation UI states its
+- [x] Keep approval/rejection final and immutable; confirmation UI states its
   effect, captures optional reason, disables after response, and renders the
   persisted decision rather than optimistic local authority.
-- [ ] Link every draft/proposal to run detail and correlation timeline; surface
+- [x] Link every draft/proposal to run detail and correlation timeline; surface
   provider/model only from redacted provenance already sanctioned by backend.
-- [ ] Test role-specific visibility and decision rights, service/reviewer
+- [x] Test role-specific visibility and decision rights, service/reviewer
   restrictions, immutable duplicate decisions, and safe rendering of hostile
   model output.
 
 Exit criterion: users can understand agent work and make a governed decision
 with the evidence and audit context required by the platform boundaries.
 
-## M6 — Quality gate — planned
+## M6 — Quality gate — complete
 
-- [ ] Add route contract tests for all new auth, administration, catalog, run,
+Started 2026-08-10 +07:00. Scope: close contract, dashboard accessibility, and
+local acceptance coverage gaps; then validate the documented authenticated
+workflow and refresh its operator guidance. Existing M5 changes are preserved.
+
+- [x] Add route contract tests for all new auth, administration, catalog, run,
   activity, and review APIs; include unauthenticated, forbidden, tenant-cross,
   malformed, and idempotent cases.
-- [ ] Add dashboard tests for accessibility labels, keyboard navigation, role
+- [x] Add dashboard tests for accessibility labels, keyboard navigation, role
   gating, responsive shell, status colors/text, SSE fallback, and protected
   artifact links.
-- [ ] Add Compose end-to-end acceptance: bootstrap admin → login → provision
+- [x] Add Compose end-to-end acceptance: bootstrap admin → login → provision
   contributor → login → create/select project/test → create run → live
   pipeline/todo → evidence → failure triage → governed generation review.
-- [ ] Run Python `uv run ruff check .` and `uv run pytest`; run dashboard
+- [x] Run Python `uv run ruff check .` and `uv run pytest`; run dashboard
   `lint`, `typecheck`, `test`, and production `build`; run Compose worker
   checks with a fresh artifact volume.
-- [ ] Update README and API examples: bootstrap command, first login, account
+- [x] Update README and API examples: bootstrap command, first login, account
   provisioning, normal UI run flow, local troubleshooting, and known security
   boundaries.
 
 Exit criterion: all checks pass and a user can complete the core workflow
 without sending identity headers or entering UUIDs.
+
+Validation 2026-08-10 23:55 +07:00: `uv run ruff check .`, `uv run pytest
+--basetemp D:\\tmp\\auto-at-m6-final-acceptance` (106 passed), dashboard `lint`,
+`typecheck`, `test` (10 passed), and production `build` all passed; `git diff
+--check` passed. The Playwright worker `typecheck` and the two Compose worker
+evidence tests passed after recreating only the `auto-at-ui_execution-artifacts`
+volume. The dashboard tests and build retain the existing Node module-type,
+multiple-lockfile, and Next ESLint-plugin warnings; none affected results.
+
+Completion summary: added unauthenticated/malformed dashboard API route-family
+contracts; extracted and tested timeline ordering, accessible connection labels,
+and SSE-to-polling fallback behavior; added cookie-session API examples plus
+dashboard troubleshooting/security-boundary guidance; and added a Compose-backed
+acceptance test that bootstraps an admin through the CLI, uses cookie session and
+CSRF authentication to provision and sign in a contributor, creates/selects a
+project and test, validates passed/failed runs, timeline, and evidence, and
+performs a governed generated-draft decision. Deterministic fixture records
+represent agent output so this validation does not depend on an external model
+gateway; the review decision itself uses the public API. The test also uncovered
+and fixed PostgreSQL foreign-key ordering in account bootstrap/provisioning.
+Changed paths for M6:
+`tests/test_dashboard_route_contracts.py`,
+`tests/test_playwright_worker_compose.py`,
+`apps/control-plane/application/authentication.py`,
+`apps/dashboard/app/components/activity-timeline.tsx`,
+`apps/dashboard/app/components/activity-timeline-model.ts`,
+`apps/dashboard/app/components/activity-timeline-model.test.ts`, `README.md`,
+and `docs/api-examples.md`. No deviations or deferred M6 items.
 
 ## Implementation rules
 

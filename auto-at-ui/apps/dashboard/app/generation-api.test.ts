@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ControlPlaneError, submitGeneration } from "./generation-api.ts";
+import { ControlPlaneError, decideProposal, listDrafts, listProposals, submitGeneration } from "./generation-api.ts";
 
 test("generation submission sends session credentials and an idempotency key", async () => {
   const originalFetch = globalThis.fetch;
@@ -22,5 +22,23 @@ test("control-plane errors retain only the safe API detail", async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ detail: "Project not found." }), { status: 404 });
   try {
     await assert.rejects(() => submitGeneration("http://control-plane", { project_id: "project", target_url: "https://example.com", request: "Check heading" }), (error: unknown) => error instanceof ControlPlaneError && error.message === "Project not found.");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("review collection and decision requests use the control-plane routes", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init); requests.push(request);
+    return new Response(JSON.stringify(request.url.includes("decision") ? { proposal_id: "proposal", proposal_version: 1, approved: true, decided_by: "person", reason: null } : { items: [], total: 0, limit: 25, offset: 0 }));
+  };
+  try {
+    await listDrafts("http://control-plane", "pending_review");
+    await listProposals("http://control-plane", false);
+    await decideProposal("http://control-plane", "proposal", true, "evidence reviewed");
+    assert.match(requests[0].url, /test-generations\/drafts\?state=pending_review/);
+    assert.match(requests[1].url, /proposals\?decided=false/);
+    assert.equal(requests[2].method, "POST");
+    assert.equal(await requests[2].text(), JSON.stringify({ approved: true, reason: "evidence reviewed" }));
   } finally { globalThis.fetch = originalFetch; }
 });

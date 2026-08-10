@@ -75,6 +75,21 @@ temporary password, then use **Admin → Users** to provision collaborators.
 The temporary password is displayed once and is never persisted in the
 dashboard. Dashboard requests use an HttpOnly session cookie and CSRF token;
 the legacy development identity headers remain only for local API compatibility.
+See [session API examples](docs/api-examples.md) for cookie-based calls without
+identity headers.
+
+## Dashboard troubleshooting and security boundaries
+
+- If the dashboard returns to sign-in, check that the control-plane and
+  dashboard origins match the local Compose defaults, then sign in again; do
+  not work around it by entering development identity headers in the browser.
+- The pipeline timeline reconnects through polling when SSE is unavailable.
+  It shows only server-redacted activity summaries and cannot affect a run
+  verdict.
+- Evidence links are authorized, run-scoped downloads. Generated drafts and
+  healing proposals remain advisory until the relevant human decision is
+  accepted by the control plane; neither agents nor the dashboard can change a
+  deterministic result.
 
 ## Run a basic pipeline
 

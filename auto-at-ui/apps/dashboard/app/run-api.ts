@@ -14,4 +14,4 @@ export const runs = (apiUrl: string, query = "") => apiRequest<RunPage>(apiUrl, 
 export const run = (apiUrl: string, id: string) => apiRequest<Run>(apiUrl, `/api/v1/runs/${id}`);
 export const artifacts = (apiUrl: string, id: string) => apiRequest<Artifact[]>(apiUrl, `/api/v1/runs/${id}/artifacts`);
 export const cancelRun = (apiUrl: string, id: string) => apiRequest<Run>(apiUrl, `/api/v1/runs/${id}/cancel`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey() } });
-export const activities = (apiUrl: string, id: string) => apiRequest<Activity[]>(apiUrl, `/api/v1/activities?run_id=${encodeURIComponent(id)}`);
+export const activities = (apiUrl: string, id: string, byCorrelation = false) => apiRequest<Activity[]>(apiUrl, `/api/v1/activities?${byCorrelation ? "correlation_id" : "run_id"}=${encodeURIComponent(id)}`);

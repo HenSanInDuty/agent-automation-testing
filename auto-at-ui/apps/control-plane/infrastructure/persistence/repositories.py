@@ -150,6 +150,15 @@ class SqlAlchemyGenerationRepository:
             )
         )
 
+    def list_requests(self, tenant_id: str) -> list[GenerationRequestModel]:
+        return list(
+            self._session.scalars(
+                select(GenerationRequestModel)
+                .where(GenerationRequestModel.tenant_id == tenant_id)
+                .order_by(GenerationRequestModel.id.desc())
+            )
+        )
+
     def claim_queued_request(
         self, tenant_id: str, request_id: UUID
     ) -> GenerationRequestModel | None:
@@ -187,6 +196,15 @@ class SqlAlchemyGenerationRepository:
             select(GeneratedTestDraftModel).where(
                 GeneratedTestDraftModel.tenant_id == tenant_id,
                 GeneratedTestDraftModel.planning_request_id == request_id,
+            )
+        )
+
+    def list_drafts(self, tenant_id: str) -> list[GeneratedTestDraftModel]:
+        return list(
+            self._session.scalars(
+                select(GeneratedTestDraftModel)
+                .where(GeneratedTestDraftModel.tenant_id == tenant_id)
+                .order_by(GeneratedTestDraftModel.id.desc())
             )
         )
 
@@ -466,6 +484,27 @@ class SqlAlchemyProposalRepository:
             created_at=model.created_at,
             payload=model.proposal,
         )
+
+    def list(self, tenant_id: str) -> list[ProposalRecord]:
+        models = self._session.scalars(
+            select(AgentProposalModel)
+            .where(AgentProposalModel.tenant_id == tenant_id)
+            .order_by(AgentProposalModel.created_at.desc(), AgentProposalModel.id.desc())
+        )
+        return [
+            ProposalRecord(
+                id=model.id,
+                tenant_id=model.tenant_id,
+                run_id=model.run_id,
+                correlation_id=model.correlation_id,
+                kind=ProposalKind(model.kind),
+                proposal_version=model.proposal_version,
+                summary=model.summary,
+                created_at=model.created_at,
+                payload=model.proposal,
+            )
+            for model in models
+        ]
 
     def add(self, proposal: ProposalRecord) -> None:
         self._session.add(

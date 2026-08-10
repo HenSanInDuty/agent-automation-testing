@@ -28,5 +28,9 @@ export type GeneratedDraft = {
   linked_run_id: string | null;
 };
 
+export type ProposalDecision = { proposal_id: string; proposal_version: number; approved: boolean; decided_by: string; reason: string | null };
+export type Proposal = { id: string; run_id: string; correlation_id: string; kind: string; proposal_version: number; summary: string; payload: Record<string, unknown>; decision: ProposalDecision | null };
+export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
+
 export type Run = { id: string; correlation_id: string; status: string; revision: string };
 export type Artifact = { id: string; kind: string; uri: string; checksum: string; size: number; content_type: string | null };

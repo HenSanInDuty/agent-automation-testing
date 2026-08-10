@@ -203,10 +203,15 @@ class AccountService:
             created_at=now,
             updated_at=now,
         )
+        # The membership foreign key is not represented by an ORM relationship,
+        # so flush the identity before adding its grant. This keeps CLI bootstrap
+        # and HTTP provisioning valid against PostgreSQL, not only SQLite-like tests.
+        self._session.add(user)
+        self._session.flush()
         membership = TenantMembershipModel(
             id=uuid4(), tenant_id=tenant_id, user_id=user.id, role=role.value, created_at=now
         )
-        self._session.add_all([user, membership])
+        self._session.add(membership)
         self._session.flush()
         return self._account(user, membership)
 
