@@ -3,7 +3,12 @@
 import logging
 from datetime import UTC, datetime
 
-from application.runs import DispatchRun, RecordDeterministicResult, RequestFailureTriage
+from application.runs import (
+    DispatchRun,
+    RecordDeterministicResult,
+    RequestFailureTriage,
+    RequestRunReport,
+)
 from auto_at.contracts.execution import TestExecutionRequest
 from config import Settings
 from domain.activity import ActivityEvent
@@ -27,6 +32,7 @@ from infrastructure.workflows.definitions import RunWorkflowInput, TestRunWorkfl
 def _requested_at(value: object) -> str | None:
     return value if isinstance(value, str) else None
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,35 +52,48 @@ def dispatch_test_run(payload: RunWorkflowInput) -> dict[str, str]:
     with transactional_session(create_session_factory(settings)) as session:
         runs = SqlAlchemyRunRepository(session)
         activities = SqlAlchemyActivityEventRepository(session)
-        activities.append(ActivityEvent.create(
-            tenant_id=payload.tenant_id, run_id=request.run_id,
-            correlation_id=request.correlation_id, source="workflow", stage="dispatch",
-            status="running", safe_summary="Durable workflow dispatched the browser run.",
-            occurred_at=datetime.now(UTC), metadata={"attempt": attempt},
-        ))
-        worker_request = request.model_copy(
-            update={
-                "runner_config": {
-                    **request.runner_config,
-                    "internal_progress_tenant_id": payload.tenant_id,
-                }
-            }
+        activities.append(
+            ActivityEvent.create(
+                tenant_id=payload.tenant_id,
+                run_id=request.run_id,
+                correlation_id=request.correlation_id,
+                source="workflow",
+                stage="dispatch",
+                status="running",
+                safe_summary="Durable workflow dispatched the browser run.",
+                occurred_at=datetime.now(UTC),
+                metadata={"attempt": attempt},
+            )
         )
         run, result = DispatchRun(
-            runs, HttpPlaywrightTransport(settings.playwright_worker_url)
-        ).execute(payload.tenant_id, worker_request)
+            runs,
+            HttpPlaywrightTransport(
+                settings.playwright_worker_url, progress_tenant_id=payload.tenant_id
+            ),
+        ).execute(payload.tenant_id, request)
         VerifiedLocalArtifactPort(
             settings.artifact_root, SqlAlchemyArtifactRepository(session)
         ).persist_result_artifacts(payload.tenant_id, result, request.artifact_policy.retain_days)
         run = RecordDeterministicResult(runs).execute(payload.tenant_id, result)
-        activities.append(ActivityEvent.create(
-            tenant_id=payload.tenant_id, run_id=request.run_id,
-            correlation_id=request.correlation_id, source="workflow", stage="completed",
-            status=result.status.value, safe_summary="Runner returned its deterministic result.",
-            occurred_at=datetime.now(UTC),
-        ))
+        activities.append(
+            ActivityEvent.create(
+                tenant_id=payload.tenant_id,
+                run_id=request.run_id,
+                correlation_id=request.correlation_id,
+                source="workflow",
+                stage="completed",
+                status=result.status.value,
+                safe_summary="Runner returned its deterministic result.",
+                occurred_at=datetime.now(UTC),
+            )
+        )
         RequestFailureTriage(
             SqlAlchemyOutboxEventRepository(session), SqlAlchemyAuditEventRepository(session)
+        ).execute(run)
+        RequestRunReport(
+            SqlAlchemyOutboxEventRepository(session),
+            SqlAlchemyAuditEventRepository(session),
+            activities,
         ).execute(run)
     return {"run_id": str(run.id), "status": result.status.value}
 

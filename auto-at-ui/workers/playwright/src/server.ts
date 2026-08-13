@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 
 import { executeRequest } from "./execute.js";
 
@@ -9,13 +9,16 @@ const cancelledRuns = new Set<string>();
 type ProgressPayload = {
   run_id: string;
   correlation_id?: unknown;
-  runner_config?: { internal_progress_tenant_id?: unknown };
 };
 
-function reportProgress(payload: ProgressPayload, stage: string, status: string, safeSummary: string): void {
+function progressTenantId(request: IncomingMessage): string | undefined {
+  const value = request.headers["x-auto-at-progress-tenant-id"];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function reportProgress(payload: ProgressPayload, tenantId: string | undefined, stage: string, status: string, safeSummary: string): void {
   const url = process.env.PROGRESS_CALLBACK_URL;
   const secret = process.env.PROGRESS_CALLBACK_SECRET;
-  const tenantId = payload.runner_config?.internal_progress_tenant_id;
   if (!url || !secret || typeof payload.correlation_id !== "string" || typeof tenantId !== "string") return;
   void fetch(url, {
     method: "POST",
@@ -31,6 +34,7 @@ createServer(async (request, response) => {
   for await (const chunk of request) chunks.push(Buffer.from(chunk));
   try {
     const payload = JSON.parse(Buffer.concat(chunks).toString("utf8")) as ProgressPayload;
+    const tenantId = progressTenantId(request);
     if (typeof payload.run_id !== "string" || payload.run_id.length === 0) throw new Error("run_id is required");
     if (request.url === "/cancel") {
       cancelledRuns.add(payload.run_id);
@@ -42,15 +46,15 @@ createServer(async (request, response) => {
     const controller = new AbortController();
     activeExecutions.set(payload.run_id, controller);
     try {
-      reportProgress(payload, "validation", "running", "Worker accepted the execution request.");
-      reportProgress(payload, "browser.launch", "running", "Browser execution is starting.");
+      reportProgress(payload, tenantId, "validation", "running", "Worker accepted the execution request.");
+      reportProgress(payload, tenantId, "browser.launch", "running", "Browser execution is starting.");
       const result = await executeRequest(
         payload,
         process.env.ARTIFACT_ROOT ?? "/artifacts",
         controller.signal,
-        (stage, status, summary) => reportProgress(payload, stage, status, summary),
+        (stage, status, summary) => reportProgress(payload, tenantId, stage, status, summary),
       );
-      reportProgress(payload, "terminal", result.status, "Worker returned its deterministic result.");
+      reportProgress(payload, tenantId, "terminal", result.status, "Worker returned its deterministic result.");
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(result));
     } finally {
       activeExecutions.delete(payload.run_id);

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID, uuid4
 
+from application.reporting import GetRunReport
 from application.runs import (
     CancelRun,
     CreateRun,
@@ -32,6 +33,7 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyAuditEventRepository,
     SqlAlchemyCatalogRepository,
     SqlAlchemyOutboxEventRepository,
+    SqlAlchemyRunReportRepository,
     SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
@@ -82,6 +84,81 @@ class ArtifactResponse(BaseModel):
     checksum: str
     size: int
     content_type: str | None = None
+
+
+class RunReportObservationResponse(BaseModel):
+    text: str
+    evidence_references: list[str]
+
+
+class RunReportFailureResponse(BaseModel):
+    stage: str
+    location: str
+    message: str
+    evidence_references: list[str]
+
+
+class RunReportPayloadResponse(BaseModel):
+    deterministic_status: str
+    headline: str
+    what_ran: str
+    observations: list[RunReportObservationResponse]
+    failure: RunReportFailureResponse | None
+    unverified_or_skipped: list[str]
+    limitations: list[str]
+
+
+class RunReportProvenanceResponse(BaseModel):
+    provider: str | None = None
+    model: str | None = None
+    redaction_policy_version: str | None = None
+    input_hash: str
+
+
+class RunReportResponse(BaseModel):
+    report_version: int
+    schema_version: str
+    prompt_version: str
+    deterministic_status: str
+    status: str
+    payload: RunReportPayloadResponse | None
+    unavailable_reason: str | None = None
+    provenance: RunReportProvenanceResponse
+    created_at: datetime
+
+
+def _run_report_response(report: object) -> RunReportResponse:
+    payload = report.payload
+    provenance = report.provenance
+    safe_reason = provenance.get("safe_reason")
+    return RunReportResponse(
+        report_version=report.report_version,
+        schema_version=report.schema_version,
+        prompt_version=report.prompt_version,
+        deterministic_status=report.deterministic_status.value,
+        status=report.status.value,
+        payload=(
+            None
+            if payload is None
+            else RunReportPayloadResponse.model_validate(payload.model_dump())
+        ),
+        unavailable_reason=safe_reason if isinstance(safe_reason, str) else None,
+        provenance=RunReportProvenanceResponse(
+            provider=(
+                provenance.get("provider")
+                if isinstance(provenance.get("provider"), str)
+                else None
+            ),
+            model=provenance.get("model") if isinstance(provenance.get("model"), str) else None,
+            redaction_policy_version=(
+                provenance.get("redaction_policy_version")
+                if isinstance(provenance.get("redaction_policy_version"), str)
+                else None
+            ),
+            input_hash=report.input_hash,
+        ),
+        created_at=report.created_at,
+    )
 
 
 def _run_response(run: object, created_at: datetime | None = None) -> RunResponse:
@@ -188,6 +265,28 @@ def get_run(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
             ) from error
     return _run_response(run)
+
+
+@router.get("/{run_id}/report", response_model=RunReportResponse)
+def get_run_report(
+    run_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> RunReportResponse:
+    """Return a report only after the caller has passed the run's normal read boundary."""
+    with create_session_factory(settings)() as session:
+        try:
+            run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+        except (RunNotFoundError, AuthorizationError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run report not found."
+            ) from error
+        report = GetRunReport(SqlAlchemyRunReportRepository(session)).execute(tenant_id, run_id)
+    if report is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run report not found.")
+    return _run_report_response(report)
 
 
 @router.get("", response_model=RunListResponse)

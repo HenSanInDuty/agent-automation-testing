@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from auto_at.contracts.agent import ProposalKind
-from auto_at.contracts.execution import TargetType
+from auto_at.contracts.agent import ProposalKind, RunReport, RunReportStatus
+from auto_at.contracts.execution import RunStatus, TargetType
 
 
 class ApprovalStateError(ValueError):
@@ -41,6 +41,65 @@ class ArtifactRecord:
     size: int
     content_type: str | None = None
     retention_until: datetime | None = None
+
+
+@dataclass(frozen=True)
+class RunReportRecord:
+    """Tenant-scoped, immutable advisory report for one run/version."""
+
+    id: UUID
+    tenant_id: str
+    run_id: UUID
+    correlation_id: UUID
+    report_version: int
+    schema_version: str
+    prompt_version: str
+    deterministic_status: RunStatus
+    status: RunReportStatus
+    payload: RunReport | None
+    provenance: dict[str, object]
+    input_hash: str
+    created_at: datetime
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        tenant_id: str,
+        run_id: UUID,
+        correlation_id: UUID,
+        deterministic_status: RunStatus,
+        status: RunReportStatus,
+        report_version: int = 1,
+        schema_version: str = "v1",
+        prompt_version: str = "run-report-v1",
+        payload: RunReport | None = None,
+        provenance: dict[str, object] | None = None,
+        input_hash: str,
+    ) -> "RunReportRecord":
+        if report_version < 1:
+            raise ValueError("report_version must be positive")
+        if status is RunReportStatus.COMPLETED and payload is None:
+            raise ValueError("completed report requires a payload")
+        if status is RunReportStatus.UNAVAILABLE and payload is not None:
+            raise ValueError("unavailable report must not persist a payload")
+        if len(input_hash) != 64:
+            raise ValueError("input_hash must be a SHA-256 digest")
+        return cls(
+            id=uuid4(),
+            tenant_id=tenant_id,
+            run_id=run_id,
+            correlation_id=correlation_id,
+            report_version=report_version,
+            schema_version=schema_version,
+            prompt_version=prompt_version,
+            deterministic_status=deterministic_status,
+            status=status,
+            payload=payload,
+            provenance=provenance or {},
+            input_hash=input_hash,
+            created_at=datetime.now(UTC),
+        )
 
 
 @dataclass

@@ -9,6 +9,7 @@ def test_control_plane_schema_contains_tenant_scoped_aggregates() -> None:
         "test_runs",
         "artifacts",
         "agent_proposals",
+        "run_reports",
         "approvals",
         "audit_events",
         "outbox_events",

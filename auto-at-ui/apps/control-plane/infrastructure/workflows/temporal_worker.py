@@ -5,6 +5,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from application.generation_events import GenerationEventProcessor
+from application.reporting_events import ReportingEventProcessor
 from application.runs import PublishOutbox
 from application.triage_events import TriageEventProcessor
 from config import Settings
@@ -13,14 +14,17 @@ from temporalio.worker import Worker
 
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
+    SqlAlchemyArtifactRepository,
     SqlAlchemyAuditEventRepository,
     SqlAlchemyConfigurationRepository,
     SqlAlchemyGenerationRepository,
     SqlAlchemyOutboxEventRepository,
     SqlAlchemyProposalRepository,
+    SqlAlchemyRunReportRepository,
     SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
+from infrastructure.runners import VerifiedLocalArtifactPort
 from infrastructure.workflows.temporal import (
     TemporalWorkflowStarter,
     TestRunWorkflow,
@@ -43,14 +47,23 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                     TriageEventProcessor(
                         SqlAlchemyRunRepository(session),
                         SqlAlchemyConfigurationRepository(session),
-                    SqlAlchemyProposalRepository(session),
-                    settings,
-                    SqlAlchemyActivityEventRepository(session),
+                        SqlAlchemyProposalRepository(session),
+                        settings,
+                        SqlAlchemyActivityEventRepository(session),
                     ),
                     GenerationEventProcessor(
                         SqlAlchemyGenerationRepository(session),
                         SqlAlchemyConfigurationRepository(session),
                         SqlAlchemyAuditEventRepository(session),
+                        settings,
+                        SqlAlchemyActivityEventRepository(session),
+                    ),
+                    ReportingEventProcessor(
+                        SqlAlchemyRunRepository(session),
+                        SqlAlchemyConfigurationRepository(session),
+                        SqlAlchemyArtifactRepository(session),
+                        SqlAlchemyRunReportRepository(session),
+                        VerifiedLocalArtifactPort(settings.artifact_root),
                         settings,
                         SqlAlchemyActivityEventRepository(session),
                     ),

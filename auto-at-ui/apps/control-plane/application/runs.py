@@ -108,21 +108,34 @@ class CreateRun:
             )
         )
         if self._activities is not None:
-            self._activities.append(ActivityEvent.create(
-                tenant_id=command.tenant_id, run_id=run.id, correlation_id=run.correlation_id,
-                source="control_plane", stage="run.created", status="queued",
-                safe_summary="Run queued for durable dispatch.", occurred_at=datetime.now(UTC),
-            ))
+            self._activities.append(
+                ActivityEvent.create(
+                    tenant_id=command.tenant_id,
+                    run_id=run.id,
+                    correlation_id=run.correlation_id,
+                    source="control_plane",
+                    stage="run.created",
+                    status="queued",
+                    safe_summary="Run queued for durable dispatch.",
+                    occurred_at=datetime.now(UTC),
+                )
+            )
             steps = request.runner_config.get("steps")
             if isinstance(steps, list):
                 for index, _ in enumerate(steps, start=1):
-                    self._activities.append(ActivityEvent.create(
-                        tenant_id=command.tenant_id, run_id=run.id,
-                        correlation_id=run.correlation_id, source="control_plane",
-                        stage=f"browser.todo.{index}", status="queued",
-                        safe_summary=f"Browser todo step {index} queued.",
-                        occurred_at=datetime.now(UTC), metadata={"step_index": index},
-                    ))
+                    self._activities.append(
+                        ActivityEvent.create(
+                            tenant_id=command.tenant_id,
+                            run_id=run.id,
+                            correlation_id=run.correlation_id,
+                            source="control_plane",
+                            stage=f"browser.todo.{index}",
+                            status="queued",
+                            safe_summary=f"Browser todo step {index} queued.",
+                            occurred_at=datetime.now(UTC),
+                            metadata={"step_index": index},
+                        )
+                    )
         self._outbox.append(
             OutboxEvent(
                 id=uuid4(),
@@ -215,6 +228,68 @@ class RequestFailureTriage:
         )
 
 
+class RequestRunReport:
+    """Queue one read-only report for every result-bearing terminal run."""
+
+    def __init__(
+        self,
+        outbox: OutboxEventRepository,
+        audits: AuditEventRepository,
+        activities: ActivityEventRepository | None = None,
+    ) -> None:
+        self._outbox = outbox
+        self._audits = audits
+        self._activities = activities
+
+    def execute(self, run: TestRun) -> None:
+        if run.result is None or run.result.status not in {
+            RunStatus.PASSED,
+            RunStatus.FAILED,
+            RunStatus.ERRORED,
+            RunStatus.SKIPPED,
+        }:
+            return
+        idempotency_key = f"run-report:{run.id}:v1"
+        if self._outbox.get_by_idempotency_key(run.tenant_id, idempotency_key) is not None:
+            return
+        self._outbox.append(
+            OutboxEvent(
+                id=uuid4(),
+                tenant_id=run.tenant_id,
+                event_type=EventType.AGENT_RUN_REPORT_REQUESTED.value,
+                schema_version="v1",
+                correlation_id=run.correlation_id,
+                causation_id=None,
+                idempotency_key=idempotency_key,
+                payload={"run_id": str(run.id)},
+            )
+        )
+        self._audits.append(
+            AuditEvent(
+                id=uuid4(),
+                tenant_id=run.tenant_id,
+                actor="system",
+                action="run_report.requested",
+                entity_type="test_run",
+                entity_id=run.id,
+                correlation_id=run.correlation_id,
+            )
+        )
+        if self._activities is not None:
+            self._activities.append(
+                ActivityEvent.create(
+                    tenant_id=run.tenant_id,
+                    run_id=run.id,
+                    correlation_id=run.correlation_id,
+                    source="reporting",
+                    stage="requested",
+                    status="queued",
+                    safe_summary="Advisory run report queued.",
+                    occurred_at=datetime.now(UTC),
+                )
+            )
+
+
 class CancelRun:
     """Persist cancellation before asking the workflow plane to stop execution."""
 
@@ -262,11 +337,18 @@ class CancelRun:
             )
         )
         if self._activities is not None:
-            self._activities.append(ActivityEvent.create(
-                tenant_id=tenant_id, run_id=run.id, correlation_id=run.correlation_id,
-                source="control_plane", stage="run.cancelled", status="cancelled",
-                safe_summary="Run cancellation was requested.", occurred_at=datetime.now(UTC),
-            ))
+            self._activities.append(
+                ActivityEvent.create(
+                    tenant_id=tenant_id,
+                    run_id=run.id,
+                    correlation_id=run.correlation_id,
+                    source="control_plane",
+                    stage="run.cancelled",
+                    status="cancelled",
+                    safe_summary="Run cancellation was requested.",
+                    occurred_at=datetime.now(UTC),
+                )
+            )
         return run
 
 
@@ -302,11 +384,13 @@ class PublishOutbox:
         workflows: WorkflowStarter,
         triage: TriageEventHandler | None = None,
         generation: TriageEventHandler | None = None,
+        reporting: TriageEventHandler | None = None,
     ) -> None:
         self._outbox = outbox
         self._workflows = workflows
         self._triage = triage
         self._generation = generation
+        self._reporting = reporting
 
     async def execute(self, limit: int = 100) -> int:
         published = 0
@@ -333,6 +417,11 @@ class PublishOutbox:
                 and self._generation is not None
             ):
                 await self._generation.execute(event)
+            elif (
+                event.event_type == EventType.AGENT_RUN_REPORT_REQUESTED.value
+                and self._reporting is not None
+            ):
+                await self._reporting.execute(event)
             else:
                 continue
             self._outbox.mark_published(event.id, datetime.now(UTC))

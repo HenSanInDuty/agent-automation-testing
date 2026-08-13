@@ -2,13 +2,18 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProposalKind(StrEnum):
     TRIAGE = "triage"
     TEST_GENERATION = "test_generation"
     HEALING = "healing"
+
+
+class RunReportStatus(StrEnum):
+    COMPLETED = "completed"
+    UNAVAILABLE = "unavailable"
 
 
 class TriageCategory(StrEnum):
@@ -41,6 +46,24 @@ class EvidenceBundle(BaseModel):
     input_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
+class RedactedTextExcerpt(BaseModel):
+    """A bounded, verified textual artifact excerpt permitted in a report prompt."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str = Field(min_length=1, max_length=100)
+    uri: str = Field(min_length=1, max_length=2_000)
+    checksum: str = Field(pattern=r"^[a-f0-9]{64}$")
+    content_type: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=1, max_length=16_384)
+
+
+class RunReportEvidenceBundle(EvidenceBundle):
+    """Report-specific evidence with bounded redacted text from verified artifacts only."""
+
+    excerpts: list[RedactedTextExcerpt] = Field(default_factory=list, max_length=4)
+
+
 class TestIntent(BaseModel):
     source_reference: str = Field(min_length=1, max_length=2_000)
     goal: str = Field(min_length=1, max_length=4_000)
@@ -67,6 +90,40 @@ class ProposalProvenance(BaseModel):
     prompt_version: str = Field(min_length=1, max_length=100)
     redaction_policy_version: str = Field(min_length=1, max_length=100)
     evidence_input_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class RunReportObservation(BaseModel):
+    """One fact grounded in the bounded, redacted report evidence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=2_000)
+    evidence_references: list[str] = Field(default_factory=list, max_length=20)
+
+
+class RunReportFailure(BaseModel):
+    """Safe failure detail, when the permitted evidence makes it available."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    stage: str = Field(min_length=1, max_length=200)
+    location: str = Field(min_length=1, max_length=1_000)
+    message: str = Field(min_length=1, max_length=4_000)
+    evidence_references: list[str] = Field(default_factory=list, max_length=20)
+
+
+class RunReport(BaseModel):
+    """Immutable informational account of one deterministic execution result."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    deterministic_status: Literal["passed", "failed", "errored", "skipped"]
+    headline: str = Field(min_length=1, max_length=500)
+    what_ran: str = Field(min_length=1, max_length=4_000)
+    observations: list[RunReportObservation] = Field(default_factory=list, max_length=50)
+    failure: RunReportFailure | None = None
+    unverified_or_skipped: list[str] = Field(default_factory=list, max_length=50)
+    limitations: list[str] = Field(default_factory=list, max_length=50)
 
 
 class HealingProposal(BaseModel):

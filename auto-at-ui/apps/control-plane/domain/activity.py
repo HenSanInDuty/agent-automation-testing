@@ -5,8 +5,17 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 _SENSITIVE_KEYS = {"authorization", "cookie", "password", "secret", "token", "api_key"}
-_SOURCES = {"control_plane", "workflow", "worker", "generation", "triage"}
-_STATUSES = {"queued", "running", "passed", "failed", "errored", "cancelled", "info"}
+_SOURCES = {"control_plane", "workflow", "worker", "generation", "triage", "reporting"}
+_STATUSES = {
+    "queued",
+    "running",
+    "passed",
+    "failed",
+    "errored",
+    "cancelled",
+    "info",
+    "unavailable",
+}
 
 
 def validate_safe_metadata(value: object) -> dict[str, object]:
@@ -39,13 +48,31 @@ class ActivityEvent:
 
     @classmethod
     def create(
-        cls, *, tenant_id: str, correlation_id: UUID, source: str, stage: str,
-        status: str, safe_summary: str, occurred_at: datetime, run_id: UUID | None = None,
+        cls,
+        *,
+        tenant_id: str,
+        correlation_id: UUID,
+        source: str,
+        stage: str,
+        status: str,
+        safe_summary: str,
+        occurred_at: datetime,
+        run_id: UUID | None = None,
         metadata: dict[str, object] | None = None,
     ) -> "ActivityEvent":
         if source not in _SOURCES or status not in _STATUSES or not stage or len(stage) > 100:
             raise ValueError("activity source, stage, or status is invalid")
         if not safe_summary or len(safe_summary) > 1_000:
             raise ValueError("activity summary is invalid")
-        return cls(uuid4(), tenant_id, run_id, correlation_id, source, stage, status,
-                   safe_summary, validate_safe_metadata(metadata or {}), occurred_at)
+        return cls(
+            uuid4(),
+            tenant_id,
+            run_id,
+            correlation_id,
+            source,
+            stage,
+            status,
+            safe_summary,
+            validate_safe_metadata(metadata or {}),
+            occurred_at,
+        )

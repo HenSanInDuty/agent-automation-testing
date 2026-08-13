@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ControlPlaneError, decideProposal, listDrafts, listProposals, submitGeneration } from "./generation-api.ts";
+import { ControlPlaneError, decideProposal, getPolicy, listDrafts, listProposals, submitGeneration } from "./generation-api.ts";
 
 test("generation submission sends session credentials and an idempotency key", async () => {
   const originalFetch = globalThis.fetch;
@@ -40,5 +40,19 @@ test("review collection and decision requests use the control-plane routes", asy
     assert.match(requests[1].url, /proposals\?decided=false/);
     assert.equal(requests[2].method, "POST");
     assert.equal(await requests[2].text(), JSON.stringify({ approved: true, reason: "evidence reviewed" }));
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("project policy can be loaded after it has been saved", async () => {
+  const originalFetch = globalThis.fetch;
+  let received: Request | undefined;
+  globalThis.fetch = async (input, init) => {
+    received = new Request(input, init);
+    return new Response(JSON.stringify({ allowed_origins: ["https://example.test"] }));
+  };
+  try {
+    await getPolicy("http://control-plane", "project-id");
+    assert.equal(received?.method, "GET");
+    assert.match(received?.url ?? "", /projects\/project-id\/policy$/);
   } finally { globalThis.fetch = originalFetch; }
 });

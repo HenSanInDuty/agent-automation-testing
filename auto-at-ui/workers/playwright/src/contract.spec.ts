@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
@@ -87,9 +88,38 @@ test("returns a normal v1 policy-blocked result before browser startup", async (
   const config = request.runner_config as Record<string, unknown>;
   config.source_hash = "a".repeat(64);
 
-  const result = await executeRequest(request, ".tmp-artifacts");
+  const result = await executeRequest(request, "/tmp/worker-contract-artifacts");
   expect(result).toMatchObject({ status: "errored", summary: "Generated source blocked by execution policy." });
   expect(result.runner_metadata).toMatchObject({ policy_blocked: true });
+});
+
+test("runs generated source with the browser bundled in the worker image", async () => {
+  test.skip(!existsSync("/ms-playwright"), "requires the pinned Playwright worker image");
+  const source = [
+    "import { test, expect } from '@playwright/test';",
+    "test('bundled browser', async ({ page }) => {",
+    "  await page.setContent('<button>Save</button>');",
+    "  await expect(page.getByRole('button', { name: 'Save' })).toBeEnabled();",
+    "});",
+  ].join("\n");
+  const request = {
+    contract_version: "v1", run_id: "11111111-1111-4111-8111-111111111111",
+    correlation_id: "22222222-2222-4222-8222-222222222222",
+    project_id: "33333333-3333-4333-8333-333333333333", test_case_id: "generated-browser",
+    target_type: "web_ui", revision: "a".repeat(40),
+    runner_config: {
+      mode: "playwright_test_source", playwright_test_source: source,
+      source_hash: createHash("sha256").update(source).digest("hex"),
+      allowed_origins: ["https://example.test"],
+    },
+    artifact_policy: {
+      trace_on_failure: true, video_on_failure: true, screenshot_on_failure: true, retain_days: 30,
+    },
+  };
+
+  const result = await executeRequest(request, "/tmp/worker-contract-artifacts");
+
+  expect(result).toMatchObject({ status: "passed", runner_metadata: { policy_blocked: false } });
 });
 
 test("stops before launching a browser when the run was already cancelled", async () => {

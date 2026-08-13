@@ -90,6 +90,10 @@ class PolicyRequest(BaseModel):
     allowed_origins: list[str] = Field(min_length=1, max_length=100)
 
 
+class PolicyResponse(BaseModel):
+    allowed_origins: list[str] = Field(default_factory=list, max_length=100)
+
+
 def _request_response(
     repository: SqlAlchemyGenerationRepository, request: object
 ) -> RequestResponse:
@@ -142,6 +146,22 @@ def set_policy(
     with transactional_session(create_session_factory(settings)) as session:
         SqlAlchemyGenerationRepository(session).set_policy(tenant_id, project_id, normalized)
     return PolicyRequest(allowed_origins=normalized)
+
+
+@router.get("/projects/{project_id}/policy", response_model=PolicyResponse)
+def get_policy(
+    project_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> PolicyResponse:
+    try:
+        require(actor_for_tenant(principal, tenant_id, project_id), Permission.READ)
+    except AuthorizationError as error:
+        raise HTTPException(status_code=404, detail="Project not found.") from error
+    with create_session_factory(settings)() as session:
+        policy = SqlAlchemyGenerationRepository(session).get_policy(tenant_id, project_id)
+    return PolicyResponse(allowed_origins=[] if policy is None else policy.allowed_origins)
 
 
 @router.post("", response_model=RequestResponse, status_code=status.HTTP_202_ACCEPTED)

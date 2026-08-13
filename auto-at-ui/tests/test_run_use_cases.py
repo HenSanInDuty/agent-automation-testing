@@ -7,6 +7,7 @@ from application.runs import (
     ListArtifacts,
     RecordDeterministicResult,
     RequestFailureTriage,
+    RequestRunReport,
     RunNotFoundError,
 )
 from auto_at.contracts.execution import RunStatus
@@ -127,6 +128,45 @@ def test_failed_run_queues_one_advisory_triage_event() -> None:
 
     assert [event.event_type for event in outbox.events] == ["agent.triage.requested.v1"]
     assert len(audits.events) == 1
+
+
+@pytest.mark.parametrize("status", list(RunStatus))
+def test_every_result_bearing_terminal_run_queues_one_report(status: RunStatus) -> None:
+    class Outbox:
+        def __init__(self) -> None:
+            self.events: list[OutboxEvent] = []
+
+        def get_by_idempotency_key(self, tenant_id: str, idempotency_key: str):
+            return next(
+                (item for item in self.events if item.idempotency_key == idempotency_key), None
+            )
+
+        def append(self, event: OutboxEvent) -> None:
+            self.events.append(event)
+
+    class Audits:
+        def append(self, event: object) -> None:
+            return None
+
+    run = make_run()
+    RecordDeterministicResult(InMemoryRuns(run)).execute(
+        "tenant-a",
+        ExecutionResult(
+            run_id=run.id,
+            correlation_id=run.correlation_id,
+            status=status,
+            started_at="2026-08-13T00:00:00Z",
+            completed_at="2026-08-13T00:00:01Z",
+            summary="Done.",
+        ),
+    )
+    outbox = Outbox()
+    reporter = RequestRunReport(outbox, Audits())
+
+    reporter.execute(run)
+    reporter.execute(run)
+
+    assert [item.event_type for item in outbox.events] == ["agent.run_report.requested.v1"]
 
 
 def test_list_artifacts_is_scoped_to_the_run_and_tenant() -> None:

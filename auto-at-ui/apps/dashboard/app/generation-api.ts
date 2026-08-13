@@ -25,6 +25,9 @@ export function setPolicy(apiUrl: string, projectId: string, allowed_origins: st
     method: "PUT", body: JSON.stringify({ allowed_origins }),
   });
 }
+export function getPolicy(apiUrl: string, projectId: string) {
+  return apiRequest<{ allowed_origins: string[] }>(apiUrl, `/api/v1/test-generations/projects/${projectId}/policy`);
+}
 export function getRun(apiUrl: string, id: string) {
   return apiRequest<Run>(apiUrl, `/api/v1/runs/${id}`);
 }

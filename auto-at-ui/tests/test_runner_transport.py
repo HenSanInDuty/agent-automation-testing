@@ -58,3 +58,44 @@ def test_transport_posts_an_idempotent_cancellation_command(monkeypatch) -> None
     assert observed["url"] == "http://worker/cancel"
     assert observed["data"] == b'{"run_id": "run-1"}'
     assert observed["timeout"] == 12
+
+
+def test_transport_keeps_progress_metadata_outside_the_execution_contract(monkeypatch) -> None:
+    request = ExecutionRequest(
+        run_id=uuid4(), correlation_id=uuid4(), project_id=uuid4(), test_case_id="generated",
+        target_type=TargetType.WEB_UI, revision="a" * 40,
+        runner_config={"mode": "playwright_test_source"},
+    )
+    observed: dict[str, object] = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return (
+                b'{"contract_version":"v1","run_id":"'
+                + str(request.run_id).encode()
+                + b'","correlation_id":"'
+                + str(request.correlation_id).encode()
+                + b'","status":"passed","started_at":"now","completed_at":"now",'
+                + b'"summary":"ok","artifacts":[],"runner_metadata":{}}'
+            )
+
+    def build_request(url, data, headers):
+        observed.update(url=url, data=data, headers=headers)
+        return object()
+
+    monkeypatch.setattr("infrastructure.runners.Request", build_request)
+    monkeypatch.setattr("infrastructure.runners.urlopen", lambda *_args, **_kwargs: Response())
+
+    HttpPlaywrightTransport("http://worker", progress_tenant_id="tenant-a").execute(request)
+
+    assert observed["headers"] == {
+        "Content-Type": "application/json",
+        "X-Auto-AT-Progress-Tenant-ID": "tenant-a",
+    }
+    assert b"internal_progress_tenant_id" not in observed["data"]

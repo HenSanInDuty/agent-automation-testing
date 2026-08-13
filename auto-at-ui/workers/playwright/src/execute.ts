@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "@playwright/test";
 
 import {
@@ -175,16 +177,24 @@ async function executePlaywrightTestSource(
   try {
     const resultDirectory = join(workspace, "test-results");
     const policyEvidence = join(workspace, "origin-policy.json");
+    const workerRoot = fileURLToPath(new URL("../", import.meta.url));
+    const runner = join(workerRoot, "node_modules", "@playwright/test/cli.js");
+    const guard = fileURLToPath(new URL("./origin-guard.cjs", import.meta.url));
     await writeFile(join(workspace, "generated.spec.ts"), config.playwright_test_source, { mode: 0o400 });
     await writeFile(join(workspace, "package.json"), "{\"type\":\"module\"}\n", { mode: 0o400 });
-    await symlink("/worker/node_modules", join(workspace, "node_modules"), "junction");
+    await symlink(join(workerRoot, "node_modules"), join(workspace, "node_modules"), "junction");
     await writeFile(join(workspace, "playwright.config.ts"), `import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: '.', testMatch: 'generated.spec.ts', outputDir: ${JSON.stringify(resultDirectory)}, timeout: 60000, workers: 1, use: { trace: 'retain-on-failure', video: 'retain-on-failure', screenshot: 'only-on-failure', serviceWorkers: 'block' } });\n`, { mode: 0o400 });
-    const runner = "/worker/node_modules/@playwright/test/cli.js";
-    const guard = "/worker/src/origin-guard.cjs";
+    const workerHome = process.env.HOME ?? "/home/pwuser";
+    const browserPath = existsSync("/ms-playwright")
+      ? "/ms-playwright"
+      : join(workerHome, ".cache", "ms-playwright");
     const child = spawn(process.execPath, [runner, "test", "--config=playwright.config.ts", "--reporter=line"], {
       cwd: workspace,
       env: {
         PATH: process.env.PATH ?? "", HOME: workspace, TMPDIR: workspace,
+        // The temporary HOME isolates generated source from the worker account,
+        // but browser binaries remain part of the pinned Playwright image.
+        PLAYWRIGHT_BROWSERS_PATH: browserPath,
         PLAYWRIGHT_ALLOWED_ORIGINS: JSON.stringify(config.allowed_origins),
         PLAYWRIGHT_POLICY_EVIDENCE: policyEvidence,
         NODE_OPTIONS: `--require ${guard}`,
@@ -198,12 +208,15 @@ async function executePlaywrightTestSource(
       child.once("error", reject); child.once("exit", resolveExit);
     }), 65_000, signal).catch((error) => { child.kill("SIGKILL"); throw error; });
     const policy = await readFile(policyEvidence, "utf8").catch(() => "[]");
-    const blocked = policy !== "[]";
-    const result = blocked ? policyResult(request, startedAt, "origin outside project allowlist") : {
+    const policyViolations = JSON.parse(policy) as unknown;
+    const result = {
       contract_version: "v1" as const, run_id: request.run_id, correlation_id: request.correlation_id,
       status: exit === 0 ? "passed" as const : "failed" as const, started_at: startedAt,
       completed_at: new Date().toISOString(), summary: exit === 0 ? "Playwright Test passed." : "Playwright Test reported a failure.",
-      artifacts, runner_metadata: { browser: "chromium", playwright_version: "1.50.1", source_hash: config.source_hash, policy_blocked: false, evidence },
+      artifacts, runner_metadata: {
+        browser: "chromium", playwright_version: "1.50.1", source_hash: config.source_hash,
+        policy_blocked: false, blocked_external_origins: policyViolations, evidence,
+      },
     };
     await addEvidence(artifactRoot, request.run_id, "playwright-output", "txt", "text/plain", Buffer.concat(output), artifacts, evidence);
     await addEvidence(artifactRoot, request.run_id, "origin-policy", "json", "application/json", policy, artifacts, evidence);

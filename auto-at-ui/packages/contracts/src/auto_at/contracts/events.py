@@ -14,6 +14,7 @@ class EventType(StrEnum):
     TEST_RUN_COMPLETED = "test.run.completed.v1"
     TEST_RUN_CANCELLED = "test.run.cancelled.v1"
     AGENT_TRIAGE_REQUESTED = "agent.triage.requested.v1"
+    AGENT_RUN_REPORT_REQUESTED = "agent.run_report.requested.v1"
     AGENT_PROPOSAL_CREATED = "agent.proposal.created.v1"
     PROPOSAL_APPROVAL_RECORDED = "proposal.approval.recorded.v1"
     MEMORY_EPISODE_VALIDATED = "memory.episode.validated.v1"

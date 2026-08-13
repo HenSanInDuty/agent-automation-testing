@@ -24,16 +24,21 @@ class RunnerUnavailableError(RuntimeError):
 class HttpPlaywrightTransport:
     """The local HTTP boundary can be replaced by a durable workflow transport."""
 
-    def __init__(self, worker_url: str, timeout_seconds: float = 90) -> None:
+    def __init__(
+        self, worker_url: str, timeout_seconds: float = 90, progress_tenant_id: str | None = None
+    ) -> None:
         self._url = f"{worker_url.rstrip('/')}/execute"
         self._timeout_seconds = timeout_seconds
+        self._progress_tenant_id = progress_tenant_id
 
     def execute(self, request: TestExecutionRequest) -> TestExecutionResult:
         body = json.dumps(request.model_dump(mode="json")).encode()
         try:
+            headers = {"Content-Type": "application/json"}
+            if self._progress_tenant_id:
+                headers["X-Auto-AT-Progress-Tenant-ID"] = self._progress_tenant_id
             with urlopen(
-                Request(self._url, data=body, headers={"Content-Type": "application/json"}),
-                timeout=self._timeout_seconds,
+                Request(self._url, data=body, headers=headers), timeout=self._timeout_seconds
             ) as response:
                 return TestExecutionResult.model_validate_json(response.read())
         except TimeoutError as error:
@@ -125,6 +130,12 @@ class VerifiedLocalArtifactPort:
         if hashlib.sha256(path.read_bytes()).hexdigest() != artifact.checksum:
             raise ValueError("artifact checksum verification failed")
         return path
+
+    def read_verified_bytes(self, artifact: ArtifactRecord, max_bytes: int) -> bytes:
+        """Return a capped artifact only after its stored checksum is verified."""
+        if artifact.size > max_bytes:
+            raise ValueError("artifact exceeds the configured raw-byte cap")
+        return self.verified_path(artifact).read_bytes()
 
     @staticmethod
     def _path_for_uri(uri: str) -> Path:

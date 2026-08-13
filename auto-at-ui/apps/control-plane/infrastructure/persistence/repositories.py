@@ -5,10 +5,17 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from auto_at.contracts.agent import ProposalKind
-from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
+from auto_at.contracts.agent import ProposalKind, RunReport, RunReportStatus
+from auto_at.contracts.execution import RunStatus, TestExecutionRequest, TestExecutionResult
 from domain.activity import ActivityEvent
-from domain.entities import ApprovalRecord, ArtifactRecord, Project, ProposalRecord, TestCase
+from domain.entities import (
+    ApprovalRecord,
+    ArtifactRecord,
+    Project,
+    ProposalRecord,
+    RunReportRecord,
+    TestCase,
+)
 from domain.runs import AuditEvent, OutboxEvent, RunLifecycleStatus, TestRun
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.orm import Session
@@ -26,6 +33,7 @@ from infrastructure.persistence.models import (
     OutboxEventModel,
     ProjectExecutionPolicyModel,
     ProjectModel,
+    RunReportModel,
     TestCaseModel,
     TestRunModel,
 )
@@ -523,6 +531,67 @@ class SqlAlchemyProposalRepository:
         self._session.flush()
 
 
+class SqlAlchemyRunReportRepository:
+    """Immutable, tenant-scoped run-report storage."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get_for_run(
+        self, tenant_id: str, run_id: UUID, report_version: int = 1
+    ) -> RunReportRecord | None:
+        model = self._session.scalar(
+            select(RunReportModel).where(
+                RunReportModel.tenant_id == tenant_id,
+                RunReportModel.run_id == run_id,
+                RunReportModel.report_version == report_version,
+            )
+        )
+        return None if model is None else self._to_domain(model)
+
+    def add(self, report: RunReportRecord) -> RunReportRecord:
+        existing = self.get_for_run(report.tenant_id, report.run_id, report.report_version)
+        if existing is not None:
+            return existing
+        self._session.add(
+            RunReportModel(
+                id=report.id,
+                tenant_id=report.tenant_id,
+                run_id=report.run_id,
+                correlation_id=report.correlation_id,
+                report_version=report.report_version,
+                schema_version=report.schema_version,
+                prompt_version=report.prompt_version,
+                deterministic_status=report.deterministic_status.value,
+                status=report.status.value,
+                payload=None if report.payload is None else report.payload.model_dump(mode="json"),
+                provenance=report.provenance,
+                input_hash=report.input_hash,
+                created_at=report.created_at,
+            )
+        )
+        self._session.flush()
+        return report
+
+    @staticmethod
+    def _to_domain(model: RunReportModel) -> RunReportRecord:
+        return RunReportRecord(
+            id=model.id,
+            tenant_id=model.tenant_id,
+            run_id=model.run_id,
+            correlation_id=model.correlation_id,
+            report_version=model.report_version,
+            schema_version=model.schema_version,
+            prompt_version=model.prompt_version,
+            deterministic_status=RunStatus(model.deterministic_status),
+            status=RunReportStatus(model.status),
+            payload=None if model.payload is None else RunReport.model_validate(model.payload),
+            provenance=model.provenance,
+            input_hash=model.input_hash,
+            created_at=model.created_at,
+        )
+
+
 class SqlAlchemyApprovalRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -592,19 +661,29 @@ class SqlAlchemyActivityEventRepository:
         self._session = session
 
     def append(self, event: ActivityEvent) -> None:
-        self._session.add(ActivityEventModel(
-            id=event.id, tenant_id=event.tenant_id, run_id=event.run_id,
-            correlation_id=event.correlation_id, source=event.source, stage=event.stage,
-            status=event.status,
-            safe_summary=event.safe_summary,
-            event_metadata=event.metadata,
-            occurred_at=event.occurred_at,
-        ))
+        self._session.add(
+            ActivityEventModel(
+                id=event.id,
+                tenant_id=event.tenant_id,
+                run_id=event.run_id,
+                correlation_id=event.correlation_id,
+                source=event.source,
+                stage=event.stage,
+                status=event.status,
+                safe_summary=event.safe_summary,
+                event_metadata=event.metadata,
+                occurred_at=event.occurred_at,
+            )
+        )
         self._session.flush()
 
     def list(
-        self, tenant_id: str, *, run_id: UUID | None = None,
-        correlation_id: UUID | None = None, after: datetime | None = None,
+        self,
+        tenant_id: str,
+        *,
+        run_id: UUID | None = None,
+        correlation_id: UUID | None = None,
+        after: datetime | None = None,
     ) -> list[ActivityEvent]:
         statement = select(ActivityEventModel).where(ActivityEventModel.tenant_id == tenant_id)
         if run_id is not None:
@@ -614,14 +693,21 @@ class SqlAlchemyActivityEventRepository:
         if after is not None:
             statement = statement.where(ActivityEventModel.occurred_at > after)
         statement = statement.order_by(ActivityEventModel.occurred_at, ActivityEventModel.id)
-        return [ActivityEvent(
-            id=item.id, tenant_id=item.tenant_id, run_id=item.run_id,
-            correlation_id=item.correlation_id, source=item.source, stage=item.stage,
-            status=item.status,
-            safe_summary=item.safe_summary,
-            metadata=item.event_metadata,
-            occurred_at=item.occurred_at,
-        ) for item in self._session.scalars(statement)]
+        return [
+            ActivityEvent(
+                id=item.id,
+                tenant_id=item.tenant_id,
+                run_id=item.run_id,
+                correlation_id=item.correlation_id,
+                source=item.source,
+                stage=item.stage,
+                status=item.status,
+                safe_summary=item.safe_summary,
+                metadata=item.event_metadata,
+                occurred_at=item.occurred_at,
+            )
+            for item in self._session.scalars(statement)
+        ]
 
 
 class SqlAlchemyConfigurationRepository:

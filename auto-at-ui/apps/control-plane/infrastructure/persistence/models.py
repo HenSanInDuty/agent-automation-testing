@@ -171,6 +171,23 @@ class AgentProposalModel(TenantRecord, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class RunReportModel(TenantRecord, Base):
+    __tablename__ = "run_reports"
+    __table_args__ = (UniqueConstraint("tenant_id", "run_id", "report_version"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("test_runs.id", ondelete="CASCADE"), index=True)
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    report_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    schema_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    deterministic_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    payload: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    provenance: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class ApprovalModel(TenantRecord, Base):
     __tablename__ = "approvals"
     __table_args__ = (UniqueConstraint("proposal_id", "proposal_version"),)

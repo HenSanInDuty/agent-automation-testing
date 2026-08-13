@@ -7,7 +7,14 @@ from uuid import UUID
 from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
 
 from domain.activity import ActivityEvent
-from domain.entities import ApprovalRecord, ArtifactRecord, Project, ProposalRecord, TestCase
+from domain.entities import (
+    ApprovalRecord,
+    ArtifactRecord,
+    Project,
+    ProposalRecord,
+    RunReportRecord,
+    TestCase,
+)
 from domain.runs import AuditEvent, OutboxEvent, TestRun
 
 
@@ -47,6 +54,14 @@ class ProposalRepository(Protocol):
     def get(self, tenant_id: str, proposal_id: UUID) -> ProposalRecord | None: ...
 
     def add(self, proposal: ProposalRecord) -> None: ...
+
+
+class RunReportRepository(Protocol):
+    def get_for_run(
+        self, tenant_id: str, run_id: UUID, report_version: int = 1
+    ) -> RunReportRecord | None: ...
+
+    def add(self, report: RunReportRecord) -> RunReportRecord: ...
 
 
 class ApprovalRepository(Protocol):

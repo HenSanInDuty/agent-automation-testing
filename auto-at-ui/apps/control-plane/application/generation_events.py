@@ -6,7 +6,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
-from agents.generation.planner import plan_test
+from agents.generation.planner import PlannerOutputError, plan_test
 from agents.shared.openrouter import create_language_model
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentStepGuard, resolve_agent_runtime
 from auto_at.contracts.execution import sha256_text, validate_playwright_test_source
@@ -98,13 +98,26 @@ class GenerationEventProcessor:
                 raise ValueError("generation token budget is exhausted")
             model = create_language_model(self._settings, runtime)
             self._record(request, "model", "running", "Generation model is producing a draft.")
-            output = await plan_test(
-                model,
-                planning_request,
-                policy.allowed_origins,
-                self._settings.agent_generation_max_tokens,
-            )
-            validate_playwright_test_source(output.playwright_test_source)
+            try:
+                output = await plan_test(
+                    model,
+                    planning_request,
+                    policy.allowed_origins,
+                    self._settings.agent_generation_max_tokens,
+                )
+            except PlannerOutputError as error:
+                # This is safe to share: it identifies the contract boundary,
+                # without retaining model text or provider diagnostics.
+                logger.info(
+                    "generation planner output rejected request_id=%s diagnostic=%s",
+                    request_id,
+                    error.diagnostic,
+                )
+                raise GenerationOutputStructureError from None
+            try:
+                validate_playwright_test_source(output.playwright_test_source)
+            except ValueError:
+                raise GenerationSourceSafetyError from None
             complete_generation(
                 self._repository,
                 tenant_id=event.tenant_id,
@@ -138,11 +151,12 @@ class GenerationEventProcessor:
                 raise
             # Never persist provider responses or exception details: they may
             # contain unredacted data.
-            detail = (
-                "generation unavailable"
-                if "configured" in str(error)
-                else "generation output failed policy validation"
-            )
+            if isinstance(error, GenerationOutputStructureError):
+                detail = "generation output did not match the required structured format"
+            elif isinstance(error, GenerationSourceSafetyError):
+                detail = "generation output failed source safety validation"
+            else:
+                detail = "generation unavailable"
             fail_generation(
                 self._repository,
                 tenant_id=event.tenant_id,
@@ -166,3 +180,11 @@ class GenerationEventProcessor:
                 source="generation", stage=stage, status=status, safe_summary=summary,
                 occurred_at=datetime.now(UTC), metadata={"request_id": str(request.id)},
             ))
+
+
+class GenerationOutputStructureError(ValueError):
+    """The untrusted provider response did not satisfy the planner contract."""
+
+
+class GenerationSourceSafetyError(ValueError):
+    """The structured response contained prohibited generated source."""

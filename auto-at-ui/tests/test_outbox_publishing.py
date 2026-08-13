@@ -42,6 +42,10 @@ class RecordingGenerationHandler(RecordingTriageHandler):
     pass
 
 
+class RecordingReportingHandler(RecordingTriageHandler):
+    pass
+
+
 def requested_event() -> OutboxEvent:
     run_id = uuid4()
     return OutboxEvent(
@@ -146,6 +150,26 @@ def test_publisher_delivers_generation_events_only_when_a_handler_is_configured(
 
     assert asyncio.run(PublishOutbox(outbox, RecordingWorkflowStarter()).execute()) == 0
     publisher = PublishOutbox(outbox, RecordingWorkflowStarter(), generation=handler)
+    assert asyncio.run(publisher.execute()) == 1
+    assert handler.events == [event]
+
+
+def test_publisher_delivers_reporting_events_only_when_a_handler_is_configured() -> None:
+    event = OutboxEvent(
+        id=uuid4(),
+        tenant_id="tenant-a",
+        event_type="agent.run_report.requested.v1",
+        schema_version="v1",
+        correlation_id=uuid4(),
+        causation_id=None,
+        idempotency_key="run-report:one",
+        payload={"run_id": str(uuid4())},
+    )
+    outbox = InMemoryOutbox([event])
+    handler = RecordingReportingHandler()
+
+    assert asyncio.run(PublishOutbox(outbox, RecordingWorkflowStarter()).execute()) == 0
+    publisher = PublishOutbox(outbox, RecordingWorkflowStarter(), reporting=handler)
     assert asyncio.run(publisher.execute()) == 1
     assert handler.events == [event]
 

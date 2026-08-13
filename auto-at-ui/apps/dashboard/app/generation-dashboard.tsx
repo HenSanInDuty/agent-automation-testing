@@ -1,23 +1,27 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CodeBlock } from "./components/code-block";
 import { ConfirmDialog } from "./components/confirm-dialog";
 import { ActivityTimeline } from "./components/activity-timeline";
 import { PageHeader } from "./components/page-header";
 import { EmptyState, LoadingState } from "./components/states";
 import { StatusBadge } from "./components/status-badge";
-import { ControlPlaneError, decideDraft, getArtifacts, getDraft, getGenerationRequest, getRun, setPolicy, submitGeneration } from "./generation-api";
+import { ControlPlaneError, decideDraft, getArtifacts, getDraft, getGenerationRequest, getPolicy, getRun, setPolicy, submitGeneration } from "./generation-api";
 import { shouldPollGeneration } from "./generation-polling";
 import type { Artifact, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
+import { projects, type Project } from "./run-api";
 
 function errorMessage(error: unknown) { return error instanceof ControlPlaneError ? error.message : "The control plane is unavailable. Try again later."; }
 
 export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const [projectId, setProjectId] = useState("");
+  const [projectOptions, setProjectOptions] = useState<Project[]>([]);
   const [targetUrl, setTargetUrl] = useState("");
   const [naturalRequest, setNaturalRequest] = useState("");
   const [origins, setOrigins] = useState("");
+  const [savedOrigins, setSavedOrigins] = useState<string[]>([]);
   const [generation, setGeneration] = useState<GenerationRequest | null>(null);
   const [draft, setDraft] = useState<GeneratedDraft | null>(null);
   const [run, setRun] = useState<Run | null>(null);
@@ -27,6 +31,18 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const [decision, setDecision] = useState<boolean | null>(null);
   const [isDeciding, setIsDeciding] = useState(false);
   const canDecide = useMemo(() => draft?.state === "pending_review", [draft]);
+
+  useEffect(() => {
+    projects(apiUrl).then((next) => { setProjectOptions(next); setProjectId((current) => current || next[0]?.id || ""); }).catch((error) => setNotice(errorMessage(error)));
+  }, [apiUrl]);
+
+  useEffect(() => {
+    if (!projectId) { setOrigins(""); setSavedOrigins([]); return; }
+    getPolicy(apiUrl, projectId).then((policy) => {
+      setSavedOrigins(policy.allowed_origins);
+      setOrigins(policy.allowed_origins.join(", "));
+    }).catch((error) => setNotice(errorMessage(error)));
+  }, [apiUrl, projectId]);
 
   useEffect(() => {
     if (!generation || !shouldPollGeneration(generation.state)) return;
@@ -63,15 +79,15 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   }
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    try { const policy = await setPolicy(apiUrl, projectId, origins.split(/\s|,/).filter(Boolean)); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
+    try { const policy = await setPolicy(apiUrl, projectId, origins.split(/\s|,/).filter(Boolean)); setSavedOrigins(policy.allowed_origins); setOrigins(policy.allowed_origins.join(", ")); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
     catch (error) { setNotice(errorMessage(error)); }
   }
 
   return <><PageHeader eyebrow="Governed intelligence" title="Agent workspace" description="Request a bounded Playwright draft, inspect the control-plane response, then make one auditable decision." />
     <section className="workspace-section"><h2>Request a Playwright test</h2><p>The dashboard is an API client: it never authorizes, redacts, generates, approves, or executes a test itself.</p>
-      <form onSubmit={submit} className="form-grid"><label className="field">Project ID <input required value={projectId} onChange={(e) => setProjectId(e.target.value)} /></label><label className="field">Target URL <input required type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} /></label><label className="field form-grid--one">Natural-language request <textarea required value={naturalRequest} onChange={(e) => setNaturalRequest(e.target.value)} /></label><div className="form-actions"><button className="button" type="submit">Submit for generation</button></div></form>
+      <form onSubmit={submit} className="form-grid"><label className="field">Project<select required value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={!projectOptions.length}><option value="">{projectOptions.length ? "Choose a project" : "No projects available"}</option>{projectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label><label className="field">Target URL <input required type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} /></label><label className="field form-grid--full">Natural-language request <textarea required value={naturalRequest} onChange={(e) => setNaturalRequest(e.target.value)} /></label><div className="form-actions form-grid--full"><button className="button" type="submit" disabled={!projectId}>Submit for generation</button>{!projectOptions.length && <Link href="/projects">Create a project</Link>}</div></form>
     </section>
-    <section className="workspace-section"><h2>Project policy</h2><p>Only project administrators can save an origin allowlist.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><div className="form-actions"><button className="button button--secondary" type="submit">Save allowed origins</button></div></form></section>
+    <section className="workspace-section"><h2>Project policy</h2><p>Only project administrators can save an origin allowlist.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><div className="form-actions"><button className="button button--secondary" type="submit" disabled={!projectId}>Save allowed origins</button></div></form><h3>Saved allowed origins</h3>{savedOrigins.length ? <ul className="stack-list">{savedOrigins.map((origin) => <li key={origin}><code>{origin}</code></li>)}</ul> : <p>No origin policy has been saved for this project.</p>}</section>
     {notice && <p className={`notice ${notice.includes("unavailable") ? "notice--error" : ""}`} role="alert">{notice}</p>}
     {generation && <><section className="workspace-section" aria-label="Generation request"><div className="section-heading"><h2>Generation request</h2><StatusBadge status={generation.state} /></div><ul className="detail-list"><li>Request: {generation.redacted_request}</li><li>Request hash: <code>{generation.request_hash}</code></li><li>Correlation: <code>{generation.correlation_id}</code></li>{generation.failure_reason && <li>Safe failure: {generation.failure_reason}</li>}</ul>{shouldPollGeneration(generation.state) && <LoadingState title="Generation is in progress" />}</section><ActivityTimeline apiUrl={apiUrl} correlationId={generation.correlation_id} live={shouldPollGeneration(generation.state)} /></>}
     {draft && <section className="workspace-section" aria-label="Generated draft"><div className="section-heading"><h2>{draft.title}</h2><StatusBadge status={draft.state} /></div><p>Source hash: <code>{draft.source_hash}</code></p><CodeBlock label="Generated Playwright source">{draft.playwright_test_source}</CodeBlock><h3>Assumptions</h3><ul className="stack-list">{draft.assumptions.map((item) => <li key={item}>{item}</li>)}</ul><h3>Stop conditions</h3><ul className="stack-list">{draft.stop_conditions.map((item) => <li key={item}>{item}</li>)}</ul><h3>Provenance</h3><CodeBlock label="Draft provenance">{JSON.stringify(draft.provenance, null, 2)}</CodeBlock>{canDecide && <div className="form-grid form-grid--one"><label className="field">Decision reason <input value={reason} onChange={(e) => setReason(e.target.value)} /></label><div className="button-row"><button type="button" className="button" onClick={() => setDecision(true)}>Approve and dispatch once</button><button type="button" className="button button--danger" onClick={() => setDecision(false)}>Reject draft</button></div></div>}{draft.linked_test_case_id && <p>Versioned test case: <code>{draft.linked_test_case_id}</code></p>}</section>}
