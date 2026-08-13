@@ -97,6 +97,7 @@ class SqlAlchemyCatalogRepository:
                 model.target_type,
                 model.revision,
                 model.specification,
+                model.name,
             )
         )
 
@@ -106,10 +107,12 @@ class SqlAlchemyCatalogRepository:
         statement = (
             select(TestCaseModel)
             .where(TestCaseModel.tenant_id == tenant_id, TestCaseModel.project_id == project_id)
-            .order_by(TestCaseModel.id)
+            .order_by(TestCaseModel.name, TestCaseModel.id)
         )
         if query:
-            statement = statement.where(TestCaseModel.id.ilike(f"%{query}%"))
+            statement = statement.where(
+                TestCaseModel.name.ilike(f"%{query}%") | TestCaseModel.id.ilike(f"%{query}%")
+            )
         return [
             TestCase(
                 item.id,
@@ -118,6 +121,7 @@ class SqlAlchemyCatalogRepository:
                 item.target_type,
                 item.revision,
                 item.specification,
+                item.name,
             )
             for item in self._session.scalars(statement)
         ]
@@ -131,9 +135,30 @@ class SqlAlchemyCatalogRepository:
                 target_type=test_case.target_type.value,
                 revision=test_case.revision,
                 specification=test_case.specification,
+                name=test_case.name,
             )
         )
         self._session.flush()
+
+    def rename_test_case(self, tenant_id: str, test_case_id: str, name: str) -> TestCase | None:
+        model = self._session.scalar(
+            select(TestCaseModel).where(
+                TestCaseModel.tenant_id == tenant_id, TestCaseModel.id == test_case_id
+            )
+        )
+        if model is None:
+            return None
+        model.name = name
+        self._session.flush()
+        return TestCase(
+            model.id,
+            model.tenant_id,
+            model.project_id,
+            model.target_type,
+            model.revision,
+            model.specification,
+            model.name,
+        )
 
 
 class SqlAlchemyGenerationRepository:

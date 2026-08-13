@@ -1,4 +1,5 @@
 import pytest
+from agents.shared.openrouter import OpenAICompatibleLanguageModel, create_language_model
 from agents.shared.runtime import (
     AGENT_RUNTIME_CONFIG_KEY,
     AgentRuntimeConfig,
@@ -9,11 +10,11 @@ from agents.shared.runtime import (
 from config import Settings
 
 
-def test_agent_runtime_uses_openrouter_environment_defaults() -> None:
+def test_agent_runtime_uses_huggingface_environment_defaults() -> None:
     runtime = AgentRuntimeConfig.from_settings(Settings())
 
-    assert runtime.provider == "openrouter"
-    assert runtime.model == "openai/gpt-5-mini"
+    assert runtime.provider == "huggingface"
+    assert runtime.model == "Qwen/Qwen2.5-Coder-32B-Instruct"
     assert runtime.evidence.include_metadata
     assert runtime.evidence.include_redacted_text
     assert not runtime.evidence.include_screenshots
@@ -67,3 +68,24 @@ def test_runtime_rejects_an_adapter_that_has_not_been_installed() -> None:
                 },
             }
         )
+
+
+def test_huggingface_runtime_uses_its_environment_gateway() -> None:
+    runtime = AgentRuntimeConfig.model_validate(
+        {
+            "provider": "huggingface",
+            "model": "Qwen/Qwen2.5-Coder-32B-Instruct",
+            "guard": {
+                "max_tokens": 100,
+                "max_steps_per_run": 1,
+                "max_evidence_bytes_per_step": 1024,
+            },
+        }
+    )
+
+    model = create_language_model(
+        Settings(huggingface_api_key="hf_test", huggingface_base_url="https://hf.example/v1"),
+        runtime,
+    )
+
+    assert isinstance(model, OpenAICompatibleLanguageModel)

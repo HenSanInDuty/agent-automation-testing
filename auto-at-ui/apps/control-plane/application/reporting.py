@@ -41,16 +41,6 @@ class PersistRunReport:
             )
         )
 
-
-class GetRunReport:
-    """Read one tenant-scoped immutable advisory report."""
-
-    def __init__(self, reports: RunReportRepository) -> None:
-        self._reports = reports
-
-    def execute(self, tenant_id: str, run_id: UUID) -> RunReportRecord | None:
-        return self._reports.get_for_run(tenant_id, run_id)
-
     def unavailable(
         self,
         *,
@@ -76,3 +66,13 @@ class GetRunReport:
                 provenance=provenance,
             )
         )
+
+
+class GetRunReport:
+    """Read one tenant-scoped immutable advisory report."""
+
+    def __init__(self, reports: RunReportRepository) -> None:
+        self._reports = reports
+
+    def execute(self, tenant_id: str, run_id: UUID) -> RunReportRecord | None:
+        return self._reports.get_for_run(tenant_id, run_id)

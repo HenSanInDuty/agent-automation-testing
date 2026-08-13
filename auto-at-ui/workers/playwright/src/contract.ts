@@ -23,6 +23,9 @@ export type ExecutionRequestV1 = {
     trace_on_failure: boolean;
     video_on_failure: boolean;
     screenshot_on_failure: boolean;
+    trace_on_success?: boolean;
+    video_on_success?: boolean;
+    screenshot_on_success?: boolean;
     retain_days: number;
   };
 };
@@ -69,6 +72,9 @@ export function validateExecutionRequestV1(value: unknown): ExecutionRequestV1 {
     typeof policy.trace_on_failure !== "boolean" ||
     typeof policy.video_on_failure !== "boolean" ||
     typeof policy.screenshot_on_failure !== "boolean" ||
+    (policy.trace_on_success !== undefined && typeof policy.trace_on_success !== "boolean") ||
+    (policy.video_on_success !== undefined && typeof policy.video_on_success !== "boolean") ||
+    (policy.screenshot_on_success !== undefined && typeof policy.screenshot_on_success !== "boolean") ||
     typeof policy.retain_days !== "number" || !Number.isInteger(policy.retain_days) ||
     policy.retain_days < 1 || policy.retain_days > 3650
   ) throw new Error("invalid TestExecutionRequest v1");

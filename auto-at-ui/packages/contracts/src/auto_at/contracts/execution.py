@@ -54,6 +54,11 @@ class ArtifactPolicy(BaseModel):
     trace_on_failure: bool = True
     video_on_failure: bool = True
     screenshot_on_failure: bool = True
+    # Visual evidence is retained for successful runs by default so reviewers can
+    # inspect what the browser actually did, not merely its terminal verdict.
+    trace_on_success: bool = True
+    video_on_success: bool = True
+    screenshot_on_success: bool = True
     retain_days: int = Field(default=30, ge=1, le=3650)
 
 
@@ -116,4 +121,3 @@ class TestExecutionResult(BaseModel):
     summary: str
     artifacts: list[Artifact] = Field(default_factory=list)
     runner_metadata: dict[str, Any] = Field(default_factory=dict)
-

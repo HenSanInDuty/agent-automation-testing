@@ -34,5 +34,10 @@ export function getRun(apiUrl: string, id: string) {
 export function getArtifacts(apiUrl: string, runId: string) {
   return apiRequest<Artifact[]>(apiUrl, `/api/v1/runs/${runId}/artifacts`);
 }
-export function listProposals(apiUrl: string, decided?: boolean) { return apiRequest<Page<Proposal>>(apiUrl, `/api/v1/proposals${decided === undefined ? "" : `?decided=${decided}`}`); }
+export function listProposals(apiUrl: string, decided?: boolean, runId?: string) {
+  const query = new URLSearchParams();
+  if (decided !== undefined) query.set("decided", String(decided));
+  if (runId) query.set("run_id", runId);
+  return apiRequest<Page<Proposal>>(apiUrl, `/api/v1/proposals${query.size ? `?${query}` : ""}`);
+}
 export function decideProposal(apiUrl: string, id: string, approved: boolean, reason: string) { return apiRequest<ProposalDecision>(apiUrl, `/api/v1/proposals/${id}/decision`, { method: "POST", body: JSON.stringify({ approved, reason: reason || null }) }); }

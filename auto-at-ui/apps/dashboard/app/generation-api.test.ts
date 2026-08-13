@@ -34,10 +34,10 @@ test("review collection and decision requests use the control-plane routes", asy
   };
   try {
     await listDrafts("http://control-plane", "pending_review");
-    await listProposals("http://control-plane", false);
+    await listProposals("http://control-plane", false, "run-id");
     await decideProposal("http://control-plane", "proposal", true, "evidence reviewed");
     assert.match(requests[0].url, /test-generations\/drafts\?state=pending_review/);
-    assert.match(requests[1].url, /proposals\?decided=false/);
+    assert.match(requests[1].url, /proposals\?decided=false&run_id=run-id/);
     assert.equal(requests[2].method, "POST");
     assert.equal(await requests[2].text(), JSON.stringify({ approved: true, reason: "evidence reviewed" }));
   } finally { globalThis.fetch = originalFetch; }

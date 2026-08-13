@@ -191,9 +191,15 @@ class RecordDeterministicResult:
 class RequestFailureTriage:
     """Queue advisory triage after an observed failure without mutating its verdict."""
 
-    def __init__(self, outbox: OutboxEventRepository, audits: AuditEventRepository) -> None:
+    def __init__(
+        self,
+        outbox: OutboxEventRepository,
+        audits: AuditEventRepository,
+        activities: ActivityEventRepository | None = None,
+    ) -> None:
         self._outbox = outbox
         self._audits = audits
+        self._activities = activities
 
     def execute(self, run: TestRun) -> None:
         if run.result is None or run.result.status not in {
@@ -226,6 +232,19 @@ class RequestFailureTriage:
                 correlation_id=run.correlation_id,
             )
         )
+        if self._activities is not None:
+            self._activities.append(
+                ActivityEvent.create(
+                    tenant_id=run.tenant_id,
+                    run_id=run.id,
+                    correlation_id=run.correlation_id,
+                    source="triage",
+                    stage="requested",
+                    status="queued",
+                    safe_summary="Failure triage was queued.",
+                    occurred_at=datetime.now(UTC),
+                )
+            )
 
 
 class RequestRunReport:

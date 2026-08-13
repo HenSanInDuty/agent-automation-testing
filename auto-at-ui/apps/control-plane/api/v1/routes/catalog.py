@@ -34,6 +34,7 @@ class ProjectResponse(ProjectRequest):
 
 class TestCaseRequest(BaseModel):
     id: str = Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9._:-]+$")
+    name: str = Field(min_length=1, max_length=200)
     target_type: TargetType
     revision: str = Field(min_length=7, max_length=128)
     specification: dict[str, object] = Field(default_factory=dict)
@@ -41,6 +42,10 @@ class TestCaseRequest(BaseModel):
 
 class TestCaseResponse(TestCaseRequest):
     project_id: UUID
+
+
+class TestCaseNameRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
 
 
 def project_response(project: Project) -> ProjectResponse:
@@ -51,6 +56,7 @@ def test_case_response(test_case: TestCase) -> TestCaseResponse:
     return TestCaseResponse(
         id=test_case.id,
         project_id=test_case.project_id,
+        name=test_case.name,
         target_type=test_case.target_type,
         revision=test_case.revision,
         specification=test_case.specification,
@@ -169,9 +175,38 @@ def create_test_case(
             payload.target_type,
             payload.revision,
             payload.specification,
+            payload.name.strip(),
         )
         repository.add_test_case(test_case)
     return test_case_response(test_case)
+
+
+@router.put(
+    "/{project_id}/tests/{test_case_id}/name",
+    response_model=TestCaseResponse,
+    dependencies=[Depends(require_csrf)],
+)
+def rename_test_case(
+    project_id: UUID,
+    test_case_id: str,
+    payload: TestCaseNameRequest,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> TestCaseResponse:
+    with transactional_session(create_session_factory(settings)) as session:
+        repository = SqlAlchemyCatalogRepository(session)
+        test_case = repository.get_test_case(tenant_id, test_case_id)
+        try:
+            if test_case is None or test_case.project_id != project_id:
+                raise AuthorizationError("not found")
+            require(actor_for_tenant(principal, tenant_id, project_id), Permission.MANAGE_PROJECT)
+        except AuthorizationError as error:
+            raise HTTPException(status_code=404, detail="Test case not found.") from error
+        renamed = repository.rename_test_case(tenant_id, test_case_id, payload.name.strip())
+    if renamed is None:
+        raise HTTPException(status_code=404, detail="Test case not found.")
+    return test_case_response(renamed)
 
 
 @router.get("/{project_id}/tests/{test_case_id}", response_model=TestCaseResponse)

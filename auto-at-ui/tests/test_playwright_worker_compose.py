@@ -195,7 +195,10 @@ def test_compose_worker_reports_a_deterministic_pass() -> None:
         "dom-fragment",
         "network-failures",
         "page-url",
+        "screenshot",
         "step-history",
+        "trace",
+        "video",
     }
 
 
@@ -274,6 +277,7 @@ def test_compose_dashboard_session_workflow_and_governed_review() -> None:
             headers=csrf_headers(admin),
             json={
                 "id": test_case_id,
+                "name": "Compose dashboard test",
                 "target_type": "web_ui",
                 "revision": "a" * 40,
                 "specification": {},

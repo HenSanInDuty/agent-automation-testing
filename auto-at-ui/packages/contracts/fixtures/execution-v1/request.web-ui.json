@@ -18,6 +18,9 @@
     "trace_on_failure": true,
     "video_on_failure": true,
     "screenshot_on_failure": true,
+    "trace_on_success": true,
+    "video_on_success": true,
+    "screenshot_on_success": true,
     "retain_days": 30
   }
 }

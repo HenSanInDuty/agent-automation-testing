@@ -1,12 +1,14 @@
 """HTTP boundary for deterministic run lifecycle use cases."""
 
+import json
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
+from application.generation import SubmitGeneration
 from application.reporting import GetRunReport
 from application.runs import (
     CancelRun,
@@ -18,7 +20,7 @@ from application.runs import (
     RequestFailureTriage,
     RunNotFoundError,
 )
-from auto_at.contracts.execution import ArtifactPolicy, TargetType, TestExecutionResult
+from auto_at.contracts.execution import ArtifactPolicy, RunStatus, TargetType, TestExecutionResult
 from config import Settings, get_settings
 from domain.authorization import (
     AuthorizationError,
@@ -28,13 +30,14 @@ from domain.authorization import (
     require,
 )
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from infrastructure.observability import current_trace_context
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyArtifactRepository,
     SqlAlchemyAuditEventRepository,
     SqlAlchemyCatalogRepository,
+    SqlAlchemyGenerationRepository,
     SqlAlchemyOutboxEventRepository,
     SqlAlchemyRunReportRepository,
     SqlAlchemyRunRepository,
@@ -66,9 +69,12 @@ class RunResponse(BaseModel):
     revision: str
     project_id: UUID | None = None
     test_case_id: str | None = None
+    test_case_name: str | None = None
     target_type: TargetType | None = None
     target_url: str | None = None
     artifact_policy: ArtifactPolicy | None = None
+    playwright_test_source: str | None = None
+    blocked_external_origins: list[str] = Field(default_factory=list)
     terminal_summary: str | None = None
     created_at: datetime | None = None
 
@@ -78,6 +84,13 @@ class RunListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class RevisedDraftRequestResponse(BaseModel):
+    id: UUID
+    correlation_id: UUID
+    state: str
+    failure_reason: str | None = None
 
 
 class ArtifactResponse(BaseModel):
@@ -93,6 +106,16 @@ class ArchiveEntryResponse(BaseModel):
     path: str
     size: int
     is_directory: bool
+
+
+class BrowserActionResponse(BaseModel):
+    sequence: int
+    action: str
+    element: str
+    duration_ms: int | None = None
+    source_line: int | None = None
+    has_before_frame: bool = False
+    has_after_frame: bool = False
 
 
 class RunReportObservationResponse(BaseModel):
@@ -170,8 +193,13 @@ def _run_report_response(report: object) -> RunReportResponse:
     )
 
 
-def _run_response(run: object, created_at: datetime | None = None) -> RunResponse:
+def _run_response(
+    run: object, created_at: datetime | None = None, test_case_name: str | None = None
+) -> RunResponse:
     request = run.request
+    runner_config = {} if request is None else request.runner_config
+    result_metadata = {} if run.result is None else run.result.runner_metadata
+    blocked_external_origins = result_metadata.get("blocked_external_origins", [])
     return RunResponse(
         id=run.id,
         correlation_id=run.correlation_id,
@@ -179,11 +207,22 @@ def _run_response(run: object, created_at: datetime | None = None) -> RunRespons
         revision=run.revision,
         project_id=run.project_id,
         test_case_id=run.test_case_id,
+        test_case_name=test_case_name,
         target_type=None if request is None else request.target_type,
         target_url=None
         if request is None or request.target_url is None
         else str(request.target_url),
         artifact_policy=None if request is None else request.artifact_policy,
+        playwright_test_source=(
+            runner_config.get("playwright_test_source")
+            if isinstance(runner_config.get("playwright_test_source"), str)
+            else None
+        ),
+        blocked_external_origins=(
+            [origin for origin in blocked_external_origins if isinstance(origin, str)]
+            if isinstance(blocked_external_origins, list)
+            else []
+        ),
         terminal_summary=None if run.result is None else run.result.summary,
         created_at=created_at,
     )
@@ -250,7 +289,77 @@ def create_run(
         )
     # UI creation is always asynchronous: the outbox publisher starts the durable
     # workflow after this transaction commits. The runner remains verdict authority.
-    return _run_response(run)
+    return _run_response(run, test_case_name=test_case.name)
+
+
+@router.post(
+    "/{run_id}/revised-draft",
+    response_model=RevisedDraftRequestResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_csrf)],
+)
+def create_revised_draft(
+    run_id: UUID,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> RevisedDraftRequestResponse:
+    """Queue a reviewable replacement draft; the failed revision remains immutable."""
+    with transactional_session(create_session_factory(settings)) as session:
+        runs = SqlAlchemyRunRepository(session)
+        try:
+            run = GetRun(runs).execute(tenant_id, run_id)
+            require(
+                actor_for_tenant(principal, tenant_id, run.project_id),
+                Permission.SUBMIT_GENERATION,
+            )
+        except (RunNotFoundError, AuthorizationError) as error:
+            raise HTTPException(status_code=404, detail="Run not found.") from error
+        if run.result is None or run.result.status not in {RunStatus.FAILED, RunStatus.ERRORED}:
+            raise HTTPException(
+                status_code=409, detail="Only failed or errored runs can be revised."
+            )
+        if run.request is None or run.request.target_url is None:
+            raise HTTPException(status_code=409, detail="Run has no revisable Web UI target.")
+        test_case = SqlAlchemyCatalogRepository(session).get_test_case(
+            tenant_id, run.test_case_id
+        )
+        source = (
+            None if test_case is None else test_case.specification.get("playwright_test_source")
+        )
+        if not isinstance(source, str) or not source:
+            raise HTTPException(
+                status_code=409, detail="Run does not reference generated Playwright source."
+            )
+        report = SqlAlchemyRunReportRepository(session).get_for_run(tenant_id, run.id)
+        failure = None if report is None or report.payload is None else report.payload.failure
+        failure_detail = failure.message if failure is not None else run.result.summary
+        revision_request = (
+            "Create a revised replacement for the approved Playwright source below. Preserve its "
+            "testing intent, change only what is needed to address the observed deterministic "
+            "failure, and keep assertions resilient. This is a reviewable draft, not permission "
+            "to change a test verdict.\n\n"
+            f"Observed failure: {failure_detail}\n\nApproved source:\n{source}"
+        )
+        request = SubmitGeneration(
+            SqlAlchemyGenerationRepository(session),
+            SqlAlchemyAuditEventRepository(session),
+            SqlAlchemyOutboxEventRepository(session),
+        ).execute(
+            tenant_id=tenant_id,
+            project_id=run.project_id,
+            correlation_id=uuid4(),
+            target_url=str(run.request.target_url),
+            natural_language_request=revision_request,
+            idempotency_key=f"revised-draft:{run.id}:{idempotency_key}",
+        )
+    return RevisedDraftRequestResponse(
+        id=request.id,
+        correlation_id=request.correlation_id,
+        state=request.state,
+        failure_reason=request.failure_reason,
+    )
 
 
 @router.get("/{run_id}", response_model=RunResponse)
@@ -273,7 +382,8 @@ def get_run(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
             ) from error
-    return _run_response(run)
+        test_case = SqlAlchemyCatalogRepository(session).get_test_case(tenant_id, run.test_case_id)
+    return _run_response(run, test_case_name=None if test_case is None else test_case.name)
 
 
 @router.get("/{run_id}/report", response_model=RunReportResponse)
@@ -337,8 +447,19 @@ def list_runs(
         if started_before is not None and row.created_at > started_before:
             continue
         visible.append(row)
+    page = visible[offset : offset + limit]
+    with create_session_factory(settings)() as session:
+        catalog = SqlAlchemyCatalogRepository(session)
+        names = {
+            row.run.test_case_id: test_case.name
+            for row in page
+            if (test_case := catalog.get_test_case(tenant_id, row.run.test_case_id)) is not None
+        }
     return RunListResponse(
-        items=[_run_response(row.run, row.created_at) for row in visible[offset : offset + limit]],
+        items=[
+            _run_response(row.run, row.created_at, names.get(row.run.test_case_id))
+            for row in page
+        ],
         total=len(visible),
         limit=limit,
         offset=offset,
@@ -487,6 +608,184 @@ def list_artifact_archive_entries(
         )
         for entry in entries
     ]
+
+
+def _trace_target_element(node: Any, target: str) -> str | None:
+    """Return the most useful safe identifier for one trace-highlighted DOM node."""
+    if not isinstance(node, list):
+        return None
+    if len(node) >= 2 and isinstance(node[0], str) and isinstance(node[1], dict):
+        tag, attributes = node[0].lower(), node[1]
+        if attributes.get("__playwright_target__") == target:
+            label = next(
+                (
+                    attributes[name]
+                    for name in ("aria-label", "title", "name", "data-testid", "id", "alt")
+                    if isinstance(attributes.get(name), str) and attributes[name].strip()
+                ),
+                None,
+            )
+            if isinstance(label, str):
+                return f"{tag} · {label.strip()[:120]}"
+            class_name = attributes.get("class")
+            if isinstance(class_name, str) and class_name.strip():
+                return f"{tag} · .{'.'.join(class_name.split()[:3])}"
+            return tag
+    for child in node:
+        found = _trace_target_element(child, target)
+        if found is not None:
+            return found
+    return None
+
+
+def _trace_browser_actions(
+    path: Path,
+) -> tuple[list[BrowserActionResponse], list[tuple[str | None, str | None]]]:
+    """Extract a small, read-only click ledger from a verified Playwright trace."""
+    with ZipFile(path) as archive:
+        trace_name = next(
+            (name for name in archive.namelist() if name.endswith("0-trace.trace")), None
+        )
+        if trace_name is None:
+            return [], []
+        entry = archive.getinfo(trace_name)
+        if entry.file_size > 5_000_000:
+            return [], []
+        rows = archive.read(trace_name).decode("utf-8", errors="replace").splitlines()
+    starts: dict[str, tuple[int, int | None]] = {}
+    completed: list[tuple[int, int, int | None, str]] = []
+    frames: list[tuple[int, str]] = []
+    elements: dict[str, str] = {}
+    for row in rows:
+        try:
+            event = json.loads(row)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        call_id = event.get("callId")
+        if event.get("type") == "screencast-frame":
+            timestamp, sha1 = event.get("timestamp"), event.get("sha1")
+            if isinstance(timestamp, (int, float)) and isinstance(sha1, str):
+                frames.append((round(timestamp), sha1))
+            continue
+        if event.get("type") == "frame-snapshot":
+            snapshot = event.get("snapshot")
+            if isinstance(snapshot, dict):
+                snapshot_call_id = snapshot.get("callId")
+                html = snapshot.get("html")
+                if isinstance(snapshot_call_id, str):
+                    element = _trace_target_element(html, snapshot_call_id)
+                    if element is not None:
+                        elements[snapshot_call_id] = element
+        if not isinstance(call_id, str):
+            continue
+        if event.get("type") == "before" and event.get("apiName") in {
+            "locator.click",
+            "elementHandle.click",
+        }:
+            start = event.get("startTime")
+            stack = event.get("stack")
+            source_line = None
+            if isinstance(stack, list) and stack and isinstance(stack[0], dict):
+                line = stack[0].get("line")
+                source_line = line if isinstance(line, int) else None
+            if isinstance(start, (int, float)):
+                starts[call_id] = (round(start), source_line)
+        elif event.get("type") == "after" and call_id in starts:
+            start, source_line = starts.pop(call_id)
+            end = event.get("endTime")
+            if isinstance(end, (int, float)):
+                completed.append((start, round(end), source_line, call_id))
+    frames.sort()
+    actions: list[BrowserActionResponse] = []
+    action_frames: list[tuple[str | None, str | None]] = []
+    for sequence, (start, end, source_line, call_id) in enumerate(completed, start=1):
+        before = next((sha1 for timestamp, sha1 in reversed(frames) if timestamp <= start), None)
+        after = next((sha1 for timestamp, sha1 in frames if timestamp >= end), None)
+        actions.append(
+            BrowserActionResponse(
+                sequence=sequence,
+                action="click",
+                element=elements.get(call_id, "button (unlabeled)"),
+                duration_ms=end - start,
+                source_line=source_line,
+                has_before_frame=before is not None,
+                has_after_frame=after is not None,
+            )
+        )
+        action_frames.append((before, after))
+    return actions, action_frames
+
+
+def _run_trace_path(evidence: list[object], settings: Settings) -> Path | None:
+    trace = next((artifact for artifact in evidence if artifact.uri.lower().endswith(".zip")), None)
+    if trace is None:
+        return None
+    return VerifiedLocalArtifactPort(settings.artifact_root).verified_path(trace)
+
+
+def _run_evidence(
+    run_id: UUID, tenant_id: str, principal: Principal, settings: Settings
+) -> list[object]:
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+            return ListArtifacts(SqlAlchemyArtifactRepository(session)).execute(tenant_id, run_id)
+        except (RunNotFoundError, AuthorizationError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+
+
+@router.get("/{run_id}/browser-actions", response_model=list[BrowserActionResponse])
+def browser_actions(
+    run_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[BrowserActionResponse]:
+    try:
+        path = _run_trace_path(_run_evidence(run_id, tenant_id, principal, settings), settings)
+        return [] if path is None else _trace_browser_actions(path)[0]
+    except (BadZipFile, OSError, ValueError):
+        return []
+
+
+@router.get("/{run_id}/browser-actions/{sequence}/frames/{frame}")
+def browser_action_frame(
+    run_id: UUID,
+    sequence: int,
+    frame: str,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Response:
+    if frame not in {"before", "after"} or sequence < 1:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action frame not found.")
+    try:
+        path = _run_trace_path(_run_evidence(run_id, tenant_id, principal, settings), settings)
+        if path is None:
+            raise ValueError("trace is unavailable")
+        _, frames = _trace_browser_actions(path)
+        before, after = frames[sequence - 1]
+        sha1 = before if frame == "before" else after
+        if sha1 is None:
+            raise ValueError("frame is unavailable")
+        with ZipFile(path) as archive:
+            image = archive.read(f"resources/{sha1}")
+        if len(image) > 3_000_000:
+            raise ValueError("frame is too large")
+    except (BadZipFile, IndexError, KeyError, OSError, ValueError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Action frame not found."
+        ) from error
+    return Response(
+        content=image,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 @router.get("/{run_id}/artifacts.zip")

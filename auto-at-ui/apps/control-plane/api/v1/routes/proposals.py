@@ -103,6 +103,7 @@ def get_proposal(
 @router.get("", response_model=ProposalListResponse)
 def list_proposals(
     project_id: UUID | None = None,
+    run_id: UUID | None = None,
     decided: bool | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 25,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -117,7 +118,11 @@ def list_proposals(
         visible = []
         for proposal in proposals:
             run = runs.get(tenant_id, proposal.run_id)
-            if run is None or (project_id is not None and run.project_id != project_id):
+            if (
+                run is None
+                or (project_id is not None and run.project_id != project_id)
+                or (run_id is not None and run.id != run_id)
+            ):
                 continue
             try:
                 require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)

@@ -178,8 +178,9 @@ The generated-test flow is advisory until a human approves the draft. It never
 changes a source repository and the Playwright worker remains the sole authority
 for the test verdict.
 
-1. Configure a non-secret local credential for the already-selected generation
-   model gateway, start Compose, and apply migrations as described above. Use
+1. Configure a Hugging Face access token in `HUGGINGFACE_API_KEY` (with
+   **Inference Providers** permission), choose `AGENT_MODEL`, start Compose,
+   and apply migrations as described above. Use
    only a public target that is permitted by the project origin policy.
 
 2. In the imported Postman/Hoppscotch collection, open `Governed test

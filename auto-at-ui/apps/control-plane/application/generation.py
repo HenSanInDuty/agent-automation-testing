@@ -247,6 +247,7 @@ class DecideGeneratedDraft:
                         "source_hash": draft.source_hash,
                         "generated_draft_id": str(draft.id),
                     },
+                    name=draft.title,
                 )
             )
             run = CreateRun(self._runs, self._outbox, self._audits).execute(

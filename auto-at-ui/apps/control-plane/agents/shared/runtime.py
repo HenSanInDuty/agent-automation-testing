@@ -29,15 +29,15 @@ class FallbackModel(BaseModel):
 class AgentRuntimeConfig(BaseModel):
     """Non-secret values that may later be changed by the admin interface."""
 
-    provider: str = Field(default="openrouter", min_length=1, max_length=100)
-    model: str = Field(default="openai/gpt-5-mini", min_length=1, max_length=200)
+    provider: str = Field(default="huggingface", min_length=1, max_length=100)
+    model: str = Field(default="Qwen/Qwen2.5-Coder-32B-Instruct", min_length=1, max_length=200)
     evidence: EvidencePolicy = Field(default_factory=EvidencePolicy)
     guard: StepGuardPolicy
     fallback: FallbackModel | None = None
 
     @model_validator(mode="after")
-    def only_openrouter_is_currently_supported(self) -> "AgentRuntimeConfig":
-        if self.provider != "openrouter":
+    def requires_an_installed_provider_adapter(self) -> "AgentRuntimeConfig":
+        if self.provider not in {"huggingface", "openrouter"}:
             raise ValueError("the configured provider adapter is not installed")
         return self
 

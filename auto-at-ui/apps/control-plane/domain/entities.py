@@ -28,6 +28,7 @@ class TestCase:
     target_type: TargetType
     revision: str
     specification: dict[str, object] = field(default_factory=dict)
+    name: str = ""
 
 
 @dataclass(frozen=True)

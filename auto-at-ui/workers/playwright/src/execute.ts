@@ -183,7 +183,10 @@ async function executePlaywrightTestSource(
     await writeFile(join(workspace, "generated.spec.ts"), config.playwright_test_source, { mode: 0o400 });
     await writeFile(join(workspace, "package.json"), "{\"type\":\"module\"}\n", { mode: 0o400 });
     await symlink(join(workerRoot, "node_modules"), join(workspace, "node_modules"), "junction");
-    await writeFile(join(workspace, "playwright.config.ts"), `import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: '.', testMatch: 'generated.spec.ts', outputDir: ${JSON.stringify(resultDirectory)}, timeout: 60000, workers: 1, use: { trace: 'retain-on-failure', video: 'retain-on-failure', screenshot: 'only-on-failure', serviceWorkers: 'block' } });\n`, { mode: 0o400 });
+    const trace = request.artifact_policy.trace_on_success ?? true ? "on" : "retain-on-failure";
+    const video = request.artifact_policy.video_on_success ?? true ? "on" : "retain-on-failure";
+    const screenshot = request.artifact_policy.screenshot_on_success ?? true ? "on" : "only-on-failure";
+    await writeFile(join(workspace, "playwright.config.ts"), `import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: '.', testMatch: 'generated.spec.ts', outputDir: ${JSON.stringify(resultDirectory)}, timeout: 60000, workers: 1, use: { trace: '${trace}', video: '${video}', screenshot: '${screenshot}', serviceWorkers: 'block' } });\n`, { mode: 0o400 });
     const workerHome = process.env.HOME ?? "/home/pwuser";
     const browserPath = existsSync("/ms-playwright")
       ? "/ms-playwright"
@@ -250,7 +253,8 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
   const networkFailures: string[] = [];
   const browser = await chromium.launch({ headless: true });
   report?.("browser.launched", "running", "Browser launched.");
-  const context = await browser.newContext({ recordVideo: request.artifact_policy.video_on_failure ? { dir: join(artifactRoot, request.run_id, "video") } : undefined });
+  const retainVisualEvidence = request.artifact_policy.video_on_success ?? true;
+  const context = await browser.newContext({ recordVideo: (request.artifact_policy.video_on_failure || retainVisualEvidence) ? { dir: join(artifactRoot, request.run_id, "video") } : undefined });
   const page = await context.newPage();
   const video = page.video();
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
@@ -300,11 +304,11 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
     await addEvidence(artifactRoot, request.run_id, "dom-fragment", "html", "text/html", dom || snapshot, artifacts, evidence);
     await addEvidence(artifactRoot, request.run_id, "console-errors", "json", "application/json", JSON.stringify(consoleErrors), artifacts, evidence);
     await addEvidence(artifactRoot, request.run_id, "network-failures", "json", "application/json", JSON.stringify(networkFailures), artifacts, evidence);
-    if (status !== "passed" && request.artifact_policy.screenshot_on_failure) {
+    if ((status !== "passed" && request.artifact_policy.screenshot_on_failure) || (status === "passed" && (request.artifact_policy.screenshot_on_success ?? true))) {
       const image = await page.screenshot({ fullPage: true }).catch(() => Buffer.alloc(0));
       await addEvidence(artifactRoot, request.run_id, "screenshot", "png", "image/png", image, artifacts, evidence);
     }
-    if (status !== "passed" && request.artifact_policy.trace_on_failure) {
+    if ((status !== "passed" && request.artifact_policy.trace_on_failure) || (status === "passed" && (request.artifact_policy.trace_on_success ?? true))) {
       const tracePath = join(artifactRoot, request.run_id, "trace.zip");
       await context.tracing.stop({ path: tracePath });
       const trace = await readFile(tracePath);
@@ -313,7 +317,7 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
     await context.close();
     if (video !== null) {
       const videoPath = await video.path();
-      if (status !== "passed") {
+      if (status !== "passed" || retainVisualEvidence) {
         await addEvidence(artifactRoot, request.run_id, "video", "webm", "video/webm", await readFile(videoPath), artifacts, evidence);
       } else {
         await rm(videoPath, { force: true });

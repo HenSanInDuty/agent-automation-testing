@@ -80,6 +80,7 @@ class TestCaseModel(TenantRecord, Base):
     target_type: Mapped[str] = mapped_column(String(32))
     revision: Mapped[str] = mapped_column(String(128))
     specification: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
 
 
 class ProjectExecutionPolicyModel(TenantRecord, Base):

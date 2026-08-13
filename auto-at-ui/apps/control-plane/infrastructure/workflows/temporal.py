@@ -88,7 +88,9 @@ def dispatch_test_run(payload: RunWorkflowInput) -> dict[str, str]:
             )
         )
         RequestFailureTriage(
-            SqlAlchemyOutboxEventRepository(session), SqlAlchemyAuditEventRepository(session)
+            SqlAlchemyOutboxEventRepository(session),
+            SqlAlchemyAuditEventRepository(session),
+            activities,
         ).execute(run)
         RequestRunReport(
             SqlAlchemyOutboxEventRepository(session),

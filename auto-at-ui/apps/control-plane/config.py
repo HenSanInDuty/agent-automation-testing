@@ -27,8 +27,10 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
     openrouter_api_key: str | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    agent_provider: str = "openrouter"
-    agent_model: str = "openai/gpt-5-mini"
+    huggingface_api_key: str | None = None
+    huggingface_base_url: str = "https://router.huggingface.co/v1"
+    agent_provider: str = "huggingface"
+    agent_model: str = "Qwen/Qwen2.5-Coder-32B-Instruct"
     agent_fallback_enabled: bool = False
     agent_fallback_provider: str | None = None
     agent_fallback_model: str | None = None

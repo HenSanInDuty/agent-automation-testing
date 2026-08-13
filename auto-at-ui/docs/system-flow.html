@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auto-AT — Luồng hệ thống kiểm thử</title>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis" },
+        themeVariables: {
+          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+          primaryColor: "#e0f2fe",
+          primaryTextColor: "#0f172a",
+          primaryBorderColor: "#0284c7",
+          lineColor: "#64748b",
+          secondaryColor: "#f0fdf4",
+          tertiaryColor: "#fff7ed",
+        },
+      });
+    </script>
+    <style>
+      :root { color: #172033; background: #f8fafc; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      body { margin: 0; }
+      main { max-width: 1480px; margin: auto; padding: 36px 24px 48px; }
+      h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.8rem); }
+      .intro { margin: 10px 0 28px; color: #475569; font-size: 1.05rem; }
+      .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+      .tag { padding: 7px 11px; border-radius: 999px; font-size: .9rem; font-weight: 650; }
+      .generation { background: #ede9fe; color: #5b21b6; }
+      .execution { background: #dcfce7; color: #166534; }
+      .advisory { background: #ffedd5; color: #9a3412; }
+      .approval { background: #fef3c7; color: #92400e; }
+      .diagram { padding: 28px 16px; overflow-x: auto; background: white; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 8px 26px rgba(15, 23, 42, .06); }
+      .mermaid { min-width: 1050px; }
+      .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 24px; }
+      .note { padding: 18px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; }
+      .note h2 { margin: 0 0 8px; font-size: 1rem; }
+      .note p { margin: 0; color: #475569; line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Luồng hệ thống kiểm thử Auto-AT</h1>
+      <p class="intro">Từ yêu cầu của người dùng đến kết quả test, báo cáo và phân tích lỗi.</p>
+
+      <div class="legend" aria-label="Chú thích màu">
+        <span class="tag generation">Tạo test bằng AI</span>
+        <span class="tag approval">Điểm cần người phê duyệt</span>
+        <span class="tag execution">Thực thi test xác định</span>
+        <span class="tag advisory">Kết quả advisory của agent</span>
+      </div>
+
+      <section class="diagram" aria-label="Sơ đồ luồng hệ thống">
+        <pre class="mermaid">
+flowchart TD
+    U["Người dùng<br/>Dashboard / API"] --> A{"Yêu cầu gì?"}
+
+    subgraph GEN["1. Tạo test bằng AI"]
+      direction TB
+      A -->|"Tạo test mới"| G1["Control Plane API"]
+      G1 --> G2["Kiểm tra quyền (RBAC)<br/>lọc secret / PII<br/>kiểm tra URL được phép"]
+      G2 --> G3["Lưu yêu cầu<br/>+ audit + outbox"]
+      G3 --> G4["Generation Planner Agent"]
+      G4 --> G5{"Bản nháp an toàn<br/>và đúng cấu trúc?"}
+      G5 -->|"Không"| G6["Thông báo failed an toàn"]
+      G5 -->|"Có"| G7["Generated Draft<br/>chờ review"]
+      G7 --> H{"Người duyệt"}
+      H -->|"Từ chối"| X["Kết thúc"]
+      H -->|"Phê duyệt"| T1["Tạo Test Case versioned<br/>+ Test Run v1"]
+    end
+
+    subgraph RUN["2. Chạy test xác định"]
+      direction TB
+      A -->|"Chạy test có sẵn"| T1
+      T1 --> T2["Lưu TestExecutionRequest<br/>+ audit + outbox"]
+      T2 --> T3["Temporal Workflow"]
+      T3 --> T4["Playwright Worker"]
+      T4 --> T5["Chạy test theo revision đã pin"]
+      T5 --> T6["TestExecutionResult<br/>passed / failed / errored / skipped"]
+      T6 --> T7["Lưu verdict và artifacts<br/>trace, screenshot, video, log"]
+    end
+
+    subgraph AFTER["3. Sau khi run kết thúc"]
+      direction LR
+      T7 --> R1["Reporting Agent<br/>mọi run"]
+      R1 --> R2["Báo cáo advisory"]
+      T7 --> F{"Failed / errored?"}
+      F -->|"Không"| END["Hoàn tất"]
+      F -->|"Có"| TR1["Failure Triage Agent"]
+      TR1 --> TR2["Đề xuất nguyên nhân<br/>có audit"]
+      TR2 --> SH["Self-healing<br/>xếp hạng đề xuất sửa locator"]
+      SH --> HR["Người duyệt proposal"]
+      HR --> END
+      R2 --> END
+    end
+
+    classDef generation fill:#ede9fe,stroke:#7c3aed,color:#3b0764,stroke-width:2px;
+    classDef approval fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px;
+    classDef execution fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px;
+    classDef advisory fill:#ffedd5,stroke:#ea580c,color:#7c2d12,stroke-width:2px;
+    classDef decision fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-width:2px;
+    class G1,G2,G3,G4,G5,G6,G7 generation;
+    class H,HR approval;
+    class T1,T2,T3,T4,T5,T6,T7 execution;
+    class R1,R2,TR1,TR2,SH advisory;
+    class A,F decision;
+        </pre>
+      </section>
+
+      <section class="notes">
+        <article class="note">
+          <h2>Verdict thuộc về worker</h2>
+          <p>Chỉ Playwright Worker trả kết quả pass/fail. Agent không thể tự đổi kết quả test.</p>
+        </article>
+        <article class="note">
+          <h2>Agent chỉ advisory</h2>
+          <p>Generation, Triage và Reporting chỉ tạo draft, báo cáo hoặc đề xuất để con người xem xét.</p>
+        </article>
+        <article class="note">
+          <h2>Phê duyệt là bắt buộc</h2>
+          <p>Test do AI sinh và đề xuất self-healing chỉ có hiệu lực sau khi được phê duyệt.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

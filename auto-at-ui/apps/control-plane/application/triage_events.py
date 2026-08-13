@@ -78,7 +78,7 @@ class TriageEventProcessor:
             )
             self._record(run, "proposal", "passed", "Advisory triage proposal was recorded.")
         else:
-            self._record(run, "completed", "info", "Triage completed without a proposal.")
+            self._record(run, "unavailable", "unavailable", "Triage provider is unavailable.")
         return outcome
 
     def _record(self, run, stage: str, status: str, summary: str) -> None:
