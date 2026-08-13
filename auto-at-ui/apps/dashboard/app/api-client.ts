@@ -26,3 +26,11 @@ export async function apiRequest<T>(apiUrl: string, path: string, init: RequestI
 export function artifactDownloadUrl(apiUrl: string, runId: string, artifactId: string): string {
   return `${apiUrl}/api/v1/runs/${runId}/artifacts/${artifactId}`;
 }
+
+export function artifactArchiveDownloadUrl(apiUrl: string, runId: string): string {
+  return `${apiUrl}/api/v1/runs/${runId}/artifacts.zip`;
+}
+
+export function artifactArchiveEntriesUrl(apiUrl: string, runId: string, artifactId: string): string {
+  return `${apiUrl}/api/v1/runs/${runId}/artifacts/${artifactId}/archive-entries`;
+}

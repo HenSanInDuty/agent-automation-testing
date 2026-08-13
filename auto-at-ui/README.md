@@ -59,6 +59,54 @@ Temporal is behind a dedicated workflow adapter; production may use Temporal Clo
 self-hosted Temporal, or another implementation without changing the HTTP or runner
 contracts.
 
+## Move local run data to another machine
+
+To retain dashboard history and the evidence linked from it, export both the
+PostgreSQL database and the execution-artifacts volume. The backup directory is
+ignored by Git and may be copied to the destination machine by any secure transfer
+method.
+
+On the source machine:
+
+```bash
+mkdir -p auto-at-backup
+
+docker run --rm \
+  -v auto-at-ui_postgres-data:/source:ro \
+  -v "$PWD/auto-at-backup":/backup \
+  alpine tar czf /backup/postgres-data.tar.gz -C /source .
+
+docker run --rm \
+  -v auto-at-ui_execution-artifacts:/source:ro \
+  -v "$PWD/auto-at-backup":/backup \
+  alpine tar czf /backup/execution-artifacts.tar.gz -C /source .
+```
+
+On the destination machine, first clone the same repository revision and run
+`docker compose up -d` once to create its volumes. Copy `auto-at-backup/` beside
+the Compose file, then restore it while the application services are stopped:
+
+```bash
+docker compose stop control-plane dashboard temporal-worker
+
+docker run --rm \
+  -v auto-at-ui_postgres-data:/target \
+  -v "$PWD/auto-at-backup":/backup:ro \
+  alpine sh -c 'cd /target && tar xzf /backup/postgres-data.tar.gz'
+
+docker run --rm \
+  -v auto-at-ui_execution-artifacts:/target \
+  -v "$PWD/auto-at-backup":/backup:ro \
+  alpine sh -c 'cd /target && tar xzf /backup/execution-artifacts.tar.gz'
+
+docker compose up -d
+docker compose exec -T control-plane uv run --no-sync alembic upgrade head
+```
+
+Only these two volumes are needed for the dashboard's run history and linked
+artifacts. Export the Temporal, Redis, or MinIO volumes separately only when their
+own operational history or objects must also be retained.
+
 ## Bootstrap dashboard access
 
 Apply migrations, then create the first tenant administrator. The password is

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { artifactArchiveDownloadUrl } from "./api-client.ts";
 import { createProject, runReport } from "./run-api.ts";
 
 test("project creation sends only the user-facing name and target", async () => {
@@ -29,4 +30,11 @@ test("run reporting is read through the dedicated immutable report route", async
     assert.equal(received?.method, "GET");
     assert.match(received?.url ?? "", /\/api\/v1\/runs\/run-id\/report$/);
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test("artifact archive download uses the run-scoped ZIP route", () => {
+  assert.equal(
+    artifactArchiveDownloadUrl("http://control-plane", "run-id"),
+    "http://control-plane/api/v1/runs/run-id/artifacts.zip",
+  );
 });

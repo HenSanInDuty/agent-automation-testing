@@ -1,7 +1,13 @@
+import hashlib
+import io
+from pathlib import Path
 from uuid import UUID, uuid4
+from zipfile import ZipFile
 
+from domain.runs import TestRun as DomainRun
 from fastapi.testclient import TestClient
 from infrastructure.persistence.models import (
+    ArtifactModel,
     AuditEventModel,
     OutboxEventModel,
     ProjectModel,
@@ -117,4 +123,111 @@ def test_create_run_commits_run_audit_and_outbox_atomically() -> None:
             session.execute(delete(DbTestCaseModel).where(DbTestCaseModel.id == test_case_id))
             session.execute(delete(ProjectModel).where(ProjectModel.id == project_id))
             session.commit()
+        engine.dispose()
+
+
+def test_artifact_archive_is_tenant_scoped_and_contains_verified_evidence() -> None:
+    from config import Settings
+
+    settings = Settings()
+    tenant_id = f"artifact-archive-{uuid4()}"
+    project_id = uuid4()
+    test_case_id = f"artifact-archive-{uuid4()}"
+    run = DomainRun.create(
+        tenant_id=tenant_id,
+        project_id=project_id,
+        test_case_id=test_case_id,
+        revision="a" * 40,
+        correlation_id=uuid4(),
+    )
+    artifact_path = Path(settings.artifact_root) / str(run.id) / "playwright-output.txt"
+    zip_buffer = io.BytesIO()
+    with ZipFile(zip_buffer, "w") as archive:
+        archive.writestr("test-results/failure.txt", "Playwright assertion failed.")
+        archive.writestr("resources/screenshot.png", b"png evidence")
+    artifact_bytes = zip_buffer.getvalue()
+    artifact_id = uuid4()
+    engine = create_engine(settings)
+    try:
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_bytes(artifact_bytes)
+        with Session(engine) as session:
+            session.add(
+                ProjectModel(
+                    id=project_id,
+                    tenant_id=tenant_id,
+                    name="Artifact archive project",
+                    default_target="web_ui",
+                )
+            )
+            session.add(
+                DbTestCaseModel(
+                    id=test_case_id,
+                    tenant_id=tenant_id,
+                    project_id=project_id,
+                    target_type="web_ui",
+                    revision="a" * 40,
+                )
+            )
+            session.add(
+                DbTestRunModel(
+                    id=run.id,
+                    tenant_id=tenant_id,
+                    project_id=project_id,
+                    test_case_id=test_case_id,
+                    revision=run.revision,
+                    status=run.status.value,
+                    correlation_id=run.correlation_id,
+                    version=run.version,
+                )
+            )
+            session.add(
+                ArtifactModel(
+                    id=artifact_id,
+                    tenant_id=tenant_id,
+                    run_id=run.id,
+                    kind="playwright-trace",
+                    uri=artifact_path.resolve().as_uri(),
+                    checksum=hashlib.sha256(artifact_bytes).hexdigest(),
+                    size=len(artifact_bytes),
+                    content_type="application/zip",
+                )
+            )
+            session.commit()
+
+        response = TestClient(app).get(
+            f"/api/v1/runs/{run.id}/artifacts.zip", headers={"X-Tenant-Id": tenant_id}
+        )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/zip"
+        assert f'filename="run-{run.id}-artifacts.zip"' in response.headers["content-disposition"]
+        with ZipFile(io.BytesIO(response.content)) as archive:
+            filename = f"playwright-trace-{artifact_id}.txt"
+            assert archive.namelist() == [filename]
+            assert archive.read(filename) == artifact_bytes
+
+        entries = TestClient(app).get(
+            f"/api/v1/runs/{run.id}/artifacts/{artifact_id}/archive-entries",
+            headers={"X-Tenant-Id": tenant_id},
+        )
+        assert entries.status_code == 200
+        assert entries.json() == [
+            {"path": "test-results/failure.txt", "size": 28, "is_directory": False},
+            {"path": "resources/screenshot.png", "size": 12, "is_directory": False},
+        ]
+
+        denied = TestClient(app).get(
+            f"/api/v1/runs/{run.id}/artifacts.zip", headers={"X-Tenant-Id": "other-tenant"}
+        )
+        assert denied.status_code == 404
+    finally:
+        with Session(engine) as session:
+            session.execute(delete(ArtifactModel).where(ArtifactModel.run_id == run.id))
+            session.execute(delete(DbTestRunModel).where(DbTestRunModel.id == run.id))
+            session.execute(delete(DbTestCaseModel).where(DbTestCaseModel.id == test_case_id))
+            session.execute(delete(ProjectModel).where(ProjectModel.id == project_id))
+            session.commit()
+        artifact_path.unlink(missing_ok=True)
+        artifact_path.parent.rmdir()
         engine.dispose()

@@ -1,8 +1,11 @@
 """HTTP boundary for deterministic run lifecycle use cases."""
 
 from datetime import datetime
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Annotated
 from uuid import UUID, uuid4
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 from application.reporting import GetRunReport
 from application.runs import (
@@ -24,7 +27,7 @@ from domain.authorization import (
     actor_for_tenant,
     require,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from infrastructure.observability import current_trace_context
 from infrastructure.persistence.repositories import (
@@ -84,6 +87,12 @@ class ArtifactResponse(BaseModel):
     checksum: str
     size: int
     content_type: str | None = None
+
+
+class ArchiveEntryResponse(BaseModel):
+    path: str
+    size: int
+    is_directory: bool
 
 
 class RunReportObservationResponse(BaseModel):
@@ -430,6 +439,106 @@ def download_artifact(
             detail="Artifact integrity check failed.",
         ) from error
     return FileResponse(path, media_type=artifact.content_type or "application/octet-stream")
+
+
+@router.get(
+    "/{run_id}/artifacts/{artifact_id}/archive-entries",
+    response_model=list[ArchiveEntryResponse],
+)
+def list_artifact_archive_entries(
+    run_id: UUID,
+    artifact_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[ArchiveEntryResponse]:
+    """Return bounded, non-extracted contents of one verified ZIP artifact."""
+    with create_session_factory(settings)() as session:
+        try:
+            run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+        except (RunNotFoundError, AuthorizationError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+        artifacts = ListArtifacts(SqlAlchemyArtifactRepository(session)).execute(tenant_id, run_id)
+    artifact = next((item for item in artifacts if item.id == artifact_id), None)
+    if artifact is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found.")
+    try:
+        path = VerifiedLocalArtifactPort(settings.artifact_root).verified_path(artifact)
+        with ZipFile(path) as archive:
+            entries = archive.infolist()
+    except (BadZipFile, OSError, ValueError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Artifact is not a readable ZIP archive.",
+        ) from error
+    if len(entries) > 2_000:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Archive contains too many entries to preview.",
+        )
+    return [
+        ArchiveEntryResponse(
+            path=entry.filename,
+            size=entry.file_size,
+            is_directory=entry.is_dir(),
+        )
+        for entry in entries
+    ]
+
+
+@router.get("/{run_id}/artifacts.zip")
+def download_artifact_archive(
+    run_id: UUID,
+    background_tasks: BackgroundTasks,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> FileResponse:
+    """Download all retained evidence as one verified ZIP archive."""
+    with create_session_factory(settings)() as session:
+        try:
+            run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
+            require(actor_for_tenant(principal, tenant_id, run.project_id), Permission.READ)
+        except (RunNotFoundError, AuthorizationError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Run not found."
+            ) from error
+        artifacts = ListArtifacts(SqlAlchemyArtifactRepository(session)).execute(tenant_id, run_id)
+    if not artifacts:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No artifacts found.")
+
+    artifact_port = VerifiedLocalArtifactPort(settings.artifact_root)
+    try:
+        verified = [(artifact, artifact_port.verified_path(artifact)) for artifact in artifacts]
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Artifact integrity check failed.",
+        ) from error
+
+    with NamedTemporaryFile(prefix=f"auto-at-run-{run_id}-", suffix=".zip", delete=False) as file:
+        archive_path = Path(file.name)
+    try:
+        with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
+            for artifact, path in verified:
+                # The generated name is stable, readable, and cannot preserve a storage path.
+                archive.write(path, arcname=f"{artifact.kind}-{artifact.id}{path.suffix}")
+    except OSError as error:
+        archive_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to prepare artifact archive.",
+        ) from error
+    background_tasks.add_task(archive_path.unlink, missing_ok=True)
+    return FileResponse(
+        archive_path,
+        media_type="application/zip",
+        filename=f"run-{run_id}-artifacts.zip",
+        background=background_tasks,
+    )
 
 
 @router.post("/{run_id}/result", response_model=RunResponse)
