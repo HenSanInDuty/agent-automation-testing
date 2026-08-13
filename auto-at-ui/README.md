@@ -107,23 +107,48 @@ Only these two volumes are needed for the dashboard's run history and linked
 artifacts. Export the Temporal, Redis, or MinIO volumes separately only when their
 own operational history or objects must also be retained.
 
-## Bootstrap dashboard access
+## Create a demo admin account
 
-Apply migrations, then create the first tenant administrator. The password is
-temporary and must satisfy the displayed policy; the first sign-in requires a
-replacement password.
+Use this after starting the local stack. It creates the first administrator for
+the `demo-tenant` tenant, which can create projects, set the allowed-origin
+policy, approve generated tests, and provision other users.
+
+```bash
+docker compose up -d --build
+
+docker compose exec -T control-plane uv run --no-sync python cli.py bootstrap-admin \
+  --tenant demo-tenant \
+  --email admin@example.test \
+  --temporary-password 'DemoAdminPass123'
+```
+
+Then open [the local login page](http://localhost:3000/login) and sign in with:
+
+| Field | Value |
+| --- | --- |
+| Tenant | `demo-tenant` |
+| Email | `admin@example.test` |
+| Temporary password | `DemoAdminPass123` |
+
+The first login forces a password replacement. New passwords must have at least
+12 characters and include uppercase, lowercase, and a digit. After changing it,
+open **Admin → Users** to create collaborators.
+
+The bootstrap command is safe to re-run only when the same email already has a
+`tenant_admin` membership in that tenant; it does **not** reset that account's
+password. To use different demo credentials, choose a new email or remove the
+local Docker volumes and start the stack again. For a control plane running
+outside Docker, use the equivalent local command:
 
 ```bash
 uv run python apps/control-plane/cli.py bootstrap-admin \
-  --tenant demo-tenant --email admin@example.test
+  --tenant demo-tenant \
+  --email admin@example.test
 ```
 
-Open `http://localhost:3000/login`, sign in with the tenant, email, and
-temporary password, then use **Admin → Users** to provision collaborators.
-The temporary password is displayed once and is never persisted in the
-dashboard. Dashboard requests use an HttpOnly session cookie and CSRF token;
-the legacy development identity headers remain only for local API compatibility.
-See [session API examples](docs/api-examples.md) for cookie-based calls without
+Dashboard requests use an HttpOnly session cookie and CSRF token; the legacy
+development identity headers remain only for local API compatibility. See
+[session API examples](docs/api-examples.md) for cookie-based calls without
 identity headers.
 
 ## Dashboard troubleshooting and security boundaries
