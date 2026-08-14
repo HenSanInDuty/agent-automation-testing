@@ -16,6 +16,7 @@ from agents.shared.runtime import (
     resolve_agent_runtime,
 )
 from auto_at.contracts.events import EventType
+from auto_at.contracts.execution import validate_playwright_test_source
 from config import Settings
 from domain.activity import ActivityEvent
 from domain.ports import (
@@ -78,10 +79,10 @@ class ReportingEventProcessor:
             )
 
         started = perf_counter()
-        self._record(run, "requested", "running", "Advisory run report started.")
+        self._record(run, "requested", "running", "AI post-run review started.")
         runtime = self._runtime(event.tenant_id)
         evidence = build_run_report_evidence_bundle(
-            run.result,
+            self._review_result(run),
             runtime.evidence,
             self._artifacts.list_for_run(event.tenant_id, run.id),
             self._reader,
@@ -105,7 +106,7 @@ class ReportingEventProcessor:
                 prompt_version=self._settings.agent_reporting_prompt_version,
                 input_hash=evidence.input_hash,
             )
-            self._record(run, "completed", "passed", "Advisory run report was recorded.")
+            self._record(run, "completed", "passed", "AI post-run review was recorded.")
             final = outcome
         else:
             persistence.unavailable(
@@ -116,7 +117,7 @@ class ReportingEventProcessor:
                 reason=outcome.detail or "reporting unavailable",
                 runtime=runtime,
             )
-            self._record(run, "unavailable", "unavailable", "Advisory run report is unavailable.")
+            self._record(run, "unavailable", "unavailable", "AI post-run review is unavailable.")
             final = ReportingExecutionOutcome(status="unavailable", detail=outcome.detail)
         logger.info(
             "run_report.completed run_id=%s correlation_id=%s status=%s latency_seconds=%.3f",
@@ -126,6 +127,31 @@ class ReportingEventProcessor:
             perf_counter() - started,
         )
         return final
+
+    @staticmethod
+    def _review_result(run):
+        """Expose only approved, policy-valid source to the read-only review agent."""
+        assert run.result is not None
+        source = None if run.request is None else run.request.runner_config.get(
+            "playwright_test_source"
+        )
+        if not isinstance(source, str):
+            return run.result
+        try:
+            validate_playwright_test_source(source)
+        except ValueError:
+            return run.result
+        metadata = {
+            **run.result.runner_metadata,
+            "review_context": {
+                "approved_playwright_test_source": source,
+                "source_hash": run.request.runner_config.get("source_hash"),
+                "review_scope": (
+                    "Compare approved source with deterministic result; do not change verdict."
+                ),
+            },
+        }
+        return run.result.model_copy(update={"runner_metadata": metadata})
 
     def _runtime(self, tenant_id: str) -> AgentRuntimeConfig:
         return resolve_agent_runtime(

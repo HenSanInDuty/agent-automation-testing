@@ -62,7 +62,12 @@ async def _invoke_reporting(
                     {
                         "role": "system",
                         "content": (
-                            "Create an informational report from supplied redacted evidence only. "
+                            "Review every terminal run (passed, failed, errored, or skipped) from "
+                            "supplied redacted evidence only. When review_context contains an "
+                            "approved Playwright source, compare its intended controls/assertions "
+                            "with the deterministic result and evidence. For a passed run, "
+                            "identify verified and unverified scope; a pass is not proof of "
+                            "unasserted behavior. "
                             "Never claim a retry, fix, approval, or changed verdict. Preserve "
                             "deterministic_status exactly. Return only a JSON object with exactly "
                             "these fields: deterministic_status, headline, what_ran, observations, "

@@ -12,9 +12,11 @@ class FakeModel:
     def __init__(self, response: object) -> None:
         self.response = response
         self.calls = 0
+        self.payload: object | None = None
 
     async def ainvoke(self, payload: object, **kwargs: object) -> object:
         self.calls += 1
+        self.payload = payload
         if isinstance(self.response, Exception):
             raise self.response
         return self.response
@@ -78,6 +80,8 @@ def test_reporting_executor_preserves_the_deterministic_failure_status() -> None
     assert outcome.report.deterministic_status == "failed"
     assert outcome.report.failure is not None
     assert outcome.report.failure.location == "checkout.spec.ts:42:3"
+    assert isinstance(model.payload, dict)
+    assert "Review every terminal run" in model.payload["messages"][0]["content"]
 
 
 def test_reporting_executor_returns_unavailable_for_invalid_output_or_guard_exhaustion() -> None:

@@ -116,7 +116,7 @@ policy, approve generated tests, and provision other users.
 ```bash
 docker compose up -d --build
 
-docker compose exec -T control-plane uv run --no-sync python cli.py bootstrap-admin \
+docker compose exec -T control-plane uv run --no-sync python apps/control-plane/cli.py bootstrap-admin \
   --tenant demo-tenant \
   --email admin@example.test \
   --temporary-password 'DemoAdminPass123'

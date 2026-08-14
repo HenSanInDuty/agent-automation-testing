@@ -14,8 +14,8 @@ from auto_at.contracts.generation import TestGenerationPlanningRequest, request_
 from config import Settings
 
 
-def test_generation_prompt_guides_vietnamese_natural_language_button_requests() -> None:
-    user_request = "Kiểm tra số lượng nút và đảm bảo các nút bấm được."
+def test_generation_prompt_guides_vietnamese_link_and_button_requests() -> None:
+    user_request = "Kiểm tra tính khả dụng của các thẻ <a> và <button>."
     request = TestGenerationPlanningRequest(
         id=uuid4(),
         correlation_id=uuid4(),
@@ -29,12 +29,19 @@ def test_generation_prompt_guides_vietnamese_natural_language_button_requests() 
     system_message = prompt["messages"][0]["content"]
     context = json.loads(prompt["messages"][1]["content"])
 
-    assert PROMPT_VERSION == "test-generation-v3"
+    assert PROMPT_VERSION == "test-generation-v5"
     assert Settings().agent_generation_prompt_version == PROMPT_VERSION
     assert "including Vietnamese" in system_message
     assert "one raw JSON object" in system_message
-    assert "count buttons" in system_message
-    assert "visible at the current viewport" in system_message
+    assert "<a> links and <button> controls" in system_message
+    assert "page.locator('a, button')" in system_message
+    assert "locator.getAttribute('href')" in system_message
+    assert "page.evaluate" in system_message
+    assert "protocol is not HTTP(S), or it is a fragment-only anchor" in system_message
+    assert "two separate loops" in system_message
+    assert "Never place a button click inside an href condition" in system_message
+    assert "Do not use page.goBack()" in system_message
+    assert "new URL(href, page.url())" in system_message
     assert "Skip responsive controls hidden" in system_message
     assert "MUST match this JSON pattern exactly" in system_message
     assert "escaping newlines" in system_message

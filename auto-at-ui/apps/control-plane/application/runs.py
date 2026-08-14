@@ -303,7 +303,7 @@ class RequestRunReport:
                     source="reporting",
                     stage="requested",
                     status="queued",
-                    safe_summary="Advisory run report queued.",
+                    safe_summary="AI post-run review queued.",
                     occurred_at=datetime.now(UTC),
                 )
             )
