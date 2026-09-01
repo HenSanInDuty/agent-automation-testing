@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Any
@@ -31,6 +32,7 @@ from domain.authorization import (
 )
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, status
 from fastapi.responses import FileResponse, Response
+from infrastructure.artifacts.rustfs import ArtifactStorageError, RustFSArtifactStore
 from infrastructure.observability import current_trace_context
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
@@ -43,7 +45,6 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
-from infrastructure.runners import VerifiedLocalArtifactPort
 from pydantic import BaseModel, Field
 
 from api.v1.dependencies.authorization import current_principal, current_tenant, require_csrf
@@ -177,9 +178,7 @@ def _run_report_response(report: object) -> RunReportResponse:
         unavailable_reason=safe_reason if isinstance(safe_reason, str) else None,
         provenance=RunReportProvenanceResponse(
             provider=(
-                provenance.get("provider")
-                if isinstance(provenance.get("provider"), str)
-                else None
+                provenance.get("provider") if isinstance(provenance.get("provider"), str) else None
             ),
             model=provenance.get("model") if isinstance(provenance.get("model"), str) else None,
             redaction_policy_version=(
@@ -322,9 +321,7 @@ def create_revised_draft(
             )
         if run.request is None or run.request.target_url is None:
             raise HTTPException(status_code=409, detail="Run has no revisable Web UI target.")
-        test_case = SqlAlchemyCatalogRepository(session).get_test_case(
-            tenant_id, run.test_case_id
-        )
+        test_case = SqlAlchemyCatalogRepository(session).get_test_case(tenant_id, run.test_case_id)
         source = (
             None if test_case is None else test_case.specification.get("playwright_test_source")
         )
@@ -457,8 +454,7 @@ def list_runs(
         }
     return RunListResponse(
         items=[
-            _run_response(row.run, row.created_at, names.get(row.run.test_case_id))
-            for row in page
+            _run_response(row.run, row.created_at, names.get(row.run.test_case_id)) for row in page
         ],
         total=len(visible),
         limit=limit,
@@ -539,7 +535,7 @@ def download_artifact(
     tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     settings: Annotated[Settings, Depends(get_settings)],
-) -> FileResponse:
+) -> Response:
     with create_session_factory(settings)() as session:
         try:
             run = GetRun(SqlAlchemyRunRepository(session)).execute(tenant_id, run_id)
@@ -553,13 +549,15 @@ def download_artifact(
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found.")
     try:
-        path = VerifiedLocalArtifactPort(settings.artifact_root).verified_path(artifact)
-    except ValueError as error:
+        content = RustFSArtifactStore(settings).read_verified_bytes(
+            artifact, settings.artifact_upload_max_bytes
+        )
+    except (ArtifactStorageError, ValueError) as error:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Artifact integrity check failed.",
         ) from error
-    return FileResponse(path, media_type=artifact.content_type or "application/octet-stream")
+    return Response(content=content, media_type=artifact.content_type or "application/octet-stream")
 
 
 @router.get(
@@ -587,8 +585,10 @@ def list_artifact_archive_entries(
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found.")
     try:
-        path = VerifiedLocalArtifactPort(settings.artifact_root).verified_path(artifact)
-        with ZipFile(path) as archive:
+        content = RustFSArtifactStore(settings).read_verified_bytes(
+            artifact, settings.artifact_upload_max_bytes
+        )
+        with ZipFile(BytesIO(content)) as archive:
             entries = archive.infolist()
     except (BadZipFile, OSError, ValueError) as error:
         raise HTTPException(
@@ -639,7 +639,7 @@ def _trace_target_element(node: Any, target: str) -> str | None:
 
 
 def _trace_browser_actions(
-    path: Path,
+    path: BytesIO,
 ) -> tuple[list[BrowserActionResponse], list[tuple[str | None, str | None]]]:
     """Extract a small, read-only click ledger from a verified Playwright trace."""
     with ZipFile(path) as archive:
@@ -718,11 +718,13 @@ def _trace_browser_actions(
     return actions, action_frames
 
 
-def _run_trace_path(evidence: list[object], settings: Settings) -> Path | None:
+def _run_trace_path(evidence: list[object], settings: Settings) -> BytesIO | None:
     trace = next((artifact for artifact in evidence if artifact.uri.lower().endswith(".zip")), None)
     if trace is None:
         return None
-    return VerifiedLocalArtifactPort(settings.artifact_root).verified_path(trace)
+    return BytesIO(
+        RustFSArtifactStore(settings).read_verified_bytes(trace, settings.artifact_upload_max_bytes)
+    )
 
 
 def _run_evidence(
@@ -809,10 +811,17 @@ def download_artifact_archive(
     if not artifacts:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No artifacts found.")
 
-    artifact_port = VerifiedLocalArtifactPort(settings.artifact_root)
     try:
-        verified = [(artifact, artifact_port.verified_path(artifact)) for artifact in artifacts]
-    except ValueError as error:
+        verified = [
+            (
+                artifact,
+                RustFSArtifactStore(settings).read_verified_bytes(
+                    artifact, settings.artifact_upload_max_bytes
+                ),
+            )
+            for artifact in artifacts
+        ]
+    except (ArtifactStorageError, ValueError) as error:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Artifact integrity check failed.",
@@ -822,9 +831,10 @@ def download_artifact_archive(
         archive_path = Path(file.name)
     try:
         with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
-            for artifact, path in verified:
+            for artifact, content in verified:
                 # The generated name is stable, readable, and cannot preserve a storage path.
-                archive.write(path, arcname=f"{artifact.kind}-{artifact.id}{path.suffix}")
+                suffix = Path(artifact.uri).suffix
+                archive.writestr(f"{artifact.kind}-{artifact.id}{suffix}", content)
     except OSError as error:
         archive_path.unlink(missing_ok=True)
         raise HTTPException(

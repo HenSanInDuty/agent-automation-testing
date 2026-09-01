@@ -168,7 +168,7 @@ apps/control-plane/
   domain/                 entities, policies, domain events, ports
   infrastructure/
     persistence/          SQLAlchemy repositories and Alembic migrations
-    storage/              S3/MinIO artifact adapter
+    storage/              S3/RustFS artifact adapter
     messaging/            outbox publisher and event consumer
     workflow/             Temporal (or chosen equivalent) adapter
     observability/        tracing, metrics, structured logging
@@ -291,7 +291,7 @@ Required quality gates:
 
 1. Python: `uv run ruff check .`, `uv run pytest`, static type checking.
 2. TypeScript: lint, type check, Playwright adapter contract tests.
-3. Integration: Compose-backed API -> worker -> MinIO happy path and failure
+3. Integration: Compose-backed API -> worker -> RustFS happy path and failure
    path.
 4. Security: secret scan, dependency scan and tests proving redaction and
    approval enforcement.
@@ -321,7 +321,7 @@ an LLM claims so.
 | --- | --- | --- |
 | 0. Decisions | ADRs for LLM, auth, workflow, retention, deployment | user-approved choices and threat model |
 | 1. Foundation | migrations, repositories, outbox, audit, run APIs | persisted run lifecycle with HTTP tests |
-| 2. Web UI vertical slice | worker transport, execution, MinIO evidence | end-to-end deterministic run in Compose |
+| 2. Web UI vertical slice | worker transport, execution, RustFS evidence | end-to-end deterministic run in Compose |
 | 3. Durable orchestration | workflow, retries, cancellation, idempotency | injected duplicate/timeout tests pass |
 | 4. Intelligence | redaction pipeline, triage, evaluator, approvals | proposal cannot affect verdict without approval |
 | 5. Research evaluation | benchmark, baseline, ablations, experiment scripts | repeatable results and exported dataset |

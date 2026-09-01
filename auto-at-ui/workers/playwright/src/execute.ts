@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,7 @@ import {
   validateExecutionRequestV1,
   validatePlaywrightTestSourceMode,
 } from "./contract.js";
+import { executionContext, logEvent, RunnerEventSink } from "./observability.js";
 
 export type Step =
   | { action: "goto"; url: string }
@@ -102,6 +103,29 @@ async function addEvidence(
   const uri = `file://${path}`;
   artifacts.push({ kind, uri, content_type: contentType });
   evidence[uri] = { checksum: createHash("sha256").update(bytes).digest("hex"), size: bytes.length };
+}
+
+export async function addRunnerObservabilityArtifacts(
+  root: string, request: ExecutionRequestV1, artifacts: ExecutionResultV1["artifacts"],
+  evidence: Record<string, { checksum: string; size: number }>, sink: RunnerEventSink,
+): Promise<void> {
+  try {
+    sink.record("runner.execution.terminal", "Runner reached its terminal result.");
+    sink.record("artifact.runner_log.created", "Runner log artifact was created.");
+    await addEvidence(root, request.run_id, "runner-log", "jsonl", "application/x-ndjson", sink.serialize(), artifacts, evidence);
+    const manifest = {
+      schema_version: "v1", run_id: request.run_id, correlation_id: request.correlation_id,
+      created_at: new Date().toISOString(),
+      artifacts: artifacts.map((artifact) => ({
+        name: basename(new URL(artifact.uri).pathname), kind: artifact.kind,
+        content_type: artifact.content_type, checksum: evidence[artifact.uri]?.checksum,
+        size: evidence[artifact.uri]?.size,
+      })),
+    };
+    await addEvidence(root, request.run_id, "artifact-manifest", "json", "application/json", JSON.stringify(manifest), artifacts, evidence);
+  } catch {
+    // Staging diagnostics must never influence a deterministic runner verdict.
+  }
 }
 
 async function performStep(page: Page, step: Step, timeout: number): Promise<void> {
@@ -292,18 +316,36 @@ async function executePlaywrightTestSource(
 
 export async function executeRequest(value: unknown, artifactRoot = process.env.ARTIFACT_ROOT ?? "/artifacts", signal?: AbortSignal, report?: ProgressReporter): Promise<ExecutionResultV1> {
   const request = validateExecutionRequestV1(value);
+  const logContext = executionContext(request);
   if (request.runner_config.mode === "playwright_test_source") {
-    return executePlaywrightTestSource(request, artifactRoot, signal);
+    const runnerLog = new RunnerEventSink(logContext);
+    runnerLog.record("runner.validation.completed", "Execution request validation completed.");
+    const result = await executePlaywrightTestSource(request, artifactRoot, signal);
+    const evidence = result.runner_metadata.evidence;
+    if (evidence && typeof evidence === "object" && !Array.isArray(evidence)) {
+      await addRunnerObservabilityArtifacts(
+        artifactRoot,
+        request,
+        result.artifacts,
+        evidence as Record<string, { checksum: string; size: number }>,
+        runnerLog,
+      );
+    }
+    return result;
   }
   const config = configOf(request);
   if (signal?.aborted) throw new ExecutionCancelledError("Browser run was cancelled.");
   const startedAt = new Date().toISOString();
   const artifacts: ExecutionResultV1["artifacts"] = [];
   const evidence: Record<string, { checksum: string; size: number }> = {};
+  const runnerLog = new RunnerEventSink(logContext);
+  runnerLog.record("runner.validation.completed", "Execution request validation completed.");
   const steps: Array<{ step: Step; status: "passed" | "failed"; error?: string }> = [];
   const consoleErrors: string[] = [];
   const networkFailures: string[] = [];
   const browser = await chromium.launch({ headless: true });
+  runnerLog.record("runner.browser.started", "Pinned browser started.");
+  logEvent("info", "runner.browser.started", "Pinned browser started.", logContext);
   report?.("browser.launched", "running", "Browser launched.");
   const retainVisualEvidence = request.artifact_policy.video_on_success ?? true;
   const context = await browser.newContext({ recordVideo: (request.artifact_policy.video_on_failure || retainVisualEvidence) ? { dir: join(artifactRoot, request.run_id, "video") } : undefined });
@@ -320,12 +362,17 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
         for (const [index, step] of config.steps.entries()) {
           try {
             report?.(`browser.todo.${index + 1}`, "running", `Browser todo step ${index + 1} started.`);
+            runnerLog.record("runner.step.started", "Browser step started.", { step_index: index + 1, action: step.action });
             await performStep(page, step, config.step_timeout_ms);
             steps.push({ step, status: "passed" });
+            runnerLog.record("runner.step.completed", "Browser step completed.", { step_index: index + 1, action: step.action });
+            logEvent("info", "runner.step.completed", "Browser step completed.", logContext, { step_index: index + 1, action: step.action });
             report?.(`browser.todo.${index + 1}`, "passed", `Browser todo step ${index + 1} passed.`);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             steps.push({ step, status: "failed", error: message });
+            runnerLog.record("runner.step.failed", "Browser step failed.", { step_index: index + 1, action: step.action });
+            logEvent("warn", "runner.step.failed", "Browser step failed.", logContext, { step_index: index + 1, action: step.action });
             status = "failed";
             summary = `Browser step failed: ${step.action}.`;
             report?.(`browser.todo.${index + 1}`, "failed", `Browser todo step ${index + 1} failed.`);
@@ -339,6 +386,7 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
     if (error instanceof ExecutionCancelledError) {
       throw error;
     } else if (error instanceof ExecutionTimeoutError) {
+      runnerLog.record("runner.execution.timed_out", "Browser execution timed out.");
       status = "failed";
       summary = error.message;
     } else {
@@ -347,6 +395,8 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
     }
   } finally {
     report?.("evidence.collection", "running", "Collecting configured evidence.");
+    runnerLog.record("runner.evidence.collection_started", "Evidence collection started.");
+    logEvent("info", "runner.evidence.collection_started", "Evidence collection started.", logContext);
     const snapshot = await page.locator("body").innerText().catch(() => "");
     const dom = await page.locator("body").evaluate((body) => body.outerHTML.slice(0, 20_000)).catch(() => "");
     const accessibility = await page.accessibility.snapshot().catch(() => null);
@@ -376,7 +426,10 @@ export async function executeRequest(value: unknown, artifactRoot = process.env.
       }
     }
     await browser.close();
+    runnerLog.record("runner.evidence.collection_completed", "Evidence collection completed.");
+    logEvent("info", "runner.evidence.collection_completed", "Evidence collection completed.", logContext);
     report?.("evidence.collection", "passed", "Evidence collection completed.");
   }
+  await addRunnerObservabilityArtifacts(artifactRoot, request, artifacts, evidence, runnerLog);
   return { contract_version: "v1", run_id: request.run_id, correlation_id: request.correlation_id, status, started_at: startedAt, completed_at: new Date().toISOString(), summary, artifacts, runner_metadata: { browser: "chromium", playwright_version: "1.50.1", steps, console_errors: consoleErrors, network_failures: networkFailures, evidence } };
 }

@@ -3,6 +3,7 @@ from uuid import uuid4
 import pytest
 from auto_at.contracts.execution import TargetType
 from auto_at.contracts.execution import TestExecutionRequest as ExecutionRequest
+from infrastructure.observability import JsonFormatter
 from infrastructure.runners import HttpPlaywrightTransport, RunnerUnavailableError
 
 
@@ -24,9 +25,12 @@ def test_transport_logs_correlation_data_when_the_worker_times_out(monkeypatch, 
     with pytest.raises(RunnerUnavailableError, match="timed out"):
         HttpPlaywrightTransport("http://worker", timeout_seconds=12).execute(request)
 
-    assert f"run_id={request.run_id}" in caplog.text
-    assert f"correlation_id={request.correlation_id}" in caplog.text
-    assert "timeout_seconds=12" in caplog.text
+    record = caplog.records[-1]
+    payload = __import__("json").loads(JsonFormatter("test", "test").format(record))
+    assert payload["event"] == "runner.request.timeout"
+    assert payload["run_id"] == str(request.run_id)
+    assert payload["correlation_id"] == str(request.correlation_id)
+    assert payload["timeout_seconds"] == 12
 
 
 def test_transport_posts_an_idempotent_cancellation_command(monkeypatch) -> None:
@@ -62,8 +66,12 @@ def test_transport_posts_an_idempotent_cancellation_command(monkeypatch) -> None
 
 def test_transport_keeps_progress_metadata_outside_the_execution_contract(monkeypatch) -> None:
     request = ExecutionRequest(
-        run_id=uuid4(), correlation_id=uuid4(), project_id=uuid4(), test_case_id="generated",
-        target_type=TargetType.WEB_UI, revision="a" * 40,
+        run_id=uuid4(),
+        correlation_id=uuid4(),
+        project_id=uuid4(),
+        test_case_id="generated",
+        target_type=TargetType.WEB_UI,
+        revision="a" * 40,
         runner_config={"mode": "playwright_test_source"},
     )
     observed: dict[str, object] = {}
@@ -103,8 +111,12 @@ def test_transport_keeps_progress_metadata_outside_the_execution_contract(monkey
 
 def test_transport_uses_the_preflight_endpoint_before_dispatch(monkeypatch) -> None:
     request = ExecutionRequest(
-        run_id=uuid4(), correlation_id=uuid4(), project_id=uuid4(), test_case_id="generated",
-        target_type=TargetType.WEB_UI, revision="a" * 40,
+        run_id=uuid4(),
+        correlation_id=uuid4(),
+        project_id=uuid4(),
+        test_case_id="generated",
+        target_type=TargetType.WEB_UI,
+        revision="a" * 40,
     )
     observed: dict[str, object] = {}
 

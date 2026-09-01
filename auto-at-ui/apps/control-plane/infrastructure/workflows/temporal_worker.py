@@ -13,6 +13,8 @@ from config import Settings
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from infrastructure.artifacts.rustfs import RustFSArtifactStore
+from infrastructure.observability import configure_logging, log_event
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyArtifactRepository,
@@ -26,14 +28,12 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyVisionRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
-from infrastructure.runners import VerifiedLocalArtifactPort
 from infrastructure.workflows.temporal import (
     TemporalWorkflowStarter,
     TestRunWorkflow,
     dispatch_test_run,
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +65,7 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         SqlAlchemyConfigurationRepository(session),
                         SqlAlchemyArtifactRepository(session),
                         SqlAlchemyRunReportRepository(session),
-                        VerifiedLocalArtifactPort(settings.artifact_root),
+                        RustFSArtifactStore(settings),
                         settings,
                         SqlAlchemyActivityEventRepository(session),
                     ),
@@ -80,14 +80,26 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                     ),
                 ).execute()
             if published:
-                logger.info("published %s run event(s) to Temporal", published)
+                log_event(
+                    logger,
+                    logging.INFO,
+                    "workflow.outbox.published",
+                    "Outbox events published to Temporal.",
+                    published_count=published,
+                )
         except Exception:
-            logger.exception("outbox publication failed; events remain unpublished")
+            log_event(
+                logger,
+                logging.ERROR,
+                "workflow.outbox.publish_failed",
+                "Outbox publication failed; events remain unpublished.",
+            )
         await asyncio.sleep(settings.temporal_outbox_poll_interval_seconds)
 
 
 async def main() -> None:
     settings = Settings()
+    configure_logging(settings, service="auto-at-temporal-worker")
     client = await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
     publisher = asyncio.create_task(publish_forever(client, settings))
     try:

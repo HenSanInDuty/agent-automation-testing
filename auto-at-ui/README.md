@@ -22,7 +22,7 @@ See [architecture.md](docs/architecture.md) and [ADR-001](docs/adr/001-platform-
 | Web UI runner | Playwright, TypeScript | Browser automation adapter (currently a scaffold). |
 | Primary database | PostgreSQL 17 | Source of truth for future application, tenancy, audit, and test data. |
 | Cache / queue support | Redis 7 | Cache, coordination, and future background-job support. |
-| Artifact storage | MinIO (S3-compatible) | Stores screenshots, videos, reports, and other execution artifacts in the `auto-at-artifacts` bucket. |
+| Artifact storage | RustFS (S3-compatible) | Stores screenshots, videos, reports, and other execution artifacts in the `auto-at-artifacts` bucket. |
 | Containers | Docker Compose | Runs the control plane and local backing services together. |
 | Workflow engine | Temporal | Local self-hosted development backend for durable run dispatch; production deployment remains undecided. |
 
@@ -42,7 +42,7 @@ uv run ruff check .
 uv run pytest
 ```
 
-Start the complete local stack (control plane, dashboard, PostgreSQL, Redis, and MinIO):
+Start the complete local stack (control plane, dashboard, PostgreSQL, Redis, and RustFS):
 
 ```bash
 docker compose up --build
@@ -50,7 +50,7 @@ docker compose up --build
 
 The control-plane API is available at `http://localhost:7000/docs`, the dashboard at
 `http://localhost:3000`, PostgreSQL at `localhost:5432`, Redis at `localhost:6379`,
-and the MinIO console at `http://localhost:9001`. Docker Compose creates the
+and the RustFS console at `http://localhost:9001`. The control plane creates the
 `auto-at-artifacts` bucket before starting the control plane. Copy `.env.example` to
 `.env` to override local credentials, ports, or the Ollama endpoint.
 
@@ -62,7 +62,8 @@ contracts.
 ## Move local run data to another machine
 
 To retain dashboard history and the evidence linked from it, export both the
-PostgreSQL database and the execution-artifacts volume. The backup directory is
+PostgreSQL database and the RustFS durable-data volume. The staging
+`execution-artifacts` volume is not durable evidence. The backup directory is
 ignored by Git and may be copied to the destination machine by any secure transfer
 method.
 
@@ -77,9 +78,9 @@ docker run --rm \
   alpine tar czf /backup/postgres-data.tar.gz -C /source .
 
 docker run --rm \
-  -v auto-at-ui_execution-artifacts:/source:ro \
+  -v auto-at-ui_rustfs-data:/source:ro \
   -v "$PWD/auto-at-backup":/backup \
-  alpine tar czf /backup/execution-artifacts.tar.gz -C /source .
+  alpine tar czf /backup/rustfs-data.tar.gz -C /source .
 ```
 
 On the destination machine, first clone the same repository revision and run
@@ -95,17 +96,17 @@ docker run --rm \
   alpine sh -c 'cd /target && tar xzf /backup/postgres-data.tar.gz'
 
 docker run --rm \
-  -v auto-at-ui_execution-artifacts:/target \
+  -v auto-at-ui_rustfs-data:/target \
   -v "$PWD/auto-at-backup":/backup:ro \
-  alpine sh -c 'cd /target && tar xzf /backup/execution-artifacts.tar.gz'
+  alpine sh -c 'cd /target && tar xzf /backup/rustfs-data.tar.gz'
 
 docker compose up -d
 docker compose exec -T control-plane uv run --no-sync alembic upgrade head
 ```
 
-Only these two volumes are needed for the dashboard's run history and linked
-artifacts. Export the Temporal, Redis, or MinIO volumes separately only when their
-own operational history or objects must also be retained.
+These two volumes are needed for the dashboard's run history and linked artifacts.
+Export the Temporal or Redis volumes separately only when their own operational
+history must also be retained.
 
 ## Create a demo admin account
 

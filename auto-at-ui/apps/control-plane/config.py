@@ -12,6 +12,9 @@ class Settings(BaseSettings):
 
     app_name: str = "Auto-AT Control Plane"
     environment: str = "local"
+    log_level: str = "INFO"
+    json_logging_enabled: bool = True
+    log_service_name: str = "auto-at-control-plane"
     auth_mode: str = "local"
     session_cookie_name: str = "auto_at_session"
     csrf_cookie_name: str = "auto_at_csrf"
@@ -88,14 +91,18 @@ class Settings(BaseSettings):
     agent_reporting_prompt_version: str = "run-review-v2"
     database_url: str = "postgresql://auto_at:local-development-only@127.0.0.1:5432/auto_at"
     redis_url: str = "redis://127.0.0.1:6379/0"
-    minio_endpoint: str = "127.0.0.1:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
-    minio_bucket: str = "auto-at-artifacts"
-    minio_secure: bool = False
+    rustfs_endpoint: str = "http://127.0.0.1:9000"
+    rustfs_access_key: str = "rustfsadmin"
+    rustfs_secret_key: str = "rustfsadmin"
+    rustfs_bucket: str = "auto-at-artifacts"
+    rustfs_secure: bool = False
+    rustfs_region: str = "us-east-1"
+    rustfs_path_style: bool = True
+    artifact_upload_max_bytes: int = Field(default=100_000_000, ge=1_024, le=1_000_000_000)
     runner_dispatch_enabled: bool = False
     playwright_worker_url: str = "http://127.0.0.1:7100"
     worker_progress_callback_secret: str | None = None
+    # Staging-only shared volume used between the worker and workflow promoter.
     artifact_root: str = "/tmp/auto-at-artifacts"
     temporal_enabled: bool = False
     temporal_address: str = "127.0.0.1:7233"

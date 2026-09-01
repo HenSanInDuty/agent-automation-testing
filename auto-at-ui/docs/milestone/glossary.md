@@ -77,12 +77,12 @@ artifact, event và proposal khi cần trace lỗi.
 ### Artifact
 
 An **artifact** is evidence produced by an execution, such as a screenshot,
-video, Playwright trace, console log, or report. Binary artifacts live in MinIO;
+video, Playwright trace, console log, or report. Binary artifacts live in RustFS;
 the database stores their metadata, URI, and checksum.
 
 **Tiếng Việt:** **Artifact (bằng chứng đầu ra)** là screenshot, video,
 Playwright trace, console log hoặc report do lúc chạy tạo ra. File nhị phân nằm
-trong MinIO; DB chỉ lưu metadata, URI và checksum.
+trong RustFS; DB chỉ lưu metadata, URI và checksum.
 
 ### Revision
 

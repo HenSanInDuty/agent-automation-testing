@@ -46,6 +46,16 @@ class ArtifactRepository(Protocol):
     def add(self, artifact: ArtifactRecord) -> None: ...
 
 
+class VerifiedArtifactStore(Protocol):
+    """Durable, tenant-scoped bytes store; provider details stay in infrastructure."""
+
+    def read_verified_bytes(self, artifact: ArtifactRecord, max_bytes: int) -> bytes: ...
+
+    def delete(self, artifact: ArtifactRecord) -> None: ...
+
+    def list_keys(self, tenant_id: str, run_id: UUID) -> list[str]: ...
+
+
 class RunnerTransport(Protocol):
     def execute(self, request: "TestExecutionRequest") -> TestExecutionResult: ...
 

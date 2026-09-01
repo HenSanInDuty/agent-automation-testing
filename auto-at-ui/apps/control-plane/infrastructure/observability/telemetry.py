@@ -40,6 +40,11 @@ def trace_context(correlation_id: UUID, parent_traceparent: str | None = None) -
     return context
 
 
+def reset_trace_context() -> None:
+    """Clear request-scoped context after a boundary has finished handling it."""
+    _context.set(None)
+
+
 def current_trace_context() -> TraceContext | None:
     return _context.get()
 

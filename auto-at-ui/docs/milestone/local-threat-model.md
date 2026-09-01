@@ -8,7 +8,7 @@ baseline, not a production security approval.
 The control plane owns run records, approvals, audit events, and the outbox in
 PostgreSQL. The Playwright worker is trusted only to execute a versioned
 `TestExecutionRequest` and return its observed `TestExecutionResult`.
-MinIO stores binary evidence; it is not an authorization source. The agent may
+RustFS stores binary evidence; it is not an authorization source. The agent may
 read a bounded, redacted evidence bundle and create a proposal, but cannot
 change source code, a test suite, an approval, or a runner verdict.
 

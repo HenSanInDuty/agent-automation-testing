@@ -1,0 +1,1 @@
+{"title":"Auto-AT Run Investigation","panels":[{"type":"logs","title":"Correlation / run search","targets":[{"expr":"{service=~\"auto-at-.+\"} | json | correlation_id=~\"$correlation_id\" | run_id=~\"$run_id\""}]}],"templating":{"list":[{"name":"correlation_id","type":"textbox"},{"name":"run_id","type":"textbox"}]},"schemaVersion":39}

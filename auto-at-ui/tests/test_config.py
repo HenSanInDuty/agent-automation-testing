@@ -9,14 +9,14 @@ def test_settings_reads_port_from_environment(monkeypatch) -> None:
 
 def test_settings_reads_storage_and_database_endpoints(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql://test:test@postgres:5432/test")
-    monkeypatch.setenv("MINIO_ENDPOINT", "minio:9000")
-    monkeypatch.setenv("MINIO_BUCKET", "test-artifacts")
+    monkeypatch.setenv("RUSTFS_ENDPOINT", "http://rustfs:9000")
+    monkeypatch.setenv("RUSTFS_BUCKET", "test-artifacts")
 
     settings = Settings()
 
     assert settings.database_url == "postgresql://test:test@postgres:5432/test"
-    assert settings.minio_endpoint == "minio:9000"
-    assert settings.minio_bucket == "test-artifacts"
+    assert settings.rustfs_endpoint == "http://rustfs:9000"
+    assert settings.rustfs_bucket == "test-artifacts"
 
 
 def test_settings_accepts_standard_google_application_credentials_environment(monkeypatch) -> None:

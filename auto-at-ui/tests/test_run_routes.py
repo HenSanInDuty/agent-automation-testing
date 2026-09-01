@@ -1,6 +1,5 @@
 import hashlib
 import io
-from pathlib import Path
 from uuid import UUID, uuid4
 from zipfile import ZipFile
 
@@ -126,7 +125,7 @@ def test_create_run_commits_run_audit_and_outbox_atomically() -> None:
         engine.dispose()
 
 
-def test_artifact_archive_is_tenant_scoped_and_contains_verified_evidence() -> None:
+def test_artifact_archive_is_tenant_scoped_and_contains_verified_evidence(monkeypatch) -> None:
     from config import Settings
 
     settings = Settings()
@@ -140,17 +139,29 @@ def test_artifact_archive_is_tenant_scoped_and_contains_verified_evidence() -> N
         revision="a" * 40,
         correlation_id=uuid4(),
     )
-    artifact_path = Path(settings.artifact_root) / str(run.id) / "playwright-output.txt"
     zip_buffer = io.BytesIO()
     with ZipFile(zip_buffer, "w") as archive:
         archive.writestr("test-results/failure.txt", "Playwright assertion failed.")
         archive.writestr("resources/screenshot.png", b"png evidence")
     artifact_bytes = zip_buffer.getvalue()
     artifact_id = uuid4()
+    artifact_uri = (
+        f"s3://{settings.rustfs_bucket}/tenants/{tenant_id}/runs/{run.id}/artifacts/"
+        "playwright-trace.zip"
+    )
+
+    class FakeStore:
+        def __init__(self, _settings) -> None:
+            pass
+
+        def read_verified_bytes(self, artifact, _max_bytes):
+            assert artifact.uri == artifact_uri
+            assert artifact.checksum == hashlib.sha256(artifact_bytes).hexdigest()
+            return artifact_bytes
+
+    monkeypatch.setattr("api.v1.routes.runs.RustFSArtifactStore", FakeStore)
     engine = create_engine(settings)
     try:
-        artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        artifact_path.write_bytes(artifact_bytes)
         with Session(engine) as session:
             session.add(
                 ProjectModel(
@@ -181,13 +192,14 @@ def test_artifact_archive_is_tenant_scoped_and_contains_verified_evidence() -> N
                     version=run.version,
                 )
             )
+            session.flush()
             session.add(
                 ArtifactModel(
                     id=artifact_id,
                     tenant_id=tenant_id,
                     run_id=run.id,
                     kind="playwright-trace",
-                    uri=artifact_path.resolve().as_uri(),
+                    uri=artifact_uri,
                     checksum=hashlib.sha256(artifact_bytes).hexdigest(),
                     size=len(artifact_bytes),
                     content_type="application/zip",
@@ -203,7 +215,7 @@ def test_artifact_archive_is_tenant_scoped_and_contains_verified_evidence() -> N
         assert response.headers["content-type"] == "application/zip"
         assert f'filename="run-{run.id}-artifacts.zip"' in response.headers["content-disposition"]
         with ZipFile(io.BytesIO(response.content)) as archive:
-            filename = f"playwright-trace-{artifact_id}.txt"
+            filename = f"playwright-trace-{artifact_id}.zip"
             assert archive.namelist() == [filename]
             assert archive.read(filename) == artifact_bytes
 
@@ -228,6 +240,4 @@ def test_artifact_archive_is_tenant_scoped_and_contains_verified_evidence() -> N
             session.execute(delete(DbTestCaseModel).where(DbTestCaseModel.id == test_case_id))
             session.execute(delete(ProjectModel).where(ProjectModel.id == project_id))
             session.commit()
-        artifact_path.unlink(missing_ok=True)
-        artifact_path.parent.rmdir()
         engine.dispose()

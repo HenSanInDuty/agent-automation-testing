@@ -6,7 +6,7 @@
 ## Context
 
 Artifacts and logs can contain test data, browser evidence, URLs, and redacted
-agent inputs. Local MinIO retention is not a production policy. The platform
+agent inputs. Local RustFS retention is not a production policy. The platform
 must retain enough evidence for reproducibility and auditability while limiting
 data exposure and supporting deletion requests.
 

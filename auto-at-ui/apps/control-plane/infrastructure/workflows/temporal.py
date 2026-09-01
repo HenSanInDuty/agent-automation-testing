@@ -17,6 +17,8 @@ from temporalio import activity
 from temporalio.client import Client
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
+from infrastructure.artifacts.rustfs import ArtifactStorageError, RustFSArtifactStore
+from infrastructure.observability import log_event
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyArtifactRepository,
@@ -25,7 +27,7 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
-from infrastructure.runners import HttpPlaywrightTransport, VerifiedLocalArtifactPort
+from infrastructure.runners import HttpPlaywrightTransport, VerifiedArtifactPromotion
 from infrastructure.workflows.definitions import RunWorkflowInput, TestRunWorkflow
 
 
@@ -71,9 +73,26 @@ def dispatch_test_run(payload: RunWorkflowInput) -> dict[str, str]:
                 settings.playwright_worker_url, progress_tenant_id=payload.tenant_id
             ),
         ).execute(payload.tenant_id, request)
-        VerifiedLocalArtifactPort(
-            settings.artifact_root, SqlAlchemyArtifactRepository(session)
-        ).persist_result_artifacts(payload.tenant_id, result, request.artifact_policy.retain_days)
+        try:
+            VerifiedArtifactPromotion(
+                settings.artifact_root,
+                SqlAlchemyArtifactRepository(session),
+                RustFSArtifactStore(settings),
+                settings.artifact_upload_max_bytes,
+            ).persist_result_artifacts(
+                payload.tenant_id, result, request.artifact_policy.retain_days
+            )
+        except (ArtifactStorageError, ValueError):
+            # Evidence promotion is observational and retriable; it cannot replace
+            # the runner verdict.
+            log_event(
+                logger,
+                logging.ERROR,
+                "artifact.promotion_failed",
+                "Artifact promotion failed; staging evidence is retained for retry.",
+                run_id=request.run_id,
+                correlation_id=request.correlation_id,
+            )
         run = RecordDeterministicResult(runs).execute(payload.tenant_id, result)
         activities.append(
             ActivityEvent.create(

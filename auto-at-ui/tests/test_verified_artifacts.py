@@ -5,7 +5,7 @@ import pytest
 from auto_at.contracts.execution import Artifact, RunStatus
 from auto_at.contracts.execution import TestExecutionResult as ExecutionResult
 from domain.entities import ArtifactRecord
-from infrastructure.runners import VerifiedLocalArtifactPort
+from infrastructure.runners import VerifiedArtifactPromotion, VerifiedLocalArtifactPort
 
 
 class InMemoryArtifacts:
@@ -14,6 +14,18 @@ class InMemoryArtifacts:
 
     def add(self, artifact: ArtifactRecord) -> None:
         self.items.append(artifact)
+
+
+class Store:
+    def __init__(self) -> None:
+        self.items: dict[str, bytes] = {}
+
+    def put_verified(
+        self, key: str, content: bytes, checksum: str, _content_type: str | None
+    ) -> str:
+        assert hashlib.sha256(content).hexdigest() == checksum
+        self.items[key] = content
+        return f"s3://artifacts/{key}"
 
 
 def make_result(uri: str, checksum: str, size: int) -> ExecutionResult:
@@ -59,3 +71,25 @@ def test_verified_artifact_port_rejects_a_bad_checksum(tmp_path) -> None:
         VerifiedLocalArtifactPort(str(root), InMemoryArtifacts()).persist_result_artifacts(
             "tenant-a", result, 30
         )
+
+
+def test_promotion_persists_s3_metadata_only_after_verified_upload_and_clears_staging(
+    tmp_path,
+) -> None:
+    root = tmp_path / "artifacts"
+    artifact_path = root / "run-1" / "screen.png"
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_bytes(b"evidence bytes")
+    repository, store = InMemoryArtifacts(), Store()
+    result = make_result(
+        artifact_path.resolve().as_uri(), hashlib.sha256(b"evidence bytes").hexdigest(), 14
+    )
+
+    VerifiedArtifactPromotion(str(root), repository, store).persist_result_artifacts(
+        "tenant-a", result, 30
+    )
+
+    assert repository.items[0].uri.startswith(
+        f"s3://artifacts/tenants/tenant-a/runs/{result.run_id}/"
+    )
+    assert store.items and not artifact_path.exists()

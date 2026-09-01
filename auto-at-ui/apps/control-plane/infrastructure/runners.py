@@ -14,6 +14,9 @@ from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResul
 from domain.entities import ArtifactRecord
 from domain.ports import ArtifactRepository
 
+from infrastructure.artifacts.rustfs import RustFSArtifactStore
+from infrastructure.observability import log_event
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,11 +45,14 @@ class HttpPlaywrightTransport:
             ) as response:
                 return TestExecutionResult.model_validate_json(response.read())
         except TimeoutError as error:
-            logger.warning(
-                "run.timeout run_id=%s correlation_id=%s timeout_seconds=%s",
-                request.run_id,
-                request.correlation_id,
-                self._timeout_seconds,
+            log_event(
+                logger,
+                logging.WARNING,
+                "runner.request.timeout",
+                "Playwright worker timed out.",
+                run_id=request.run_id,
+                correlation_id=request.correlation_id,
+                timeout_seconds=self._timeout_seconds,
             )
             raise RunnerUnavailableError("Playwright worker timed out") from error
         except (URLError, ValueError) as error:
@@ -166,3 +172,72 @@ class VerifiedLocalArtifactPort:
         if len(value) >= 3 and value[0] == "/" and value[2] == ":":
             value = value[1:]
         return Path(value).resolve()
+
+
+class VerifiedArtifactPromotion:
+    """Promotes verified worker staging files without granting workers storage credentials."""
+
+    def __init__(
+        self,
+        root: str,
+        repository: ArtifactRepository,
+        store: RustFSArtifactStore,
+        max_upload_bytes: int = 100_000_000,
+    ) -> None:
+        self._local = VerifiedLocalArtifactPort(root)
+        self._repository = repository
+        self._store = store
+        self._max_upload_bytes = max_upload_bytes
+
+    def persist_result_artifacts(
+        self, tenant_id: str, result: TestExecutionResult, retain_days: int
+    ) -> None:
+        evidence = result.runner_metadata.get("evidence", {})
+        if not isinstance(evidence, dict):
+            raise ValueError("runner evidence manifest is invalid")
+        promoted: list[Path] = []
+        records: list[ArtifactRecord] = []
+        for artifact in result.artifacts:
+            path = self._local._path_for_uri(artifact.uri)
+            if self._local._root not in path.parents or not path.is_file():
+                raise ValueError("artifact is outside the configured root")
+            metadata = evidence.get(artifact.uri)
+            content = path.read_bytes()
+            if len(content) > self._max_upload_bytes:
+                raise ValueError("artifact exceeds the configured upload cap")
+            checksum = hashlib.sha256(content).hexdigest()
+            if (
+                not isinstance(metadata, dict)
+                or metadata.get("checksum") != checksum
+                or metadata.get("size") != len(content)
+            ):
+                raise ValueError("artifact checksum verification failed")
+            safe_kind = "".join(
+                char if char.isalnum() or char in "-_" else "-" for char in artifact.kind
+            )
+            suffix = "".join(
+                char for char in path.suffix.lower() if char.isalnum() or char == "."
+            )[:16]
+            key = (
+                f"tenants/{tenant_id}/runs/{result.run_id}/artifacts/"
+                f"{safe_kind}-{checksum[:12]}{suffix}"
+            )
+            uri = self._store.put_verified(key, content, checksum, artifact.content_type)
+            records.append(
+                ArtifactRecord(
+                    uuid4(),
+                    tenant_id,
+                    result.run_id,
+                    artifact.kind,
+                    uri,
+                    checksum,
+                    len(content),
+                    artifact.content_type,
+                    datetime.now(UTC) + timedelta(days=retain_days),
+                )
+            )
+            promoted.append(path)
+        for record in records:
+            self._repository.add(record)
+        for path in promoted:
+            path.unlink(missing_ok=True)

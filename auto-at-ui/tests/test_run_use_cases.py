@@ -176,7 +176,7 @@ def test_list_artifacts_is_scoped_to_the_run_and_tenant() -> None:
         tenant_id="tenant-a",
         run_id=run.id,
         kind="screenshot",
-        uri="minio://artifacts/run.png",
+        uri="s3://artifacts/tenants/tenant-a/runs/11111111-1111-4111-8111-111111111111/artifacts/run.png",
         checksum="a" * 64,
         size=123,
     )

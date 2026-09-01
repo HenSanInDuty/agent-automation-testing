@@ -55,5 +55,5 @@ Ask before selecting a cloud provider, LLM provider/model, authentication provid
 ## Current scaffold status
 
 - FastAPI control-plane exposes `/healthz` and `/api/v1/platform`.
-- Local backing services are PostgreSQL, Redis, and MinIO via `docker-compose.yml`.
+- Local backing services are PostgreSQL, Redis, and RustFS via `docker-compose.yml`.
 - Temporal, database migrations, authentication, agent services, runner transport, and actual dashboard pages are not yet implemented.
