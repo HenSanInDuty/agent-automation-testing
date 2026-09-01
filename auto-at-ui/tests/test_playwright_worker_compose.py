@@ -191,10 +191,12 @@ def test_compose_worker_reports_a_deterministic_pass() -> None:
     assert result["status"] == "passed"
     assert artifact_kinds(result) == {
         "accessibility",
+        "artifact-manifest",
         "console-errors",
         "dom-fragment",
         "network-failures",
         "page-url",
+        "runner-log",
         "screenshot",
         "step-history",
         "trace",

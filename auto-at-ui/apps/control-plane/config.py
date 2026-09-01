@@ -109,6 +109,7 @@ class Settings(BaseSettings):
     temporal_namespace: str = "auto-at-local"
     temporal_task_queue: str = "auto-at-run-dispatch-v1"
     temporal_outbox_poll_interval_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
+    artifact_retention_cleanup_interval_seconds: int = Field(default=3_600, ge=60, le=86_400)
     temporal_activity_timeout_seconds: int = Field(default=600, ge=1, le=3_600)
     temporal_run_deadline_seconds: int = Field(default=1_200, ge=1, le=7_200)
     temporal_retry_initial_interval_seconds: int = Field(default=1, ge=1, le=300)

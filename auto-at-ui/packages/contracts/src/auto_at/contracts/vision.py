@@ -83,6 +83,26 @@ class VisualExplorationRequest(BaseModel):
     stop_conditions: list[str] = Field(default_factory=list, max_length=50)
 
 
+class VisualStateNode(BaseModel):
+    """Safe state-graph provenance; never contains screenshot bytes or URLs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID = Field(default_factory=uuid4)
+    parent_id: UUID | None = None
+    hop: int = Field(ge=0, le=10)
+    screenshot_checksum: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class VisualActionCandidateBatch(BaseModel):
+    """A bounded BFS expansion proposed for one state node."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    state_id: UUID
+    candidates: list[VisualAction] = Field(min_length=1, max_length=20)
+
+
 class VisualExplorationResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

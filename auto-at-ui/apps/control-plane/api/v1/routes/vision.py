@@ -62,6 +62,8 @@ class ExplorationResponse(BaseModel):
     provider: str
     model: str
     max_steps: int
+    max_hops: int
+    max_states: int
     max_screenshot_bytes: int
     max_session_seconds: int
     safe_failure_reason: str | None
@@ -93,9 +95,16 @@ def _policy_response(runtime: AgentRuntimeConfig) -> VisionPolicyResponse:
 
 def _response(record: object) -> ExplorationResponse:
     return ExplorationResponse(
-        id=record.id, project_id=record.project_id, correlation_id=record.correlation_id,
-        state=record.state, policy_version=record.policy_version, provider=record.provider,
-        model=record.model, max_steps=record.max_steps,
+        id=record.id,
+        project_id=record.project_id,
+        correlation_id=record.correlation_id,
+        state=record.state,
+        policy_version=record.policy_version,
+        provider=record.provider,
+        model=record.model,
+        max_steps=record.max_steps,
+        max_hops=record.max_hops,
+        max_states=record.max_states,
         max_screenshot_bytes=record.max_screenshot_bytes,
         max_session_seconds=record.max_session_seconds,
         safe_failure_reason=record.safe_failure_reason,
@@ -160,9 +169,12 @@ def submit_exploration(
                 SqlAlchemyActivityEventRepository(session),
                 SqlAlchemyOutboxEventRepository(session),
             ).execute(
-                tenant_id=tenant_id, project_id=payload.project_id,
-                correlation_id=payload.correlation_id, target_url=payload.target_url,
-                task_intent=payload.task_intent, idempotency_key=idempotency_key,
+                tenant_id=tenant_id,
+                project_id=payload.project_id,
+                correlation_id=payload.correlation_id,
+                target_url=payload.target_url,
+                task_intent=payload.task_intent,
+                idempotency_key=idempotency_key,
                 runtime=_runtime(settings, configs, tenant_id),
                 actor=principal.subject,
                 intent_encryption_key=settings.vision_intent_encryption_key,

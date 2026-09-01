@@ -45,6 +45,10 @@ class ArtifactRepository(Protocol):
 
     def add(self, artifact: ArtifactRecord) -> None: ...
 
+    def list_expired(self, before: datetime, limit: int) -> list[ArtifactRecord]: ...
+
+    def delete_expired(self, tenant_id: str, artifact_id: UUID) -> bool: ...
+
 
 class VerifiedArtifactStore(Protocol):
     """Durable, tenant-scoped bytes store; provider details stay in infrastructure."""

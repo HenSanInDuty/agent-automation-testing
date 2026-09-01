@@ -40,6 +40,7 @@ from infrastructure.persistence.models import (
     TestRunModel,
     VisualActionProposalModel,
     VisualExplorationSessionModel,
+    VisualExplorationStateModel,
 )
 
 
@@ -269,16 +270,30 @@ class SqlAlchemyGenerationRepository:
             )
         )
 
-    def set_policy(self, tenant_id: str, project_id: UUID, origins: list[str]) -> None:
+    def set_policy(
+        self,
+        tenant_id: str,
+        project_id: UUID,
+        origins: list[str],
+        *,
+        vision_max_hops: int = 5,
+        vision_max_states: int = 50,
+    ) -> None:
         model = self.get_policy(tenant_id, project_id)
         if model is None:
             self._session.add(
                 ProjectExecutionPolicyModel(
-                    tenant_id=tenant_id, project_id=project_id, allowed_origins=origins
+                    tenant_id=tenant_id,
+                    project_id=project_id,
+                    allowed_origins=origins,
+                    vision_max_hops=vision_max_hops,
+                    vision_max_states=vision_max_states,
                 )
             )
         else:
             model.allowed_origins = origins
+            model.vision_max_hops = vision_max_hops
+            model.vision_max_states = vision_max_states
         self._session.flush()
 
     def add_test_case(self, model: TestCaseModel) -> None:
@@ -763,6 +778,38 @@ class SqlAlchemyConfigurationRepository:
             model.value = value
         self._session.flush()
 
+    def list_expired(self, before: datetime, limit: int) -> list[ArtifactRecord]:
+        statement = (
+            select(ArtifactModel)
+            .where(
+                ArtifactModel.retention_until.is_not(None), ArtifactModel.retention_until <= before
+            )
+            .order_by(ArtifactModel.retention_until, ArtifactModel.id)
+            .limit(limit)
+        )
+        return [
+            ArtifactRecord(
+                id=model.id,
+                tenant_id=model.tenant_id,
+                run_id=model.run_id,
+                kind=model.kind,
+                uri=model.uri,
+                checksum=model.checksum,
+                size=model.size,
+                content_type=model.content_type,
+                retention_until=model.retention_until,
+            )
+            for model in self._session.scalars(statement)
+        ]
+
+    def delete_expired(self, tenant_id: str, artifact_id: UUID) -> bool:
+        result = self._session.execute(
+            ArtifactModel.__table__.delete().where(
+                ArtifactModel.id == artifact_id, ArtifactModel.tenant_id == tenant_id
+            )
+        )
+        return bool(result.rowcount)
+
 
 class SqlAlchemyVisionRepository:
     """Tenant-scoped visual session persistence; values are safe metadata only."""
@@ -806,6 +853,10 @@ class SqlAlchemyVisionRepository:
 
     def add_action(self, proposal: VisualActionProposalModel) -> None:
         self._session.add(proposal)
+        self._session.flush()
+
+    def add_state(self, state: VisualExplorationStateModel) -> None:
+        self._session.add(state)
         self._session.flush()
 
     def list_actions(self, tenant_id: str, session_id: UUID) -> list[VisualActionProposalModel]:

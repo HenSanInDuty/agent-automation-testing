@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage } from "node:http";
 
 import { executeRequest, preflightPlaywrightTestSource } from "./execute.js";
 import { executionContext, logEvent } from "./observability.js";
-import { applyVisualAction, closeVisualSession, openVisualSession } from "./vision.js";
+import { applyVisualAction, closeVisualSession, observeVisualTreeState, openVisualSession } from "./vision.js";
 
 const port = Number(process.env.PORT ?? "7100");
 const activeExecutions = new Map<string, AbortController>();
@@ -32,7 +32,7 @@ function reportProgress(payload: ProgressPayload, tenantId: string | undefined, 
 
 createServer(async (request, response) => {
   const url = request.url ?? "";
-  if (!["POST", "DELETE"].includes(request.method ?? "") || !["/execute", "/preflight", "/cancel", "/visual-explorations", ...Array.from(url.matchAll(/^\/visual-explorations\/[^/]+(?:\/actions)?$/g), (match) => match[0])].includes(url)) { logEvent("warn", "runner.request.rejected", "Worker request route was rejected."); response.writeHead(404).end(); return; }
+  if (!["POST", "DELETE"].includes(request.method ?? "") || !["/execute", "/preflight", "/cancel", "/visual-explorations", "/visual-explorations/tree-states", ...Array.from(url.matchAll(/^\/visual-explorations\/[^/]+(?:\/actions)?$/g), (match) => match[0])].includes(url)) { logEvent("warn", "runner.request.rejected", "Worker request route was rejected."); response.writeHead(404).end(); return; }
   if (url.startsWith("/visual-explorations")) {
     const secret = process.env.VISION_WORKER_SECRET;
     if (!secret || request.headers["x-auto-at-vision-worker-secret"] !== secret) { response.writeHead(401).end(); return; }
@@ -41,7 +41,8 @@ createServer(async (request, response) => {
       const payload = chunks.length === 0 ? undefined : JSON.parse(Buffer.concat(chunks).toString("utf8"));
       const sessionId = url.split("/")[2];
       const root = process.env.ARTIFACT_ROOT ?? "/artifacts";
-      const result = url === "/visual-explorations" ? await openVisualSession(payload, root)
+      const result = url === "/visual-explorations/tree-states" ? await observeVisualTreeState(payload, root)
+        : url === "/visual-explorations" ? await openVisualSession(payload, root)
         : url.endsWith("/actions") ? await applyVisualAction(sessionId, payload?.action, root)
         : (await closeVisualSession(sessionId, root), { session_id: sessionId, closed: true });
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(result));

@@ -11,7 +11,9 @@ from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
 from agents.vision.service import (
     build_visual_action_prompt,
+    build_visual_candidate_batch_prompt,
     validate_visual_action_output,
+    validate_visual_candidate_batch_output,
 )
 
 
@@ -19,6 +21,14 @@ from agents.vision.service import (
 class VisualActionOutcome:
     status: str
     action: VisualAction | None = None
+    latency_seconds: float | None = None
+    detail: str | None = None
+
+
+@dataclass(frozen=True)
+class VisualCandidateBatchOutcome:
+    status: str
+    actions: list[VisualAction] | None = None
     latency_seconds: float | None = None
     detail: str | None = None
 
@@ -67,14 +77,86 @@ async def execute_visual_action(
     started = perf_counter()
     try:
         response = await model.ainvoke(payload)
+    except Exception:
+        return VisualActionOutcome(
+            status="unavailable",
+            latency_seconds=perf_counter() - started,
+            detail="vision model request failed",
+        )
+    try:
         action = validate_visual_action_output(_content_from_response(response))
     except Exception:
         return VisualActionOutcome(
-            status="unavailable", latency_seconds=perf_counter() - started,
-            detail="vision model unavailable or returned an invalid action",
+            status="unavailable",
+            latency_seconds=perf_counter() - started,
+            detail="vision model returned an invalid action",
         )
     return VisualActionOutcome(
         status="completed", action=action, latency_seconds=perf_counter() - started
+    )
+
+
+async def execute_visual_candidate_batch(
+    *,
+    screenshot: bytes,
+    content_type: str,
+    task_intent: str,
+    policy: VisionPolicy,
+    model: LanguageModel,
+    max_candidates: int,
+    image_url: str | None = None,
+    requested_tokens: int = 1_000,
+) -> VisualCandidateBatchOutcome:
+    """Invoke once for a state; reply is advisory and cannot choose traversal order."""
+    if not policy.enabled or not policy.raw_screenshot_transfer_accepted:
+        return VisualCandidateBatchOutcome(status="unavailable", detail="vision policy is disabled")
+    if len(screenshot) > policy.max_screenshot_bytes:
+        return VisualCandidateBatchOutcome(
+            status="unavailable", detail="screenshot exceeds policy cap"
+        )
+    if content_type not in {"image/png", "image/jpeg"}:
+        return VisualCandidateBatchOutcome(
+            status="unavailable", detail="screenshot type is not allowed"
+        )
+    if max_candidates < 1 or max_candidates > 20:
+        return VisualCandidateBatchOutcome(
+            status="unavailable", detail="candidate batch cap is invalid"
+        )
+    image_data_uri = (
+        image_url or f"data:{content_type};base64,{b64encode(screenshot).decode('ascii')}"
+    )
+    payload = {
+        "messages": [
+            {
+                "role": "system",
+                "content": build_visual_candidate_batch_prompt(task_intent, max_candidates),
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Return candidate actions for this state."},
+                    {"type": "image_url", "image_url": {"url": image_data_uri}},
+                ],
+            },
+        ],
+        "max_tokens": requested_tokens,
+        "temperature": 0,
+        "response_format": {"type": "json_object"},
+    }
+    started = perf_counter()
+    try:
+        response = await model.ainvoke(payload)
+        actions = validate_visual_candidate_batch_output(
+            _content_from_response(response), max_candidates
+        )
+    except Exception:
+        return VisualCandidateBatchOutcome(
+            status="unavailable",
+            latency_seconds=perf_counter() - started,
+            detail="vision model returned an invalid candidate batch",
+        )
+    return VisualCandidateBatchOutcome(
+        status="completed", actions=actions, latency_seconds=perf_counter() - started
     )
 
 

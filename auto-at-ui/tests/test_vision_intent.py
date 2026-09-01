@@ -21,6 +21,7 @@ def test_visual_intent_is_encrypted_and_only_available_before_retention_expiry()
         decrypt_visual_intent(encrypted, key, datetime.now(UTC) - timedelta(seconds=1))
 
 
-def test_visual_intent_requires_a_valid_configured_key() -> None:
+@pytest.mark.parametrize("key", [None, "not-a-valid-fernet-key"])
+def test_visual_intent_requires_a_valid_configured_key(key: str | None) -> None:
     with pytest.raises(VisualIntentUnavailableError):
-        encrypt_visual_intent("x", None)
+        encrypt_visual_intent("x", key)

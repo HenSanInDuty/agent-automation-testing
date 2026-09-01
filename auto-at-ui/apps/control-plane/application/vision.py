@@ -68,35 +68,68 @@ class SubmitVisualExploration:
         try:
             encrypted_intent = encrypt_visual_intent(task_intent, intent_encryption_key)
         except ValueError as error:
-            raise VisionStateError("vision request retention is not configured") from error
+            raise VisionStateError("vision request encryption is not configured") from error
         now = datetime.now(UTC)
         record = VisualExplorationSessionModel(
-            id=uuid4(), tenant_id=tenant_id, project_id=project_id, correlation_id=correlation_id,
-            target_url=target_url, intent_hash=intent_hash, state="queued",
+            id=uuid4(),
+            tenant_id=tenant_id,
+            project_id=project_id,
+            correlation_id=correlation_id,
+            target_url=target_url,
+            intent_hash=intent_hash,
+            state="queued",
             encrypted_task_intent=encrypted_intent,
             intent_retention_until=now + timedelta(days=intent_retention_days),
-            policy_version=AGENT_RUNTIME_CONFIG_KEY, provider=policy.provider, model=policy.model,
-            prompt_version="vision-exploration-v1", max_steps=policy.max_steps,
+            policy_version=AGENT_RUNTIME_CONFIG_KEY,
+            provider=policy.provider,
+            model=policy.model,
+            prompt_version="vision-exploration-v2",
+            max_steps=policy.max_steps,
+            max_hops=project_policy.vision_max_hops,
+            max_states=project_policy.vision_max_states,
             max_screenshot_bytes=policy.max_screenshot_bytes,
-            max_session_seconds=policy.max_session_seconds, max_cost_usd=str(policy.max_cost_usd),
-            max_requests_per_minute=policy.max_requests_per_minute, safe_failure_reason=None,
-            idempotency_key=idempotency_key, created_at=now, updated_at=now,
+            max_session_seconds=policy.max_session_seconds,
+            max_cost_usd=str(policy.max_cost_usd),
+            max_requests_per_minute=policy.max_requests_per_minute,
+            safe_failure_reason=None,
+            idempotency_key=idempotency_key,
+            created_at=now,
+            updated_at=now,
         )
         self._repository.add(record)
-        self._audits.append(AuditEvent(
-            id=uuid4(), tenant_id=tenant_id, actor=actor, action="vision.exploration_requested",
-            entity_type="visual_exploration_session", entity_id=record.id,
-            correlation_id=correlation_id,
-        ))
-        self._activity.append(ActivityEvent.create(
-            tenant_id=tenant_id, correlation_id=correlation_id, source="vision", stage="queued",
-            status="queued", safe_summary="Visual exploration queued.",
-            metadata={"session_id": str(record.id), "policy_version": record.policy_version},
-            occurred_at=record.created_at,
-        ))
-        self._outbox.append(OutboxEvent(
-            id=uuid4(), tenant_id=tenant_id, event_type="agent.visual_exploration.requested.v1",
-            schema_version="v1", correlation_id=correlation_id, causation_id=None,
-            idempotency_key=f"vision:{record.id}", payload={"session_id": str(record.id)},
-        ))
+        self._audits.append(
+            AuditEvent(
+                id=uuid4(),
+                tenant_id=tenant_id,
+                actor=actor,
+                action="vision.exploration_requested",
+                entity_type="visual_exploration_session",
+                entity_id=record.id,
+                correlation_id=correlation_id,
+            )
+        )
+        self._activity.append(
+            ActivityEvent.create(
+                tenant_id=tenant_id,
+                correlation_id=correlation_id,
+                source="vision",
+                stage="queued",
+                status="queued",
+                safe_summary="Visual exploration queued.",
+                metadata={"session_id": str(record.id), "policy_version": record.policy_version},
+                occurred_at=record.created_at,
+            )
+        )
+        self._outbox.append(
+            OutboxEvent(
+                id=uuid4(),
+                tenant_id=tenant_id,
+                event_type="agent.visual_exploration.requested.v1",
+                schema_version="v1",
+                correlation_id=correlation_id,
+                causation_id=None,
+                idempotency_key=f"vision:{record.id}",
+                payload={"session_id": str(record.id)},
+            )
+        )
         return record

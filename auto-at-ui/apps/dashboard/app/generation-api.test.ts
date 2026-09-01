@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ControlPlaneError, decideProposal, getPolicy, getVisionPolicy, listDrafts, listProposals, listVisualActions, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
+import { ControlPlaneError, decideProposal, getPolicy, getVisionPolicy, listDrafts, listProposals, listVisualActions, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
 
 test("generation submission sends session credentials and an idempotency key", async () => {
   const originalFetch = globalThis.fetch;
@@ -48,12 +48,22 @@ test("project policy can be loaded after it has been saved", async () => {
   let received: Request | undefined;
   globalThis.fetch = async (input, init) => {
     received = new Request(input, init);
-    return new Response(JSON.stringify({ allowed_origins: ["https://example.test"] }));
+    return new Response(JSON.stringify({ allowed_origins: ["https://example.test"], vision_max_hops: 5, vision_max_states: 50 }));
   };
   try {
     await getPolicy("http://control-plane", "project-id");
     assert.equal(received?.method, "GET");
     assert.match(received?.url ?? "", /projects\/project-id\/policy$/);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("project policy keeps configured Vision tree bounds", async () => {
+  const originalFetch = globalThis.fetch;
+  let received: Request | undefined;
+  globalThis.fetch = async (input, init) => { received = new Request(input, init); return new Response("{}"); };
+  try {
+    await setPolicy("http://control-plane", "project-id", { allowed_origins: ["https://example.test"], vision_max_hops: 5, vision_max_states: 50 });
+    assert.equal(await received?.text(), JSON.stringify({ allowed_origins: ["https://example.test"], vision_max_hops: 5, vision_max_states: 50 }));
   } finally { globalThis.fetch = originalFetch; }
 });
 

@@ -1,5 +1,82 @@
 # Phase 5 — Evaluation, rollout, and operational readiness
 
+## State-tree exploration revision (2026-09-01 ICT)
+
+The user requested checkpoint/backtracking exploration: a hop is path depth,
+not a linear action count, and sibling candidates are explored from a restored
+checkpoint. This changes the Vision policy, contracts, worker protocol,
+persistence/action provenance, dashboard language, and evaluation gates while
+leaving deterministic test execution unchanged.
+
+Decision: use BFS. For each state, the model returns an allowlisted list of
+child candidates; the worker restores that state's checkpoint before each
+sibling. The project-scoped defaults approved by the user are `max_hops=5` and
+`max_states=50`. The aggregate time, screenshot-byte, provider request-rate,
+and cost guards remain mandatory.
+
+Implemented the bounded BFS protocol: the worker materializes each state in a
+fresh browser context by replaying its in-memory ancestor path, which provides
+checkpoint restoration and sibling isolation. The control plane persists only
+state parent/hop/checksum metadata, asks the model for a strictly validated
+candidate batch, then queues safe child checkpoints breadth-first. It never
+persists replay text, screenshot bytes, URLs, raw model output, or browser
+cookies. Project administrators configure the depth and total-state bounds in
+the project policy UI/API. Focused Python Ruff and nine Vision tests, dashboard
+typecheck/API tests, and worker typecheck passed. The missing RustFS artifact
+adapter was restored and the Alembic migration now has one head; local
+control-plane health and Temporal-worker startup were verified afterward.
+
+## Local request-encryption repair (2026-09-01 ICT)
+
+- The local `VISION_INTENT_ENCRYPTION_KEY` was present but invalid as a Fernet
+  key, so request submission failed before retention could be established. The
+  resulting API text incorrectly described this as missing retention.
+- Replaced the ignored local/demo secret with a valid Fernet key, restarted the
+  control-plane and Temporal worker, and verified each process can parse it;
+  `/healthz` returned `ok`. The key was neither displayed nor committed.
+- The submission error now correctly reports unavailable request encryption.
+  Focused Ruff and `tests/test_vision_intent.py
+  tests/test_vision_event_processor.py` passed (4 tests). Phase 5 remains in
+  progress; this repair does not alter retention duration, provider, policy,
+  or rollout scope.
+
+## Local screenshot-cap diagnosis (2026-09-01 ICT)
+
+- Session `78ca1cda-dfa5-4b8e-ae0a-5062cc58cb9e` is readable by its tenant and
+  entered the fail-closed `unavailable` state before any model call. The
+  Playwright worker returned HTTP 422.
+- A one-time worker-only reproduction against the user-selected local-demo
+  target, with no model call or image upload and cleanup of the temporary
+  screenshot, established the exact reason: `visual screenshot exceeds byte
+  cap`. The tenant policy's cap is 1,000,000 bytes.
+- Raising that guard increases the maximum raw screenshot disclosed to the
+  provider. The user approved the local `demo-tenant` increase to 5,000,000
+  bytes; the policy API confirmed it while preserving consent, model, and all
+  remaining guards. The terminal failed session is not retried or altered; a
+  new exploration is required. No deterministic verdict changed.
+
+## Local invalid-action diagnosis (2026-09-01 ICT)
+
+- The next local session passed the browser screenshot cap, Google Drive image
+  delivery, and Hugging Face HTTP transport. Its action content failed the
+  strict allowlisted schema, so no browser action was recorded or applied.
+- The fail-closed path now persists a safe distinction between `vision model
+  request failed` and `vision model returned an invalid action`; it never
+  stores provider output or raw image content. Focused Ruff and seven executor,
+  event-processor, and intent tests passed.
+- Control-plane and Temporal worker were rebuilt/restarted and `/healthz`
+  returned `ok`. A new session may now be created for a bounded retry; the
+  terminal session remains immutable.
+- The model prompt now explicitly lists the exact permitted keys for each
+  action object, including the required `expected_outcome` on `stop`. The
+  parser remains strict; focused Ruff and the same seven Vision tests passed,
+  and the local services were rebuilt with the change.
+- A bounded retry with the same encrypted local-demo intent produced and
+  applied two valid `click` candidates in its isolated browser context. The
+  third provider response was invalid, so the session stayed fail-closed with
+  no generated draft, deterministic execution, or verdict change. The Hugging
+  Face transport itself returned HTTP success for all three inference calls.
+
 ## GLM URL-image route trial (2026-09-01 ICT)
 
 - The user authorized a bounded local-evaluation trial of

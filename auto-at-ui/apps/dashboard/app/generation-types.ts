@@ -48,6 +48,11 @@ export type VisionPolicy = {
   max_cost_usd: number;
   max_requests_per_minute: number;
 };
+export type ProjectExecutionPolicy = {
+  allowed_origins: string[];
+  vision_max_hops: number;
+  vision_max_states: number;
+};
 export type VisualExploration = {
   id: string;
   project_id: string;
@@ -57,6 +62,8 @@ export type VisualExploration = {
   provider: string;
   model: string;
   max_steps: number;
+  max_hops: number;
+  max_states: number;
   max_screenshot_bytes: number;
   max_session_seconds: number;
   safe_failure_reason: string | null;

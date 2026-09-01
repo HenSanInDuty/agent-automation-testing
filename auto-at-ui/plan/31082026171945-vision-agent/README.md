@@ -156,6 +156,39 @@ local guards. The local kill switch was verified by disabling then restoring
 the policy. No production tenant, deterministic verdict, or browser action was
 changed.
 
+The local Vision request-encryption secret was repaired after an invalid
+non-Fernet value caused submission to report a misleading retention error.
+The control-plane and Temporal worker were restarted and each validated the
+non-disclosed key. The API now reports an encryption-configuration error
+accurately. Focused Ruff and four intent/event tests passed. The ignored local
+`.env` file and its secret are not tracked.
+
+The first live local session for `mongchiton.vn` then failed closed before
+inference because its PNG screenshot exceeded the configured 1,000,000-byte
+cap. A no-model, no-upload worker probe confirmed the 422 reason and removed
+  its temporary screenshot. The user approved raising the local `demo-tenant`
+  guard to 5,000,000 bytes. The policy API confirmed the change while all other
+  guards and consent remain unchanged. The terminal failed session remains
+  immutable; any retry must use a new exploration.
+
+The subsequent session reached the provider after browser capture and temporary
+Drive delivery succeeded; the Hugging Face route returned HTTP 200 but its
+action content failed strict schema validation. The fail-closed diagnostic now
+separates a failed provider request from an invalid action without retaining
+provider output. Focused Ruff and seven Vision tests passed, and local services
+were rebuilt and confirmed healthy.
+
+The prompt now includes the exact allowlisted keys for every action variant,
+including `stop`, while the response parser remains strict. This local change
+passed the same focused checks and is active for the next new exploration.
+
+A bounded retry reached two schema-valid `click` candidates and the isolated
+worker applied them before the third model reply failed action validation. The
+session remained fail-closed, with no draft, deterministic run, or verdict
+change. The provider transport remained HTTP-successful; completing this case
+requires improving third-step model conformance or a separately approved
+session-policy adjustment.
+
 ## Risks and rollout
 
 - Raw screenshots can contain PII, secrets, customer data, or visual prompt
@@ -310,6 +343,26 @@ approval is required before the endpoint-backed gate can proceed.
   approved evaluation credentials/endpoint described below.
 
 ## Out of scope
+
+## State-tree BFS implementation (2026-09-01 ICT)
+
+- Replaced the linear visual-action traversal with project-scoped BFS defaults
+  of five hops and 50 total states. Limits are snapshotted at submission and
+  can only become stricter if the project policy changes before processing.
+- The worker restores every child from its ancestor-action checkpoint in a
+  fresh Playwright context. Safe state metadata records only parent ID, hop,
+  and screenshot checksum; no raw pixels, URLs, replay text, provider output,
+  or browser cookies are persisted.
+- The model returns a strict, bounded candidate list per state. The control
+  plane determines traversal order and retains request-rate, screenshot, time,
+  and cleanup guards. An independent generated-draft handoff failure no longer
+  converts a completed visual exploration into `unavailable`.
+- Added project policy UI/API controls and a migration for the tree limits and
+  safe state provenance. Validation passed: focused Ruff, 12 Vision/
+  persistence/contract tests, dashboard typecheck plus six API tests, and
+  Playwright worker typecheck. The missing RustFS artifact adapter was restored
+  and the migration chain now has one head; focused RustFS tests and local
+  control-plane health/Temporal-worker startup then passed.
 
 - Replacing Playwright, autonomous production browsing, autonomous test
   approval, changes to deterministic verdicts, raw screenshot display from

@@ -47,8 +47,8 @@ Production still needs a chosen RustFS topology, TLS, secret manager, backup/rec
 | [01](phase-01-structured-logging.md) | Safe structured logs and correlation context. | completed (2026-09-01 19:16 +07:00) | — | Python/worker focused tests |
 | [02](phase-02-runner-log-artifacts.md) | Bounded runner-log/manifest staging evidence. | completed (2026-09-01 19:20 +07:00) | 01 | Worker and artifact tests |
 | [03](phase-03-rustfs-artifact-storage.md) | RustFS adapter and complete MinIO replacement. | completed (2026-09-01 19:35 +07:00) | 02 | Storage, API, Compose tests |
-| [04](phase-04-compose-observability-stack.md) | Fluent Bit/Loki/Grafana Compose and dashboards. | in progress (2026-09-01 19:35 +07:00) | 01 | Compose/config/smoke query |
-| [05](phase-05-retention-migration-operations.md) | RustFS retention, safe legacy migration, runbook. | not started | 03, 04 | Retention/migration tests |
+| [04](phase-04-compose-observability-stack.md) | Fluent Bit/Loki/Grafana Compose and dashboards. | completed (2026-09-01 20:44 +07:00) | 01 | Compose/config/smoke query |
+| [05](phase-05-retention-migration-operations.md) | RustFS retention, safe legacy migration, runbook. | completed (2026-09-01 20:48 +07:00) | 03, 04 | Retention/migration tests |
 
 ## Rollout, risks, and out of scope
 
@@ -82,3 +82,21 @@ Phase 01 started 2026-09-01 19:08 +07:00. Scope: introduce safe, context-aware J
 - Validation passed: `uv lock`; focused Ruff; `uv run pytest tests/test_rustfs_artifacts.py tests/test_verified_artifacts.py tests/test_reporting_event_processor.py tests/test_reporting_routes.py tests/test_run_routes.py --basetemp .pytest-phase3` (13 passed); `docker compose config --quiet`; and a legacy-identifier search outside this plan returned no matches.
 - Deferred: the existing Compose worker test invocation did not emit a final summary in this non-interactive shell. Phase 4 adds independent Compose validation; final validation remains required.
 - Phase 04 is in progress.
+
+### Phase 04 completed — 2026-09-01 20:44 +07:00
+
+- Verified the checked-in Fluent Bit, Loki, and Grafana Compose topology: finite filesystem buffering and bounded retries, 30-day Loki retention, only `service`/`environment`/`level` stream labels, and a provisioned JSON-field investigation dashboard.
+- Validation passed: `uv run pytest tests/test_observability_compose.py tests/test_playwright_worker_compose.py::test_compose_worker_reports_a_deterministic_pass --basetemp .pytest-phase4-final` (2 passed), `docker compose config --quiet`, local Grafana/Loki/Fluent Bit health checks, a Loki range query returning the injected correlation ID, and a query returning no secret-shaped fixture.
+- Loki was briefly stopped during a deterministic Compose worker execution; its result remained `passed`, and Loki recovered healthy. The Compose assertion was updated in `tests/test_playwright_worker_compose.py` to include the Phase 02 `runner-log` and `artifact-manifest` evidence artifacts.
+- Phase 05 is in progress. Scope: tenant-safe RustFS expiry deletion, an operator-controlled legacy MinIO migration utility, and operational documentation.
+
+### Phase 05 completed — 2026-09-01 20:48 +07:00
+
+- Added `ExpireArtifacts`, which selects expired metadata in bounded batches, deletes scoped RustFS bytes before tenant-qualified metadata, and leaves failed work retryable. The Temporal worker now schedules it with a bounded configuration interval.
+- Added `scripts/migrate_minio_to_rustfs.py`: default inventory is read-only; copy mode requires `COPY_LEGACY_MINIO`, verifies copied object size and SHA-256 metadata, and never deletes the source. Operations documentation records both boundaries.
+- Validation passed: focused Ruff for the Phase 5 paths; `uv run pytest tests/test_artifact_retention.py tests/test_rustfs_artifacts.py --basetemp .pytest-phase5-final` (4 passed); `docker compose config --quiet`; and `git diff --check`.
+- Deviation: this implementation does not run a migration because no source endpoint, credentials, or explicit production migration authorization was supplied. The utility is intentionally operator-controlled.
+
+## Overall completion
+
+Status: completed 2026-09-01 20:48 +07:00. All five plan phases are implemented without changing the v1 execution request/result contracts or deterministic verdict authority. Production RustFS topology/TLS/secrets/backups, Grafana auth/alerting, and any legacy migration execution remain explicitly deferred.

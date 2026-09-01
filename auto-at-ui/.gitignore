@@ -15,5 +15,7 @@ dist/
 playwright-report/
 test-results/
 artifacts/
+!apps/control-plane/infrastructure/artifacts/
+!apps/control-plane/infrastructure/artifacts/*.py
 auto-at-backup/
 secret/

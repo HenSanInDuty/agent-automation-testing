@@ -4,6 +4,7 @@ import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
+from application.artifact_retention import ExpireArtifacts
 from application.generation_events import GenerationEventProcessor
 from application.reporting_events import ReportingEventProcessor
 from application.runs import PublishOutbox
@@ -97,11 +98,36 @@ async def publish_forever(client: Client, settings: Settings) -> None:
         await asyncio.sleep(settings.temporal_outbox_poll_interval_seconds)
 
 
+async def expire_artifacts_forever(settings: Settings) -> None:
+    session_factory = create_session_factory(settings)
+    while True:
+        try:
+            with transactional_session(session_factory) as session:
+                result = ExpireArtifacts(
+                    SqlAlchemyArtifactRepository(session), RustFSArtifactStore(settings)
+                ).execute()
+            if result.deleted or result.failed:
+                log_event(
+                    logger,
+                    logging.INFO,
+                    "artifact.retention.completed",
+                    "Artifact expiry batch completed.",
+                    deleted_count=result.deleted,
+                    failed_count=result.failed,
+                )
+        except Exception:
+            log_event(
+                logger, logging.ERROR, "artifact.retention.failed", "Artifact expiry batch failed."
+            )
+        await asyncio.sleep(settings.artifact_retention_cleanup_interval_seconds)
+
+
 async def main() -> None:
     settings = Settings()
     configure_logging(settings, service="auto-at-temporal-worker")
     client = await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
     publisher = asyncio.create_task(publish_forever(client, settings))
+    retention = asyncio.create_task(expire_artifacts_forever(settings))
     try:
         worker = Worker(
             client,
@@ -113,7 +139,8 @@ async def main() -> None:
         await worker.run()
     finally:
         publisher.cancel()
-        await asyncio.gather(publisher, return_exceptions=True)
+        retention.cancel()
+        await asyncio.gather(publisher, retention, return_exceptions=True)
 
 
 if __name__ == "__main__":

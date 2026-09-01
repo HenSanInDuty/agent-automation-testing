@@ -1,5 +1,6 @@
 """At-least-once-safe orchestration for advisory visual exploration."""
 
+import asyncio
 import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
@@ -8,13 +9,16 @@ from uuid import UUID, uuid4
 import httpx
 from agents.shared.openrouter import create_vision_language_model
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, resolve_agent_runtime
-from agents.vision.executor import execute_visual_action
+from agents.vision.executor import execute_visual_candidate_batch
 from agents.vision.intent import decrypt_visual_intent
 from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
 from config import Settings
 from domain.activity import ActivityEvent
 from domain.runs import AuditEvent, OutboxEvent
-from infrastructure.persistence.models import VisualActionProposalModel
+from infrastructure.persistence.models import (
+    VisualActionProposalModel,
+    VisualExplorationStateModel,
+)
 
 from application.generation import SubmitGeneration
 
@@ -47,6 +51,7 @@ class VisionEventProcessor:
         )
         if not runtime.vision.enabled or not runtime.vision.raw_screenshot_transfer_accepted:
             return self._unavailable(session, "vision policy is disabled")
+        worker_session_open = False
         try:
             intent = decrypt_visual_intent(
                 session.encrypted_task_intent,
@@ -56,105 +61,150 @@ class VisionEventProcessor:
             policy = self._generation.get_policy(event.tenant_id, session.project_id)
             if policy is None or not self._settings.vision_worker_secret:
                 raise ValueError("visual worker is unavailable")
-            async with httpx.AsyncClient(timeout=runtime.vision.max_session_seconds) as client:
-                response = await client.post(
-                    f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations",
-                    headers={"X-Auto-At-Vision-Worker-Secret": self._settings.vision_worker_secret},
-                    json={
-                        "contract_version": "v1",
-                        "id": str(session.id),
-                        "target_url": session.target_url,
-                        "allowed_origins": policy.allowed_origins,
-                        "max_steps": runtime.vision.max_steps,
-                        "max_screenshot_bytes": runtime.vision.max_screenshot_bytes,
-                        "max_session_seconds": runtime.vision.max_session_seconds,
-                    },
-                )
-                response.raise_for_status()
             root = Path(self._settings.artifact_root, "vision", str(session.id)).resolve()
             session.state = "running"
-            for sequence in range(1, runtime.vision.max_steps + 1):
-                path = (root / f"{sequence}.png").resolve()
-                if root not in path.parents or not path.is_file():
-                    raise ValueError("visual screenshot is unavailable")
-                image = path.read_bytes()
-                if len(image) > runtime.vision.max_screenshot_bytes or not image.startswith(
-                    b"\x89PNG\r\n\x1a\n"
-                ):
-                    raise ValueError("visual screenshot failed verification")
-                store = GoogleDriveTemporaryVisionImageStore(
-                    service_account_file=self._settings.google_drive_service_account_file,
-                    oauth_client_id=self._settings.google_drive_oauth_client_id,
-                    oauth_client_secret=self._settings.google_drive_oauth_client_secret,
-                    oauth_refresh_token=self._settings.google_drive_oauth_refresh_token,
-                    folder_id=self._settings.google_drive_vision_folder_id,
-                    ttl=self._settings.vision_temporary_url_ttl_seconds,
-                    delete_after_delivery=self._settings.google_drive_vision_delete_after_delivery,
-                )
-                async with store.deliver(
-                    tenant_id=session.tenant_id,
-                    session_id=session.id,
-                    sequence=sequence,
-                    image=image,
-                ) as image_url:
-                    outcome = await execute_visual_action(
-                        screenshot=image, content_type="image/png", image_url=image_url,
-                        task_intent=intent, policy=runtime.vision,
-                        model=create_vision_language_model(self._settings, runtime.vision),
-                    )
-                if outcome.action is None:
-                    return self._unavailable(session, "vision model is unavailable")
-                async with httpx.AsyncClient(timeout=runtime.vision.max_session_seconds) as client:
+            # A checkpoint is an in-memory ancestor action path.  The worker replays it
+            # in a new context, so siblings are isolated and BFS can backtrack safely.
+            queue: list[tuple[UUID, UUID | None, int, list[dict[str, object]]]] = [
+                (uuid4(), None, 0, [])
+            ]
+            visited, sequence, last_model_call = 0, 0, None
+            max_hops = min(session.max_hops, policy.vision_max_hops)
+            max_states = min(session.max_states, policy.vision_max_states)
+            worker_session_open = True
+            async with httpx.AsyncClient(timeout=runtime.vision.max_session_seconds) as client:
+                while queue and visited < max_states:
+                    state_id, parent_id, hop, replay_path = queue.pop(0)
                     response = await client.post(
-                        f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/{session.id}/actions",
+                        f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/tree-states",
                         headers={
                             "X-Auto-At-Vision-Worker-Secret": self._settings.vision_worker_secret
                         },
-                        json={"action": outcome.action.model_dump(mode="json")},
+                        json={
+                            "contract_version": "v2",
+                            "id": str(session.id),
+                            "node_id": str(state_id),
+                            "target_url": session.target_url,
+                            "allowed_origins": policy.allowed_origins,
+                            "max_hops": max_hops,
+                            "max_states": max_states,
+                            "max_screenshot_bytes": runtime.vision.max_screenshot_bytes,
+                            "max_session_seconds": runtime.vision.max_session_seconds,
+                            "replay_path": replay_path,
+                        },
                     )
                     response.raise_for_status()
-                safe_action = {"kind": outcome.action.kind, "confidence": outcome.action.confidence}
-                for field in ("x", "y", "delta_y", "duration_ms"):
-                    value = getattr(outcome.action, field, None)
-                    if isinstance(value, (int, float)):
-                        safe_action[field] = value
-                self._sessions.add_action(
-                    VisualActionProposalModel(
-                        id=uuid4(),
+                    path = (root / f"tree-{state_id}.png").resolve()
+                    if root not in path.parents or not path.is_file():
+                        raise ValueError("visual screenshot is unavailable")
+                    image = path.read_bytes()
+                    if len(image) > runtime.vision.max_screenshot_bytes or not image.startswith(
+                        b"\x89PNG\r\n\x1a\n"
+                    ):
+                        raise ValueError("visual screenshot failed verification")
+                    checksum = hashlib.sha256(image).hexdigest()
+                    self._sessions.add_state(
+                        VisualExplorationStateModel(
+                            id=state_id,
+                            tenant_id=session.tenant_id,
+                            session_id=session.id,
+                            parent_id=parent_id,
+                            hop=hop,
+                            screenshot_checksum=checksum,
+                        )
+                    )
+                    visited += 1
+                    if hop >= max_hops:
+                        continue
+                    remaining_states = max_states - visited - len(queue)
+                    if remaining_states < 1:
+                        continue
+                    if last_model_call is not None:
+                        remaining = (
+                            60 / runtime.vision.max_requests_per_minute
+                            - (datetime.now(UTC) - last_model_call).total_seconds()
+                        )
+                        if remaining > 0:
+                            await asyncio.sleep(remaining)
+                    store = GoogleDriveTemporaryVisionImageStore(
+                        service_account_file=self._settings.google_drive_service_account_file,
+                        oauth_client_id=self._settings.google_drive_oauth_client_id,
+                        oauth_client_secret=self._settings.google_drive_oauth_client_secret,
+                        oauth_refresh_token=self._settings.google_drive_oauth_refresh_token,
+                        folder_id=self._settings.google_drive_vision_folder_id,
+                        ttl=self._settings.vision_temporary_url_ttl_seconds,
+                        delete_after_delivery=self._settings.google_drive_vision_delete_after_delivery,
+                    )
+                    async with store.deliver(
                         tenant_id=session.tenant_id,
                         session_id=session.id,
-                        correlation_id=session.correlation_id,
-                        sequence=sequence,
-                        action=safe_action,
-                        evidence_checksum=hashlib.sha256(image).hexdigest(),
-                        policy_version=session.policy_version,
-                        provider=session.provider,
-                        model=session.model,
-                        prompt_version=session.prompt_version,
-                    )
-                )
-                if outcome.action.kind == "stop":
-                    session.state = "completed"
-                    break
-            else:
-                session.state = "completed"
+                        sequence=visited,
+                        image=image,
+                    ) as image_url:
+                        outcome = await execute_visual_candidate_batch(
+                            screenshot=image,
+                            content_type="image/png",
+                            image_url=image_url,
+                            task_intent=intent,
+                            policy=runtime.vision,
+                            model=create_vision_language_model(self._settings, runtime.vision),
+                            max_candidates=min(20, remaining_states),
+                        )
+                    last_model_call = datetime.now(UTC)
+                    if outcome.actions is None:
+                        return self._unavailable(
+                            session, outcome.detail or "vision model request failed"
+                        )
+                    for action in outcome.actions:
+                        sequence += 1
+                        safe_action = {"kind": action.kind, "confidence": action.confidence}
+                        for field in ("x", "y", "delta_y", "duration_ms"):
+                            value = getattr(action, field, None)
+                            if isinstance(value, (int, float)):
+                                safe_action[field] = value
+                        self._sessions.add_action(
+                            VisualActionProposalModel(
+                                id=uuid4(),
+                                tenant_id=session.tenant_id,
+                                session_id=session.id,
+                                correlation_id=session.correlation_id,
+                                sequence=sequence,
+                                action=safe_action,
+                                evidence_checksum=checksum,
+                                policy_version=session.policy_version,
+                                provider=session.provider,
+                                model=session.model,
+                                prompt_version=session.prompt_version,
+                            )
+                        )
+                        if action.kind != "stop" and visited + len(queue) < max_states:
+                            queue.append(
+                                (
+                                    uuid4(),
+                                    state_id,
+                                    hop + 1,
+                                    replay_path + [action.model_dump(mode="json")],
+                                )
+                            )
+            session.state = "completed"
+            draft_handoff = False
             if session.state == "completed":
-                SubmitGeneration(self._generation, self._audits, self._outbox).execute(
-                    tenant_id=session.tenant_id,
-                    project_id=session.project_id,
-                    correlation_id=session.correlation_id,
-                    target_url=session.target_url,
-                    natural_language_request=(
-                        "Create a reviewable Playwright draft for this approved visual intent: "
-                        f"{intent}"
-                    ),
-                    idempotency_key=f"vision-draft:{session.id}",
-                )
-            async with httpx.AsyncClient(timeout=10) as client:
-                await client.delete(
-                    f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/{session.id}",
-                    headers={"X-Auto-At-Vision-Worker-Secret": self._settings.vision_worker_secret},
-                )
+                try:
+                    SubmitGeneration(self._generation, self._audits, self._outbox).execute(
+                        tenant_id=session.tenant_id,
+                        project_id=session.project_id,
+                        correlation_id=session.correlation_id,
+                        target_url=session.target_url,
+                        natural_language_request=(
+                            "Create a reviewable Playwright draft for this approved visual intent: "
+                            f"{intent}"
+                        ),
+                        idempotency_key=f"vision-draft:{session.id}",
+                    )
+                    draft_handoff = True
+                except Exception:
+                    # Exploration is complete even if the independent draft handoff retries later.
+                    draft_handoff = False
             self._activities.append(
                 ActivityEvent.create(
                     tenant_id=session.tenant_id,
@@ -166,9 +216,9 @@ class VisionEventProcessor:
                     occurred_at=datetime.now(UTC),
                     metadata={
                         "session_id": str(session.id),
-                        "evidence_checksum": hashlib.sha256(image).hexdigest(),
-                        "action_kind": outcome.action.kind,
-                        "draft_handoff": session.state == "completed",
+                        "states_visited": visited,
+                        "actions_proposed": sequence,
+                        "draft_handoff": draft_handoff,
                     },
                 )
             )
@@ -186,6 +236,21 @@ class VisionEventProcessor:
             return session.state
         except Exception:
             return self._unavailable(session, "visual exploration is unavailable")
+        finally:
+            if worker_session_open:
+                try:
+                    async with httpx.AsyncClient(timeout=10) as client:
+                        await client.delete(
+                            f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/{session.id}",
+                            headers={
+                                "X-Auto-At-Vision-Worker-Secret": (
+                                    self._settings.vision_worker_secret
+                                )
+                            },
+                        )
+                except Exception:
+                    # Worker cleanup cannot change the fail-closed exploration result.
+                    pass
 
     def _unavailable(self, session, reason: str) -> str:
         session.state, session.safe_failure_reason = "unavailable", reason

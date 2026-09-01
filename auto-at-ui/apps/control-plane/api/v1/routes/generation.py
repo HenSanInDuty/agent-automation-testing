@@ -91,10 +91,14 @@ class DecisionRequest(BaseModel):
 
 class PolicyRequest(BaseModel):
     allowed_origins: list[str] = Field(min_length=1, max_length=100)
+    vision_max_hops: int = Field(default=5, ge=1, le=10)
+    vision_max_states: int = Field(default=50, ge=1, le=200)
 
 
 class PolicyResponse(BaseModel):
     allowed_origins: list[str] = Field(default_factory=list, max_length=100)
+    vision_max_hops: int = Field(default=5, ge=1, le=10)
+    vision_max_states: int = Field(default=50, ge=1, le=200)
 
 
 def _request_response(
@@ -158,8 +162,12 @@ def set_policy(
     except (ValueError, AuthorizationError) as error:
         raise HTTPException(status_code=404, detail="Project not found.") from error
     with transactional_session(create_session_factory(settings)) as session:
-        SqlAlchemyGenerationRepository(session).set_policy(tenant_id, project_id, normalized)
-    return PolicyRequest(allowed_origins=normalized)
+        SqlAlchemyGenerationRepository(session).set_policy(
+            tenant_id, project_id, normalized, vision_max_hops=payload.vision_max_hops,
+            vision_max_states=payload.vision_max_states,
+        )
+    return PolicyRequest(allowed_origins=normalized, vision_max_hops=payload.vision_max_hops,
+                         vision_max_states=payload.vision_max_states)
 
 
 @router.get("/projects/{project_id}/policy", response_model=PolicyResponse)
@@ -175,7 +183,11 @@ def get_policy(
         raise HTTPException(status_code=404, detail="Project not found.") from error
     with create_session_factory(settings)() as session:
         policy = SqlAlchemyGenerationRepository(session).get_policy(tenant_id, project_id)
-    return PolicyResponse(allowed_origins=[] if policy is None else policy.allowed_origins)
+    return PolicyResponse(
+        allowed_origins=[] if policy is None else policy.allowed_origins,
+        vision_max_hops=5 if policy is None else policy.vision_max_hops,
+        vision_max_states=50 if policy is None else policy.vision_max_states,
+    )
 
 
 @router.post("", response_model=RequestResponse, status_code=status.HTTP_202_ACCEPTED)

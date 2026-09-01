@@ -87,6 +87,8 @@ class ProjectExecutionPolicyModel(TenantRecord, Base):
     __tablename__ = "project_execution_policies"
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), primary_key=True)
     allowed_origins: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    vision_max_hops: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    vision_max_states: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
 
 
 class VisualExplorationSessionModel(TenantRecord, Base):
@@ -107,6 +109,8 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     model: Mapped[str] = mapped_column(String(200))
     prompt_version: Mapped[str] = mapped_column(String(100))
     max_steps: Mapped[int] = mapped_column(Integer)
+    max_hops: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    max_states: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     max_screenshot_bytes: Mapped[int] = mapped_column(Integer)
     max_session_seconds: Mapped[int] = mapped_column(Integer)
     max_cost_usd: Mapped[str] = mapped_column(String(32))
@@ -138,6 +142,23 @@ class VisualActionProposalModel(TenantRecord, Base):
     provider: Mapped[str] = mapped_column(String(100))
     model: Mapped[str] = mapped_column(String(200))
     prompt_version: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+
+
+class VisualExplorationStateModel(TenantRecord, Base):
+    """Safe BFS checkpoint metadata; replay actions and screenshots stay out of the DB."""
+
+    __tablename__ = "visual_exploration_states"
+    __table_args__ = (UniqueConstraint("session_id", "id"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("visual_exploration_sessions.id"), index=True
+    )
+    parent_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
+    hop: Mapped[int] = mapped_column(Integer)
+    screenshot_checksum: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

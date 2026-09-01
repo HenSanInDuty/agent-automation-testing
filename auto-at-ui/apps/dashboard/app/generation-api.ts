@@ -1,5 +1,5 @@
 import { apiRequest, idempotencyKey } from "./api-client.ts";
-import type { Artifact, GeneratedDraft, GenerationRequest, Page, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisionPolicy } from "./generation-types";
+import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisionPolicy } from "./generation-types";
 export { ControlPlaneError } from "./api-client.ts";
 
 export function submitGeneration(apiUrl: string, payload: { project_id: string; target_url: string; request: string }) {
@@ -20,13 +20,13 @@ export function decideDraft(apiUrl: string, id: string, approved: boolean, reaso
     method: "POST", body: JSON.stringify({ approved, reason: reason || null }),
   });
 }
-export function setPolicy(apiUrl: string, projectId: string, allowed_origins: string[]) {
-  return apiRequest<{ allowed_origins: string[] }>(apiUrl, `/api/v1/test-generations/projects/${projectId}/policy`, {
-    method: "PUT", body: JSON.stringify({ allowed_origins }),
+export function setPolicy(apiUrl: string, projectId: string, policy: ProjectExecutionPolicy) {
+  return apiRequest<ProjectExecutionPolicy>(apiUrl, `/api/v1/test-generations/projects/${projectId}/policy`, {
+    method: "PUT", body: JSON.stringify(policy),
   });
 }
 export function getPolicy(apiUrl: string, projectId: string) {
-  return apiRequest<{ allowed_origins: string[] }>(apiUrl, `/api/v1/test-generations/projects/${projectId}/policy`);
+  return apiRequest<ProjectExecutionPolicy>(apiUrl, `/api/v1/test-generations/projects/${projectId}/policy`);
 }
 export function getRun(apiUrl: string, id: string) {
   return apiRequest<Run>(apiUrl, `/api/v1/runs/${id}`);

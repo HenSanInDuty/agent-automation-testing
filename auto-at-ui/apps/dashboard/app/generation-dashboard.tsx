@@ -26,6 +26,8 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const [naturalRequest, setNaturalRequest] = useState("");
   const [origins, setOrigins] = useState("");
   const [savedOrigins, setSavedOrigins] = useState<string[]>([]);
+  const [visionMaxHops, setVisionMaxHops] = useState(5);
+  const [visionMaxStates, setVisionMaxStates] = useState(50);
   const [generation, setGeneration] = useState<GenerationRequest | null>(null);
   const [draft, setDraft] = useState<GeneratedDraft | null>(null);
   const [run, setRun] = useState<Run | null>(null);
@@ -58,10 +60,12 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   }, [apiUrl, draft, draftId, generation?.id]);
 
   useEffect(() => {
-    if (!projectId) { setOrigins(""); setSavedOrigins([]); return; }
+    if (!projectId) { setOrigins(""); setSavedOrigins([]); setVisionMaxHops(5); setVisionMaxStates(50); return; }
     getPolicy(apiUrl, projectId).then((policy) => {
       setSavedOrigins(policy.allowed_origins);
       setOrigins(policy.allowed_origins.join(", "));
+      setVisionMaxHops(policy.vision_max_hops);
+      setVisionMaxStates(policy.vision_max_states);
     }).catch((error) => setNotice(errorMessage(error)));
   }, [apiUrl, projectId]);
 
@@ -100,7 +104,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   }
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    try { const policy = await setPolicy(apiUrl, projectId, origins.split(/\s|,/).filter(Boolean)); setSavedOrigins(policy.allowed_origins); setOrigins(policy.allowed_origins.join(", ")); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
+    try { const policy = await setPolicy(apiUrl, projectId, { allowed_origins: origins.split(/\s|,/).filter(Boolean), vision_max_hops: visionMaxHops, vision_max_states: visionMaxStates }); setSavedOrigins(policy.allowed_origins); setOrigins(policy.allowed_origins.join(", ")); setVisionMaxHops(policy.vision_max_hops); setVisionMaxStates(policy.vision_max_states); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
     catch (error) { setNotice(errorMessage(error)); }
   }
 
@@ -109,7 +113,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
       <form onSubmit={submit} className="form-grid"><label className="field">Project<select required value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={Boolean(draftId) || !projectOptions.length}><option value="">{projectOptions.length ? "Choose a project" : "No projects available"}</option>{projectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label><label className="field">Target URL <input required type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} readOnly={Boolean(draftId)} /></label><label className="field form-grid--full">Natural-language request <textarea required value={naturalRequest} onChange={(e) => setNaturalRequest(e.target.value)} readOnly={Boolean(draftId)} /></label>{draftId ? <p className="form-grid--full">Source request is shown for review only. Use the decision controls below; this page will not submit another generation request.</p> : <div className="form-actions form-grid--full"><button className="button" type="submit" disabled={!projectId}>Submit for generation</button>{!projectOptions.length && <Link href="/projects">Create a project</Link>}</div>}</form>
     </section>
     <VisionDashboard apiUrl={apiUrl} />
-    <section className="workspace-section"><h2>Project policy</h2><p>Only project administrators can save an origin allowlist.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><div className="form-actions"><button className="button button--secondary" type="submit" disabled={!projectId}>Save allowed origins</button></div></form><h3>Saved allowed origins</h3>{savedOrigins.length ? <ul className="stack-list">{savedOrigins.map((origin) => <li key={origin}><code>{origin}</code></li>)}</ul> : <p>No origin policy has been saved for this project.</p>}</section>
+    <section className="workspace-section"><h2>Project policy</h2><p>Only project administrators can save the origin allowlist and Vision tree bounds.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><label className="field">Vision maximum hops <input required type="number" min="1" max="10" value={visionMaxHops} onChange={(e) => setVisionMaxHops(Number(e.target.value))} /></label><label className="field">Vision maximum states <input required type="number" min="1" max="200" value={visionMaxStates} onChange={(e) => setVisionMaxStates(Number(e.target.value))} /></label><div className="form-actions"><button className="button button--secondary" type="submit" disabled={!projectId}>Save project policy</button></div></form><h3>Saved allowed origins</h3>{savedOrigins.length ? <ul className="stack-list">{savedOrigins.map((origin) => <li key={origin}><code>{origin}</code></li>)}</ul> : <p>No origin policy has been saved for this project.</p>}</section>
     {notice && <p className={`notice ${notice.includes("unavailable") ? "notice--error" : ""}`} role="alert">{notice}</p>}
     {generation && <><section className="workspace-section" aria-label="Generation request"><div className="section-heading"><h2>Generation request</h2><StatusBadge status={generation.state} /></div><ul className="detail-list"><li>Request: {generation.redacted_request}</li><li>Request hash: <code>{generation.request_hash}</code></li><li>Correlation: <code>{generation.correlation_id}</code></li>{generation.failure_reason && <li>Safe failure: {generation.failure_reason}</li>}</ul>{shouldPollGeneration(generation.state) && <LoadingState title="Generation is in progress" />}</section><ActivityTimeline apiUrl={apiUrl} correlationId={generation.correlation_id} live={shouldPollGeneration(generation.state)} /></>}
     {draft && <section className="workspace-section" aria-label="Generated draft"><div className="section-heading"><h2>{draft.title}</h2><StatusBadge status={draft.state} /></div><p>Source hash: <code>{draft.source_hash}</code></p><CodeBlock label="Generated Playwright source">{draft.playwright_test_source}</CodeBlock><h3>Assumptions</h3><ul className="stack-list">{draft.assumptions.map((item) => <li key={item}>{item}</li>)}</ul><h3>Stop conditions</h3><ul className="stack-list">{draft.stop_conditions.map((item) => <li key={item}>{item}</li>)}</ul><h3>Provenance</h3><CodeBlock label="Draft provenance">{JSON.stringify(draft.provenance, null, 2)}</CodeBlock>{canDecide && <div className="form-grid form-grid--one"><label className="field">Decision reason <input value={reason} onChange={(e) => setReason(e.target.value)} /></label><div className="button-row"><button type="button" className="button" onClick={() => setDecision(true)}>Approve and dispatch once</button><button type="button" className="button button--danger" onClick={() => setDecision(false)}>Reject draft</button></div></div>}{draft.linked_test_case_id && <p>Versioned test case: <code>{draft.linked_test_case_id}</code></p>}</section>}

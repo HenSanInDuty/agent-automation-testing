@@ -23,3 +23,11 @@ docker compose config
 ```
 
 No automatic MinIO destruction, production migration, legal-hold completeness, or HA/credential-management claim is in scope.
+
+## Completion record
+
+- Status: completed 2026-09-01 20:48 +07:00.
+- Delivered bounded retryable expiry through `application/artifact_retention.py`, tenant-qualified SQL metadata deletion, idempotent RustFS object deletion, and Temporal-worker scheduling. Provider failures preserve metadata for retry and do not affect deterministic run verdicts.
+- Delivered `scripts/migrate_minio_to_rustfs.py`; its inventory is read-only by default, copy mode needs an explicit confirmation phrase, every destination object is reconciled by size and SHA-256, and no source deletion exists.
+- Validation: focused Ruff passed; `uv run pytest tests/test_artifact_retention.py tests/test_rustfs_artifacts.py --basetemp .pytest-phase5-final` passed (4 passed); `docker compose config --quiet` and `git diff --check` passed.
+- Deferred: no source bucket inventory or copy was run because that requires separate endpoint/credential access and explicit operator approval. Production retention/legal-hold/backup decisions remain outside this local plan.
