@@ -21,4 +21,4 @@ def test_observability_stack_keeps_correlation_fields_out_of_loki_labels() -> No
     assert "build: ./observability/loki" in compose
     assert "build: ./observability/fluent-bit" in compose
     assert "build: ./observability/grafana" in compose
-    assert "curl --fail http://127.0.0.1:9000/health/ready" in compose
+    assert "until wget -q -O /dev/null http://rustfs:9000/health/ready" in compose

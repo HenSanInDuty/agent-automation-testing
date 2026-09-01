@@ -244,20 +244,19 @@ services:
       - "${RUSTFS_CONSOLE_PORT:-9001}:9001"
     volumes:
       - rustfs-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://127.0.0.1:9000/health/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
     restart: unless-stopped
 
   rustfs-init:
     image: busybox:1.37
     depends_on:
       rustfs:
-        condition: service_healthy
-    entrypoint: ["sh", "-c", "wget -q -O /dev/null http://rustfs:9000/health/ready"]
+        condition: service_started
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        until wget -q -O /dev/null http://rustfs:9000/health/ready;
+        do sleep 2; done
     restart: "no"
 
   loki:
