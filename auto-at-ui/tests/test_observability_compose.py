@@ -18,5 +18,7 @@ def test_observability_stack_keeps_correlation_fields_out_of_loki_labels() -> No
     ).read_text()
     assert "| json | correlation_id" in dashboard["panels"][0]["targets"][0]["expr"]
     assert "fluent-bit:" in compose and "loki:" in compose and "grafana:" in compose
-    assert "./observability/loki:/etc/loki:ro" in compose
+    assert "build: ./observability/loki" in compose
+    assert "build: ./observability/fluent-bit" in compose
+    assert "build: ./observability/grafana" in compose
     assert "curl --fail http://127.0.0.1:9000/health/ready" in compose

@@ -261,10 +261,10 @@ services:
     restart: "no"
 
   loki:
-    image: grafana/loki:3.5.3
+    build: ./observability/loki
+    image: auto-at-loki:local
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-      - ./observability/loki:/etc/loki:ro
       - loki-data:/loki
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3100/ready"]
@@ -274,21 +274,20 @@ services:
     restart: unless-stopped
 
   fluent-bit:
-    image: fluent/fluent-bit:4.2.0
+    build: ./observability/fluent-bit
+    image: auto-at-fluent-bit:local
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf", "-R", "/fluent-bit/etc/parsers.conf"]
     depends_on:
       loki:
         condition: service_healthy
     volumes:
-      - ./observability/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
-      - ./observability/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
-      - ./observability/fluent-bit/redact.lua:/fluent-bit/etc/redact.lua:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - fluent-bit-buffer:/buffers
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:12.1.0
+    build: ./observability/grafana
+    image: auto-at-grafana:local
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
@@ -300,8 +299,6 @@ services:
         condition: service_healthy
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     restart: unless-stopped
 
 volumes:
