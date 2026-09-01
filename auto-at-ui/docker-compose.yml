@@ -255,7 +255,7 @@ services:
       - sh
       - -c
       - >-
-        until wget -q -O /dev/null http://rustfs:9000/health/ready;
+        until nc -z rustfs 9000;
         do sleep 2; done
     restart: "no"
 
