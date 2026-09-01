@@ -261,9 +261,9 @@ services:
 
   loki:
     image: grafana/loki:3.5.3
-    command: -config.file=/etc/loki/config.yaml
+    command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-      - ./observability/loki/loki-config.yaml:/etc/loki/config.yaml:ro
+      - ./observability/loki:/etc/loki:ro
       - loki-data:/loki
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3100/ready"]
