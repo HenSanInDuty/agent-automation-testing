@@ -245,10 +245,11 @@ services:
     volumes:
       - rustfs-data:/data
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9000/health/ready"]
-      interval: 5s
+      test: ["CMD-SHELL", "curl --fail http://127.0.0.1:9000/health/ready"]
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   rustfs-init:
