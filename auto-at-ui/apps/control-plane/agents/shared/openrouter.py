@@ -90,8 +90,8 @@ def create_vision_language_model(settings: Settings, policy: VisionPolicy) -> La
         raise ValueError(f"unsupported vision provider: {policy.provider}")
     if not settings.huggingface_api_key:
         raise ValueError("HUGGINGFACE_API_KEY must be set before invoking vision")
-    if policy.model.endswith(":cohere"):
-        # Cohere's Hugging Face VLM route documents the OpenAI-compatible
+    if policy.model.endswith((":cohere", ":baseten", ":deepinfra")):
+        # These Hugging Face VLM routes document the OpenAI-compatible
         # image_url chat-completion format. Keep the provider-aware client for
         # routes that require its custom transport.
         return OpenAICompatibleLanguageModel(

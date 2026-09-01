@@ -62,6 +62,7 @@ async def execute_visual_action(
         ],
         "max_tokens": requested_tokens,
         "temperature": 0,
+        "response_format": {"type": "json_object"},
     }
     started = perf_counter()
     try:

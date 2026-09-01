@@ -5,8 +5,8 @@ Revises: f3a4b5c6d7e8
 Create Date: 2026-08-31
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "a4b5c6d7e8f9"
@@ -42,11 +42,31 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("tenant_id", "idempotency_key"),
     )
-    op.create_index("ix_visual_exploration_sessions_tenant_id", "visual_exploration_sessions", ["tenant_id"])
-    op.create_index("ix_visual_exploration_sessions_project_id", "visual_exploration_sessions", ["project_id"])
-    op.create_index("ix_visual_exploration_sessions_correlation_id", "visual_exploration_sessions", ["correlation_id"])
-    op.create_index("ix_visual_exploration_sessions_state", "visual_exploration_sessions", ["state"])
-    op.create_index("ix_visual_exploration_sessions_created_at", "visual_exploration_sessions", ["created_at"])
+    op.create_index(
+        "ix_visual_exploration_sessions_tenant_id",
+        "visual_exploration_sessions",
+        ["tenant_id"],
+    )
+    op.create_index(
+        "ix_visual_exploration_sessions_project_id",
+        "visual_exploration_sessions",
+        ["project_id"],
+    )
+    op.create_index(
+        "ix_visual_exploration_sessions_correlation_id",
+        "visual_exploration_sessions",
+        ["correlation_id"],
+    )
+    op.create_index(
+        "ix_visual_exploration_sessions_state",
+        "visual_exploration_sessions",
+        ["state"],
+    )
+    op.create_index(
+        "ix_visual_exploration_sessions_created_at",
+        "visual_exploration_sessions",
+        ["created_at"],
+    )
     op.create_table(
         "visual_action_proposals",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -65,9 +85,17 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("session_id", "sequence"),
     )
-    op.create_index("ix_visual_action_proposals_tenant_id", "visual_action_proposals", ["tenant_id"])
-    op.create_index("ix_visual_action_proposals_session_id", "visual_action_proposals", ["session_id"])
-    op.create_index("ix_visual_action_proposals_correlation_id", "visual_action_proposals", ["correlation_id"])
+    op.create_index(
+        "ix_visual_action_proposals_tenant_id", "visual_action_proposals", ["tenant_id"]
+    )
+    op.create_index(
+        "ix_visual_action_proposals_session_id", "visual_action_proposals", ["session_id"]
+    )
+    op.create_index(
+        "ix_visual_action_proposals_correlation_id",
+        "visual_action_proposals",
+        ["correlation_id"],
+    )
 
 
 def downgrade() -> None:

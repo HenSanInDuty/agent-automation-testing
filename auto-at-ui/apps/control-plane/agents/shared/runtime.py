@@ -33,7 +33,7 @@ class VisionPolicy(BaseModel):
 
     enabled: bool = False
     provider: str = "huggingface"
-    model: str = Field(default="CohereLabs/aya-vision-32b:cohere", max_length=200)
+    model: str = Field(default="Qwen/Qwen3.8-27B:deepinfra", max_length=200)
     raw_screenshot_transfer_accepted: bool = False
     max_steps: int = Field(default=3, ge=1, le=10)
     max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)

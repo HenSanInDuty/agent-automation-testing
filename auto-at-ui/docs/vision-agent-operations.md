@@ -6,8 +6,8 @@ Vision exploration is disabled by default. Before a local evaluation, use an
 evaluation-only Hugging Face token with the smallest practical scope and place
 it only in local secret configuration as `HUGGINGFACE_API_KEY`. Never put a
 token in tenant settings, reports, browser requests, logs, fixtures, or source
-control. The approved local candidate is `CohereLabs/aya-vision-32b` at
-`0554d66834922fc0f2e5f47a12f78464f4a98533`; verify that the deployment endpoint
+control. The approved local candidate is `Qwen/Qwen3.8-27B:deepinfra` at
+`1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`; verify that the deployment endpoint
 resolves this exact revision before enabling a tenant policy.
 
 The temporary-image adapter supports My Drive through

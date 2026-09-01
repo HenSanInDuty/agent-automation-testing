@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     agent_generation_redaction_policy_version: str = "generation-redaction-v1"
     vision_enabled: bool = False
     vision_provider: str = "huggingface"
-    vision_model: str = "CohereLabs/aya-vision-32b:cohere"
+    vision_model: str = "Qwen/Qwen3.8-27B:deepinfra"
     vision_raw_screenshot_transfer_accepted: bool = False
     vision_max_steps: int = Field(default=3, ge=1, le=10)
     vision_max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)

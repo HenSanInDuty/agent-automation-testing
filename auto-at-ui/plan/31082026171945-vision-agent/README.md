@@ -109,7 +109,52 @@ never decides a test verdict or silently changes/executes a test revision.
 | 2 | Build bounded visual evidence and Hugging Face vision adapter | completed (2026-08-31 18:19 ICT) | 1 | evidence/model adapter tests |
 | 3 | Add isolated Playwright visual exploration and proposal workflow | completed (2026-08-31 20:55 ICT) | 1–2 | worker, application, route tests |
 | 4 | Add `/agent` controls and reviewable vision workflow | completed (2026-08-31 21:19 ICT) | 1–3 | dashboard tests and route contracts |
-| 5 | Evaluate, roll out, and operate safely | in progress (2026-09-01 ICT) — retained Google Drive `webContentLink` delivery is verified; Cohere route returns HTTP 400 and needs request-level diagnosis | 1–4 | benchmark, end-to-end, baseline checks |
+| 5 | Evaluate, roll out, and operate safely | in progress (2026-09-01 ICT) — remote image delivery is verified; Cohere rejects image URLs, while GLM/Baseten accepts them but has no schema-valid action before a 429 rate limit | 1–4 | benchmark, end-to-end, baseline checks |
+
+## Phase 5 current blocker (2026-09-01 ICT)
+
+`zai-org/GLM-5.3-Flash:baseten` received a Google Drive-delivered synthetic
+PNG via `image_url` successfully, proving remote-image transport compatibility.
+The returned content did not validate as the versioned action contract in
+either the original or JSON-mode canary; a later structure-only diagnostic
+received HTTP 429. The executor now requests JSON mode and Baseten uses the
+documented OpenAI-compatible transport; focused Ruff and 19 related unit tests
+passed. The model is not selected or pinned, tenant policy remains unchanged,
+and the rollout gate is blocked pending a bounded retry after the rate limit or
+a new user-approved candidate. A separate Qwen2.5-VL remote-image probe
+returned HTTP 400, not 429, confirming the Baseten condition is route-specific
+but leaving that Qwen automatic-provider route unsuitable as a candidate.
+The adapter also supports the documented OpenAI-compatible `:deepinfra` VLM
+route, but its bounded live probe timed out without a diagnostic; it is not a
+selected rollout candidate.
+
+Update: `Qwen/Qwen3.8-27B:deepinfra` subsequently completed an end-to-end
+Google Drive URL-image canary and returned a schema-valid `stop` action in
+9.851 seconds. This proves the local vision path but does not complete the
+fixture benchmark or select/pin the model for rollout.
+
+The Phase 5 baseline Ruff check passes. Full pytest remains blocked by existing
+temporary-directory permissions plus unrelated persistence/legacy triage test
+failures; focused Vision tests pass. Model selection and benchmark thresholds
+remain required before the phase can complete or a tenant can be enabled.
+
+## Phase 5 approved local evaluation (2026-09-01 ICT)
+
+The user approved `Qwen/Qwen3.8-27B:deepinfra` at revision
+`1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`. Two bounded synthetic
+URL-image canaries met the applicable gates: 2/2 schema-valid actions, 1/1
+unsafe-action refusal, 1/1 prompt-injection resistance, 0/2 unavailable, and
+9.851 seconds maximum latency. The configuration remains disabled by default
+and local-only. Phase 5 remains in progress because full pytest has unrelated
+local failures and the fixture-based locator/rerun benchmark is still absent.
+
+## Local demo rollout (2026-09-01 ICT)
+
+Vision is enabled for `demo-tenant` only, using
+`Qwen/Qwen3.8-27B:deepinfra` with explicit raw-screenshot consent and bounded
+local guards. The local kill switch was verified by disabling then restoring
+the policy. No production tenant, deterministic verdict, or browser action was
+changed.
 
 ## Risks and rollout
 

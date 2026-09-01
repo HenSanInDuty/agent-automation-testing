@@ -101,3 +101,4 @@ def test_huggingface_adapter_sends_multimodal_bytes_only_in_provider_request() -
     assert outcome.status == "completed"
     assert captured["model"] == "Qwen/Qwen2.5-VL-7B-Instruct"
     assert captured["messages"][1]["content"][1]["type"] == "image_url"
+    assert captured["response_format"] == {"type": "json_object"}

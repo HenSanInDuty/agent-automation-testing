@@ -120,8 +120,8 @@ def test_vision_policy_is_disabled_by_default_and_merges_tenant_override() -> No
 
 def test_vision_default_model_is_the_approved_local_evaluation_candidate() -> None:
     assert (
-        AgentRuntimeConfig.from_settings(Settings()).vision.model
-        == "CohereLabs/aya-vision-32b:cohere"
+        AgentRuntimeConfig.from_settings(Settings(_env_file=None)).vision.model
+        == "Qwen/Qwen3.8-27B:deepinfra"
     )
 
 
@@ -130,6 +130,28 @@ def test_vision_model_uses_vision_policy_not_the_general_agent_model() -> None:
     model = create_vision_language_model(
         Settings(huggingface_api_key="hf_test", huggingface_base_url="https://hf.example/v1"),
         runtime.vision,
+    )
+
+    assert isinstance(model, OpenAICompatibleLanguageModel)
+
+
+def test_baseten_vision_route_uses_openai_compatible_image_url_transport() -> None:
+    model = create_vision_language_model(
+        Settings(huggingface_api_key="hf_test", huggingface_base_url="https://hf.example/v1"),
+        AgentRuntimeConfig.from_settings(
+            Settings(vision_model="zai-org/GLM-5.3-Flash:baseten")
+        ).vision,
+    )
+
+    assert isinstance(model, OpenAICompatibleLanguageModel)
+
+
+def test_deepinfra_vision_route_uses_openai_compatible_image_url_transport() -> None:
+    model = create_vision_language_model(
+        Settings(huggingface_api_key="hf_test", huggingface_base_url="https://hf.example/v1"),
+        AgentRuntimeConfig.from_settings(
+            Settings(vision_model="Qwen/Qwen3-VL-30B-A3B-Instruct:deepinfra")
+        ).vision,
     )
 
     assert isinstance(model, OpenAICompatibleLanguageModel)
