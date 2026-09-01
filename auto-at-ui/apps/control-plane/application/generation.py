@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 from auto_at.contracts.execution import (
     ArtifactPolicy,
     TargetType,
+    TestExecutionRequest,
     sha256_text,
     validate_playwright_test_source,
 )
@@ -19,6 +20,7 @@ from auto_at.contracts.generation import (
     redact_generation_request,
     request_hash,
 )
+from domain.ports import GeneratedSourcePreflight
 from domain.runs import AuditEvent, OutboxEvent
 from infrastructure.persistence.models import (
     GeneratedTestDecisionModel,
@@ -37,6 +39,13 @@ class GenerationNotFoundError(LookupError):
 
 class GenerationStateError(ValueError):
     pass
+
+
+class PreflightRepairQueued:
+    """A safe repair request queued after source cannot load in the pinned worker."""
+
+    def __init__(self, request_id: UUID) -> None:
+        self.request_id = request_id
 
 
 class SubmitGeneration:
@@ -194,8 +203,12 @@ def fail_generation(
 
 
 class DecideGeneratedDraft:
-    def __init__(self, repository: SqlAlchemyGenerationRepository, audits, outbox, runs) -> None:
+    def __init__(
+        self, repository: SqlAlchemyGenerationRepository, audits, outbox, runs,
+        preflight: GeneratedSourcePreflight | None = None,
+    ) -> None:
         self._repository, self._audits, self._outbox, self._runs = repository, audits, outbox, runs
+        self._preflight = preflight
 
     def execute(
         self, *, tenant_id: str, draft_id: UUID, approved: bool, decided_by: str, reason: str | None
@@ -217,16 +230,6 @@ class DecideGeneratedDraft:
         request = self._repository.get_request(tenant_id, draft.planning_request_id)
         if request is None or sha256_text(draft.playwright_test_source) != draft.source_hash:
             raise GenerationStateError("draft source integrity check failed")
-        decision = GeneratedTestDecisionModel(
-            id=uuid4(),
-            tenant_id=tenant_id,
-            draft_id=draft.id,
-            approved=approved,
-            decided_by=decided_by,
-            reason=reason,
-        )
-        self._repository.add_decision(decision)
-        draft.state = DraftState.APPROVED.value if approved else DraftState.REJECTED.value
         if approved:
             policy_record = self._repository.get_policy(tenant_id, request.project_id)
             if policy_record is None:
@@ -235,6 +238,46 @@ class DecideGeneratedDraft:
                 project_id=request.project_id, allowed_origins=policy_record.allowed_origins
             )
             test_case_id = f"generated-{draft.id}"
+            runner_config = {
+                "mode": "playwright_test_source",
+                "playwright_test_source": draft.playwright_test_source,
+                "source_hash": draft.source_hash,
+                "allowed_origins": policy.allowed_origins,
+            }
+            if self._preflight is not None:
+                try:
+                    self._preflight.preflight(
+                        TestExecutionRequest(
+                            project_id=request.project_id,
+                            test_case_id=test_case_id,
+                            target_type=TargetType.WEB_UI,
+                            target_url=request.target_url,
+                            revision=draft.source_hash,
+                            runner_config=runner_config,
+                            artifact_policy=ArtifactPolicy(),
+                        )
+                    )
+                except RuntimeError:
+                    repair = SubmitGeneration(
+                        self._repository, self._audits, self._outbox
+                    ).execute(
+                        tenant_id=tenant_id,
+                        project_id=request.project_id,
+                        correlation_id=request.correlation_id,
+                        target_url=request.target_url,
+                        natural_language_request=(
+                            "Create a revised replacement for the generated "
+                            "Playwright source below. "
+                            "It failed non-browser preflight in the pinned Playwright runtime. "
+                            "Preserve the testing intent and correct only the source issue. "
+                            "Return a reviewable draft; do not change a test verdict.\n\n"
+                            "Safe preflight failure: source could not load in "
+                            "pinned Playwright Test.\n\n"
+                            f"Generated source:\n{draft.playwright_test_source}"
+                        ),
+                        idempotency_key=f"preflight-repair:{draft.id}",
+                    )
+                    return draft, None, PreflightRepairQueued(repair.id)
             self._repository.add_test_case(
                 TestCaseModel(
                     id=test_case_id,
@@ -260,16 +303,21 @@ class DecideGeneratedDraft:
                     idempotency_key=f"generated-draft-run:{draft.id}",
                     target_type=TargetType.WEB_UI,
                     target_url=request.target_url,
-                    runner_config={
-                        "mode": "playwright_test_source",
-                        "playwright_test_source": draft.playwright_test_source,
-                        "source_hash": draft.source_hash,
-                        "allowed_origins": policy.allowed_origins,
-                    },
+                    runner_config=runner_config,
                     artifact_policy=ArtifactPolicy(),
                 )
             )
             draft.linked_test_case_id, draft.linked_run_id = test_case_id, run.id
+        decision = GeneratedTestDecisionModel(
+            id=uuid4(),
+            tenant_id=tenant_id,
+            draft_id=draft.id,
+            approved=approved,
+            decided_by=decided_by,
+            reason=reason,
+        )
+        self._repository.add_decision(decision)
+        draft.state = DraftState.APPROVED.value if approved else DraftState.REJECTED.value
         self._audits.append(
             AuditEvent(
                 id=uuid4(),
@@ -281,4 +329,4 @@ class DecideGeneratedDraft:
                 correlation_id=draft.correlation_id,
             )
         )
-        return draft, decision
+        return draft, decision, None

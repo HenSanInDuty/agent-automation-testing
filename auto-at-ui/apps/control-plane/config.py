@@ -1,7 +1,7 @@
 # file cấu hình các thông tin từ env
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,6 +47,44 @@ class Settings(BaseSettings):
     agent_generation_max_cost_usd: float = Field(default=1.0, gt=0, le=1_000)
     agent_generation_prompt_version: str = "test-generation-v5"
     agent_generation_redaction_policy_version: str = "generation-redaction-v1"
+    vision_enabled: bool = False
+    vision_provider: str = "huggingface"
+    vision_model: str = "CohereLabs/aya-vision-32b:cohere"
+    vision_raw_screenshot_transfer_accepted: bool = False
+    vision_max_steps: int = Field(default=3, ge=1, le=10)
+    vision_max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)
+    vision_max_session_seconds: int = Field(default=120, ge=1, le=3_600)
+    vision_max_cost_usd: float = Field(default=0.25, gt=0, le=1_000)
+    vision_max_requests_per_minute: int = Field(default=5, ge=1, le=10_000)
+    # Fernet key supplied only through environment/secret configuration.  Vision
+    # submission remains unavailable when an enabled tenant has not configured it.
+    vision_intent_encryption_key: str | None = None
+    vision_intent_retention_days: int = Field(default=60, ge=1, le=60)
+    vision_worker_secret: str | None = None
+    supabase_url: str | None = None
+    supabase_service_role_key: str | None = None
+    supabase_vision_bucket: str = "vision-transient"
+    google_drive_service_account_file: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE", "GOOGLE_APPLICATION_CREDENTIALS"
+        ),
+    )
+    google_drive_oauth_client_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_DRIVE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID"),
+    )
+    google_drive_oauth_client_secret: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_DRIVE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"),
+    )
+    google_drive_oauth_refresh_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN", "GOOGLE_REFRESH_TOKEN"),
+    )
+    google_drive_vision_folder_id: str | None = None
+    google_drive_vision_delete_after_delivery: bool = False
+    vision_temporary_url_ttl_seconds: int = Field(default=60, ge=1, le=60)
     agent_reporting_prompt_version: str = "run-review-v2"
     database_url: str = "postgresql://auto_at:local-development-only@127.0.0.1:5432/auto_at"
     redis_url: str = "redis://127.0.0.1:6379/0"

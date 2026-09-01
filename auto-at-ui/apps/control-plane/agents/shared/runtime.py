@@ -26,6 +26,32 @@ class FallbackModel(BaseModel):
     model: str = Field(min_length=1, max_length=200)
 
 
+class VisionPolicy(BaseModel):
+    """Tenant-scoped, non-secret guardrails for raw screenshot transfer."""
+
+    model_config = {"extra": "forbid"}
+
+    enabled: bool = False
+    provider: str = "huggingface"
+    model: str = Field(default="CohereLabs/aya-vision-32b:cohere", max_length=200)
+    raw_screenshot_transfer_accepted: bool = False
+    max_steps: int = Field(default=3, ge=1, le=10)
+    max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)
+    max_session_seconds: int = Field(default=120, ge=1, le=3_600)
+    max_cost_usd: float = Field(default=0.25, gt=0, le=1_000)
+    max_requests_per_minute: int = Field(default=5, ge=1, le=10_000)
+
+    @model_validator(mode="after")
+    def validate_enabled_policy(self) -> "VisionPolicy":
+        if self.provider != "huggingface":
+            raise ValueError("vision supports only the installed huggingface provider")
+        if self.enabled and not self.raw_screenshot_transfer_accepted:
+            raise ValueError("enabled vision requires raw screenshot transfer consent")
+        if self.enabled and not self.model.strip():
+            raise ValueError("enabled vision requires a configured model")
+        return self
+
+
 class AgentRuntimeConfig(BaseModel):
     """Non-secret values that may later be changed by the admin interface."""
 
@@ -34,6 +60,7 @@ class AgentRuntimeConfig(BaseModel):
     evidence: EvidencePolicy = Field(default_factory=EvidencePolicy)
     guard: StepGuardPolicy
     fallback: FallbackModel | None = None
+    vision: VisionPolicy = Field(default_factory=VisionPolicy)
 
     @model_validator(mode="after")
     def requires_an_installed_provider_adapter(self) -> "AgentRuntimeConfig":
@@ -68,6 +95,17 @@ class AgentRuntimeConfig(BaseModel):
                 max_concurrency=settings.agent_max_concurrency,
             ),
             fallback=fallback,
+            vision=VisionPolicy(
+                enabled=settings.vision_enabled,
+                provider=settings.vision_provider,
+                model=settings.vision_model,
+                raw_screenshot_transfer_accepted=settings.vision_raw_screenshot_transfer_accepted,
+                max_steps=settings.vision_max_steps,
+                max_screenshot_bytes=settings.vision_max_screenshot_bytes,
+                max_session_seconds=settings.vision_max_session_seconds,
+                max_cost_usd=settings.vision_max_cost_usd,
+                max_requests_per_minute=settings.vision_max_requests_per_minute,
+            ),
         )
 
     def with_override(self, override: Mapping[str, object] | None) -> "AgentRuntimeConfig":

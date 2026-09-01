@@ -16,6 +16,8 @@ def test_control_plane_schema_contains_tenant_scoped_aggregates() -> None:
         "users",
         "tenant_memberships",
         "sessions",
+        "visual_exploration_sessions",
+        "visual_action_proposals",
     }
 
     assert expected_tables <= set(Base.metadata.tables)

@@ -54,6 +54,26 @@ class HttpPlaywrightTransport:
                 "Playwright worker did not return a valid result"
             ) from error
 
+    def preflight(self, request: TestExecutionRequest) -> None:
+        """Check source with the worker's pinned Playwright runtime before dispatch."""
+        body = json.dumps(request.model_dump(mode="json")).encode()
+        try:
+            with urlopen(
+                Request(
+                    f"{self._url.removesuffix('/execute')}/preflight",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                ),
+                timeout=15,
+            ) as response:
+                payload = json.loads(response.read())
+            if not isinstance(payload, dict) or payload.get("accepted") is not True:
+                raise RunnerUnavailableError("generated source failed Playwright preflight")
+        except (HTTPError, TimeoutError, URLError, ValueError, json.JSONDecodeError) as error:
+            raise RunnerUnavailableError(
+                "generated source Playwright preflight is unavailable"
+            ) from error
+
     def cancel(self, run_id: str) -> None:
         """Notify the worker that a durable cancellation reached an active run.
 

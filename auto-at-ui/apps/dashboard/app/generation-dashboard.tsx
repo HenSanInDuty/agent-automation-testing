@@ -9,6 +9,7 @@ import { ActivityTimeline } from "./components/activity-timeline";
 import { PageHeader } from "./components/page-header";
 import { EmptyState, LoadingState } from "./components/states";
 import { StatusBadge } from "./components/status-badge";
+import { VisionDashboard } from "./vision-dashboard";
 import { ControlPlaneError, decideDraft, getArtifacts, getDraft, getGenerationRequest, getPolicy, getRun, setPolicy, submitGeneration } from "./generation-api";
 import { shouldPollGeneration } from "./generation-polling";
 import type { Artifact, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
@@ -93,7 +94,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   async function decide(approved: boolean) {
     if (!draft) return;
     setIsDeciding(true);
-    try { setDraft(await decideDraft(apiUrl, draft.id, approved, reason)); setNotice(approved ? "Draft approved. The control plane created one deterministic run." : "Draft rejected. This final decision is immutable."); setDecision(null); }
+    try { const next = await decideDraft(apiUrl, draft.id, approved, reason); setDraft(next); setNotice(next.preflight_repair_request_id ? (next.preflight_message ?? "Generated source failed while preparing execution. A revised draft is being created for review.") : approved ? "Draft approved. The control plane created one deterministic run." : "Draft rejected. This final decision is immutable."); setDecision(null); }
     catch (error) { setNotice(errorMessage(error)); }
     finally { setIsDeciding(false); }
   }
@@ -107,6 +108,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
     <section className="workspace-section"><h2>Request a Playwright test</h2><p>The dashboard is an API client: it never authorizes, redacts, generates, approves, or executes a test itself.</p>
       <form onSubmit={submit} className="form-grid"><label className="field">Project<select required value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={Boolean(draftId) || !projectOptions.length}><option value="">{projectOptions.length ? "Choose a project" : "No projects available"}</option>{projectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label><label className="field">Target URL <input required type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} readOnly={Boolean(draftId)} /></label><label className="field form-grid--full">Natural-language request <textarea required value={naturalRequest} onChange={(e) => setNaturalRequest(e.target.value)} readOnly={Boolean(draftId)} /></label>{draftId ? <p className="form-grid--full">Source request is shown for review only. Use the decision controls below; this page will not submit another generation request.</p> : <div className="form-actions form-grid--full"><button className="button" type="submit" disabled={!projectId}>Submit for generation</button>{!projectOptions.length && <Link href="/projects">Create a project</Link>}</div>}</form>
     </section>
+    <VisionDashboard apiUrl={apiUrl} />
     <section className="workspace-section"><h2>Project policy</h2><p>Only project administrators can save an origin allowlist.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><div className="form-actions"><button className="button button--secondary" type="submit" disabled={!projectId}>Save allowed origins</button></div></form><h3>Saved allowed origins</h3>{savedOrigins.length ? <ul className="stack-list">{savedOrigins.map((origin) => <li key={origin}><code>{origin}</code></li>)}</ul> : <p>No origin policy has been saved for this project.</p>}</section>
     {notice && <p className={`notice ${notice.includes("unavailable") ? "notice--error" : ""}`} role="alert">{notice}</p>}
     {generation && <><section className="workspace-section" aria-label="Generation request"><div className="section-heading"><h2>Generation request</h2><StatusBadge status={generation.state} /></div><ul className="detail-list"><li>Request: {generation.redacted_request}</li><li>Request hash: <code>{generation.request_hash}</code></li><li>Correlation: <code>{generation.correlation_id}</code></li>{generation.failure_reason && <li>Safe failure: {generation.failure_reason}</li>}</ul>{shouldPollGeneration(generation.state) && <LoadingState title="Generation is in progress" />}</section><ActivityTimeline apiUrl={apiUrl} correlationId={generation.correlation_id} live={shouldPollGeneration(generation.state)} /></>}

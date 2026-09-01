@@ -34,6 +34,7 @@ const MAX_TIMEOUT_MS = 10 * 60_000;
 class ExecutionTimeoutError extends Error {}
 export class ExecutionCancelledError extends Error {}
 export type ProgressReporter = (stage: string, status: string, safeSummary: string) => void;
+export type SourcePreflightResult = { accepted: true } | { accepted: false; reason: string };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -158,6 +159,57 @@ async function filesBelow(directory: string): Promise<string[]> {
     const path = join(directory, entry.name);
     return entry.isDirectory() ? filesBelow(path) : [path];
   }))).flat();
+}
+
+/**
+ * Validate that generated source can be loaded by the pinned Playwright Test
+ * runtime without launching a browser or producing a test verdict.  This is a
+ * pre-dispatch gate: it intentionally uses the same isolated workspace and
+ * dependency tree as execution so generated TypeScript cannot pass a weaker
+ * control-plane-only check and fail only after a run has been created.
+ */
+export async function preflightPlaywrightTestSource(value: unknown): Promise<SourcePreflightResult> {
+  let request: ExecutionRequestV1;
+  let config;
+  try {
+    request = validateExecutionRequestV1(value);
+    if (request.runner_config.mode !== "playwright_test_source") {
+      return { accepted: false, reason: "preflight supports only playwright_test_source mode" };
+    }
+    config = validatePlaywrightTestSourceMode(request.runner_config);
+  } catch (error) {
+    return { accepted: false, reason: error instanceof Error ? error.message : "invalid execution request" };
+  }
+
+  const workspace = await mkdtemp(join(tmpdir(), "auto-at-preflight-"));
+  try {
+    const workerRoot = fileURLToPath(new URL("../", import.meta.url));
+    const runner = join(workerRoot, "node_modules", "@playwright/test/cli.js");
+    await writeFile(join(workspace, "generated.spec.ts"), config.playwright_test_source, { mode: 0o400 });
+    await writeFile(join(workspace, "package.json"), "{\"type\":\"module\"}\n", { mode: 0o400 });
+    await symlink(join(workerRoot, "node_modules"), join(workspace, "node_modules"), "junction");
+    await writeFile(join(workspace, "playwright.config.ts"), "import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: '.', testMatch: 'generated.spec.ts', workers: 1 });\n", { mode: 0o400 });
+    const child = spawn(process.execPath, [runner, "test", "--list", "--config=playwright.config.ts"], {
+      cwd: workspace,
+      env: { PATH: process.env.PATH ?? "", HOME: workspace, TMPDIR: workspace },
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+    const exit = await withinTimeout(new Promise<number | null>((resolveExit, reject) => {
+      child.once("error", reject); child.once("exit", resolveExit);
+    }), 10_000).catch((error) => { child.kill("SIGKILL"); throw error; });
+    return exit === 0
+      ? { accepted: true }
+      : { accepted: false, reason: "generated source could not be loaded by pinned Playwright Test" };
+  } catch (error) {
+    return {
+      accepted: false,
+      reason: error instanceof ExecutionTimeoutError
+        ? "generated source preflight timed out"
+        : "generated source could not be loaded by pinned Playwright Test",
+    };
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
 }
 
 async function executePlaywrightTestSource(

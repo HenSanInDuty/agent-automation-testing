@@ -8,6 +8,7 @@ from application.generation_events import GenerationEventProcessor
 from application.reporting_events import ReportingEventProcessor
 from application.runs import PublishOutbox
 from application.triage_events import TriageEventProcessor
+from application.vision_events import VisionEventProcessor
 from config import Settings
 from temporalio.client import Client
 from temporalio.worker import Worker
@@ -22,6 +23,7 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyProposalRepository,
     SqlAlchemyRunReportRepository,
     SqlAlchemyRunRepository,
+    SqlAlchemyVisionRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
 from infrastructure.runners import VerifiedLocalArtifactPort
@@ -66,6 +68,15 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         VerifiedLocalArtifactPort(settings.artifact_root),
                         settings,
                         SqlAlchemyActivityEventRepository(session),
+                    ),
+                    VisionEventProcessor(
+                        SqlAlchemyVisionRepository(session),
+                        SqlAlchemyConfigurationRepository(session),
+                        SqlAlchemyGenerationRepository(session),
+                        SqlAlchemyAuditEventRepository(session),
+                        SqlAlchemyActivityEventRepository(session),
+                        SqlAlchemyOutboxEventRepository(session),
+                        settings,
                     ),
                 ).execute()
             if published:

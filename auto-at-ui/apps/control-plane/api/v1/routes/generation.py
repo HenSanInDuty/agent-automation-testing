@@ -26,6 +26,7 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyRunRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
+from infrastructure.runners import HttpPlaywrightTransport
 from pydantic import BaseModel, Field
 
 from api.v1.dependencies.authorization import current_principal, current_tenant
@@ -65,6 +66,8 @@ class DraftResponse(BaseModel):
     provenance: dict[str, object]
     linked_test_case_id: str | None
     linked_run_id: UUID | None
+    preflight_repair_request_id: UUID | None = None
+    preflight_message: str | None = None
 
 
 class GenerationListResponse(BaseModel):
@@ -111,7 +114,11 @@ def _request_response(
     )
 
 
-def _draft_response(draft: object) -> DraftResponse:
+def _draft_response(
+    draft: object,
+    *,
+    preflight_repair_request_id: UUID | None = None,
+) -> DraftResponse:
     return DraftResponse(
         id=draft.id,
         planning_request_id=draft.planning_request_id,
@@ -125,6 +132,13 @@ def _draft_response(draft: object) -> DraftResponse:
         provenance=draft.provenance,
         linked_test_case_id=draft.linked_test_case_id,
         linked_run_id=draft.linked_run_id,
+        preflight_repair_request_id=preflight_repair_request_id,
+        preflight_message=(
+            None
+            if preflight_repair_request_id is None
+            else "Generated source failed Playwright preflight during preparation. "
+            "A revised draft has been queued for your review."
+        ),
     )
 
 
@@ -314,11 +328,12 @@ def decide(
                 raise GenerationNotFoundError(draft_id)
             actor = actor_for_tenant(principal, tenant_id, request.project_id)
             require(actor, Permission.DECIDE_GENERATION)
-            decided, _ = DecideGeneratedDraft(
+            decided, _, repair = DecideGeneratedDraft(
                 repository,
                 SqlAlchemyAuditEventRepository(session),
                 SqlAlchemyOutboxEventRepository(session),
                 SqlAlchemyRunRepository(session),
+                HttpPlaywrightTransport(settings.playwright_worker_url),
             ).execute(
                 tenant_id=tenant_id,
                 draft_id=draft_id,
@@ -330,4 +345,7 @@ def decide(
             raise HTTPException(status_code=404, detail="Generated draft not found.") from error
         except GenerationStateError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
-    return _draft_response(decided)
+    return _draft_response(
+        decided,
+        preflight_repair_request_id=None if repair is None else repair.request_id,
+    )

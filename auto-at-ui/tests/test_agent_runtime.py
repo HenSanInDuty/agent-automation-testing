@@ -1,5 +1,9 @@
 import pytest
-from agents.shared.openrouter import OpenAICompatibleLanguageModel, create_language_model
+from agents.shared.openrouter import (
+    OpenAICompatibleLanguageModel,
+    create_language_model,
+    create_vision_language_model,
+)
 from agents.shared.runtime import (
     AGENT_RUNTIME_CONFIG_KEY,
     AgentRuntimeConfig,
@@ -89,3 +93,72 @@ def test_huggingface_runtime_uses_its_environment_gateway() -> None:
     )
 
     assert isinstance(model, OpenAICompatibleLanguageModel)
+
+
+def test_vision_policy_is_disabled_by_default_and_merges_tenant_override() -> None:
+    disabled_settings = Settings(
+        vision_enabled=False,
+        vision_raw_screenshot_transfer_accepted=False,
+    )
+    runtime = resolve_agent_runtime(
+        disabled_settings,
+        {
+            "vision": {
+                "enabled": True,
+                "model": "org/vision-candidate",
+                "raw_screenshot_transfer_accepted": True,
+            }
+        },
+    )
+
+    assert not AgentRuntimeConfig.from_settings(disabled_settings).vision.enabled
+    assert runtime.vision.model == "org/vision-candidate"
+    assert runtime.vision.enabled
+    assert runtime.vision.provider == "huggingface"
+    assert runtime.vision.max_steps == 3
+
+
+def test_vision_default_model_is_the_approved_local_evaluation_candidate() -> None:
+    assert (
+        AgentRuntimeConfig.from_settings(Settings()).vision.model
+        == "CohereLabs/aya-vision-32b:cohere"
+    )
+
+
+def test_vision_model_uses_vision_policy_not_the_general_agent_model() -> None:
+    runtime = AgentRuntimeConfig.from_settings(Settings())
+    model = create_vision_language_model(
+        Settings(huggingface_api_key="hf_test", huggingface_base_url="https://hf.example/v1"),
+        runtime.vision,
+    )
+
+    assert isinstance(model, OpenAICompatibleLanguageModel)
+
+
+@pytest.mark.parametrize(
+    "vision",
+    [
+        {"enabled": True, "model": "org/model"},
+        {
+            "enabled": True,
+            "model": "",
+            "raw_screenshot_transfer_accepted": True,
+        },
+        {"provider": "other"},
+        {"max_steps": 0},
+    ],
+)
+def test_vision_policy_rejects_missing_consent_and_invalid_guards(
+    vision: dict[str, object],
+) -> None:
+    with pytest.raises(ValueError):
+        AgentRuntimeConfig.model_validate(
+            {
+                "guard": {
+                    "max_tokens": 100,
+                    "max_steps_per_run": 1,
+                    "max_evidence_bytes_per_step": 1024,
+                },
+                "vision": vision,
+            }
+        )

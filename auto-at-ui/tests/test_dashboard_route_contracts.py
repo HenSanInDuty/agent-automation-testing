@@ -18,6 +18,10 @@ from main import app
         ("get", f"/api/v1/runs/{uuid4()}/report"),
         ("get", "/api/v1/activities?run_id=not-a-uuid"),
         ("get", f"/api/v1/test-generations/requests/{uuid4()}"),
+        ("get", "/api/v1/vision/policy"),
+        ("get", "/api/v1/vision/explorations"),
+        ("get", f"/api/v1/vision/explorations/{uuid4()}"),
+        ("get", f"/api/v1/vision/explorations/{uuid4()}/actions"),
         ("get", f"/api/v1/proposals/{uuid4()}"),
     ],
 )

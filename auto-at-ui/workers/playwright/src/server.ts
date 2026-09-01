@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage } from "node:http";
 
-import { executeRequest } from "./execute.js";
+import { executeRequest, preflightPlaywrightTestSource } from "./execute.js";
+import { applyVisualAction, closeVisualSession, openVisualSession } from "./vision.js";
 
 const port = Number(process.env.PORT ?? "7100");
 const activeExecutions = new Map<string, AbortController>();
@@ -29,7 +30,23 @@ function reportProgress(payload: ProgressPayload, tenantId: string | undefined, 
 }
 
 createServer(async (request, response) => {
-  if (request.method !== "POST" || !["/execute", "/cancel"].includes(request.url ?? "")) { response.writeHead(404).end(); return; }
+  const url = request.url ?? "";
+  if (!["POST", "DELETE"].includes(request.method ?? "") || !["/execute", "/preflight", "/cancel", "/visual-explorations", ...Array.from(url.matchAll(/^\/visual-explorations\/[^/]+(?:\/actions)?$/g), (match) => match[0])].includes(url)) { response.writeHead(404).end(); return; }
+  if (url.startsWith("/visual-explorations")) {
+    const secret = process.env.VISION_WORKER_SECRET;
+    if (!secret || request.headers["x-auto-at-vision-worker-secret"] !== secret) { response.writeHead(401).end(); return; }
+    const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
+    try {
+      const payload = chunks.length === 0 ? undefined : JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      const sessionId = url.split("/")[2];
+      const root = process.env.ARTIFACT_ROOT ?? "/artifacts";
+      const result = url === "/visual-explorations" ? await openVisualSession(payload, root)
+        : url.endsWith("/actions") ? await applyVisualAction(sessionId, payload?.action, root)
+        : (await closeVisualSession(sessionId, root), { session_id: sessionId, closed: true });
+      response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(result));
+    } catch (error) { response.writeHead(422, { "content-type": "application/json" }).end(JSON.stringify({ detail: error instanceof Error ? error.message : String(error) })); }
+    return;
+  }
   const chunks: Buffer[] = [];
   for await (const chunk of request) chunks.push(Buffer.from(chunk));
   try {
@@ -40,6 +57,11 @@ createServer(async (request, response) => {
       cancelledRuns.add(payload.run_id);
       activeExecutions.get(payload.run_id)?.abort();
       response.writeHead(202, { "content-type": "application/json" }).end(JSON.stringify({ run_id: payload.run_id, status: "cancellation_requested" }));
+      return;
+    }
+    if (request.url === "/preflight") {
+      const result = await preflightPlaywrightTestSource(payload);
+      response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(result));
       return;
     }
     if (cancelledRuns.has(payload.run_id)) throw new Error("run was cancelled before execution");

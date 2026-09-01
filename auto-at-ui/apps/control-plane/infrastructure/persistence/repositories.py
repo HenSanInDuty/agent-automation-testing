@@ -1,5 +1,7 @@
 """Tenant-scoped SQLAlchemy implementations of domain persistence ports."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import cast
@@ -36,6 +38,8 @@ from infrastructure.persistence.models import (
     RunReportModel,
     TestCaseModel,
     TestRunModel,
+    VisualActionProposalModel,
+    VisualExplorationSessionModel,
 )
 
 
@@ -758,3 +762,60 @@ class SqlAlchemyConfigurationRepository:
         else:
             model.value = value
         self._session.flush()
+
+
+class SqlAlchemyVisionRepository:
+    """Tenant-scoped visual session persistence; values are safe metadata only."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get(self, tenant_id: str, session_id: UUID) -> VisualExplorationSessionModel | None:
+        return self._session.scalar(
+            select(VisualExplorationSessionModel).where(
+                VisualExplorationSessionModel.tenant_id == tenant_id,
+                VisualExplorationSessionModel.id == session_id,
+            )
+        )
+
+    def get_by_key(self, tenant_id: str, key: str) -> VisualExplorationSessionModel | None:
+        return self._session.scalar(
+            select(VisualExplorationSessionModel).where(
+                VisualExplorationSessionModel.tenant_id == tenant_id,
+                VisualExplorationSessionModel.idempotency_key == key,
+            )
+        )
+
+    def list(
+        self, tenant_id: str, project_id: UUID | None = None
+    ) -> list[VisualExplorationSessionModel]:
+        statement = select(VisualExplorationSessionModel).where(
+            VisualExplorationSessionModel.tenant_id == tenant_id
+        )
+        if project_id is not None:
+            statement = statement.where(VisualExplorationSessionModel.project_id == project_id)
+        return list(
+            self._session.scalars(
+                statement.order_by(VisualExplorationSessionModel.created_at.desc())
+            )
+        )
+
+    def add(self, session: VisualExplorationSessionModel) -> None:
+        self._session.add(session)
+        self._session.flush()
+
+    def add_action(self, proposal: VisualActionProposalModel) -> None:
+        self._session.add(proposal)
+        self._session.flush()
+
+    def list_actions(self, tenant_id: str, session_id: UUID) -> list[VisualActionProposalModel]:
+        return list(
+            self._session.scalars(
+                select(VisualActionProposalModel)
+                .where(
+                    VisualActionProposalModel.tenant_id == tenant_id,
+                    VisualActionProposalModel.session_id == session_id,
+                )
+                .order_by(VisualActionProposalModel.sequence)
+            )
+        )

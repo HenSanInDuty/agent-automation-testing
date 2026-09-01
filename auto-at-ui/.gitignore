@@ -16,3 +16,4 @@ playwright-report/
 test-results/
 artifacts/
 auto-at-backup/
+secret/

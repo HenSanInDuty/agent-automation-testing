@@ -404,12 +404,14 @@ class PublishOutbox:
         triage: TriageEventHandler | None = None,
         generation: TriageEventHandler | None = None,
         reporting: TriageEventHandler | None = None,
+        vision: TriageEventHandler | None = None,
     ) -> None:
         self._outbox = outbox
         self._workflows = workflows
         self._triage = triage
         self._generation = generation
         self._reporting = reporting
+        self._vision = vision
 
     async def execute(self, limit: int = 100) -> int:
         published = 0
@@ -441,6 +443,11 @@ class PublishOutbox:
                 and self._reporting is not None
             ):
                 await self._reporting.execute(event)
+            elif (
+                event.event_type == "agent.visual_exploration.requested.v1"
+                and self._vision is not None
+            ):
+                await self._vision.execute(event)
             else:
                 continue
             self._outbox.mark_published(event.id, datetime.now(UTC))

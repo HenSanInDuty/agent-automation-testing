@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 _SENSITIVE_KEYS = {"authorization", "cookie", "password", "secret", "token", "api_key"}
-_SOURCES = {"control_plane", "workflow", "worker", "generation", "triage", "reporting"}
+_SOURCES = {"control_plane", "workflow", "worker", "generation", "triage", "reporting", "vision"}
 _STATUSES = {
     "queued",
     "running",

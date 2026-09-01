@@ -1,1 +1,1 @@
-"""Repeatable, local thesis benchmark for controlled Web UI experiments."""
+"""Offline, fixture-only evaluation utilities for advisory vision exploration."""

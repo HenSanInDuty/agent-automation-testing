@@ -99,3 +99,33 @@ def test_transport_keeps_progress_metadata_outside_the_execution_contract(monkey
         "X-Auto-AT-Progress-Tenant-ID": "tenant-a",
     }
     assert b"internal_progress_tenant_id" not in observed["data"]
+
+
+def test_transport_uses_the_preflight_endpoint_before_dispatch(monkeypatch) -> None:
+    request = ExecutionRequest(
+        run_id=uuid4(), correlation_id=uuid4(), project_id=uuid4(), test_case_id="generated",
+        target_type=TargetType.WEB_UI, revision="a" * 40,
+    )
+    observed: dict[str, object] = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"accepted": true}'
+
+    def build_request(url, data, headers):
+        observed.update(url=url, data=data, headers=headers)
+        return object()
+
+    monkeypatch.setattr("infrastructure.runners.Request", build_request)
+    monkeypatch.setattr("infrastructure.runners.urlopen", lambda *_args, **_kwargs: Response())
+
+    HttpPlaywrightTransport("http://worker").preflight(request)
+
+    assert observed["url"] == "http://worker/preflight"
+    assert observed["headers"] == {"Content-Type": "application/json"}

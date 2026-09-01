@@ -89,6 +89,60 @@ class ProjectExecutionPolicyModel(TenantRecord, Base):
     allowed_origins: Mapped[list[str]] = mapped_column(JSONB, default=list)
 
 
+class VisualExplorationSessionModel(TenantRecord, Base):
+    """Advisory-session metadata; screenshots never persist here."""
+
+    __tablename__ = "visual_exploration_sessions"
+    __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), index=True)
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    target_url: Mapped[str] = mapped_column(Text)
+    intent_hash: Mapped[str] = mapped_column(String(64))
+    encrypted_task_intent: Mapped[str] = mapped_column(Text)
+    intent_retention_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    state: Mapped[str] = mapped_column(String(32), index=True)
+    policy_version: Mapped[str] = mapped_column(String(100))
+    provider: Mapped[str] = mapped_column(String(100))
+    model: Mapped[str] = mapped_column(String(200))
+    prompt_version: Mapped[str] = mapped_column(String(100))
+    max_steps: Mapped[int] = mapped_column(Integer)
+    max_screenshot_bytes: Mapped[int] = mapped_column(Integer)
+    max_session_seconds: Mapped[int] = mapped_column(Integer)
+    max_cost_usd: Mapped[str] = mapped_column(String(32))
+    max_requests_per_minute: Mapped[int] = mapped_column(Integer)
+    safe_failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    idempotency_key: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+
+
+class VisualActionProposalModel(TenantRecord, Base):
+    """Immutable, schema-validated candidate actions without raw image content."""
+
+    __tablename__ = "visual_action_proposals"
+    __table_args__ = (UniqueConstraint("session_id", "sequence"),)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("visual_exploration_sessions.id"), index=True
+    )
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    sequence: Mapped[int] = mapped_column(Integer)
+    action: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    evidence_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    policy_version: Mapped[str] = mapped_column(String(100))
+    provider: Mapped[str] = mapped_column(String(100))
+    model: Mapped[str] = mapped_column(String(200))
+    prompt_version: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+
+
 class GenerationRequestModel(TenantRecord, Base):
     __tablename__ = "generation_requests"
     __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)

@@ -9,6 +9,7 @@ class ProposalKind(StrEnum):
     TRIAGE = "triage"
     TEST_GENERATION = "test_generation"
     HEALING = "healing"
+    VISION = "vision"
 
 
 class RunReportStatus(StrEnum):
@@ -90,6 +91,8 @@ class ProposalProvenance(BaseModel):
     prompt_version: str = Field(min_length=1, max_length=100)
     redaction_policy_version: str = Field(min_length=1, max_length=100)
     evidence_input_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
+    visual_contract_version: str | None = Field(default=None, min_length=1, max_length=100)
+    visual_prompt_version: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class RunReportObservation(BaseModel):

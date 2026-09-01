@@ -9,7 +9,7 @@ import {
   validatePlaywrightTestSourceMode,
   validateExecutionResultV1,
 } from "./contract.js";
-import { configOf, executeRequest, ExecutionCancelledError } from "./execute.js";
+import { configOf, executeRequest, ExecutionCancelledError, preflightPlaywrightTestSource } from "./execute.js";
 
 const fixtures = new URL("../../../packages/contracts/fixtures/execution-v1/", import.meta.url);
 
@@ -91,6 +91,22 @@ test("returns a normal v1 policy-blocked result before browser startup", async (
   const result = await executeRequest(request, "/tmp/worker-contract-artifacts");
   expect(result).toMatchObject({ status: "errored", summary: "Generated source blocked by execution policy." });
   expect(result.runner_metadata).toMatchObject({ policy_blocked: true });
+});
+
+test("preflights generated source without launching a browser or producing a verdict", async () => {
+  const request = await fixture("request.playwright-test-source.json");
+
+  await expect(preflightPlaywrightTestSource(request)).resolves.toEqual({ accepted: true });
+});
+
+test("preflight rejects TypeScript that the pinned runner cannot load", async () => {
+  const request = await fixture("request.playwright-test-source.json") as Record<string, unknown>;
+  const config = request.runner_config as Record<string, unknown>;
+  const source = "import { test } from '@playwright/test'; test('broken', async ({ page }) => {";
+  config.playwright_test_source = source;
+  config.source_hash = createHash("sha256").update(source).digest("hex");
+
+  await expect(preflightPlaywrightTestSource(request)).resolves.toMatchObject({ accepted: false });
 });
 
 test("runs generated source with the browser bundled in the worker image", async () => {

@@ -1,5 +1,5 @@
 import { apiRequest, idempotencyKey } from "./api-client.ts";
-import type { Artifact, GeneratedDraft, GenerationRequest, Page, Proposal, ProposalDecision, Run } from "./generation-types";
+import type { Artifact, GeneratedDraft, GenerationRequest, Page, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisionPolicy } from "./generation-types";
 export { ControlPlaneError } from "./api-client.ts";
 
 export function submitGeneration(apiUrl: string, payload: { project_id: string; target_url: string; request: string }) {
@@ -41,3 +41,11 @@ export function listProposals(apiUrl: string, decided?: boolean, runId?: string)
   return apiRequest<Page<Proposal>>(apiUrl, `/api/v1/proposals${query.size ? `?${query}` : ""}`);
 }
 export function decideProposal(apiUrl: string, id: string, approved: boolean, reason: string) { return apiRequest<ProposalDecision>(apiUrl, `/api/v1/proposals/${id}/decision`, { method: "POST", body: JSON.stringify({ approved, reason: reason || null }) }); }
+export function getVisionPolicy(apiUrl: string) { return apiRequest<VisionPolicy>(apiUrl, "/api/v1/vision/policy"); }
+export function setVisionPolicy(apiUrl: string, policy: VisionPolicy) { return apiRequest<VisionPolicy>(apiUrl, "/api/v1/vision/policy", { method: "PUT", body: JSON.stringify(policy) }); }
+export function submitVisualExploration(apiUrl: string, payload: { project_id: string; target_url: string; task_intent: string; use_vision: true }) {
+  return apiRequest<VisualExploration>(apiUrl, "/api/v1/vision/explorations", { method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify(payload) });
+}
+export function listVisualExplorations(apiUrl: string, projectId: string) { return apiRequest<{ items: VisualExploration[]; total: number }>(apiUrl, `/api/v1/vision/explorations?project_id=${encodeURIComponent(projectId)}`); }
+export function getVisualExploration(apiUrl: string, id: string) { return apiRequest<VisualExploration>(apiUrl, `/api/v1/vision/explorations/${id}`); }
+export function listVisualActions(apiUrl: string, id: string) { return apiRequest<VisualAction[]>(apiUrl, `/api/v1/vision/explorations/${id}/actions`); }
