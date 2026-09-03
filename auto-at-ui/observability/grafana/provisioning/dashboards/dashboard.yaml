@@ -4,4 +4,4 @@ providers:
     folder: Auto-AT
     type: file
     options:
-      path: /var/lib/grafana/dashboards
+      path: /etc/grafana/dashboards
