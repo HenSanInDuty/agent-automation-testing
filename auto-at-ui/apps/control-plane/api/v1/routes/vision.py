@@ -1,12 +1,23 @@
-"""HTTP boundary for governed, advisory visual exploration."""
+"""HTTP boundary for governed, advisory visual exploration.
 
+Vision progress is a read-only, session-scoped safe activity timeline. It is never
+authorized by a client-supplied correlation ID and never contains model payloads,
+screenshots, prompts, typed action text, or execution verdicts.
+"""
+
+import asyncio
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
 from application.vision import SubmitVisualExploration, VisionStateError
 from application.vision_debug_evidence import DebugEvidenceNotFoundError, ReadVisionDebugEvidence
+from application.vision_replay import (
+    VisionReplay,
+    VisionReplayDeletionError,
+    VisionReplayNotFoundError,
+)
 from config import Settings, get_settings
 from domain.authorization import (
     AuthorizationError,
@@ -16,6 +27,8 @@ from domain.authorization import (
     require,
 )
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
+from infrastructure.artifacts.rustfs import RustFSArtifactStore
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyAuditEventRepository,
@@ -29,6 +42,7 @@ from infrastructure.persistence.session import create_session_factory, transacti
 from pydantic import BaseModel, ConfigDict, Field
 
 from api.v1.dependencies.authorization import current_principal, current_tenant
+from api.v1.routes.activities import ActivityResponse, _sse_event
 
 router = APIRouter(prefix="/vision", tags=["vision"])
 
@@ -76,6 +90,28 @@ class VisualActionResponse(BaseModel):
     sequence: int
     action: dict[str, object]
     evidence_checksum: str | None
+
+
+class ReplayFrameResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: UUID
+    state_id: UUID
+    sequence: int
+    checksum: str
+    size: int
+    content_type: Literal["image/png"]
+    captured_at: datetime
+    actions: list[VisualActionResponse]
+
+
+class ReplayFrameListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[ReplayFrameResponse]
+
+
+class ReplayDeleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    confirm: Literal[True]
 
 
 class ExplorationListResponse(BaseModel):
@@ -245,6 +281,199 @@ def list_actions(
             )
             for action in repository.list_actions(tenant_id, session_id)
         ]
+
+
+def _replay_response(frame, actions) -> ReplayFrameResponse:
+    return ReplayFrameResponse(
+        id=frame.id,
+        state_id=frame.state_id,
+        sequence=frame.sequence,
+        checksum=frame.checksum,
+        size=frame.size,
+        content_type=frame.content_type,
+        captured_at=frame.captured_at,
+        actions=[
+            VisualActionResponse(
+                sequence=action.sequence,
+                action=action.action,
+                evidence_checksum=action.evidence_checksum,
+            )
+            for action in actions
+            if action.originating_state_id == frame.state_id
+        ],
+    )
+
+
+@router.get(
+    "/explorations/{session_id}/replay-frames", response_model=ReplayFrameListResponse
+)
+def list_replay_frames(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> ReplayFrameListResponse:
+    with create_session_factory(settings)() as session:
+        try:
+            frames, actions = VisionReplay(
+                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyAuditEventRepository(session),
+            ).list(tenant_id=tenant_id, principal=principal, session_id=session_id)
+        except VisionReplayNotFoundError as error:
+            raise HTTPException(status_code=404, detail="Visual exploration not found.") from error
+    return ReplayFrameListResponse(items=[_replay_response(frame, actions) for frame in frames])
+
+
+@router.get("/explorations/{session_id}/replay-frames/{frame_id}")
+def get_replay_frame(
+    session_id: UUID,
+    frame_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Response:
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            content = VisionReplay(
+                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyAuditEventRepository(session),
+            ).read(
+                tenant_id=tenant_id, principal=principal, session_id=session_id, frame_id=frame_id
+            )
+        except (VisionReplayNotFoundError, ValueError, RuntimeError) as error:
+            raise HTTPException(status_code=404, detail="Replay frame not found.") from error
+    return Response(
+        content=content,
+        media_type="image/png",
+        headers={"Cache-Control": "private, no-store"},
+    )
+
+
+@router.delete(
+    "/explorations/{session_id}/replay-frames/{frame_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+def delete_replay_frame(
+    session_id: UUID,
+    frame_id: UUID,
+    payload: ReplayDeleteRequest,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Response:
+    del payload
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            VisionReplay(
+                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyAuditEventRepository(session),
+            ).delete_one(
+                tenant_id=tenant_id, principal=principal, session_id=session_id, frame_id=frame_id
+            )
+        except VisionReplayNotFoundError as error:
+            raise HTTPException(status_code=404, detail="Visual exploration not found.") from error
+        except VisionReplayDeletionError as error:
+            raise HTTPException(
+                status_code=409, detail="Replay deletion is unavailable."
+            ) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/explorations/{session_id}/replay-frames", status_code=status.HTTP_204_NO_CONTENT)
+def delete_replay_frames(
+    session_id: UUID,
+    payload: ReplayDeleteRequest,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Response:
+    del payload
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            VisionReplay(
+                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyAuditEventRepository(session),
+            ).delete_all(tenant_id=tenant_id, principal=principal, session_id=session_id)
+        except VisionReplayNotFoundError as error:
+            raise HTTPException(status_code=404, detail="Visual exploration not found.") from error
+        except VisionReplayDeletionError as error:
+            raise HTTPException(
+                status_code=409, detail="Replay deletion is unavailable."
+            ) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _session_activities(
+    session_id: UUID,
+    tenant_id: str,
+    principal: Principal,
+    settings: Settings,
+) -> list[ActivityResponse]:
+    """Load only one authorized session's independently redacted progress records."""
+    with create_session_factory(settings)() as session:
+        vision = SqlAlchemyVisionRepository(session)
+        record = vision.get(tenant_id, session_id)
+        try:
+            if record is None:
+                raise AuthorizationError("missing")
+            require(actor_for_tenant(principal, tenant_id, record.project_id), Permission.READ)
+        except AuthorizationError as error:
+            raise HTTPException(status_code=404, detail="Visual exploration not found.") from error
+        events = SqlAlchemyActivityEventRepository(session).list(
+            tenant_id, visual_exploration_session_id=session_id
+        )
+    return [ActivityResponse.model_validate(event, from_attributes=True) for event in events]
+
+
+@router.get(
+    "/explorations/{session_id}/activities",
+    response_model=list[ActivityResponse],
+)
+def list_exploration_activities(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[ActivityResponse]:
+    return _session_activities(session_id, tenant_id, principal, settings)
+
+
+@router.get("/explorations/{session_id}/activities/stream")
+async def stream_exploration_activities(
+    session_id: UUID,
+    last_event_id: Annotated[str | None, Header(alias="Last-Event-ID")] = None,
+    tenant_id: Annotated[str, Depends(current_tenant)] = "",
+    principal: Annotated[Principal, Depends(current_principal)] = None,  # type: ignore[assignment]
+    settings: Annotated[Settings, Depends(get_settings)] = None,  # type: ignore[assignment]
+) -> StreamingResponse:
+    """Stream one authorized session's safe activity history, then five-second updates."""
+    initial = _session_activities(session_id, tenant_id, principal, settings)
+    seen = {str(event.id) for event in initial}
+    if last_event_id:
+        try:
+            resume_at = next(
+                index for index, event in enumerate(initial) if str(event.id) == last_event_id
+            )
+            initial = initial[resume_at + 1 :]
+        except StopIteration:
+            pass
+
+    async def events():
+        for event in initial:
+            yield _sse_event(event)
+        while True:
+            await asyncio.sleep(5)
+            try:
+                current = _session_activities(session_id, tenant_id, principal, settings)
+            except Exception:
+                # A failed refresh closes the stream so EventSource can use polling fallback.
+                return
+            fresh = [event for event in current if str(event.id) not in seen]
+            for event in fresh:
+                seen.add(str(event.id))
+                yield _sse_event(event)
+            yield ": keepalive\n\n"
+
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 @router.get(

@@ -134,6 +134,9 @@ class VisualActionProposalModel(TenantRecord, Base):
     session_id: Mapped[UUID] = mapped_column(
         ForeignKey("visual_exploration_sessions.id"), index=True
     )
+    originating_state_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("visual_exploration_states.id"), nullable=True, index=True
+    )
     correlation_id: Mapped[UUID] = mapped_column(index=True)
     sequence: Mapped[int] = mapped_column(Integer)
     action: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
@@ -162,6 +165,33 @@ class VisualExplorationStateModel(TenantRecord, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
+
+
+class VisualReplayFrameModel(TenantRecord, Base):
+    """Private, persistent screenshot metadata for an advisory Vision state."""
+
+    __tablename__ = "visual_replay_frames"
+    __table_args__ = (
+        UniqueConstraint("session_id", "state_id", name="uq_visual_replay_frame_state"),
+        Index(
+            "ix_visual_replay_frames_tenant_session_sequence",
+            "tenant_id",
+            "session_id",
+            "sequence",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("visual_exploration_sessions.id"), index=True
+    )
+    state_id: Mapped[UUID] = mapped_column(ForeignKey("visual_exploration_states.id"), index=True)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_key: Mapped[str] = mapped_column(Text, nullable=False)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class VisionDebugEvidenceModel(TenantRecord, Base):
@@ -328,11 +358,24 @@ class ActivityEventModel(TenantRecord, Base):
             "correlation_id",
             "occurred_at",
         ),
+        Index(
+            "ix_activity_events_vision_session_timeline",
+            "tenant_id",
+            "visual_exploration_session_id",
+            "occurred_at",
+        ),
+        UniqueConstraint(
+            "visual_exploration_session_id", "progress_key", name="uq_activity_vision_progress"
+        ),
     )
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     run_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("test_runs.id", ondelete="CASCADE"), nullable=True
     )
+    visual_exploration_session_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("visual_exploration_sessions.id"), nullable=True
+    )
+    progress_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
     correlation_id: Mapped[UUID] = mapped_column(index=True)
     source: Mapped[str] = mapped_column(String(32))
     stage: Mapped[str] = mapped_column(String(100))

@@ -73,6 +73,28 @@ export type VisualAction = {
   action: { kind: "click" | "type" | "scroll" | "wait" | "stop"; confidence?: number; x?: number; y?: number; delta_y?: number; duration_ms?: number };
   evidence_checksum: string | null;
 };
+export type VisualReplayFrame = {
+  id: string;
+  state_id: string;
+  sequence: number;
+  checksum: string;
+  size: number;
+  content_type: "image/png";
+  captured_at: string;
+  actions: VisualAction[];
+};
+export type VisualReplayFrames = { items: VisualReplayFrame[] };
+export type VisionProgressActivity = {
+  id: string;
+  run_id: string | null;
+  correlation_id: string;
+  source: "vision";
+  stage: string;
+  status: string;
+  safe_summary: string;
+  metadata: Record<string, string | number | boolean>;
+  occurred_at: string;
+};
 export type VisionDebugEvidence = {
   id: string;
   diagnostic_code: string;

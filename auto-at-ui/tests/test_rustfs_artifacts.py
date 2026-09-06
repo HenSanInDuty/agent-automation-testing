@@ -1,9 +1,10 @@
 import hashlib
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
 from config import Settings
-from domain.entities import ArtifactRecord
+from domain.entities import ArtifactRecord, VisualReplayFrameRecord
 from infrastructure.artifacts.rustfs import ArtifactStorageError, RustFSArtifactStore
 
 
@@ -109,3 +110,54 @@ def test_rustfs_maps_provider_errors_without_provider_detail() -> None:
         store(Broken()).put_verified(
             "tenants/tenant-a/runs/x/artifacts/log", b"safe", target.checksum, None
         )
+
+
+def test_rustfs_writes_only_verified_tenant_scoped_replay_frames() -> None:
+    content = b"\x89PNG\r\n\x1a\nvisual-replay"
+    session_id, state_id = uuid4(), uuid4()
+    frame = VisualReplayFrameRecord(
+        id=uuid4(), tenant_id="tenant-a", session_id=session_id, state_id=state_id,
+        sequence=1,
+        storage_key=(
+            f"tenants/tenant-a/vision-explorations/{session_id}/states/{state_id}.png"
+        ),
+        checksum=hashlib.sha256(content).hexdigest(), size=len(content), content_type="image/png",
+        captured_at=datetime.now(UTC),
+    )
+    client = FakeS3()
+
+    store(client).write_replay_frame(frame, content)
+
+    assert ("test-artifacts", frame.storage_key) in client.objects
+    invalid = VisualReplayFrameRecord(**{**frame.__dict__, "storage_key": "tenants/other/x"})
+    with pytest.raises(ValueError, match="storage key"):
+        store(client).write_replay_frame(invalid, content)
+
+
+def test_rustfs_replay_write_is_idempotent_and_never_overwrites_conflicting_bytes() -> None:
+    content = b"\x89PNG\r\n\x1a\nvisual-replay"
+    session_id, state_id = uuid4(), uuid4()
+    frame = VisualReplayFrameRecord(
+        id=uuid4(), tenant_id="tenant-a", session_id=session_id, state_id=state_id,
+        sequence=1,
+        storage_key=f"tenants/tenant-a/vision-explorations/{session_id}/states/{state_id}.png",
+        checksum=hashlib.sha256(content).hexdigest(), size=len(content), content_type="image/png",
+        captured_at=datetime.now(UTC),
+    )
+    client = FakeS3()
+    artifact_store = store(client)
+
+    artifact_store.write_replay_frame(frame, content)
+    artifact_store.write_replay_frame(frame, content)
+    conflicting = b"\x89PNG\r\n\x1a\ndifferent"
+    conflicting_frame = VisualReplayFrameRecord(
+        **{
+            **frame.__dict__,
+            "checksum": hashlib.sha256(conflicting).hexdigest(),
+            "size": len(conflicting),
+        }
+    )
+
+    with pytest.raises(ArtifactStorageError, match="verification failed"):
+        artifact_store.write_replay_frame(conflicting_frame, conflicting)
+    assert client.objects[("test-artifacts", frame.storage_key)]["Body"] == content

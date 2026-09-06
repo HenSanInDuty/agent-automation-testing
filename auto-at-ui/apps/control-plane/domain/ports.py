@@ -16,6 +16,7 @@ from domain.entities import (
     ProposalRecord,
     RunReportRecord,
     TestCase,
+    VisualReplayFrameRecord,
 )
 from domain.runs import AuditEvent, OutboxEvent, TestRun
 
@@ -60,6 +61,16 @@ class VerifiedArtifactStore(Protocol):
     def delete(self, artifact: ArtifactRecord) -> None: ...
 
     def list_keys(self, tenant_id: str, run_id: UUID) -> list[str]: ...
+
+
+class VerifiedVisualReplayStore(Protocol):
+    """Private storage for checksum-verified Vision replay bytes."""
+
+    def write_replay_frame(self, frame: VisualReplayFrameRecord, content: bytes) -> None: ...
+
+    def read_replay_frame(self, frame: VisualReplayFrameRecord) -> bytes: ...
+
+    def delete_replay_frame(self, frame: VisualReplayFrameRecord) -> None: ...
 
 
 class RunnerTransport(Protocol):
@@ -153,6 +164,20 @@ class VisualExplorationRepository(Protocol):
     def list(self, tenant_id: str, project_id: UUID | None = None) -> list[object]: ...
 
     def add(self, session: object) -> None: ...
+
+    def add_replay_frame(self, frame: VisualReplayFrameRecord) -> VisualReplayFrameRecord: ...
+
+    def get_replay_frame(
+        self, tenant_id: str, session_id: UUID, frame_id: UUID
+    ) -> VisualReplayFrameRecord | None: ...
+
+    def list_replay_frames(
+        self, tenant_id: str, session_id: UUID
+    ) -> list[VisualReplayFrameRecord]: ...
+
+    def delete_replay_frame(self, tenant_id: str, session_id: UUID, frame_id: UUID) -> bool: ...
+
+    def delete_replay_frames(self, tenant_id: str, session_id: UUID) -> int: ...
 
     def add_debug_evidence(self, evidence: object) -> object: ...
 

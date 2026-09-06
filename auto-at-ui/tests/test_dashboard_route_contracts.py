@@ -22,6 +22,10 @@ from main import app
         ("get", "/api/v1/vision/explorations"),
         ("get", f"/api/v1/vision/explorations/{uuid4()}"),
         ("get", f"/api/v1/vision/explorations/{uuid4()}/actions"),
+        ("get", f"/api/v1/vision/explorations/{uuid4()}/replay-frames"),
+        ("get", f"/api/v1/vision/explorations/{uuid4()}/replay-frames/{uuid4()}"),
+        ("get", f"/api/v1/vision/explorations/{uuid4()}/activities"),
+        ("get", f"/api/v1/vision/explorations/{uuid4()}/activities/stream"),
         ("get", f"/api/v1/proposals/{uuid4()}"),
     ],
 )

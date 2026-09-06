@@ -109,14 +109,12 @@ class SubmitVisualExploration:
             )
         )
         self._activity.append(
-            ActivityEvent.create(
+            ActivityEvent.create_vision_progress(
                 tenant_id=tenant_id,
                 correlation_id=correlation_id,
-                source="vision",
+                visual_exploration_session_id=record.id,
                 stage="queued",
-                status="queued",
-                safe_summary="Visual exploration queued.",
-                metadata={"session_id": str(record.id), "policy_version": record.policy_version},
+                progress_key="queued",
                 occurred_at=record.created_at,
             )
         )

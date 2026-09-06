@@ -25,6 +25,19 @@ def test_policy_matches_canonical_http_origins() -> None:
     assert not policy.allows("https://other.test")
 
 
+def test_wildcard_origin_policy_allows_every_http_destination() -> None:
+    policy = ProjectExecutionPolicy(
+        project_id="11111111-1111-4111-8111-111111111111",
+        allowed_origins=["*"],
+    )
+
+    assert policy.allowed_origins == ["*"]
+    assert policy.allows("https://example.test/path")
+    assert policy.allows("http://another.example.test:8080/path")
+    with pytest.raises(ValueError):
+        policy.allows("file:///tmp/test")
+
+
 @pytest.mark.parametrize("value", ["file:///tmp/test", "https://user:secret@example.test", "https://example.test/path"])
 def test_origin_policy_rejects_non_origins_and_credentials(value: str) -> None:
     with pytest.raises(ValueError):

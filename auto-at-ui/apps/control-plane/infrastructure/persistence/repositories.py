@@ -17,6 +17,7 @@ from domain.entities import (
     ProposalRecord,
     RunReportRecord,
     TestCase,
+    VisualReplayFrameRecord,
 )
 from domain.runs import AuditEvent, OutboxEvent, RunLifecycleStatus, TestRun
 from sqlalchemy import CursorResult, select, update
@@ -42,6 +43,7 @@ from infrastructure.persistence.models import (
     VisualActionProposalModel,
     VisualExplorationSessionModel,
     VisualExplorationStateModel,
+    VisualReplayFrameModel,
 )
 
 
@@ -706,11 +708,23 @@ class SqlAlchemyActivityEventRepository:
         self._session = session
 
     def append(self, event: ActivityEvent) -> None:
+        if event.visual_exploration_session_id is not None and event.progress_key is not None:
+            existing = self._session.scalar(
+                select(ActivityEventModel.id).where(
+                    ActivityEventModel.visual_exploration_session_id
+                    == event.visual_exploration_session_id,
+                    ActivityEventModel.progress_key == event.progress_key,
+                )
+            )
+            if existing is not None:
+                return
         self._session.add(
             ActivityEventModel(
                 id=event.id,
                 tenant_id=event.tenant_id,
                 run_id=event.run_id,
+                visual_exploration_session_id=event.visual_exploration_session_id,
+                progress_key=event.progress_key,
                 correlation_id=event.correlation_id,
                 source=event.source,
                 stage=event.stage,
@@ -728,6 +742,7 @@ class SqlAlchemyActivityEventRepository:
         *,
         run_id: UUID | None = None,
         correlation_id: UUID | None = None,
+        visual_exploration_session_id: UUID | None = None,
         after: datetime | None = None,
     ) -> list[ActivityEvent]:
         statement = select(ActivityEventModel).where(ActivityEventModel.tenant_id == tenant_id)
@@ -735,6 +750,10 @@ class SqlAlchemyActivityEventRepository:
             statement = statement.where(ActivityEventModel.run_id == run_id)
         if correlation_id is not None:
             statement = statement.where(ActivityEventModel.correlation_id == correlation_id)
+        if visual_exploration_session_id is not None:
+            statement = statement.where(
+                ActivityEventModel.visual_exploration_session_id == visual_exploration_session_id
+            )
         if after is not None:
             statement = statement.where(ActivityEventModel.occurred_at > after)
         statement = statement.order_by(ActivityEventModel.occurred_at, ActivityEventModel.id)
@@ -743,6 +762,8 @@ class SqlAlchemyActivityEventRepository:
                 id=item.id,
                 tenant_id=item.tenant_id,
                 run_id=item.run_id,
+                visual_exploration_session_id=item.visual_exploration_session_id,
+                progress_key=item.progress_key,
                 correlation_id=item.correlation_id,
                 source=item.source,
                 stage=item.stage,
@@ -851,6 +872,90 @@ class SqlAlchemyVisionRepository:
     def add(self, session: VisualExplorationSessionModel) -> None:
         self._session.add(session)
         self._session.flush()
+
+    @staticmethod
+    def _replay_frame_record(model: VisualReplayFrameModel) -> VisualReplayFrameRecord:
+        return VisualReplayFrameRecord(
+            id=model.id, tenant_id=model.tenant_id, session_id=model.session_id,
+            state_id=model.state_id, sequence=model.sequence, storage_key=model.storage_key,
+            checksum=model.checksum, size=model.size, content_type=model.content_type,
+            captured_at=model.captured_at, deleted_at=model.deleted_at,
+        )
+
+    def add_replay_frame(self, frame: VisualReplayFrameRecord) -> VisualReplayFrameRecord:
+        """Insert once per state; a replayed event must match immutable evidence."""
+        existing = self._session.scalar(
+            select(VisualReplayFrameModel).where(
+                VisualReplayFrameModel.session_id == frame.session_id,
+                VisualReplayFrameModel.state_id == frame.state_id,
+            )
+        )
+        if existing is not None:
+            fields = ("tenant_id", "sequence", "storage_key", "checksum", "size", "content_type")
+            if any(getattr(existing, field) != getattr(frame, field) for field in fields):
+                raise ValueError("replay frame conflicts with existing state evidence")
+            return self._replay_frame_record(existing)
+        model = VisualReplayFrameModel(
+            id=frame.id, tenant_id=frame.tenant_id, session_id=frame.session_id,
+            state_id=frame.state_id, sequence=frame.sequence, storage_key=frame.storage_key,
+            checksum=frame.checksum, size=frame.size, content_type=frame.content_type,
+            captured_at=frame.captured_at, deleted_at=frame.deleted_at,
+        )
+        self._session.add(model)
+        self._session.flush()
+        return self._replay_frame_record(model)
+
+    def get_replay_frame(
+        self, tenant_id: str, session_id: UUID, frame_id: UUID
+    ) -> VisualReplayFrameRecord | None:
+        model = self._session.scalar(
+            select(VisualReplayFrameModel).where(
+                VisualReplayFrameModel.tenant_id == tenant_id,
+                VisualReplayFrameModel.session_id == session_id,
+                VisualReplayFrameModel.id == frame_id,
+                VisualReplayFrameModel.deleted_at.is_(None),
+            )
+        )
+        return self._replay_frame_record(model) if model is not None else None
+
+    def list_replay_frames(
+        self, tenant_id: str, session_id: UUID
+    ) -> list[VisualReplayFrameRecord]:
+        models = self._session.scalars(
+            select(VisualReplayFrameModel)
+            .where(
+                VisualReplayFrameModel.tenant_id == tenant_id,
+                VisualReplayFrameModel.session_id == session_id,
+                VisualReplayFrameModel.deleted_at.is_(None),
+            )
+            .order_by(VisualReplayFrameModel.sequence, VisualReplayFrameModel.id)
+        )
+        return [self._replay_frame_record(model) for model in models]
+
+    def delete_replay_frame(self, tenant_id: str, session_id: UUID, frame_id: UUID) -> bool:
+        result = self._session.execute(
+            update(VisualReplayFrameModel)
+            .where(
+                VisualReplayFrameModel.tenant_id == tenant_id,
+                VisualReplayFrameModel.session_id == session_id,
+                VisualReplayFrameModel.id == frame_id,
+                VisualReplayFrameModel.deleted_at.is_(None),
+            )
+            .values(deleted_at=datetime.now().astimezone())
+        )
+        return bool(result.rowcount)
+
+    def delete_replay_frames(self, tenant_id: str, session_id: UUID) -> int:
+        result = self._session.execute(
+            update(VisualReplayFrameModel)
+            .where(
+                VisualReplayFrameModel.tenant_id == tenant_id,
+                VisualReplayFrameModel.session_id == session_id,
+                VisualReplayFrameModel.deleted_at.is_(None),
+            )
+            .values(deleted_at=datetime.now().astimezone())
+        )
+        return result.rowcount or 0
 
     def add_action(self, proposal: VisualActionProposalModel) -> None:
         self._session.add(proposal)

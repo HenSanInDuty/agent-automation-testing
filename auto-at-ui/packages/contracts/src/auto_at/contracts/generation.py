@@ -21,6 +21,7 @@ _CREDENTIAL_PATTERNS = (
     re.compile(r"(?i)(https?://[^\s/:@]+:)([^@\s]+)(@)"),
 )
 _REDACTED = "[REDACTED]"
+WILDCARD_ORIGIN = "*"
 
 
 def redact_generation_request(value: str) -> str:
@@ -37,6 +38,8 @@ def request_hash(value: str) -> str:
 
 def canonical_origin(value: str) -> str:
     """Validate and normalize an HTTP(S) origin for policy comparison."""
+    if value == WILDCARD_ORIGIN:
+        return WILDCARD_ORIGIN
     parsed = urlsplit(value)
     if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
         raise ValueError("origin must use http or https and include a host")
@@ -83,7 +86,8 @@ class ProjectExecutionPolicy(BaseModel):
         return normalized
 
     def allows(self, target_url: str) -> bool:
-        return origin_for_url(target_url) in self.allowed_origins
+        origin = origin_for_url(target_url)
+        return WILDCARD_ORIGIN in self.allowed_origins or origin in self.allowed_origins
 
 
 class DraftState(StrEnum):

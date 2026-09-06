@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -7,6 +8,7 @@ from auto_at.contracts.vision import (
     VisualExplorationRequest,
     VisualExplorationResult,
     VisualExplorationState,
+    VisualReplayFrame,
 )
 from pydantic import ValidationError
 
@@ -35,3 +37,19 @@ def test_visual_contract_is_separate_from_execution_and_bounds_actions() -> None
 def test_visual_contract_forbids_unknown_fields_and_invalid_coordinates() -> None:
     with pytest.raises(ValidationError):
         ClickAction(x=1.1, y=0.5, confidence=0.5, expected_outcome="x", shell_command="no")
+
+
+def test_replay_frame_contract_is_metadata_only_and_validated() -> None:
+    frame = VisualReplayFrame(
+        id=uuid4(), session_id=uuid4(), state_id=uuid4(), sequence=1,
+        checksum="b" * 64, byte_count=100, content_type="image/png",
+        captured_at=datetime.now(UTC),
+    )
+
+    assert "storage" not in frame.model_dump_json()
+    with pytest.raises(ValidationError):
+        VisualReplayFrame(
+            **frame.model_dump(), storage_url="https://storage.example/frame.png"
+        )
+    with pytest.raises(ValidationError):
+        VisualReplayFrame(**{**frame.model_dump(), "checksum": "invalid"})

@@ -43,6 +43,17 @@ result. Do not delete artifacts to enact a kill switch.
 
 ## Guardrails and incident response
 
+## Advisory session progress
+
+The Advisory session timeline is server-owned, session-scoped operational
+evidence. A project reader can retrieve its safe history or connect to its SSE
+stream; the dashboard falls back to bounded polling if streaming fails. It is
+not model reasoning, raw visual evidence, a prompt, typed action text, provider
+output, diagnostics, or a deterministic test verdict. Progress is authorized
+against the exploration session's project, never a caller-provided correlation
+ID. Monitor aggregate stream connections, fallback activation, safe-stage
+counts, unauthorized attempts, and activity write/query failures only.
+
 Keep concurrency, steps, screenshot bytes, session duration, request rate, and
 cost caps at their disabled-by-default local values until a benchmark gate is
 approved. Investigate `unavailable` outcomes using the correlation ID and safe
@@ -52,8 +63,19 @@ artifact-retention evidence, review correlation-linked audit/activity events,
 and roll back to the last approved immutable model revision. Do not retry by
 raising limits or bypassing consent.
 
-Retention inherits the existing artifact policy. A production retention change,
-data-region choice, paid usage, or production rollout needs separate approval.
+## Visual replay evidence
+
+Verified state screenshots retained for visual replay are private RustFS evidence,
+not temporary provider images or normal run artifacts. They persist without an
+automatic expiry until a tenant administrator explicitly deletes a frame or the
+whole replay. Readers need project `READ` authorization and receive image bytes
+only through the authorized control-plane route; storage keys, URLs, prompts,
+typed text, and provider output must never appear in API responses, logs,
+activity events, audit detail, tickets, or dashboards.
+
+Production retention of screenshots indefinitely remains gated on privacy/legal
+approval. Do not enable it for production data, choose a data region, or alter
+the existing consent/provider/cost limits without the corresponding approval.
 
 ## Production diagnostic evidence
 

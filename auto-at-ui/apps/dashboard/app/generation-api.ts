@@ -1,5 +1,5 @@
-import { apiRequest, idempotencyKey } from "./api-client.ts";
-import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy } from "./generation-types";
+import { apiRequest, ControlPlaneError, idempotencyKey } from "./api-client.ts";
+import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisualReplayFrames, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy, VisionProgressActivity } from "./generation-types";
 export { ControlPlaneError } from "./api-client.ts";
 
 export function submitGeneration(apiUrl: string, payload: { project_id: string; target_url: string; request: string }) {
@@ -49,5 +49,15 @@ export function submitVisualExploration(apiUrl: string, payload: { project_id: s
 export function listVisualExplorations(apiUrl: string, projectId: string) { return apiRequest<{ items: VisualExploration[]; total: number }>(apiUrl, `/api/v1/vision/explorations?project_id=${encodeURIComponent(projectId)}`); }
 export function getVisualExploration(apiUrl: string, id: string) { return apiRequest<VisualExploration>(apiUrl, `/api/v1/vision/explorations/${id}`); }
 export function listVisualActions(apiUrl: string, id: string) { return apiRequest<VisualAction[]>(apiUrl, `/api/v1/vision/explorations/${id}/actions`); }
+export function listVisualReplayFrames(apiUrl: string, id: string) { return apiRequest<VisualReplayFrames>(apiUrl, `/api/v1/vision/explorations/${id}/replay-frames`); }
+export async function getVisualReplayFrameBlob(apiUrl: string, sessionId: string, frameId: string) {
+  const response = await fetch(`${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/replay-frames/${encodeURIComponent(frameId)}`, { credentials: "include", headers: { Accept: "image/png" } });
+  if (!response.ok) throw new ControlPlaneError(response.status, "Replay frame is unavailable.");
+  return response.blob();
+}
+export function deleteVisualReplayFrame(apiUrl: string, sessionId: string, frameId: string) { return apiRequest<void>(apiUrl, `/api/v1/vision/explorations/${sessionId}/replay-frames/${frameId}`, { method: "DELETE", body: JSON.stringify({ confirm: true }) }); }
+export function deleteVisualReplayFrames(apiUrl: string, sessionId: string) { return apiRequest<void>(apiUrl, `/api/v1/vision/explorations/${sessionId}/replay-frames`, { method: "DELETE", body: JSON.stringify({ confirm: true }) }); }
+export function listVisionProgress(apiUrl: string, id: string) { return apiRequest<VisionProgressActivity[]>(apiUrl, `/api/v1/vision/explorations/${id}/activities`); }
+export function visionProgressStreamUrl(apiUrl: string, id: string) { return `${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(id)}/activities/stream`; }
 export function listVisionDebugEvidence(apiUrl: string, id: string) { return apiRequest<VisionDebugEvidence[]>(apiUrl, `/api/v1/vision/explorations/${id}/debug-evidence`); }
 export function getVisionDebugEvidence(apiUrl: string, sessionId: string, evidenceId: string) { return apiRequest<VisionDebugEvidencePayload>(apiUrl, `/api/v1/vision/explorations/${sessionId}/debug-evidence/${evidenceId}`); }

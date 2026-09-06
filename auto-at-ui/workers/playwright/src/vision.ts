@@ -31,7 +31,12 @@ type ActiveSession = {
 const sessions = new Map<string, ActiveSession>();
 
 function allowed(url: string, origins: string[]): boolean {
-  try { return origins.includes(new URL(url).origin); } catch { return false; }
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:"].includes(parsed.protocol) && (
+      origins.includes("*") || origins.includes(parsed.origin)
+    );
+  } catch { return false; }
 }
 
 export function visualRequestOf(value: unknown): VisualRequest {

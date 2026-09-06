@@ -87,9 +87,9 @@ export function validatePlaywrightTestSourceMode(value: unknown): PlaywrightTest
     typeof value.playwright_test_source !== "string" || value.playwright_test_source.length === 0 ||
     typeof value.source_hash !== "string" || !/^[a-f0-9]{64}$/.test(value.source_hash) ||
     !Array.isArray(value.allowed_origins) || value.allowed_origins.length === 0 ||
-    !value.allowed_origins.every((origin) => typeof origin === "string" && (() => {
+    !value.allowed_origins.every((origin) => origin === "*" || (typeof origin === "string" && (() => {
       try { const url = new URL(origin); return ["http:", "https:"].includes(url.protocol) && url.origin === origin; } catch { return false; }
-    })()) ||
+    })())) ||
     createHash("sha256").update(value.playwright_test_source, "utf8").digest("hex") !== value.source_hash) {
     throw new Error("invalid playwright_test_source runner configuration");
   }

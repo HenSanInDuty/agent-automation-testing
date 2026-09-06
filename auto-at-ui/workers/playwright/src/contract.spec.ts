@@ -61,6 +61,14 @@ test("accepts the shared v1 generated Playwright source request fixture", async 
   expect(config.mode).toBe("playwright_test_source");
 });
 
+test("accepts the all-websites wildcard for generated source", () => {
+  const source = "import { test } from '@playwright/test'; test('x', async () => {});";
+  expect(validatePlaywrightTestSourceMode({
+    mode: "playwright_test_source", playwright_test_source: source,
+    source_hash: createHash("sha256").update(source).digest("hex"), allowed_origins: ["*"],
+  }).allowed_origins).toEqual(["*"]);
+});
+
 test("rejects an invalid generated-source mode", () => {
   expect(() => validatePlaywrightTestSourceMode({ mode: "shell", source_hash: "a".repeat(64) }))
     .toThrow("invalid playwright_test_source runner configuration");

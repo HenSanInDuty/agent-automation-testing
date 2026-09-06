@@ -1,5 +1,6 @@
 """Versioned, advisory-only contracts for bounded visual exploration."""
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
@@ -22,6 +23,22 @@ class VisualEvidenceMetadata(BaseModel):
     checksum: str = Field(pattern=r"^[a-f0-9]{64}$")
     content_type: Literal["image/png", "image/jpeg"]
     byte_count: int = Field(ge=1, le=5_000_000)
+
+
+class VisualReplayFrame(BaseModel):
+    """Metadata for one retained replay frame; locations and bytes stay private."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["v1"] = "v1"
+    id: UUID
+    session_id: UUID
+    state_id: UUID
+    sequence: int = Field(ge=1)
+    checksum: str = Field(pattern=r"^[a-f0-9]{64}$")
+    byte_count: int = Field(ge=1, le=5_000_000)
+    content_type: Literal["image/png", "image/jpeg"]
+    captured_at: datetime
 
 
 class VisualActionBase(BaseModel):

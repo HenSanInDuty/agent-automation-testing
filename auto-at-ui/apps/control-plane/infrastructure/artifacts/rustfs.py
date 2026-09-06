@@ -7,7 +7,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from config import Settings
-from domain.entities import ArtifactRecord
+from domain.entities import ArtifactRecord, VisualReplayFrameRecord
 
 
 class ArtifactStorageError(RuntimeError):
@@ -77,11 +77,77 @@ class RustFSArtifactStore:
             raise ValueError("artifact checksum verification failed")
         return content
 
+    def write_replay_frame(self, frame: VisualReplayFrameRecord, content: bytes) -> None:
+        """Write and head-verify a private replay PNG without returning a storage URI."""
+        expected_key = (
+            f"tenants/{frame.tenant_id}/vision-explorations/{frame.session_id}"
+            f"/states/{frame.state_id}.png"
+        )
+        if frame.storage_key != expected_key or frame.content_type != "image/png":
+            raise ValueError("visual replay storage key is invalid")
+        if frame.size != len(content) or hashlib.sha256(content).hexdigest() != frame.checksum:
+            raise ValueError("visual replay checksum verification failed")
+        try:
+            self._ensure_bucket()
+            head = self._existing_replay_frame(frame.storage_key)
+            if head is None:
+                self._client.put_object(
+                    Bucket=self._bucket,
+                    Key=frame.storage_key,
+                    Body=content,
+                    ContentType=frame.content_type,
+                    Metadata={"sha256": frame.checksum},
+                )
+                head = self._client.head_object(Bucket=self._bucket, Key=frame.storage_key)
+        except (BotoCoreError, ClientError, KeyError) as error:
+            raise ArtifactStorageError("visual replay upload failed") from error
+        if (
+            head.get("ContentLength") != frame.size
+            or head.get("Metadata", {}).get("sha256") != frame.checksum
+        ):
+            raise ArtifactStorageError("visual replay upload verification failed")
+
+    def _existing_replay_frame(self, key: str) -> dict[str, object] | None:
+        """Return an existing object only when its immutable key already exists."""
+        try:
+            return self._client.head_object(Bucket=self._bucket, Key=key)
+        except KeyError:
+            return None
+        except ClientError as error:
+            code = str(error.response.get("Error", {}).get("Code", ""))
+            if code in {"404", "NoSuchKey", "NoSuchObject"}:
+                return None
+            raise
+
     def delete(self, artifact: ArtifactRecord) -> None:
         try:
             self._client.delete_object(Bucket=self._bucket, Key=self._key_for_artifact(artifact))
         except (BotoCoreError, ClientError) as error:
             raise ArtifactStorageError("artifact deletion failed") from error
+
+    def read_replay_frame(self, frame: VisualReplayFrameRecord) -> bytes:
+        """Read a replay frame only after verifying its immutable object metadata."""
+        try:
+            head = self._client.head_object(Bucket=self._bucket, Key=frame.storage_key)
+            if (
+                head.get("ContentLength") != frame.size
+                or head.get("Metadata", {}).get("sha256") != frame.checksum
+            ):
+                raise ValueError("visual replay checksum verification failed")
+            content = self._client.get_object(
+                Bucket=self._bucket, Key=frame.storage_key
+            )["Body"].read()
+        except (BotoCoreError, ClientError, KeyError) as error:
+            raise ArtifactStorageError("visual replay read failed") from error
+        if len(content) != frame.size or hashlib.sha256(content).hexdigest() != frame.checksum:
+            raise ValueError("visual replay checksum verification failed")
+        return content
+
+    def delete_replay_frame(self, frame: VisualReplayFrameRecord) -> None:
+        try:
+            self._client.delete_object(Bucket=self._bucket, Key=frame.storage_key)
+        except (BotoCoreError, ClientError) as error:
+            raise ArtifactStorageError("visual replay deletion failed") from error
 
     def list_keys(self, tenant_id: str, run_id) -> list[str]:
         prefix = f"tenants/{tenant_id}/runs/{run_id}/"

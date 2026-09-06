@@ -79,6 +79,7 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         SqlAlchemyActivityEventRepository(session),
                         SqlAlchemyOutboxEventRepository(session),
                         settings,
+                        RustFSArtifactStore(settings),
                     ),
                 ).execute()
             if published:

@@ -2,15 +2,21 @@
 const fs = require("node:fs");
 
 const allowed = new Set(JSON.parse(process.env.PLAYWRIGHT_ALLOWED_ORIGINS || "[]"));
+const allowAllOrigins = allowed.has("*");
 const evidencePath = process.env.PLAYWRIGHT_POLICY_EVIDENCE;
 const attempted = new Set();
 
 function record(url) {
   try {
     const parsed = new URL(url);
-    if (allowed.has(parsed.origin)) return true;
-    // Evidence deliberately records only the origin: query strings may contain PII.
-    attempted.add(parsed.origin);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      attempted.add("invalid-url");
+    } else if (allowAllOrigins || allowed.has(parsed.origin)) {
+      return true;
+    } else {
+      // Evidence deliberately records only the origin: query strings may contain PII.
+      attempted.add(parsed.origin);
+    }
   } catch {
     attempted.add("invalid-url");
   }

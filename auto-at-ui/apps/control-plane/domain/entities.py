@@ -45,6 +45,23 @@ class ArtifactRecord:
 
 
 @dataclass(frozen=True)
+class VisualReplayFrameRecord:
+    """Private Vision replay evidence, separate from deterministic run artifacts."""
+
+    id: UUID
+    tenant_id: str
+    session_id: UUID
+    state_id: UUID
+    sequence: int
+    storage_key: str
+    checksum: str
+    size: int
+    content_type: str
+    captured_at: datetime
+    deleted_at: datetime | None = None
+
+
+@dataclass(frozen=True)
 class RunReportRecord:
     """Tenant-scoped, immutable advisory report for one run/version."""
 

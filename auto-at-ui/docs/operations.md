@@ -29,3 +29,20 @@ Never build a log query, label, dashboard panel, or alert annotation from encryp
 payloads, plaintext diagnostics, prompts, screenshots, URLs, tenant content, or IDs.
 See `docs/vision-agent-operations.md` for rotation, incident, canary, and smoke-test
 procedures.
+
+## Vision visual replay operations
+
+Apply the `visual_replay_frames` migration before deploying capture code. Verify
+the private RustFS policy allows only the tenant-scoped
+`tenants/<tenant>/vision-explorations/<session>/states/` prefix, then exercise a
+synthetic PNG capture, authorized read, and tenant-admin deletion. Do not
+backfill old sessions: their worker copies were intentionally cleaned up.
+
+Replay bytes have no automatic expiry. A deletion first removes the verified
+private object and only then marks its metadata deleted; a storage failure keeps
+metadata for an authorized retry. Monitor aggregate capture, verified-read,
+delete-requested, delete-completed, delete-failed, orphan, retained-count, and
+retained-byte metrics only. Do not put a screenshot, storage key, URL, prompt,
+typed text, provider output, tenant ID, session ID, or correlation ID into logs,
+tickets, alert labels, or dashboards. Production use remains subject to the
+documented privacy/legal approval gate.

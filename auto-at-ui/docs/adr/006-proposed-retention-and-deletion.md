@@ -20,6 +20,7 @@ are persisted; raw secrets and unredacted production PII must never be stored.
 | Data class | Default retention | Deletion behavior |
 | --- | --- | --- |
 | Run artifacts (screenshots, video, traces, reports) | 30 days | Delete object and metadata after expiry; record a minimal deletion audit event. |
+| Vision replay frames | Until an authorized deletion | Keep private, tenant-scoped screenshot bytes and metadata with no scheduled lifecycle expiry. A tenant administrator explicitly deletes bytes before the metadata is marked deleted; record only IDs and safe outcome codes. |
 | Operational logs and telemetry | 30 days | Expire from the observability backend; do not copy raw artifact payloads into logs. |
 | Redacted agent evidence and proposal inputs | 90 days | Delete payloads and derived embeddings; retain only non-sensitive reproducibility hashes. |
 | Run/result metadata and proposal decisions | 1 year | Delete or anonymize at expiry unless a documented legal hold applies. |
@@ -47,6 +48,10 @@ to named operational and compliance principals.
   deletion requests survive restoration.
 - Dashboard views must show evidence expiry and deletion status, but cannot
   bypass authorization or alter retention without API authorization.
+- Vision replay frames are a distinct advisory-evidence class, not run
+  artifacts: private storage keys are never exposed through the API, and this
+  local policy still requires privacy/legal approval before production data is
+  retained indefinitely.
 - The periods are a product proposal, not a jurisdiction-specific legal claim;
   legal/privacy approval is required before production data is processed.
 

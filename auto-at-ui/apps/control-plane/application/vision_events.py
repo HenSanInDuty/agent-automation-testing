@@ -15,6 +15,8 @@ from agents.vision.intent import decrypt_visual_intent
 from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
 from config import Settings
 from domain.activity import ActivityEvent
+from domain.entities import VisualReplayFrameRecord
+from domain.ports import VerifiedVisualReplayStore
 from domain.runs import AuditEvent, OutboxEvent
 from infrastructure.persistence.models import (
     VisionDebugEvidenceModel,
@@ -29,7 +31,8 @@ class VisionEventProcessor:
     """Consumes one queued session; duplicate or terminal sessions never call a model."""
 
     def __init__(
-        self, sessions, configs, generation, audits, activities, outbox, settings: Settings
+        self, sessions, configs, generation, audits, activities, outbox, settings: Settings,
+        replay_store: VerifiedVisualReplayStore | None = None,
     ) -> None:
         self._sessions, self._configs, self._generation = sessions, configs, generation
         self._audits, self._activities, self._outbox, self._settings = (
@@ -38,6 +41,7 @@ class VisionEventProcessor:
             outbox,
             settings,
         )
+        self._replay_store = replay_store
 
     async def execute(self, event: OutboxEvent) -> str:
         if event.event_type != "agent.visual_exploration.requested.v1":
@@ -65,6 +69,7 @@ class VisionEventProcessor:
                 raise ValueError("visual worker is unavailable")
             root = Path(self._settings.artifact_root, "vision", str(session.id)).resolve()
             session.state = "running"
+            self._progress(session, "started", "started")
             # A checkpoint is an in-memory ancestor action path.  The worker replays it
             # in a new context, so siblings are isolated and BFS can backtrack safely.
             queue: list[tuple[UUID, UUID | None, int, list[dict[str, object]]]] = [
@@ -105,6 +110,20 @@ class VisionEventProcessor:
                     ):
                         raise ValueError("visual screenshot failed verification")
                     checksum = hashlib.sha256(image).hexdigest()
+                    state_sequence = visited + 1
+                    frame = VisualReplayFrameRecord(
+                        id=uuid4(), tenant_id=session.tenant_id, session_id=session.id,
+                        state_id=state_id, sequence=state_sequence,
+                        storage_key=(
+                            f"tenants/{session.tenant_id}/vision-explorations/{session.id}"
+                            f"/states/{state_id}.png"
+                        ),
+                        checksum=checksum, size=len(image), content_type="image/png",
+                        captured_at=datetime.now(UTC),
+                    )
+                    if self._replay_store is None:
+                        raise ValueError("visual replay storage is unavailable")
+                    self._replay_store.write_replay_frame(frame, image)
                     self._sessions.add_state(
                         VisualExplorationStateModel(
                             id=state_id,
@@ -115,11 +134,30 @@ class VisionEventProcessor:
                             screenshot_checksum=checksum,
                         )
                     )
+                    self._sessions.add_replay_frame(frame)
                     visited += 1
+                    self._progress(
+                        session,
+                        "state.captured",
+                        f"state.captured:{state_id}",
+                        {"state_sequence": visited, "hop": hop},
+                    )
                     if hop >= max_hops:
+                        self._progress(
+                            session,
+                            "limit.reached",
+                            f"limit.hop:{state_id}",
+                            {"hop": hop},
+                        )
                         continue
                     remaining_states = max_states - visited - len(queue)
                     if remaining_states < 1:
+                        self._progress(
+                            session,
+                            "limit.reached",
+                            f"limit.states:{state_id}",
+                            {"state_count": visited},
+                        )
                         continue
                     if last_model_call is not None:
                         remaining = (
@@ -143,6 +181,12 @@ class VisionEventProcessor:
                         sequence=visited,
                         image=image,
                     ) as image_url:
+                        self._progress(
+                            session,
+                            "candidate.requested",
+                            f"candidate.requested:{state_id}",
+                            {"state_sequence": visited, "hop": hop},
+                        )
                         outcome = await execute_visual_candidate_batch(
                             screenshot=image,
                             content_type="image/png",
@@ -163,6 +207,15 @@ class VisionEventProcessor:
                         return self._unavailable(
                             session, outcome.detail or "vision model request failed"
                         )
+                    self._progress(
+                        session,
+                        "candidate.received",
+                        f"candidate.received:{state_id}",
+                        {
+                            "state_sequence": visited,
+                            "candidate_count": len(outcome.actions),
+                        },
+                    )
                     for action in outcome.actions:
                         sequence += 1
                         safe_action = {"kind": action.kind, "confidence": action.confidence}
@@ -175,6 +228,7 @@ class VisionEventProcessor:
                                 id=uuid4(),
                                 tenant_id=session.tenant_id,
                                 session_id=session.id,
+                                originating_state_id=state_id,
                                 correlation_id=session.correlation_id,
                                 sequence=sequence,
                                 action=safe_action,
@@ -184,6 +238,22 @@ class VisionEventProcessor:
                                 model=session.model,
                                 prompt_version=session.prompt_version,
                             )
+                        )
+                        progress_metadata = {
+                            "state_sequence": visited,
+                            "action_sequence": sequence,
+                            "action_kind": action.kind,
+                            "confidence": action.confidence,
+                        }
+                        for field in ("x", "y", "delta_y", "duration_ms"):
+                            value = getattr(action, field, None)
+                            if isinstance(value, (int, float)):
+                                progress_metadata[field] = value
+                        self._progress(
+                            session,
+                            "action.recorded",
+                            f"action.recorded:{sequence}",
+                            progress_metadata,
                         )
                         if action.kind != "stop" and visited + len(queue) < max_states:
                             queue.append(
@@ -213,22 +283,17 @@ class VisionEventProcessor:
                 except Exception:
                     # Exploration is complete even if the independent draft handoff retries later.
                     draft_handoff = False
-            self._activities.append(
-                ActivityEvent.create(
-                    tenant_id=session.tenant_id,
-                    correlation_id=session.correlation_id,
-                    source="vision",
-                    stage="action.proposed",
-                    status=session.state,
-                    safe_summary="Visual action candidate was recorded.",
-                    occurred_at=datetime.now(UTC),
-                    metadata={
-                        "session_id": str(session.id),
-                        "states_visited": visited,
-                        "actions_proposed": sequence,
-                        "draft_handoff": draft_handoff,
-                    },
-                )
+            self._progress(
+                session,
+                "draft.handoff",
+                "draft.handoff",
+                {"outcome": "accepted" if draft_handoff else "unavailable"},
+            )
+            self._progress(
+                session,
+                "completed",
+                "completed",
+                {"state_count": visited, "action_count": sequence},
             )
             self._audits.append(
                 AuditEvent(
@@ -262,18 +327,7 @@ class VisionEventProcessor:
 
     def _unavailable(self, session, reason: str) -> str:
         session.state, session.safe_failure_reason = "unavailable", reason
-        self._activities.append(
-            ActivityEvent.create(
-                tenant_id=session.tenant_id,
-                correlation_id=session.correlation_id,
-                source="vision",
-                stage="unavailable",
-                status="unavailable",
-                safe_summary="Visual exploration is unavailable.",
-                occurred_at=datetime.now(UTC),
-                metadata={"session_id": str(session.id)},
-            )
-        )
+        self._progress(session, "unavailable", "unavailable")
         self._audits.append(
             AuditEvent(
                 id=uuid4(),
@@ -286,6 +340,21 @@ class VisionEventProcessor:
             )
         )
         return "unavailable"
+
+    def _progress(
+        self, session, stage: str, progress_key: str, metadata: dict[str, object] | None = None
+    ) -> None:
+        self._activities.append(
+            ActivityEvent.create_vision_progress(
+                tenant_id=session.tenant_id,
+                correlation_id=session.correlation_id,
+                visual_exploration_session_id=session.id,
+                stage=stage,
+                progress_key=progress_key,
+                occurred_at=datetime.now(UTC),
+                metadata=metadata,
+            )
+        )
 
     def _capture_rejected_batch(
         self, *, session, state_id: UUID, attempt_key: str, outcome
@@ -328,12 +397,12 @@ class VisionEventProcessor:
                     tenant_id=session.tenant_id,
                     correlation_id=session.correlation_id,
                     source="vision",
+                    visual_exploration_session_id=session.id,
                     stage="debug_evidence.captured",
                     status="unavailable",
                     safe_summary="Vision diagnostic evidence was captured.",
                     occurred_at=captured_at,
                     metadata={
-                        "session_id": str(session.id),
                         "diagnostic_code": outcome.diagnostic_code.value,
                         "capture_available": True,
                     },
@@ -357,12 +426,12 @@ class VisionEventProcessor:
                     tenant_id=session.tenant_id,
                     correlation_id=session.correlation_id,
                     source="vision",
+                    visual_exploration_session_id=session.id,
                     stage="debug_evidence.capture_failed",
                     status="unavailable",
                     safe_summary="Vision diagnostic evidence capture was unavailable.",
                     occurred_at=captured_at,
                     metadata={
-                        "session_id": str(session.id),
                         "diagnostic_code": outcome.diagnostic_code.value,
                         "capture_available": False,
                     },

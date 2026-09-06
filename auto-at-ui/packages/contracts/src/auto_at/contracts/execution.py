@@ -91,6 +91,8 @@ class PlaywrightTestSourceMode(BaseModel):
         if self.source_hash != sha256_text(self.playwright_test_source):
             raise ValueError("source_hash must match playwright_test_source")
         for origin in self.allowed_origins:
+            if origin == "*":
+                continue
             parsed = urlsplit(origin)
             if (
                 parsed.scheme not in {"http", "https"}

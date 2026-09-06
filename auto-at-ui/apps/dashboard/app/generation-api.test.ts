@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ControlPlaneError, decideProposal, getPolicy, getVisionPolicy, listDrafts, listProposals, listVisualActions, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
+import { ControlPlaneError, decideProposal, deleteVisualReplayFrame, getPolicy, getVisionPolicy, getVisualReplayFrameBlob, listDrafts, listProposals, listVisualActions, listVisualReplayFrames, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
 
 test("generation submission sends session credentials and an idempotency key", async () => {
   const originalFetch = globalThis.fetch;
@@ -87,5 +87,26 @@ test("vision calls use the dedicated server-side policy and exploration routes",
     assert.equal(requests[2].headers.get("Idempotency-Key")?.length, 36);
     assert.equal(await requests[2].text(), JSON.stringify({ project_id: "project", target_url: "https://example.com", task_intent: "Open the menu", use_vision: true }));
     assert.match(requests[3].url, /\/vision\/explorations\/session\/actions$/);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("replay evidence stays on session-scoped cookie and CSRF-protected routes", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init); requests.push(request);
+    if (request.headers.get("Accept") === "image/png") return new Response(new Uint8Array([137, 80, 78, 71]));
+    if (request.method === "DELETE") return new Response(null, { status: 204 });
+    return new Response(JSON.stringify({ items: [] }));
+  };
+  try {
+    await listVisualReplayFrames("http://control-plane", "session");
+    await getVisualReplayFrameBlob("http://control-plane", "session", "frame");
+    await deleteVisualReplayFrame("http://control-plane", "session", "frame");
+    assert.match(requests[0].url, /vision\/explorations\/session\/replay-frames$/);
+    assert.match(requests[1].url, /vision\/explorations\/session\/replay-frames\/frame$/);
+    assert.equal(requests[1].headers.get("Accept"), "image/png");
+    assert.equal(requests[2].method, "DELETE");
+    assert.equal(await requests[2].text(), JSON.stringify({ confirm: true }));
   } finally { globalThis.fetch = originalFetch; }
 });
