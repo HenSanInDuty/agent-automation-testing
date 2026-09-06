@@ -27,6 +27,7 @@ class Permission(StrEnum):
     MANAGE_TENANT = "manage_tenant"
     SUBMIT_GENERATION = "submit_generation"
     DECIDE_GENERATION = "decide_generation"
+    READ_VISION_DEBUG_EVIDENCE = "read_vision_debug_evidence"
 
 
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -62,6 +63,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.MANAGE_TENANT,
             Permission.SUBMIT_GENERATION,
             Permission.DECIDE_GENERATION,
+            Permission.READ_VISION_DEBUG_EVIDENCE,
         }
     ),
     Role.SERVICE: frozenset({Permission.READ, Permission.CREATE_RUN, Permission.CANCEL_RUN}),
@@ -105,5 +107,9 @@ def actor_for_tenant(principal: Principal, tenant_id: str, project_id: UUID | No
 def require(actor: Actor, permission: Permission) -> None:
     if not actor.allows(permission):
         raise AuthorizationError("resource not found")
-    if permission == Permission.DECIDE_PROPOSAL and actor.is_service:
+    protected_human_permissions = {
+        Permission.DECIDE_PROPOSAL,
+        Permission.READ_VISION_DEBUG_EVIDENCE,
+    }
+    if permission in protected_human_permissions and actor.is_service:
         raise AuthorizationError("resource not found")

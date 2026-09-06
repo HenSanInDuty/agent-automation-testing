@@ -54,3 +54,41 @@ raising limits or bypassing consent.
 
 Retention inherits the existing artifact policy. A production retention change,
 data-region choice, paid usage, or production rollout needs separate approval.
+
+## Production diagnostic evidence
+
+Rejected Vision candidate batches may create a separate, privileged diagnostic record.
+This is not normal Vision evidence: it contains only redacted, bounded model text and
+allow-listed metadata, encrypted before persistence. It never contains screenshots,
+prompts, temporary image URLs, credentials, provider request bodies, or exception text.
+
+Inject `VISION_DEBUG_EVIDENCE_ENCRYPTION_KEY` and
+`VISION_DEBUG_EVIDENCE_KEY_ID` through the approved production secret boundary. The
+key must be distinct from `VISION_INTENT_ENCRYPTION_KEY`; no secret manager, cloud, or
+KMS vendor is implied by these variable names. Capture is safely unavailable when the
+current key or key ID is absent. Evidence expires exactly seven days after capture;
+the cleanup worker deletes it without needing the key.
+
+Only an authenticated, non-service `tenant_admin` may request diagnostic metadata or
+payload through the no-store endpoint. Every allowed, denied, unavailable, capture,
+and cleanup outcome is audited using IDs and safe event codes only. Never paste a
+payload, ciphertext, prompt, screenshot, URL, or secret-shaped value into logs,
+Grafana, tickets, or activity events.
+
+For rotation, deploy readers with the retired values in
+`VISION_DEBUG_EVIDENCE_PREVIOUS_ENCRYPTION_KEY` and
+`VISION_DEBUG_EVIDENCE_PREVIOUS_KEY_ID`, verify a synthetic old record can be read in
+the rotation window, then switch the injected current key and key ID. Do not remove the
+retired values until all records using them have expired.
+For a suspected key or data incident, disable Vision diagnostic capture/read access,
+preserve records for scheduled deletion, investigate only safe audit codes, and do not
+blindly rotate or delete evidence during the incident.
+
+Before enabling a canary tenant: apply Alembic migrations, verify the two injected
+variables, exercise a synthetic secret-redaction and unauthorized-read smoke test,
+confirm cleanup metrics, and verify no payload appears in logs or Grafana. Monitor
+capture counts by diagnostic code, encryption/redaction failures, allowed/denied
+reads, and expiry deleted/failed/overdue counts. Alert when cleanup lag exceeds 24
+hours, any key/decryption mismatch occurs, cleanup failures persist, or plaintext
+payload-log detection is nonzero. Labels must not include tenant IDs, session IDs,
+correlation IDs, payloads, ciphertext, prompts, screenshots, URLs, or exception text.

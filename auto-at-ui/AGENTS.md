@@ -28,6 +28,7 @@ Keep the control plane under `apps/control-plane/` with one-way dependencies:
 - `domain/` contains pure business rules and models. It must not import FastAPI, persistence clients, LangChain, or cloud SDKs.
 - `infrastructure/` implements database, queue, artifact, workflow, and external-service adapters behind interfaces used by the application layer.
 - `agents/` contains LLM-assisted capabilities. Agents return structured, auditable proposals and must never change test suites or execution verdicts without an explicit approval flow.
+- **Prompt management:** Every new or changed prompt sent to an LLM must be added or updated in `apps/control-plane/agents/prompts/`. Do not hard-code prompt text in callers, routes, application services, workers, or adapters; those components import the centralized prompt instead. Update the prompt directory README and its prompt version when the prompt's behavior changes.
 - `runners/` dispatches target adapters and preserves the versioned `TestExecutionRequest` / `TestExecutionResult` contract.
 - Shared runner and agent contracts belong in `packages/contracts/`; do not duplicate them in the control plane or workers.
 - Add focused tests with each behavior change: pure unit tests for domain/application rules and HTTP tests for routes.

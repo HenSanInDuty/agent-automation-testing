@@ -11,3 +11,21 @@ For production, choose Grafana authentication/RBAC, alert routing, TLS, and a du
 The Temporal worker deletes expired RustFS evidence in small retryable batches. It deletes verified bytes first and tenant-scoped metadata second; a provider failure leaves metadata for a later retry. RustFS object deletion is idempotent. Do not use this local worker as proof of a production retention, legal-hold, backup, or recovery policy.
 
 `scripts/migrate_minio_to_rustfs.py` is read-only by default and inventories a legacy MinIO bucket. Copy mode requires `--copy --confirm-copy COPY_LEGACY_MINIO`, streams each object, and verifies destination size and SHA-256 metadata. It never deletes or modifies the source. Obtain separate operator approval after reconciliation before retiring a legacy volume or bucket.
+
+## Vision debug-evidence operations
+
+The `vision_debug_evidence` migration must be applied before capture is enabled.
+Configure the separate deployment-secret variables `VISION_DEBUG_EVIDENCE_ENCRYPTION_KEY`
+and `VISION_DEBUG_EVIDENCE_KEY_ID`; do not add their values to Compose, Grafana, or
+application configuration records. During a bounded key rotation only, configure
+`VISION_DEBUG_EVIDENCE_PREVIOUS_ENCRYPTION_KEY` and
+`VISION_DEBUG_EVIDENCE_PREVIOUS_KEY_ID` to read records under the retired key. Capture
+and administration access remain disabled or unavailable if the current key or ID is
+absent. The cleanup worker reports only safe deleted, failed, and overdue counts and
+deletes records at the fixed seven-day deadline without decrypting.
+
+Grafana/Loki must retain only safe aggregate diagnostic codes and operational counts.
+Never build a log query, label, dashboard panel, or alert annotation from encrypted
+payloads, plaintext diagnostics, prompts, screenshots, URLs, tenant content, or IDs.
+See `docs/vision-agent-operations.md` for rotation, incident, canary, and smoke-test
+procedures.

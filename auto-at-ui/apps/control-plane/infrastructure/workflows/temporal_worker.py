@@ -9,6 +9,7 @@ from application.generation_events import GenerationEventProcessor
 from application.reporting_events import ReportingEventProcessor
 from application.runs import PublishOutbox
 from application.triage_events import TriageEventProcessor
+from application.vision_debug_retention import ExpireVisionDebugEvidence
 from application.vision_events import VisionEventProcessor
 from config import Settings
 from temporalio.client import Client
@@ -122,12 +123,44 @@ async def expire_artifacts_forever(settings: Settings) -> None:
         await asyncio.sleep(settings.artifact_retention_cleanup_interval_seconds)
 
 
+async def expire_vision_debug_evidence_forever(settings: Settings) -> None:
+    """Deletion needs no decryption key, so key loss cannot extend retention."""
+    session_factory = create_session_factory(settings)
+    while True:
+        try:
+            with transactional_session(session_factory) as session:
+                result = ExpireVisionDebugEvidence(
+                    SqlAlchemyVisionRepository(session), SqlAlchemyAuditEventRepository(session)
+                ).execute(
+                    limit=settings.vision_debug_evidence_cleanup_batch_size
+                )
+            if result.overdue:
+                log_event(
+                    logger,
+                    logging.INFO,
+                    "vision.debug_evidence.expiry_completed",
+                    "Vision debug-evidence expiry batch completed.",
+                    deleted_count=result.deleted,
+                    failed_count=result.failed,
+                    overdue_count=result.overdue,
+                )
+        except Exception:
+            log_event(
+                logger,
+                logging.ERROR,
+                "vision.debug_evidence.expiry_failed",
+                "Vision debug-evidence expiry batch failed.",
+            )
+        await asyncio.sleep(settings.vision_debug_evidence_cleanup_interval_seconds)
+
+
 async def main() -> None:
     settings = Settings()
     configure_logging(settings, service="auto-at-temporal-worker")
     client = await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
     publisher = asyncio.create_task(publish_forever(client, settings))
     retention = asyncio.create_task(expire_artifacts_forever(settings))
+    vision_debug_retention = asyncio.create_task(expire_vision_debug_evidence_forever(settings))
     try:
         worker = Worker(
             client,
@@ -140,7 +173,8 @@ async def main() -> None:
     finally:
         publisher.cancel()
         retention.cancel()
-        await asyncio.gather(publisher, retention, return_exceptions=True)
+        vision_debug_retention.cancel()
+        await asyncio.gather(publisher, retention, vision_debug_retention, return_exceptions=True)
 
 
 if __name__ == "__main__":

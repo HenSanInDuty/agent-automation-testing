@@ -164,6 +164,38 @@ class VisualExplorationStateModel(TenantRecord, Base):
     )
 
 
+class VisionDebugEvidenceModel(TenantRecord, Base):
+    """Encrypted privileged diagnostics; never use this model in normal Vision reads."""
+
+    __tablename__ = "vision_debug_evidence"
+    __table_args__ = (
+        UniqueConstraint("session_id", "state_id", "attempt_key", name="uq_vision_debug_attempt"),
+        Index("ix_vision_debug_evidence_tenant_session", "tenant_id", "session_id"),
+        Index("ix_vision_debug_evidence_retention", "retention_until", "id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("visual_exploration_sessions.id"), index=True
+    )
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    state_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
+    attempt_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    diagnostic_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider: Mapped[str] = mapped_column(String(100), nullable=False)
+    model: Mapped[str] = mapped_column(String(200), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    encrypted_payload: Mapped[str] = mapped_column(Text, nullable=False)
+    key_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    payload_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    payload_byte_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    redaction_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    retention_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class GenerationRequestModel(TenantRecord, Base):
     __tablename__ = "generation_requests"
     __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)

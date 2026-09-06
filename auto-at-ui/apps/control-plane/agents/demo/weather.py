@@ -5,6 +5,8 @@ from typing import Any
 from langchain.agents import create_agent
 from langchain_ollama import ChatOllama
 
+from agents.prompts.demo import WEATHER_SYSTEM_PROMPT
+
 
 def get_weather(city: str) -> str:
     """Get weather for a given city."""
@@ -21,7 +23,7 @@ def run_weather_demo(city: str, model: str, base_url: str) -> list[dict[str, Any
     agent = create_agent(
         model=chat_model,
         tools=[get_weather],
-        system_prompt="You are a helpful assistant.",
+        system_prompt=WEATHER_SYSTEM_PROMPT,
     )
     result = agent.invoke(
         {"messages": [{"role": "user", "content": f"What's the weather in {city}?"}]}

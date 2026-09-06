@@ -9,9 +9,15 @@ from typing import Any
 from auto_at.contracts.generation import GeneratedTestPlannerOutput, TestGenerationPlanningRequest
 from pydantic import ValidationError
 
+from agents.prompts.generation import GENERATION_PLANNER_SYSTEM_PROMPT, PROMPT_VERSION
 from agents.shared.models import LanguageModel
 
-PROMPT_VERSION = "test-generation-v5"
+__all__ = [
+    "PROMPT_VERSION",
+    "PlannerOutputError",
+    "build_planning_prompt",
+    "parse_planner_response",
+]
 
 
 class PlannerOutputError(ValueError):
@@ -27,53 +33,7 @@ def build_planning_prompt(
 ) -> dict[str, Any]:
     """Return the complete tool-less model payload, containing no raw request or secrets."""
     schema = GeneratedTestPlannerOutput.model_json_schema()
-    instructions = (
-        "You are an advisory Playwright Test planner. The user's request may be in any language, "
-        "including Vietnamese. Interpret its testing intent; the user does not need to know "
-        "Playwright or this response schema. Return exactly one raw JSON object that validates "
-        "against output_schema. Never use Markdown, code fences, prose, or fields other than "
-        "title, playwright_test_source, assumptions, and stop_conditions; every required field "
-        "must be present. Write a self-contained TypeScript test that imports only from "
-        "@playwright/test and uses the supplied target_url. Do not use Node, shell, filesystem, "
-        "process, package, direct-network, dynamic-import, eval, or credential APIs. Do not "
-        "invent credentials, URLs, acceptance criteria, or project policy. Record uncertainty as "
-        "assumptions or stop_conditions instead of claiming an unverified outcome. Translate "
-        "natural-language intent into observable assertions. For a request to check <a> links "
-        "and <button> controls, use only standard Playwright locator APIs: page.locator('a, "
-        "button'), locator.count(), locator.nth(), locator.isVisible(), locator.isDisabled(), "
-        "locator.getAttribute('href'), locator.click(), page.url(), and expect(). Do not use "
-        "page.evaluate, locator.evaluate, JavaScript execution, fetch, or direct network APIs. "
-        "Use two separate loops: one for page.locator('button') and one for "
-        "page.locator('a[href]'). "
-        "Never place a button click inside an href condition: a button has no href and must still "
-        "be tested when visible and enabled. At the start of every loop iteration, navigate back "
-        "to the supplied target_url and reacquire the locator by nth(index). Do not use "
-        "page.goBack() or rely on a stale locator after a click changes the page. Visit the "
-        "supplied URL, inspect "
-        "every visible enabled button and every visible link with an href. Click each eligible "
-        "control one at a time. Before clicking a link, read its href and resolve it against the "
-        "current page URL with new URL(href, page.url()). Skip it when its resolved origin differs "
-        "from target_url's origin, its protocol is not HTTP(S), or it is a fragment-only anchor; "
-        "record that scope limit in stop_conditions. After every click, assert an observable "
-        "result when the page exposes one, then navigate back to the supplied target_url before "
-        "the next control. Skip responsive controls hidden at the current breakpoint. Use the "
-        "element's text, aria-label, title, or href as a stable description when available. "
-        "Assert a concrete observable post-click "
-        "result when the page exposes one; otherwise state that limitation in stop_conditions. "
-        "Do not claim a control worked merely because click() did not throw. Keep selectors "
-        "and assertions resilient and bounded. Keep playwright_test_source under 1,200 characters. "
-        "Use no comments, navigation waits, sleeps, or unused variables. This prevents "
-        "the source from being cut off mid-test. Your response MUST match this JSON pattern "
-        "exactly: "
-        '{"title":"short test title","playwright_test_source":"import { test, expect } '
-        'from \'@playwright/test\';\\n...","assumptions":["..."],"stop_conditions":["..."]}. '
-        "Replace the example values, but keep exactly these four keys and their value types. "
-        "Encode the full TypeScript source as one JSON string, escaping newlines as \\n and "
-        "escaping quotes correctly; never emit TypeScript as a separate code block. Before sending "
-        "your answer, internally verify that it is valid JSON, has no extra keys, has all four "
-        "keys, and conforms to output_schema. If the intended test is uncertain, return valid "
-        "JSON and describe the uncertainty in assumptions or stop_conditions."
-    )
+    instructions = GENERATION_PLANNER_SYSTEM_PROMPT
     context = {
         "target_url": request.target_url,
         "allowed_origins": allowed_origins,

@@ -63,6 +63,15 @@ class Settings(BaseSettings):
     # submission remains unavailable when an enabled tenant has not configured it.
     vision_intent_encryption_key: str | None = None
     vision_intent_retention_days: int = Field(default=60, ge=1, le=60)
+    # Separate deployment-secret namespace for privileged diagnostic evidence.
+    vision_debug_evidence_encryption_key: str | None = None
+    vision_debug_evidence_key_id: str | None = None
+    vision_debug_evidence_previous_encryption_key: str | None = None
+    vision_debug_evidence_previous_key_id: str | None = None
+    vision_debug_evidence_retention_days: int = Field(default=7, ge=7, le=7)
+    vision_debug_evidence_max_payload_bytes: int = Field(default=16_384, ge=1_024, le=16_384)
+    vision_debug_evidence_cleanup_interval_seconds: int = Field(default=3_600, ge=60, le=86_400)
+    vision_debug_evidence_cleanup_batch_size: int = Field(default=100, ge=1, le=1_000)
     vision_worker_secret: str | None = None
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None

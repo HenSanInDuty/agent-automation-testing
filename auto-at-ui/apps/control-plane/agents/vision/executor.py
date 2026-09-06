@@ -9,6 +9,11 @@ from auto_at.contracts.vision import VisualAction
 
 from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
+from agents.vision.diagnostics import (
+    VisualDiagnosticCapture,
+    VisualDiagnosticCode,
+    VisualDiagnosticFailure,
+)
 from agents.vision.service import (
     build_visual_action_prompt,
     build_visual_candidate_batch_prompt,
@@ -31,6 +36,8 @@ class VisualCandidateBatchOutcome:
     actions: list[VisualAction] | None = None
     latency_seconds: float | None = None
     detail: str | None = None
+    diagnostic_code: VisualDiagnosticCode | None = None
+    diagnostic_capture: VisualDiagnosticCapture | None = None
 
 
 async def execute_visual_action(
@@ -146,14 +153,29 @@ async def execute_visual_candidate_batch(
     started = perf_counter()
     try:
         response = await model.ainvoke(payload)
-        actions = validate_visual_candidate_batch_output(
-            _content_from_response(response), max_candidates
-        )
-    except Exception:
+    except Exception as error:
+        failure = _provider_failure(error)
         return VisualCandidateBatchOutcome(
             status="unavailable",
             latency_seconds=perf_counter() - started,
             detail="vision model returned an invalid candidate batch",
+            diagnostic_code=failure.code,
+            diagnostic_capture=_capture_for_failure(failure),
+        )
+    try:
+        content = _content_from_response(response)
+        actions = validate_visual_candidate_batch_output(
+            content, max_candidates
+        )
+    except VisualDiagnosticFailure as failure:
+        return VisualCandidateBatchOutcome(
+            status="unavailable",
+            latency_seconds=perf_counter() - started,
+            detail="vision model returned an invalid candidate batch",
+            diagnostic_code=failure.code,
+            diagnostic_capture=_capture_for_failure(
+                failure, locals().get("content")
+            ),
         )
     return VisualCandidateBatchOutcome(
         status="completed", actions=actions, latency_seconds=perf_counter() - started
@@ -174,11 +196,39 @@ def policy_to_step_guard(policy: VisionPolicy):
 
 def _content_from_response(response: Any) -> str:
     if not isinstance(response, dict):
-        raise TypeError("model response must be an OpenAI-compatible object")
+        raise VisualDiagnosticFailure(VisualDiagnosticCode.RESPONSE_NOT_OBJECT)
     choices = response.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-        raise ValueError("model response has no choice")
+        raise VisualDiagnosticFailure(VisualDiagnosticCode.RESPONSE_MISSING_CHOICES)
     message = choices[0].get("message")
     if not isinstance(message, dict) or not isinstance(message.get("content"), str):
-        raise ValueError("model response has no textual action")
+        raise VisualDiagnosticFailure(VisualDiagnosticCode.RESPONSE_MISSING_CONTENT)
     return message["content"]
+
+
+def _provider_failure(error: Exception) -> VisualDiagnosticFailure:
+    status = getattr(getattr(error, "response", None), "status_code", None)
+    if isinstance(status, int):
+        return VisualDiagnosticFailure(
+            VisualDiagnosticCode.PROVIDER_HTTP, provider_status=status, provider_category="http"
+        )
+    category = "timeout" if isinstance(error, TimeoutError) else "transport"
+    return VisualDiagnosticFailure(
+        VisualDiagnosticCode.PROVIDER_TRANSPORT, provider_category=category
+    )
+
+
+def _capture_for_failure(
+    failure: VisualDiagnosticFailure, content: str | None = None
+) -> VisualDiagnosticCapture:
+    try:
+        return VisualDiagnosticCapture.from_content(
+            content,
+            provider_status=failure.provider_status,
+            provider_category=failure.provider_category,
+        )
+    except VisualDiagnosticFailure:
+        # Diagnostics must never turn an unavailable advisory result into an error.
+        return VisualDiagnosticCapture(
+            None, None, failure.provider_status, failure.provider_category
+        )

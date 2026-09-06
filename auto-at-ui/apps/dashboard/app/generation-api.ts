@@ -1,5 +1,5 @@
 import { apiRequest, idempotencyKey } from "./api-client.ts";
-import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisionPolicy } from "./generation-types";
+import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy } from "./generation-types";
 export { ControlPlaneError } from "./api-client.ts";
 
 export function submitGeneration(apiUrl: string, payload: { project_id: string; target_url: string; request: string }) {
@@ -49,3 +49,5 @@ export function submitVisualExploration(apiUrl: string, payload: { project_id: s
 export function listVisualExplorations(apiUrl: string, projectId: string) { return apiRequest<{ items: VisualExploration[]; total: number }>(apiUrl, `/api/v1/vision/explorations?project_id=${encodeURIComponent(projectId)}`); }
 export function getVisualExploration(apiUrl: string, id: string) { return apiRequest<VisualExploration>(apiUrl, `/api/v1/vision/explorations/${id}`); }
 export function listVisualActions(apiUrl: string, id: string) { return apiRequest<VisualAction[]>(apiUrl, `/api/v1/vision/explorations/${id}/actions`); }
+export function listVisionDebugEvidence(apiUrl: string, id: string) { return apiRequest<VisionDebugEvidence[]>(apiUrl, `/api/v1/vision/explorations/${id}/debug-evidence`); }
+export function getVisionDebugEvidence(apiUrl: string, sessionId: string, evidenceId: string) { return apiRequest<VisionDebugEvidencePayload>(apiUrl, `/api/v1/vision/explorations/${sessionId}/debug-evidence/${evidenceId}`); }

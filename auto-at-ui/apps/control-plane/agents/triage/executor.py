@@ -7,6 +7,7 @@ from typing import Any
 from auto_at.contracts.agent import AgentProposal, TriageResult
 from auto_at.contracts.execution import TestExecutionResult
 
+from agents.prompts.triage import TRIAGE_SYSTEM_PROMPT
 from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentRuntimeConfig, AgentStepGuard
 from agents.triage.service import propose_failure_triage, validate_triage_output
@@ -60,16 +61,7 @@ async def _invoke(model: LanguageModel, evidence_json: str, max_tokens: int) -> 
                 "messages": [
                     {
                         "role": "system",
-                        "content": (
-                            "Classify deterministic test evidence as product, test, environment, "
-                            "flaky, "
-                            "or unknown. Return only a JSON object with exactly these required "
-                            "fields: category (one of product, test, environment, flaky, unknown), "
-                            "confidence (number from 0 to 1), rationale (non-empty string), "
-                            "evidence_references (array of strings), and stop_conditions (array "
-                            "of strings). Do not use aliases such as classification. "
-                            "You have no authority to change a test result."
-                        ),
+                        "content": TRIAGE_SYSTEM_PROMPT,
                     },
                     {"role": "user", "content": evidence_json},
                 ],

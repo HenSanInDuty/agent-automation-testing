@@ -1,10 +1,12 @@
 """HTTP boundary for governed, advisory visual exploration."""
 
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID, uuid4
 
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
 from application.vision import SubmitVisualExploration, VisionStateError
+from application.vision_debug_evidence import DebugEvidenceNotFoundError, ReadVisionDebugEvidence
 from config import Settings, get_settings
 from domain.authorization import (
     AuthorizationError,
@@ -13,7 +15,7 @@ from domain.authorization import (
     actor_for_tenant,
     require,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyAuditEventRepository,
@@ -79,6 +81,20 @@ class VisualActionResponse(BaseModel):
 class ExplorationListResponse(BaseModel):
     items: list[ExplorationResponse]
     total: int
+
+
+class DebugEvidenceMetadataResponse(BaseModel):
+    id: UUID
+    diagnostic_code: str
+    provider: str
+    model: str
+    prompt_version: str
+    captured_at: datetime
+    retention_until: datetime
+
+
+class DebugEvidencePayloadResponse(DebugEvidenceMetadataResponse):
+    payload: str
 
 
 def _runtime(
@@ -229,6 +245,66 @@ def list_actions(
             )
             for action in repository.list_actions(tenant_id, session_id)
         ]
+
+
+@router.get(
+    "/explorations/{session_id}/debug-evidence",
+    response_model=list[DebugEvidenceMetadataResponse],
+)
+def list_debug_evidence(
+    session_id: UUID,
+    response: Response,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[DebugEvidenceMetadataResponse]:
+    response.headers["Cache-Control"] = "no-store"
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            records = ReadVisionDebugEvidence(
+                SqlAlchemyVisionRepository(session),
+                SqlAlchemyAuditEventRepository(session),
+                key=settings.vision_debug_evidence_encryption_key,
+                key_id=settings.vision_debug_evidence_key_id,
+                previous_key=settings.vision_debug_evidence_previous_encryption_key,
+                previous_key_id=settings.vision_debug_evidence_previous_key_id,
+            ).list(tenant_id=tenant_id, principal=principal, session_id=session_id)
+        except DebugEvidenceNotFoundError as error:
+            raise HTTPException(status_code=404, detail="Visual exploration not found.") from error
+    return [DebugEvidenceMetadataResponse.model_validate(item.__dict__) for item in records]
+
+
+@router.get(
+    "/explorations/{session_id}/debug-evidence/{evidence_id}",
+    response_model=DebugEvidencePayloadResponse,
+)
+def get_debug_evidence(
+    session_id: UUID,
+    evidence_id: UUID,
+    response: Response,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DebugEvidencePayloadResponse:
+    response.headers["Cache-Control"] = "no-store"
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            record = ReadVisionDebugEvidence(
+                SqlAlchemyVisionRepository(session),
+                SqlAlchemyAuditEventRepository(session),
+                key=settings.vision_debug_evidence_encryption_key,
+                key_id=settings.vision_debug_evidence_key_id,
+                previous_key=settings.vision_debug_evidence_previous_encryption_key,
+                previous_key_id=settings.vision_debug_evidence_previous_key_id,
+            ).read(
+                tenant_id=tenant_id,
+                principal=principal,
+                session_id=session_id,
+                evidence_id=evidence_id,
+            )
+        except DebugEvidenceNotFoundError as error:
+            raise HTTPException(status_code=404, detail="Debug evidence not found.") from error
+    return DebugEvidencePayloadResponse.model_validate(record.__dict__)
 
 
 @router.get("/explorations", response_model=ExplorationListResponse)

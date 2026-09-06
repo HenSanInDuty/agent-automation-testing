@@ -73,3 +73,13 @@ export type VisualAction = {
   action: { kind: "click" | "type" | "scroll" | "wait" | "stop"; confidence?: number; x?: number; y?: number; delta_y?: number; duration_ms?: number };
   evidence_checksum: string | null;
 };
+export type VisionDebugEvidence = {
+  id: string;
+  diagnostic_code: string;
+  provider: string;
+  model: string;
+  prompt_version: string;
+  captured_at: string;
+  retention_until: string;
+};
+export type VisionDebugEvidencePayload = VisionDebugEvidence & { payload: string };

@@ -2,13 +2,14 @@
 
 import asyncio
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
 import httpx
 from agents.shared.openrouter import create_vision_language_model
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, resolve_agent_runtime
+from agents.vision.debug_evidence import DebugEvidenceUnavailableError, encrypt_debug_evidence
 from agents.vision.executor import execute_visual_candidate_batch
 from agents.vision.intent import decrypt_visual_intent
 from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
@@ -16,6 +17,7 @@ from config import Settings
 from domain.activity import ActivityEvent
 from domain.runs import AuditEvent, OutboxEvent
 from infrastructure.persistence.models import (
+    VisionDebugEvidenceModel,
     VisualActionProposalModel,
     VisualExplorationStateModel,
 )
@@ -152,6 +154,12 @@ class VisionEventProcessor:
                         )
                     last_model_call = datetime.now(UTC)
                     if outcome.actions is None:
+                        self._capture_rejected_batch(
+                            session=session,
+                            state_id=state_id,
+                            attempt_key=f"{state_id}:{visited}:{session.model}",
+                            outcome=outcome,
+                        )
                         return self._unavailable(
                             session, outcome.detail or "vision model request failed"
                         )
@@ -266,4 +274,108 @@ class VisionEventProcessor:
                 metadata={"session_id": str(session.id)},
             )
         )
+        self._audits.append(
+            AuditEvent(
+                id=uuid4(),
+                tenant_id=session.tenant_id,
+                actor="vision-worker",
+                action="vision.exploration_unavailable",
+                entity_type="visual_exploration_session",
+                entity_id=session.id,
+                correlation_id=session.correlation_id,
+            )
+        )
         return "unavailable"
+
+    def _capture_rejected_batch(
+        self, *, session, state_id: UUID, attempt_key: str, outcome
+    ) -> None:
+        """Persist one encrypted diagnostic without changing the advisory outcome."""
+        if outcome.diagnostic_code is None or outcome.diagnostic_capture is None:
+            return
+        captured_at = datetime.now(UTC)
+        try:
+            encrypted = encrypt_debug_evidence(
+                outcome.diagnostic_capture,
+                key=self._settings.vision_debug_evidence_encryption_key,
+                key_id=self._settings.vision_debug_evidence_key_id,
+            )
+            evidence = self._sessions.add_debug_evidence(
+                VisionDebugEvidenceModel(
+                    id=uuid4(),
+                    tenant_id=session.tenant_id,
+                    session_id=session.id,
+                    correlation_id=session.correlation_id,
+                    state_id=state_id,
+                    attempt_key=attempt_key,
+                    diagnostic_code=outcome.diagnostic_code.value,
+                    provider=session.provider,
+                    model=session.model,
+                    prompt_version=session.prompt_version,
+                    encrypted_payload=encrypted.ciphertext,
+                    key_id=encrypted.key_id,
+                    payload_checksum=encrypted.checksum,
+                    payload_byte_count=encrypted.byte_count,
+                    redaction_version=encrypted.redaction_version,
+                    captured_at=captured_at,
+                    retention_until=captured_at
+                    + timedelta(days=self._settings.vision_debug_evidence_retention_days),
+                    deleted_at=None,
+                )
+            )
+            self._activities.append(
+                ActivityEvent.create(
+                    tenant_id=session.tenant_id,
+                    correlation_id=session.correlation_id,
+                    source="vision",
+                    stage="debug_evidence.captured",
+                    status="unavailable",
+                    safe_summary="Vision diagnostic evidence was captured.",
+                    occurred_at=captured_at,
+                    metadata={
+                        "session_id": str(session.id),
+                        "diagnostic_code": outcome.diagnostic_code.value,
+                        "capture_available": True,
+                    },
+                )
+            )
+            self._audits.append(
+                AuditEvent(
+                    id=uuid4(),
+                    tenant_id=session.tenant_id,
+                    actor="vision-worker",
+                    action="vision.debug_evidence_captured",
+                    entity_type="vision_debug_evidence",
+                    entity_id=evidence.id,
+                    correlation_id=session.correlation_id,
+                )
+            )
+        except (DebugEvidenceUnavailableError, Exception):
+            # No provider/model text may cross this boundary, including on key failure.
+            self._activities.append(
+                ActivityEvent.create(
+                    tenant_id=session.tenant_id,
+                    correlation_id=session.correlation_id,
+                    source="vision",
+                    stage="debug_evidence.capture_failed",
+                    status="unavailable",
+                    safe_summary="Vision diagnostic evidence capture was unavailable.",
+                    occurred_at=captured_at,
+                    metadata={
+                        "session_id": str(session.id),
+                        "diagnostic_code": outcome.diagnostic_code.value,
+                        "capture_available": False,
+                    },
+                )
+            )
+            self._audits.append(
+                AuditEvent(
+                    id=uuid4(),
+                    tenant_id=session.tenant_id,
+                    actor="vision-worker",
+                    action="vision.debug_evidence_capture_failed",
+                    entity_type="visual_exploration_session",
+                    entity_id=session.id,
+                    correlation_id=session.correlation_id,
+                )
+            )

@@ -5,6 +5,11 @@ import httpx
 import pytest
 from agents.shared.openrouter import OpenAICompatibleLanguageModel
 from agents.shared.runtime import VisionPolicy
+from agents.vision.diagnostics import (
+    VisualDiagnosticCapture,
+    VisualDiagnosticCode,
+    VisualDiagnosticFailure,
+)
 from agents.vision.executor import execute_visual_action, execute_visual_candidate_batch
 from agents.vision.service import (
     validate_visual_action_output,
@@ -140,6 +145,104 @@ def test_candidate_batch_is_strict_and_can_expand_a_state() -> None:
     )
     with pytest.raises(ValueError):
         validate_visual_candidate_batch_output(json.dumps({"actions": candidates}), 2)
+
+
+@pytest.mark.parametrize(
+    ("model_response", "maximum", "code"),
+    [
+        ([], 2, VisualDiagnosticCode.RESPONSE_NOT_OBJECT),
+        ({}, 2, VisualDiagnosticCode.RESPONSE_MISSING_CHOICES),
+        ({"choices": [{}]}, 2, VisualDiagnosticCode.RESPONSE_MISSING_CONTENT),
+        (response("not json"), 2, VisualDiagnosticCode.INVALID_JSON),
+        (response('{"actions": []}'), 2, VisualDiagnosticCode.INVALID_ROOT_SHAPE),
+        (
+            response('{"candidates": [{"kind": "shell"}]}'),
+            2,
+            VisualDiagnosticCode.INVALID_CANDIDATE_SCHEMA,
+        ),
+        (response('{"candidates": []}'), 2, VisualDiagnosticCode.EMPTY_CANDIDATES),
+        (
+            response(
+                '{"candidates": [{"kind":"stop","confidence":1,"expected_outcome":"a"},'
+                '{"kind":"stop","confidence":1,"expected_outcome":"b"}]}'
+            ),
+            1,
+            VisualDiagnosticCode.CANDIDATE_LIMIT_EXCEEDED,
+        ),
+    ],
+)
+def test_candidate_batch_failure_codes_are_stable_and_detail_is_generic(
+    model_response: object, maximum: int, code: VisualDiagnosticCode
+) -> None:
+    outcome = asyncio.run(
+        execute_visual_candidate_batch(
+            screenshot=b"\x89PNG\r\n\x1a\n",
+            content_type="image/png",
+            task_intent="x",
+            policy=policy(),
+            model=FakeModel(model_response),
+            max_candidates=maximum,
+        )
+    )
+
+    assert outcome.status == "unavailable"
+    assert outcome.detail == "vision model returned an invalid candidate batch"
+    assert outcome.diagnostic_code == code
+    assert outcome.diagnostic_capture is not None
+
+
+def test_candidate_batch_classifies_provider_transport_and_redacts_bounded_capture() -> None:
+    outcome = asyncio.run(
+        execute_visual_candidate_batch(
+            screenshot=b"\x89PNG\r\n\x1a\n",
+            content_type="image/png",
+            task_intent="x",
+            policy=policy(),
+            model=FakeModel(TimeoutError("Bearer secret-value")),
+            max_candidates=1,
+        )
+    )
+    capture = VisualDiagnosticCapture.from_content("token=top-secret\n{\"candidates\": []}")
+
+    assert outcome.diagnostic_code == VisualDiagnosticCode.PROVIDER_TRANSPORT
+    assert capture.content is not None and "top-secret" not in capture.content
+    assert "[REDACTED]" in capture.content
+    assert capture.content_sha256 is not None
+    with pytest.raises(VisualDiagnosticFailure) as oversized:
+        VisualDiagnosticCapture.from_content("x" * 20_000)
+    assert oversized.value.code == VisualDiagnosticCode.PAYLOAD_TOO_LARGE
+
+
+def test_visual_diagnostic_capture_redacts_temporary_urls() -> None:
+    capture = VisualDiagnosticCapture.from_content(
+        "invalid image at https://drive.google.com/file/d/sensitive-token/view"
+    )
+
+    assert capture.content == "invalid image at [REDACTED]"
+
+
+def test_candidate_batch_classifies_provider_http_failures_without_provider_text() -> None:
+    request = httpx.Request("POST", "https://model.example/v1/chat/completions")
+    response_value = httpx.Response(429, request=request)
+    error = httpx.HTTPStatusError(
+        "provider message must not escape", request=request, response=response_value
+    )
+
+    outcome = asyncio.run(
+        execute_visual_candidate_batch(
+            screenshot=b"\x89PNG\r\n\x1a\n",
+            content_type="image/png",
+            task_intent="x",
+            policy=policy(),
+            model=FakeModel(error),
+            max_candidates=1,
+        )
+    )
+
+    assert outcome.diagnostic_code == VisualDiagnosticCode.PROVIDER_HTTP
+    assert outcome.diagnostic_capture is not None
+    assert outcome.diagnostic_capture.provider_status == 429
+    assert "provider message" not in outcome.detail
 
 
 def test_huggingface_adapter_sends_multimodal_bytes_only_in_provider_request() -> None:

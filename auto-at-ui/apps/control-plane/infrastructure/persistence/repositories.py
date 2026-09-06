@@ -38,6 +38,7 @@ from infrastructure.persistence.models import (
     RunReportModel,
     TestCaseModel,
     TestRunModel,
+    VisionDebugEvidenceModel,
     VisualActionProposalModel,
     VisualExplorationSessionModel,
     VisualExplorationStateModel,
@@ -870,3 +871,69 @@ class SqlAlchemyVisionRepository:
                 .order_by(VisualActionProposalModel.sequence)
             )
         )
+
+    def add_debug_evidence(self, evidence: VisionDebugEvidenceModel) -> VisionDebugEvidenceModel:
+        """Insert once per state/attempt; duplicate at-least-once delivery is harmless."""
+        existing = self._session.scalar(
+            select(VisionDebugEvidenceModel).where(
+                VisionDebugEvidenceModel.session_id == evidence.session_id,
+                VisionDebugEvidenceModel.state_id == evidence.state_id,
+                VisionDebugEvidenceModel.attempt_key == evidence.attempt_key,
+            )
+        )
+        if existing is not None:
+            return existing
+        self._session.add(evidence)
+        self._session.flush()
+        return evidence
+
+    def list_debug_evidence_metadata(
+        self, tenant_id: str, session_id: UUID
+    ) -> list[VisionDebugEvidenceModel]:
+        return list(
+            self._session.scalars(
+                select(VisionDebugEvidenceModel)
+                .where(
+                    VisionDebugEvidenceModel.tenant_id == tenant_id,
+                    VisionDebugEvidenceModel.session_id == session_id,
+                    VisionDebugEvidenceModel.deleted_at.is_(None),
+                )
+                .order_by(VisionDebugEvidenceModel.captured_at, VisionDebugEvidenceModel.id)
+            )
+        )
+
+    def get_debug_evidence(
+        self, tenant_id: str, evidence_id: UUID
+    ) -> VisionDebugEvidenceModel | None:
+        return self._session.scalar(
+            select(VisionDebugEvidenceModel).where(
+                VisionDebugEvidenceModel.tenant_id == tenant_id,
+                VisionDebugEvidenceModel.id == evidence_id,
+                VisionDebugEvidenceModel.deleted_at.is_(None),
+            )
+        )
+
+    def list_expired_debug_evidence(
+        self, before: datetime, limit: int
+    ) -> list[VisionDebugEvidenceModel]:
+        return list(
+            self._session.scalars(
+                select(VisionDebugEvidenceModel)
+                .where(
+                    VisionDebugEvidenceModel.retention_until <= before,
+                    VisionDebugEvidenceModel.deleted_at.is_(None),
+                )
+                .order_by(VisionDebugEvidenceModel.retention_until, VisionDebugEvidenceModel.id)
+                .limit(limit)
+            )
+        )
+
+    def delete_expired_debug_evidence(self, tenant_id: str, evidence_id: UUID) -> bool:
+        result = self._session.execute(
+            VisionDebugEvidenceModel.__table__.delete().where(
+                VisionDebugEvidenceModel.tenant_id == tenant_id,
+                VisionDebugEvidenceModel.id == evidence_id,
+                VisionDebugEvidenceModel.retention_until <= datetime.now().astimezone(),
+            )
+        )
+        return bool(result.rowcount)

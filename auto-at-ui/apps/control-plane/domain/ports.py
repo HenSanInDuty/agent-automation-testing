@@ -1,5 +1,7 @@
 """Persistence boundaries owned by the domain and implemented by infrastructure."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
@@ -61,13 +63,13 @@ class VerifiedArtifactStore(Protocol):
 
 
 class RunnerTransport(Protocol):
-    def execute(self, request: "TestExecutionRequest") -> TestExecutionResult: ...
+    def execute(self, request: TestExecutionRequest) -> TestExecutionResult: ...
 
 
 class GeneratedSourcePreflight(Protocol):
     """Checks generated source with its target worker before a run is created."""
 
-    def preflight(self, request: "TestExecutionRequest") -> None: ...
+    def preflight(self, request: TestExecutionRequest) -> None: ...
 
 
 class ProposalRepository(Protocol):
@@ -151,3 +153,13 @@ class VisualExplorationRepository(Protocol):
     def list(self, tenant_id: str, project_id: UUID | None = None) -> list[object]: ...
 
     def add(self, session: object) -> None: ...
+
+    def add_debug_evidence(self, evidence: object) -> object: ...
+
+    def list_debug_evidence_metadata(self, tenant_id: str, session_id: UUID) -> list[object]: ...
+
+    def get_debug_evidence(self, tenant_id: str, evidence_id: UUID) -> object | None: ...
+
+    def list_expired_debug_evidence(self, before: datetime, limit: int) -> list[object]: ...
+
+    def delete_expired_debug_evidence(self, tenant_id: str, evidence_id: UUID) -> bool: ...
