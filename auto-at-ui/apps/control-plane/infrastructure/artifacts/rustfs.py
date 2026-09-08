@@ -7,7 +7,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from config import Settings
-from domain.entities import ArtifactRecord, VisualReplayFrameRecord
+from domain.entities import ArtifactRecord, VisualOperationFrameRecord, VisualReplayFrameRecord
 
 
 class ArtifactStorageError(RuntimeError):
@@ -118,6 +118,58 @@ class RustFSArtifactStore:
             if code in {"404", "NoSuchKey", "NoSuchObject"}:
                 return None
             raise
+
+    def write_operation_frame(self, record: VisualOperationFrameRecord, content: bytes) -> None:
+        """Conditional creation prevents competing writers from replacing evidence."""
+        frame = record.metadata
+        if (len(content) != frame.byte_count
+            or hashlib.sha256(content).hexdigest() != frame.checksum):
+            raise ValueError("operation frame checksum verification failed")
+        try:
+            self._ensure_bucket()
+            try:
+                self._client.put_object(
+                    Bucket=self._bucket, Key=record.storage_key, Body=content,
+                    ContentType=frame.content_type, Metadata={"sha256": frame.checksum},
+                    IfNoneMatch="*",
+                )
+            except ClientError as error:
+                if str(error.response.get("Error", {}).get("Code")) not in {
+                    "PreconditionFailed", "412", "ConditionalRequestConflict", "409",
+                }:
+                    raise
+            if self.read_operation_frame(record) != content:
+                raise ValueError("operation frame immutable key conflict")
+        except (BotoCoreError, ClientError, KeyError) as error:
+            raise ArtifactStorageError("operation frame upload failed") from error
+
+    def read_operation_frame(self, record: VisualOperationFrameRecord) -> bytes:
+        frame = record.metadata
+        if frame.deleted_at is not None:
+            raise ValueError("operation frame is deleted")
+        try:
+            response = self._client.get_object(Bucket=self._bucket, Key=record.storage_key)
+            body = response["Body"]
+            try:
+                if (response.get("ContentLength") != frame.byte_count
+                    or response.get("ContentType") != frame.content_type
+                    or response.get("Metadata", {}).get("sha256") != frame.checksum):
+                    raise ValueError("operation frame metadata verification failed")
+                content = body.read(frame.byte_count + 1)
+            finally:
+                body.close()
+        except (BotoCoreError, ClientError, KeyError) as error:
+            raise ArtifactStorageError("operation frame read failed") from error
+        if (len(content) != frame.byte_count
+            or hashlib.sha256(content).hexdigest() != frame.checksum):
+            raise ValueError("operation frame checksum verification failed")
+        return content
+
+    def delete_operation_frame(self, record: VisualOperationFrameRecord) -> None:
+        try:
+            self._client.delete_object(Bucket=self._bucket, Key=record.storage_key)
+        except (BotoCoreError, ClientError) as error:
+            raise ArtifactStorageError("operation frame deletion failed") from error
 
     def delete(self, artifact: ArtifactRecord) -> None:
         try:

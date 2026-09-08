@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ControlPlaneError, decideProposal, deleteVisualReplayFrame, getPolicy, getVisionPolicy, getVisualReplayFrameBlob, listDrafts, listProposals, listVisualActions, listVisualReplayFrames, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
+import { getVisualTrace, getOperationFrameBlob } from "./generation-api.ts";
+import { ControlPlaneError, decideProposal, deleteVisualReplayFrame, getPolicy, getVisionPolicy, getVisualReplayFrameBlob, getVisualTrajectory, listDrafts, listProposals, listVisualActions, listVisualReplayFrames, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
 
 test("generation submission sends session credentials and an idempotency key", async () => {
   const originalFetch = globalThis.fetch;
@@ -80,6 +81,7 @@ test("vision calls use the dedicated server-side policy and exploration routes",
     await setVisionPolicy("http://control-plane", policy);
     await submitVisualExploration("http://control-plane", { project_id: "project", target_url: "https://example.com", task_intent: "Open the menu", use_vision: true });
     await listVisualActions("http://control-plane", "session");
+    await getVisualTrajectory("http://control-plane", "session");
     assert.match(requests[0].url, /\/vision\/policy$/);
     assert.equal(requests[1].method, "PUT");
     assert.equal(await requests[1].text(), JSON.stringify(policy));
@@ -87,6 +89,7 @@ test("vision calls use the dedicated server-side policy and exploration routes",
     assert.equal(requests[2].headers.get("Idempotency-Key")?.length, 36);
     assert.equal(await requests[2].text(), JSON.stringify({ project_id: "project", target_url: "https://example.com", task_intent: "Open the menu", use_vision: true }));
     assert.match(requests[3].url, /\/vision\/explorations\/session\/actions$/);
+    assert.match(requests[4].url, /\/vision\/explorations\/session\/trajectory$/);
   } finally { globalThis.fetch = originalFetch; }
 });
 
@@ -109,4 +112,31 @@ test("replay evidence stays on session-scoped cookie and CSRF-protected routes",
     assert.equal(requests[2].method, "DELETE");
     assert.equal(await requests[2].text(), JSON.stringify({ confirm: true }));
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test("trace pagination restarts on a changed revision without mixing snapshots", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    if (calls.length === 2) return new Response(JSON.stringify({ detail: "Trace changed" }), { status: 409 });
+    const last = calls.length === 4;
+    return new Response(JSON.stringify({ session_id: "session", revision: calls.length === 1 ? "old" : "new", items: [{ id: calls.length }], locators: [], next_sequence: last ? 2 : 1, has_more: !last }));
+  };
+  try {
+    const result = await getVisualTrace("http://fixture", "session");
+    assert.deepEqual(result.items.map((item) => item.id), [3, 4]);
+    assert.match(calls[1], /revision=old/); assert.doesNotMatch(calls[2], /revision=/);
+    assert.match(calls[3], /revision=new/);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("operation image requests can be aborted and use private session credentials", async () => {
+  const originalFetch = globalThis.fetch; const abort = new AbortController();
+  globalThis.fetch = async (_input, init) => {
+    assert.equal(init?.signal, abort.signal); assert.equal(init?.credentials, "include");
+    assert.equal(init?.cache, "no-store"); return new Response(new Uint8Array([137, 80, 78, 71]));
+  };
+  try { assert.equal((await getOperationFrameBlob("http://fixture", "session", "frame", abort.signal)).size, 4); }
+  finally { globalThis.fetch = originalFetch; }
 });

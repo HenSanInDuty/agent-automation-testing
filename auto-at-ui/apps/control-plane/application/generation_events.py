@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from agents.generation.planner import PlannerOutputError, plan_test
+from agents.generation.vision_plan import plan_vision_test
+from agents.prompts.vision_generation import PROMPT_VERSION as VISION_GENERATION_PROMPT_VERSION
 from agents.shared.openrouter import create_language_model
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentStepGuard, resolve_agent_runtime
 from auto_at.contracts.execution import sha256_text, validate_playwright_test_source
@@ -15,6 +17,7 @@ from auto_at.contracts.generation import (
     PlanningProvenance,
     ProjectExecutionPolicy,
     TestGenerationPlanningRequest,
+    VisionPlanningSource,
 )
 from config import Settings
 from domain.activity import ActivityEvent
@@ -27,6 +30,7 @@ from infrastructure.persistence.repositories import (
 )
 
 from application.generation import complete_generation, fail_generation
+from application.vision_source_renderer import render_vision_source
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +83,17 @@ class GenerationEventProcessor:
             )
             if not policy.allows(request.target_url):
                 raise ValueError("target URL origin is no longer allowed")
+            handoff, evidence, actions, vision_source = None, None, None, None
+            if getattr(request, "vision_handoff_id", None) is not None:
+                handoff, evidence, actions = self._repository.vision_evidence(
+                    event.tenant_id, request.project_id, request.vision_handoff_id
+                )
+                self._repository.validate_vision_target(handoff, request.target_url)
+                vision_source = VisionPlanningSource(
+                    session_id=handoff.session_id,
+                    handoff_id=handoff.id,
+                    handoff_hash=handoff.content_hash,
+                )
             planning_request = TestGenerationPlanningRequest(
                 id=request.id,
                 correlation_id=request.correlation_id,
@@ -86,6 +101,7 @@ class GenerationEventProcessor:
                 target_url=request.target_url,
                 redacted_request=request.redacted_request,
                 request_hash=request.request_hash,
+                vision_source=vision_source,
             )
             runtime = resolve_agent_runtime(
                 self._settings,
@@ -99,12 +115,26 @@ class GenerationEventProcessor:
             model = create_language_model(self._settings, runtime)
             self._record(request, "model", "running", "Generation model is producing a draft.")
             try:
-                output = await plan_test(
-                    model,
-                    planning_request,
-                    policy.allowed_origins,
-                    self._settings.agent_generation_max_tokens,
-                )
+                selected_branch_ids, operation_ids = [], []
+                if handoff is not None:
+                    selection = await plan_vision_test(
+                        model,
+                        planning_request,
+                        handoff,
+                        self._settings.agent_generation_max_tokens,
+                        runtime.guard.max_evidence_bytes_per_step,
+                    )
+                    output, operation_ids = render_vision_source(
+                        selection, handoff, evidence, actions, request.target_url
+                    )
+                    selected_branch_ids = selection.selected_branch_ids
+                else:
+                    output = await plan_test(
+                        model,
+                        planning_request,
+                        policy.allowed_origins,
+                        self._settings.agent_generation_max_tokens,
+                    )
             except PlannerOutputError as error:
                 # This is safe to share: it identifies the contract boundary,
                 # without retaining model text or provider diagnostics.
@@ -133,8 +163,13 @@ class GenerationEventProcessor:
                     provenance=PlanningProvenance(
                         provider=runtime.provider,
                         model=runtime.model,
-                        prompt_version=self._settings.agent_generation_prompt_version,
+                        prompt_version=VISION_GENERATION_PROMPT_VERSION
+                        if handoff
+                        else self._settings.agent_generation_prompt_version,
                         redaction_policy_version=self._settings.agent_generation_redaction_policy_version,
+                        vision_source=vision_source,
+                        selected_branch_ids=selected_branch_ids,
+                        operation_ids=operation_ids,
                     ),
                 ),
                 audits=self._audits,
@@ -155,6 +190,10 @@ class GenerationEventProcessor:
                 detail = "generation output did not match the required structured format"
             elif isinstance(error, GenerationSourceSafetyError):
                 detail = "generation output failed source safety validation"
+            elif isinstance(error, ValueError) and str(error) in {
+                "handoff_evidence_budget", "rendered_source_limit", "input_binding_required",
+            }:
+                detail = str(error)
             else:
                 detail = "generation unavailable"
             fail_generation(
@@ -175,11 +214,18 @@ class GenerationEventProcessor:
 
     def _record(self, request, stage: str, status: str, summary: str) -> None:
         if self._activities is not None:
-            self._activities.append(ActivityEvent.create(
-                tenant_id=request.tenant_id, correlation_id=request.correlation_id,
-                source="generation", stage=stage, status=status, safe_summary=summary,
-                occurred_at=datetime.now(UTC), metadata={"request_id": str(request.id)},
-            ))
+            self._activities.append(
+                ActivityEvent.create(
+                    tenant_id=request.tenant_id,
+                    correlation_id=request.correlation_id,
+                    source="generation",
+                    stage=stage,
+                    status=status,
+                    safe_summary=summary,
+                    occurred_at=datetime.now(UTC),
+                    metadata={"request_id": str(request.id)},
+                )
+            )
 
 
 class GenerationOutputStructureError(ValueError):

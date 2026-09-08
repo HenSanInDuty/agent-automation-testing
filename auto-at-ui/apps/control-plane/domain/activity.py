@@ -51,6 +51,34 @@ _VISION_PROGRESS = {
             }
         ),
     ),
+    "edge.proposed": (
+        "running",
+        "Visual trajectory candidate was proposed.",
+        frozenset(
+            {
+                "state_sequence",
+                "action_sequence",
+                "action_kind",
+                "confidence",
+                "coordinate_available",
+            }
+        ),
+    ),
+    "edge.observed": (
+        "running",
+        "Visual trajectory candidate was observed.",
+        frozenset({"state_sequence", "action_sequence", "outcome", "duration_ms", "url_change"}),
+    ),
+    "edge.failed": (
+        "info",
+        "Visual trajectory candidate was not observed.",
+        frozenset({"state_sequence", "action_sequence", "outcome_code"}),
+    ),
+    "edge.terminal": (
+        "info",
+        "Visual trajectory candidate reached a terminal outcome.",
+        frozenset({"state_sequence", "action_sequence", "outcome_code"}),
+    ),
     "limit.reached": (
         "info",
         "Visual exploration reached a configured traversal limit.",
@@ -68,6 +96,29 @@ _VISION_PROGRESS = {
     ),
     "unavailable": ("unavailable", "Visual exploration is unavailable.", frozenset()),
 }
+
+for _stage, _summary in {
+    "operation.prepared": "Browser operation evidence was prepared.",
+    "operation.executing": "Browser operation was dispatched.",
+    "operation.completed": "Browser operation completed.",
+    "operation.failed": "Browser operation failed.",
+    "operation.rejected": "Browser operation was rejected.",
+    "operation.unknown": "Browser operation outcome is unknown.",
+    "locator.verified": "Browser locator was verified.",
+    "locator.unresolved": "Browser locator could not be verified.",
+    "state.restore_started": "Browser state restoration started.",
+    "state.restored": "Browser state restoration was verified.",
+    "state.restore_failed": "Browser state restoration failed.",
+    "handoff.ready": "Verified exploration evidence is ready for generation.",
+    "handoff.unavailable": "Exploration handoff is unavailable.",
+}.items():
+    _VISION_PROGRESS[_stage] = (
+        "info", _summary, frozenset({"operation_id", "operation_sequence", "purpose"}),
+    )
+
+_VISION_PROGRESS["handoff.unavailable"] = (
+    "unavailable", "Exploration handoff is unavailable.", frozenset({"reason_code"}),
+)
 
 
 def validate_safe_metadata(value: object) -> dict[str, object]:
@@ -153,8 +204,24 @@ class ActivityEvent:
             raise ValueError("vision progress stage or key is invalid")
         status, safe_summary, allowed_keys = definition
         safe_metadata = metadata or {}
+        if "reason_code" in safe_metadata and safe_metadata["reason_code"] not in {
+            "handoff_branch_limit", "handoff_incomplete", "no_eligible_branches",
+            "generation_request_unavailable",
+        }:
+            raise ValueError("vision progress reason is invalid")
         if set(safe_metadata) - allowed_keys:
             raise ValueError("vision progress metadata is not allow-listed")
+        if "operation_id" in safe_metadata:
+            UUID(str(safe_metadata["operation_id"]))
+        if "purpose" in safe_metadata and safe_metadata["purpose"] not in {
+            "setup", "explore", "restore", "replay",
+        }:
+            raise ValueError("vision progress purpose is invalid")
+        if "operation_sequence" in safe_metadata and (
+            type(safe_metadata["operation_sequence"]) is not int
+            or not 1 <= safe_metadata["operation_sequence"] <= 100_000
+        ):
+            raise ValueError("vision progress sequence is invalid")
         for value in safe_metadata.values():
             if not isinstance(value, (str, int, float, bool)):
                 raise ValueError("vision progress metadata value is invalid")

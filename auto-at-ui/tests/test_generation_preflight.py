@@ -1,7 +1,8 @@
 from types import SimpleNamespace
 from uuid import uuid4
 
-from application.generation import DecideGeneratedDraft
+import pytest
+from application.generation import DecideGeneratedDraft, GenerationStateError
 from auto_at.contracts.execution import sha256_text
 from auto_at.contracts.generation import DraftState
 from infrastructure.runners import RunnerUnavailableError
@@ -89,3 +90,32 @@ def test_failed_preflight_queues_a_revised_draft_without_creating_a_run() -> Non
     assert repository.test_cases == []
     assert repository.requests[0].state == "queued"
     assert "failed non-browser preflight" in repository.requests[0].redacted_request
+
+
+def test_vision_preflight_failure_preserves_pending_draft_without_freeform_repair():
+    source = "import { test } from '@playwright/test';\ntest('observed', async () => {});"
+    draft = SimpleNamespace(
+        id=uuid4(),
+        planning_request_id=uuid4(),
+        playwright_test_source=source,
+        source_hash=sha256_text(source),
+        state="pending_review",
+        linked_run_id=None,
+    )
+    request = SimpleNamespace(
+        project_id=uuid4(),
+        correlation_id=uuid4(),
+        target_url="https://example.test",
+        vision_handoff_id=uuid4(),
+    )
+    repository = Repository(draft, request)
+    with pytest.raises(GenerationStateError, match="preflight"):
+        DecideGeneratedDraft(repository, [], [], object(), Preflight()).execute(
+            tenant_id="tenant-a",
+            draft_id=draft.id,
+            approved=True,
+            decided_by="reviewer",
+            reason=None,
+        )
+    assert draft.state == "pending_review" and draft.linked_run_id is None
+    assert not repository.requests and not repository.decisions and not repository.test_cases

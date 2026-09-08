@@ -51,6 +51,7 @@ class RequestResponse(BaseModel):
     state: str
     failure_reason: str | None = None
     draft_id: UUID | None = None
+    vision_handoff_id: UUID | None = None
 
 
 class DraftResponse(BaseModel):
@@ -115,6 +116,7 @@ def _request_response(
         state=request.state,
         failure_reason=request.failure_reason,
         draft_id=None if draft is None else draft.id,
+        vision_handoff_id=getattr(request, "vision_handoff_id", None),
     )
 
 

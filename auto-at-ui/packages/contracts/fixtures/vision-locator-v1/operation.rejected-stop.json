@@ -1,0 +1,16 @@
+{
+  "contract": "VisualOperation",
+  "accepted": false,
+  "payload": {
+    "schema_version": "v1",
+    "id": "00000000-0000-0000-0000-000000000001",
+    "tenant_id": "fixture-tenant",
+    "project_id": "00000000-0000-0000-0000-000000000002",
+    "session_id": "00000000-0000-0000-0000-000000000003",
+    "sequence": 1,
+    "purpose": "setup",
+    "action_kind": "stop",
+    "started_at": "2026-09-07T16:30:00Z",
+    "status": "prepared"
+  }
+}

@@ -7,7 +7,7 @@ from uuid import uuid4
 from agents.vision.diagnostics import VisualDiagnosticCapture, VisualDiagnosticCode
 from agents.vision.executor import VisualCandidateBatchOutcome
 from application.vision_events import VisionEventProcessor
-from auto_at.contracts.vision import VisualAction
+from auto_at.contracts.vision import ClickAction
 from config import Settings
 from domain.runs import OutboxEvent
 
@@ -133,7 +133,7 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
     class CaptureSessions(Sessions):
         def __init__(self, session):
             super().__init__(session)
-            self.states, self.frames, self.actions = [], [], []
+            self.states, self.frames, self.actions, self.edges = [], [], [], []
 
         def add_state(self, state):
             self.states.append(state)
@@ -144,6 +144,10 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
 
         def add_action(self, action):
             self.actions.append(action)
+
+        def add_trajectory_edge(self, edge):
+            self.edges.append(edge)
+            return edge
 
     class Client:
         async def __aenter__(self):
@@ -157,7 +161,14 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
             path = tmp_path / "vision" / str(session.id) / f"tree-{state_id}.png"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"\x89PNG\r\n\x1a\ncaptured")
-            return SimpleNamespace(raise_for_status=lambda: None)
+            return SimpleNamespace(
+                raise_for_status=lambda: None,
+                json=lambda: {
+                    "url_fingerprint": "a" * 64,
+                    "url_change": "unavailable",
+                    "duration_ms": 3,
+                },
+            )
 
         async def delete(self, *_args, **_kwargs):
             return SimpleNamespace(raise_for_status=lambda: None)
@@ -175,12 +186,18 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
         def deliver(self, **_kwargs):
             return self
 
+    class ExplorationGeneration:
+        def get_policy(self, _tenant_id, _project_id):
+            return SimpleNamespace(
+                allowed_origins=["https://example.test"], vision_max_hops=1, vision_max_states=2
+            )
+
     session = SimpleNamespace(
         id=uuid4(), tenant_id="tenant-a", correlation_id=uuid4(), state="queued",
         project_id=uuid4(),
         encrypted_task_intent="",
         intent_retention_until=datetime.now(UTC) + timedelta(days=1),
-        max_hops=0, max_states=1, target_url="https://example.test", policy_version="policy-v1",
+        max_hops=1, max_states=2, target_url="https://example.test", policy_version="policy-v1",
         provider="provider", model="model", prompt_version="prompt-v1",
     )
     sessions, events, replay_store = CaptureSessions(session), Events(), ReplayStore()
@@ -199,7 +216,12 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
     monkeypatch.setattr(
         "application.vision_events.execute_visual_candidate_batch",
         lambda **_kwargs: asyncio.sleep(0, result=VisualCandidateBatchOutcome(
-            status="completed", actions=[VisualAction(kind="stop", confidence=0.9)]
+            status="completed",
+            actions=[
+                ClickAction(
+                    kind="click", confidence=0.9, x=0.5, y=0.5, expected_outcome="safe"
+                )
+            ],
         )),
     )
     monkeypatch.setattr(
@@ -207,14 +229,18 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
     )
 
     processor = VisionEventProcessor(
-        sessions, Configs(), Generation(), events, events, events,
+        sessions, Configs(), ExplorationGeneration(), events, events, events,
         Settings(artifact_root=str(tmp_path), vision_worker_secret="worker-secret"), replay_store,
     )
 
     assert asyncio.run(processor.execute(event(session))) == "completed"
-    assert len(replay_store.frames) == len(sessions.frames) == 1
+    assert len(replay_store.frames) == len(sessions.frames) == 2
     frame, content = replay_store.frames[0]
     assert frame.state_id == sessions.states[0].id
     assert frame.content_type == "image/png"
     assert content.startswith(b"\x89PNG")
-    assert sessions.actions == []
+    assert len(sessions.actions) == 1
+    assert [edge.status for edge in sessions.edges] == ["proposed", "terminal"]
+    assert sessions.edges[-1].outcome_code == "hop_limit"
+    assert any(item.stage == "edge.proposed" for item in events.items)
+    assert any(item.stage == "edge.terminal" for item in events.items)

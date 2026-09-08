@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
 
 from auto_at.contracts.agent import ProposalKind, RunReport, RunReportStatus
 from auto_at.contracts.execution import RunStatus, TestExecutionRequest, TestExecutionResult
+from auto_at.contracts.generation import VisionPlanningSource, vision_generation_key
+from auto_at.contracts.vision import (
+    VisualCheckpoint,
+    VisualLocatorEvidence,
+    VisualLocatorHandoff,
+    VisualOperation,
+    VisualOperationFrame,
+)
 from domain.activity import ActivityEvent
 from domain.entities import (
     ApprovalRecord,
@@ -17,10 +25,13 @@ from domain.entities import (
     ProposalRecord,
     RunReportRecord,
     TestCase,
+    VisualOperationFrameRecord,
     VisualReplayFrameRecord,
+    VisualTrajectoryEdgeRecord,
 )
 from domain.runs import AuditEvent, OutboxEvent, RunLifecycleStatus, TestRun
-from sqlalchemy import CursorResult, select, update
+from domain.vision import VisualSessionLease, VisualSessionScope, validate_operation_transition
+from sqlalchemy import CursorResult, or_, select, update
 from sqlalchemy.orm import Session
 
 from infrastructure.persistence.models import (
@@ -43,7 +54,12 @@ from infrastructure.persistence.models import (
     VisualActionProposalModel,
     VisualExplorationSessionModel,
     VisualExplorationStateModel,
+    VisualLocatorEvidenceModel,
+    VisualLocatorHandoffModel,
+    VisualOperationFrameModel,
+    VisualOperationModel,
     VisualReplayFrameModel,
+    VisualTrajectoryEdgeModel,
 )
 
 
@@ -175,6 +191,34 @@ class SqlAlchemyGenerationRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
+    def get_vision_handoff(self, tenant_id, project_id, handoff_id):
+        model = self._session.scalar(select(VisualLocatorHandoffModel).where(
+            VisualLocatorHandoffModel.tenant_id == tenant_id,
+            VisualLocatorHandoffModel.project_id == project_id,
+            VisualLocatorHandoffModel.id == handoff_id,
+        ))
+        return VisualLocatorHandoff.model_validate(model.payload) if model else None
+
+    def vision_evidence(self, tenant_id, project_id, handoff_id):
+        handoff = self.get_vision_handoff(tenant_id, project_id, handoff_id)
+        if handoff is None:
+            raise ValueError("vision handoff scope mismatch")
+        scope = VisualSessionScope(tenant_id, project_id, handoff.session_id)
+        snapshot = SqlAlchemyVisualTraceRepository(self._session).snapshot(scope)
+        actions = SqlAlchemyVisionRepository(self._session).list_actions(
+            tenant_id, handoff.session_id
+        )
+        return handoff, snapshot, {item.id: item.action for item in actions}
+
+    def validate_vision_target(self, handoff, target_url):
+        record = self._session.scalar(select(VisualExplorationSessionModel).where(
+            VisualExplorationSessionModel.tenant_id == handoff.tenant_id,
+            VisualExplorationSessionModel.project_id == handoff.project_id,
+            VisualExplorationSessionModel.id == handoff.session_id,
+        ))
+        if record is None or record.target_url != target_url:
+            raise ValueError("vision handoff target mismatch")
+
     def get_request_by_key(self, tenant_id: str, key: str) -> GenerationRequestModel | None:
         return self._session.scalar(
             select(GenerationRequestModel).where(
@@ -219,6 +263,26 @@ class SqlAlchemyGenerationRepository:
         return model
 
     def add_request(self, model: GenerationRequestModel) -> None:
+        if model.vision_handoff_id is not None:
+            handoff = self._session.scalar(
+                select(VisualLocatorHandoffModel).where(
+                    VisualLocatorHandoffModel.id == model.vision_handoff_id,
+                    VisualLocatorHandoffModel.tenant_id == model.tenant_id,
+                    VisualLocatorHandoffModel.project_id == model.project_id,
+                ).with_for_update()
+            )
+            if handoff is None:
+                raise ValueError("generation handoff scope mismatch")
+            payload = VisualLocatorHandoff.model_validate(handoff.payload)
+            source = VisionPlanningSource(
+                session_id=payload.session_id, handoff_id=payload.id,
+                handoff_hash=payload.content_hash,
+            )
+            if model.idempotency_key != vision_generation_key(source, model.redacted_request):
+                raise ValueError("generation idempotency must include handoff identity and hash")
+            if handoff.generation_request_id not in (None, model.id):
+                raise ValueError("handoff already linked to a generation request")
+            handoff.generation_request_id = model.id
         self._session.add(model)
         self._session.flush()
 
@@ -833,6 +897,528 @@ class SqlAlchemyConfigurationRepository:
         return bool(result.rowcount)
 
 
+class SqlAlchemyVisualTraceRepository:
+    """Short-transaction trace writes serialized by the fenced session row."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    @staticmethod
+    def _scope(model, scope: VisualSessionScope):
+        return (
+            model.tenant_id == scope.tenant_id,
+            model.project_id == scope.project_id,
+            model.session_id == scope.session_id,
+        )
+
+    def claim(
+        self, scope: VisualSessionScope, owner: UUID, *, lease_seconds: int = 30
+    ) -> VisualSessionLease | None:
+        if not 1 <= lease_seconds <= 3600:
+            raise ValueError("invalid lease duration")
+        now = datetime.now(UTC)
+        expires = now + timedelta(seconds=lease_seconds)
+        token = self._session.scalar(
+            update(VisualExplorationSessionModel)
+            .where(
+                VisualExplorationSessionModel.tenant_id == scope.tenant_id,
+                VisualExplorationSessionModel.project_id == scope.project_id,
+                VisualExplorationSessionModel.id == scope.session_id,
+                VisualExplorationSessionModel.trace_version == "v4",
+                VisualExplorationSessionModel.state.in_(["queued", "running"]),
+                or_(
+                    VisualExplorationSessionModel.lease_expires_at.is_(None),
+                    VisualExplorationSessionModel.lease_expires_at <= now,
+                ),
+            )
+            .values(
+                lease_owner=owner,
+                lease_expires_at=expires,
+                fencing_token=VisualExplorationSessionModel.fencing_token + 1,
+            )
+            .returning(VisualExplorationSessionModel.fencing_token)
+        )
+        return None if token is None else VisualSessionLease(scope, owner, token, expires)
+
+    def _fence(self, lease: VisualSessionLease) -> VisualExplorationSessionModel:
+        scope = lease.scope
+        model = self._session.scalar(
+            select(VisualExplorationSessionModel)
+            .where(
+                VisualExplorationSessionModel.tenant_id == scope.tenant_id,
+                VisualExplorationSessionModel.project_id == scope.project_id,
+                VisualExplorationSessionModel.id == scope.session_id,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if (
+            model is None
+            or model.trace_version != "v4"
+            or model.lease_owner != lease.owner
+            or model.fencing_token != lease.fencing_token
+            or model.lease_expires_at is None
+            or model.lease_expires_at <= datetime.now(UTC)
+        ):
+            raise ValueError("stale or expired visual session lease")
+        return model
+
+    def renew(self, lease: VisualSessionLease, *, lease_seconds: int = 30) -> VisualSessionLease:
+        if not 1 <= lease_seconds <= 3600:
+            raise ValueError("invalid lease duration")
+        model = self._fence(lease)
+        model.lease_expires_at = datetime.now(UTC) + timedelta(seconds=lease_seconds)
+        self._session.flush()
+        return VisualSessionLease(
+            lease.scope, lease.owner, lease.fencing_token, model.lease_expires_at
+        )
+
+    @staticmethod
+    def _check_identity(value, scope: VisualSessionScope) -> None:
+        if (value.tenant_id, value.project_id, value.session_id) != (
+            scope.tenant_id,
+            scope.project_id,
+            scope.session_id,
+        ):
+            raise ValueError("trace reference scope mismatch")
+
+    def _legacy_ref(self, model, scope: VisualSessionScope, identity: UUID | None):
+        if identity is None:
+            return None
+        value = self._session.scalar(
+            select(model).where(
+                model.id == identity,
+                model.tenant_id == scope.tenant_id,
+                model.session_id == scope.session_id,
+            )
+        )
+        if value is None:
+            raise ValueError("state/proposal/edge reference scope mismatch")
+        return value
+
+    def _get(self, model, scope: VisualSessionScope, identity: UUID):
+        return self._session.scalar(
+            select(model).where(
+                *self._scope(model, scope),
+                model.id == identity,
+            )
+        )
+
+    def _operation_refs(self, operation: VisualOperation, scope: VisualSessionScope) -> None:
+        self._legacy_ref(VisualExplorationStateModel, scope, operation.state_id)
+        proposal = self._legacy_ref(VisualActionProposalModel, scope, operation.proposal_id)
+        edge = self._legacy_ref(VisualTrajectoryEdgeModel, scope, operation.edge_id)
+        if proposal and proposal.originating_state_id != operation.state_id:
+            raise ValueError("proposal does not belong to operation state")
+        if edge and (
+            edge.proposal_id != operation.proposal_id or edge.parent_state_id != operation.state_id
+        ):
+            raise ValueError("edge does not belong to operation proposal/state")
+        if operation.checkpoint_id:
+            # The restore destination may differ from the replay action's source state.
+            checkpoints = self._session.scalars(select(VisualExplorationStateModel).where(
+                VisualExplorationStateModel.tenant_id == scope.tenant_id,
+                VisualExplorationStateModel.session_id == scope.session_id,
+            ))
+            if not any(s.checkpoint and s.checkpoint["id"] == str(operation.checkpoint_id)
+                       for s in checkpoints):
+                raise ValueError("checkpoint does not belong to operation session")
+        if operation.parent_operation_id:
+            parent = self._get(VisualOperationModel, scope, operation.parent_operation_id)
+            if parent is None or parent.sequence >= operation.sequence:
+                raise ValueError("parent must be an earlier operation in the same scope")
+        for role in ("before", "after"):
+            identity = getattr(operation, f"actual_{role}_frame_id")
+            if identity:
+                frame = self._get(VisualOperationFrameModel, scope, identity)
+                if frame is None or frame.operation_id != operation.id or frame.role != role:
+                    raise ValueError("operation frame reference mismatch")
+                if operation.status == "executing" and frame.deleted_at is not None:
+                    raise ValueError("cannot execute with deleted before evidence")
+        if operation.locator_id:
+            locator = self._get(VisualLocatorEvidenceModel, scope, operation.locator_id)
+            if (
+                locator is None
+                or locator.operation_id != operation.id
+                or locator.originating_frame_id != operation.actual_before_frame_id
+                or (operation.status in {"executing", "completed"} and locator.status != "verified")
+            ):
+                raise ValueError("operation requires its own verified before-frame locator")
+        if operation.status == "executing" and operation.action_kind in {"click", "type"}:
+            if operation.locator_id is None:
+                raise ValueError("targeted operation requires a verified locator")
+
+    def prepare(self, lease: VisualSessionLease, operation: VisualOperation) -> VisualOperation:
+        operation = VisualOperation.model_validate(operation.model_dump())
+        model = self._fence(lease)
+        self._check_identity(operation, lease.scope)
+        existing = self._get(VisualOperationModel, lease.scope, operation.id)
+        if existing:
+            if existing.payload != operation.model_dump(mode="json"):
+                raise ValueError("duplicate operation differs from persisted intent")
+            return VisualOperation.model_validate(existing.payload)
+        if operation.status != "prepared" or operation.sequence != model.next_operation_sequence:
+            raise ValueError("new operation requires prepared status and next sequence")
+        if (
+            operation.actual_before_frame_id
+            or operation.actual_after_frame_id
+            or operation.locator_id
+        ):
+            raise ValueError("new operation cannot reference evidence before insertion")
+        self._operation_refs(operation, lease.scope)
+        self._session.add(
+            VisualOperationModel(
+                id=operation.id,
+                tenant_id=operation.tenant_id,
+                project_id=operation.project_id,
+                session_id=operation.session_id,
+                sequence=operation.sequence,
+                attempt=operation.attempt,
+                state_id=operation.state_id,
+                proposal_id=operation.proposal_id,
+                status=operation.status,
+                fencing_token=lease.fencing_token,
+                payload=operation.model_dump(mode="json"),
+            )
+        )
+        model.next_operation_sequence += 1
+        self._session.flush()
+        return operation
+
+    def save_operation(
+        self, lease: VisualSessionLease, operation: VisualOperation
+    ) -> VisualOperation:
+        operation = VisualOperation.model_validate(operation.model_dump())
+        self._fence(lease)
+        self._check_identity(operation, lease.scope)
+        model = self._get(VisualOperationModel, lease.scope, operation.id)
+        if model is None:
+            raise ValueError("operation must be prepared first")
+        old = VisualOperation.model_validate(model.payload)
+        validate_operation_transition(old, operation)
+        if model.fencing_token != lease.fencing_token and old != operation:
+            # A replacement worker cannot know whether the old browser side effect happened.
+            if operation.status != "unknown":
+                raise ValueError("reclaimed operation can only finalize unknown")
+        self._operation_refs(operation, lease.scope)
+        model.payload = operation.model_dump(mode="json")
+        model.status = operation.status
+        self._session.flush()
+        return operation
+
+    @staticmethod
+    def _frame_record(model: VisualOperationFrameModel) -> VisualOperationFrameRecord:
+        metadata = VisualOperationFrame.model_validate(
+            {
+                key: getattr(model, key)
+                for key in VisualOperationFrame.model_fields
+                if key != "schema_version"
+            }
+        )
+        return VisualOperationFrameRecord(metadata, model.storage_key)
+
+    def add_frame(
+        self, lease: VisualSessionLease, record: VisualOperationFrameRecord
+    ) -> VisualOperationFrameRecord:
+        self._fence(lease)
+        frame = VisualOperationFrame.model_validate(record.metadata.model_dump())
+        self._check_identity(frame, lease.scope)
+        operation = self._get(VisualOperationModel, lease.scope, frame.operation_id)
+        if operation is None or operation.fencing_token != lease.fencing_token:
+            raise ValueError("frame requires current operation owner")
+        existing = self._session.scalar(
+            select(VisualOperationFrameModel).where(
+                VisualOperationFrameModel.operation_id == frame.operation_id,
+                VisualOperationFrameModel.role == frame.role,
+            )
+        )
+        if existing:
+            if self._frame_record(existing) != record:
+                raise ValueError("operation frame is immutable; checksum/identity conflict")
+            return record
+        if operation.status != ("prepared" if frame.role == "before" else "executing"):
+            raise ValueError("frame capture is outside operation lifecycle")
+        if frame.deleted_at is not None:
+            raise ValueError("new frame cannot already be deleted")
+        started = VisualOperation.model_validate(operation.payload).started_at
+        if frame.captured_at < started:
+            raise ValueError("frame predates this operation")
+        self._session.add(
+            VisualOperationFrameModel(
+                **frame.model_dump(exclude={"schema_version"}),
+                storage_key=record.storage_key,
+            )
+        )
+        self._session.flush()
+        return record
+
+    def add_locator(
+        self, lease: VisualSessionLease, evidence: VisualLocatorEvidence
+    ) -> VisualLocatorEvidence:
+        evidence = VisualLocatorEvidence.model_validate(evidence.model_dump())
+        self._fence(lease)
+        self._check_identity(evidence, lease.scope)
+        operation = self._get(VisualOperationModel, lease.scope, evidence.operation_id)
+        frame = self._get(VisualOperationFrameModel, lease.scope, evidence.originating_frame_id)
+        if (
+            operation is None
+            or frame is None
+            or frame.deleted_at is not None
+            or frame.operation_id != evidence.operation_id
+            or frame.role != "before"
+            or operation.state_id != evidence.state_id
+            or operation.proposal_id != evidence.proposal_id
+        ):
+            raise ValueError("locator source frame/state/proposal mismatch")
+        if evidence.verified_at and evidence.verified_at < frame.captured_at:
+            raise ValueError("locator verification predates originating frame")
+        existing = self._get(VisualLocatorEvidenceModel, lease.scope, evidence.id)
+        if existing:
+            if existing.payload != evidence.model_dump(mode="json"):
+                raise ValueError("locator evidence is immutable")
+            return evidence
+        if operation.status != "prepared" or operation.fencing_token != lease.fencing_token:
+            raise ValueError("locator requires a prepared operation owned by current lease")
+        self._session.add(
+            VisualLocatorEvidenceModel(
+                **{
+                    key: getattr(evidence, key)
+                    for key in (
+                        "id",
+                        "tenant_id",
+                        "project_id",
+                        "session_id",
+                        "operation_id",
+                        "state_id",
+                        "proposal_id",
+                        "originating_frame_id",
+                        "status",
+                    )
+                },
+                payload=evidence.model_dump(mode="json"),
+            )
+        )
+        self._session.flush()
+        return evidence
+
+    def save_checkpoint(self, lease: VisualSessionLease, checkpoint: VisualCheckpoint) -> None:
+        checkpoint = VisualCheckpoint.model_validate(checkpoint.model_dump())
+        self._fence(lease)
+        state = self._legacy_ref(VisualExplorationStateModel, lease.scope, checkpoint.state_id)
+        previous = None
+        for identity in checkpoint.ancestor_operation_ids:
+            operation = self._get(VisualOperationModel, lease.scope, identity)
+            if operation is None or operation.status != "completed":
+                raise ValueError("checkpoint requires completed ancestor operations")
+            payload = VisualOperation.model_validate(operation.payload)
+            if payload.parent_operation_id != previous:
+                raise ValueError("checkpoint ancestors must form one branch")
+            previous = identity
+        payload = checkpoint.model_dump(mode="json")
+        if state.checkpoint is not None and state.checkpoint != payload:
+            raise ValueError("checkpoint invariants are immutable")
+        state.checkpoint = payload
+        self._session.flush()
+
+    def add_handoff(
+        self, lease: VisualSessionLease, handoff: VisualLocatorHandoff
+    ) -> VisualLocatorHandoff:
+        handoff = VisualLocatorHandoff.model_validate(handoff.model_dump())
+        self._fence(lease)
+        self._check_identity(handoff, lease.scope)
+        existing = self._session.scalar(
+            select(VisualLocatorHandoffModel).where(
+                *self._scope(VisualLocatorHandoffModel, lease.scope),
+                VisualLocatorHandoffModel.version == handoff.version,
+            )
+        )
+        if existing:
+            if existing.payload != handoff.model_dump(mode="json"):
+                raise ValueError("handoff version is immutable")
+            return handoff
+        for branch in handoff.branches:
+            previous = None
+            for step in branch.steps:
+                model = self._get(VisualOperationModel, lease.scope, step.operation_id)
+                if model is None or (branch.status == "ready" and model.status != "completed"):
+                    raise ValueError("handoff requires completed operations in the same scope")
+                operation = VisualOperation.model_validate(model.payload)
+                if operation.parent_operation_id != previous:
+                    raise ValueError("handoff must contain a complete branch, never siblings")
+                previous = operation.id
+                if step.locator_id != operation.locator_id:
+                    raise ValueError("handoff locator must match executed operation")
+                if (branch.status == "ready" and operation.action_kind in {"click", "type"}
+                    and step.locator_id is None):
+                    raise ValueError("targeted handoff step requires a verified locator")
+                if (operation.action_kind == "type") != (step.input_reference is not None):
+                    raise ValueError("typed handoff step requires an unbound input reference")
+                self._operation_refs(operation, lease.scope)
+        self._session.add(
+            VisualLocatorHandoffModel(
+                id=handoff.id,
+                tenant_id=handoff.tenant_id,
+                project_id=handoff.project_id,
+                session_id=handoff.session_id,
+                version=handoff.version,
+                content_hash=handoff.content_hash,
+                payload=handoff.model_dump(mode="json"),
+                created_at=handoff.created_at,
+            )
+        )
+        self._session.flush()
+        return handoff
+
+    def snapshot(self, scope: VisualSessionScope) -> dict[str, tuple]:
+        """Return detached contracts, including frame tombstones, from one DB snapshot."""
+        operations = self._session.scalars(
+            select(VisualOperationModel)
+            .where(
+                *self._scope(VisualOperationModel, scope),
+            )
+            .order_by(VisualOperationModel.sequence)
+        )
+        frames = self._session.scalars(
+            select(VisualOperationFrameModel)
+            .where(
+                *self._scope(VisualOperationFrameModel, scope),
+            )
+            .order_by(VisualOperationFrameModel.captured_at, VisualOperationFrameModel.id)
+        )
+        locators = self._session.scalars(
+            select(VisualLocatorEvidenceModel)
+            .where(
+                *self._scope(VisualLocatorEvidenceModel, scope),
+            )
+            .order_by(VisualLocatorEvidenceModel.id)
+        )
+        handoffs = self._session.scalars(
+            select(VisualLocatorHandoffModel)
+            .where(
+                *self._scope(VisualLocatorHandoffModel, scope),
+            )
+            .order_by(VisualLocatorHandoffModel.version)
+        )
+        return {
+            "operations": tuple(VisualOperation.model_validate(row.payload) for row in operations),
+            "frames": tuple(self._frame_record(row) for row in frames),
+            "locators": tuple(
+                VisualLocatorEvidence.model_validate(row.payload) for row in locators
+            ),
+            "handoffs": tuple(VisualLocatorHandoff.model_validate(row.payload) for row in handoffs),
+        }
+
+    def result_links(self, scope, *, legacy=False):
+        generation = SqlAlchemyGenerationRepository(self._session)
+        links = {
+            key: {"state": "not_started", "id": None, "href": None}
+            for key in ("handoff", "generation", "draft", "run", "report")
+        }
+        handoff = self._session.scalar(
+            select(VisualLocatorHandoffModel)
+            .where(*self._scope(VisualLocatorHandoffModel, scope))
+            .order_by(VisualLocatorHandoffModel.version.desc())
+        )
+        request = None
+        if handoff:
+            package = VisualLocatorHandoff.model_validate(handoff.payload)
+            links["handoff"] = dict(
+                id=str(handoff.id),
+                href=None,
+                state="ready"
+                if any(b.status == "ready" for b in package.branches)
+                else "unavailable",
+            )
+            if handoff.generation_request_id:
+                candidate = generation.get_request(scope.tenant_id, handoff.generation_request_id)
+                if candidate and candidate.vision_handoff_id == handoff.id:
+                    request = candidate
+        elif legacy:
+            request = generation.get_request_by_key(
+                scope.tenant_id, f"vision-draft:{scope.session_id}"
+            )
+            links["handoff"]["state"] = "legacy_missing"
+        if request is None or request.project_id != scope.project_id:
+            record = SqlAlchemyVisionRepository(self._session).get(
+                scope.tenant_id, scope.session_id
+            )
+            if record.state in {"completed", "unavailable", "cancelled"}:
+                links["generation"]["state"] = "unavailable" if not legacy else "legacy_missing"
+                if not legacy and handoff is None:
+                    links["handoff"]["state"] = "unavailable"
+            activity = self._session.scalar(select(ActivityEventModel).where(
+                ActivityEventModel.tenant_id == scope.tenant_id,
+                ActivityEventModel.visual_exploration_session_id == scope.session_id,
+                ActivityEventModel.stage == "handoff.unavailable",
+            ))
+            if activity and activity.event_metadata.get("reason_code") in {
+                "handoff_branch_limit", "handoff_incomplete", "no_eligible_branches",
+                "generation_request_unavailable",
+            }:
+                links["handoff"]["reason_code"] = activity.event_metadata["reason_code"]
+            return links
+        links["generation"] = dict(
+            state=request.state,
+            id=str(request.id),
+            href=None,
+            reason_code="generation_unavailable" if request.state == "failed" else None,
+        )
+        draft = generation.get_draft_for_request(scope.tenant_id, request.id)
+        if draft is None:
+            return links
+        links["draft"] = dict(state=draft.state, id=str(draft.id), href=f"/agent?draft={draft.id}")
+        if draft.linked_run_id is None:
+            return links
+        run = self._session.scalar(
+            select(TestRunModel).where(
+                TestRunModel.tenant_id == scope.tenant_id,
+                TestRunModel.project_id == scope.project_id,
+                TestRunModel.id == draft.linked_run_id,
+            )
+        )
+        if run is None:
+            links["run"]["state"] = "unavailable"
+            return links
+        links["run"] = dict(state=run.status, id=str(run.id), href=f"/runs/{run.id}")
+        report = self._session.scalar(
+            select(RunReportModel)
+            .where(
+                RunReportModel.tenant_id == scope.tenant_id,
+                RunReportModel.run_id == run.id,
+            )
+            .order_by(RunReportModel.report_version.desc())
+        )
+        pending_report = self._session.scalar(select(OutboxEventModel.id).where(
+            OutboxEventModel.tenant_id == scope.tenant_id,
+            OutboxEventModel.idempotency_key == f"run-report:{run.id}:v1",
+            OutboxEventModel.published_at.is_(None),
+        ))
+        links["report"] = dict(
+            state=("available" if report.status == "completed" else "unavailable")
+            if report
+            else "pending" if pending_report
+            else "unavailable"
+            if run.status in {"passed", "failed", "cancelled", "errored", "skipped"}
+            else "pending",
+            id=str(report.id) if report else None,
+            href=f"/runs/{run.id}" if report else None,
+        )
+        return links
+
+    def tombstone_frame(self, scope: VisualSessionScope, frame_id: UUID) -> bool:
+        # Authorization is supplied by the application, separately from worker ownership.
+        result = self._session.execute(
+            update(VisualOperationFrameModel)
+            .where(
+                *self._scope(VisualOperationFrameModel, scope),
+                VisualOperationFrameModel.id == frame_id,
+                VisualOperationFrameModel.deleted_at.is_(None),
+            )
+            .values(deleted_at=datetime.now(UTC))
+        )
+        return bool(result.rowcount)
+
+
 class SqlAlchemyVisionRepository:
     """Tenant-scoped visual session persistence; values are safe metadata only."""
 
@@ -957,6 +1543,92 @@ class SqlAlchemyVisionRepository:
         )
         return result.rowcount or 0
 
+    @staticmethod
+    def _trajectory_edge_record(model: VisualTrajectoryEdgeModel) -> VisualTrajectoryEdgeRecord:
+        return VisualTrajectoryEdgeRecord(
+            id=model.id, tenant_id=model.tenant_id, session_id=model.session_id,
+            parent_state_id=model.parent_state_id, proposal_id=model.proposal_id,
+            attempt=model.attempt, action=model.action, confidence=model.confidence,
+            status=model.status, outcome_code=model.outcome_code,
+            child_state_id=model.child_state_id, observed_at=model.observed_at,
+            duration_ms=model.duration_ms, url_fingerprint=model.url_fingerprint,
+            url_change=model.url_change, child_screenshot_checksum=model.child_screenshot_checksum,
+            created_at=model.created_at,
+        )
+
+    def add_trajectory_edge(self, edge: VisualTrajectoryEdgeRecord) -> VisualTrajectoryEdgeRecord:
+        """Insert an edge, then permit its single proposed-to-terminal finalization."""
+        existing = self._session.scalar(
+            select(VisualTrajectoryEdgeModel).where(
+                VisualTrajectoryEdgeModel.session_id == edge.session_id,
+                VisualTrajectoryEdgeModel.proposal_id == edge.proposal_id,
+                VisualTrajectoryEdgeModel.attempt == edge.attempt,
+            )
+        )
+        if existing is not None:
+            identity_fields = ("tenant_id", "parent_state_id", "action", "confidence")
+            if any(getattr(existing, field) != getattr(edge, field) for field in identity_fields):
+                raise ValueError("trajectory edge conflicts with immutable proposal attempt")
+            outcome_fields = (
+                "status", "outcome_code", "child_state_id", "observed_at", "duration_ms",
+                "url_fingerprint", "url_change", "child_screenshot_checksum",
+            )
+            if all(getattr(existing, field) == getattr(edge, field) for field in outcome_fields):
+                return self._trajectory_edge_record(existing)
+            if existing.status != "proposed" or edge.status == "proposed":
+                raise ValueError("trajectory edge conflicts with immutable proposal attempt")
+            for field in outcome_fields:
+                setattr(existing, field, getattr(edge, field))
+            self._session.flush()
+            return self._trajectory_edge_record(existing)
+        model = VisualTrajectoryEdgeModel(
+            id=edge.id, tenant_id=edge.tenant_id, session_id=edge.session_id,
+            parent_state_id=edge.parent_state_id, proposal_id=edge.proposal_id,
+            attempt=edge.attempt, action=edge.action, confidence=edge.confidence,
+            status=edge.status,
+            outcome_code=edge.outcome_code, child_state_id=edge.child_state_id,
+            observed_at=edge.observed_at, duration_ms=edge.duration_ms,
+            url_fingerprint=edge.url_fingerprint, url_change=edge.url_change,
+            child_screenshot_checksum=edge.child_screenshot_checksum, created_at=edge.created_at,
+        )
+        self._session.add(model)
+        self._session.flush()
+        return self._trajectory_edge_record(model)
+
+    def list_trajectory_edges(
+        self, tenant_id: str, session_id: UUID
+    ) -> list[VisualTrajectoryEdgeRecord]:
+        models = self._session.scalars(
+            select(VisualTrajectoryEdgeModel)
+            .join(
+                VisualActionProposalModel,
+                VisualTrajectoryEdgeModel.proposal_id == VisualActionProposalModel.id,
+            )
+            .join(
+                VisualExplorationStateModel,
+                VisualTrajectoryEdgeModel.parent_state_id == VisualExplorationStateModel.id,
+            )
+            .where(
+                VisualTrajectoryEdgeModel.tenant_id == tenant_id,
+                VisualTrajectoryEdgeModel.session_id == session_id,
+            )
+            .order_by(
+                VisualExplorationStateModel.created_at,
+                VisualActionProposalModel.sequence,
+                VisualTrajectoryEdgeModel.id,
+            )
+        )
+        return [self._trajectory_edge_record(model) for model in models]
+
+    def list_trajectory_edges_for_state(
+        self, tenant_id: str, session_id: UUID, state_id: UUID
+    ) -> list[VisualTrajectoryEdgeRecord]:
+        return [
+            edge
+            for edge in self.list_trajectory_edges(tenant_id, session_id)
+            if edge.parent_state_id == state_id or edge.child_state_id == state_id
+        ]
+
     def add_action(self, proposal: VisualActionProposalModel) -> None:
         self._session.add(proposal)
         self._session.flush()
@@ -964,6 +1636,14 @@ class SqlAlchemyVisionRepository:
     def add_state(self, state: VisualExplorationStateModel) -> None:
         self._session.add(state)
         self._session.flush()
+
+    def list_states(self, tenant_id: str, session_id: UUID) -> list[VisualExplorationStateModel]:
+        return list(self._session.scalars(
+            select(VisualExplorationStateModel).where(
+                VisualExplorationStateModel.tenant_id == tenant_id,
+                VisualExplorationStateModel.session_id == session_id,
+            ).order_by(VisualExplorationStateModel.created_at, VisualExplorationStateModel.id)
+        ))
 
     def list_actions(self, tenant_id: str, session_id: UUID) -> list[VisualActionProposalModel]:
         return list(

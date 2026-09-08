@@ -1,0 +1,15 @@
+{
+  "contract": "VisualWorkerAck",
+  "accepted": true,
+  "payload": {
+    "contract_version": "v4",
+    "tenant_id": "fixture-tenant",
+    "project_id": "00000000-0000-0000-0000-000000000002",
+    "session_id": "00000000-0000-0000-0000-000000000003",
+    "fencing_token": 1,
+    "operation_id": "00000000-0000-0000-0000-000000000004",
+    "persisted_frame_ids": [
+      "00000000-0000-0000-0000-000000000006"
+    ]
+  }
+}

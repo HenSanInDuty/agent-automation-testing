@@ -16,8 +16,11 @@ The temporary-image adapter supports My Drive through
 folder owned by that OAuth user. Shared Drive service-account credentials are
 also supported, but require a deployment-specific secret-file mount. Each
 verified screenshot is shared by an
-unlisted public link only for the model request, then deleted; neither the URL
-nor image is saved in application records or logs.
+unlisted public link for delivery. Per ADR-008,
+`GOOGLE_DRIVE_VISION_DELETE_AFTER_DELIVERY=false` is the current default: files
+remain until explicitly removed or their permission is revoked. Drive links
+have no enforced TTL. The link is held only in memory, never saved in application
+records or logs. Private replay/operation evidence is stored separately in RustFS.
 
 For My Drive OAuth, no credential-file mount is required by the supplied local
 Compose configuration.
@@ -54,9 +57,10 @@ against the exploration session's project, never a caller-provided correlation
 ID. Monitor aggregate stream connections, fallback activation, safe-stage
 counts, unauthorized attempts, and activity write/query failures only.
 
-Keep concurrency, steps, screenshot bytes, session duration, request rate, and
-cost caps at their disabled-by-default local values until a benchmark gate is
-approved. Investigate `unavailable` outcomes using the correlation ID and safe
+Keep concurrency, steps, screenshot bytes, session duration and request rate
+within the configured limits. Vision monetary cost fields remain compatibility
+metadata; cost reservation, accounting and missing-price gating are not implemented
+by the locator trace flow, as requested. Investigate `unavailable` outcomes using the correlation ID and safe
 activity/audit records. On suspected prompt injection, privacy exposure, cost
 spike, or provider incident: disable the tenant policy, retain only the normal
 artifact-retention evidence, review correlation-linked audit/activity events,
@@ -75,7 +79,7 @@ activity events, audit detail, tickets, or dashboards.
 
 Production retention of screenshots indefinitely remains gated on privacy/legal
 approval. Do not enable it for production data, choose a data region, or alter
-the existing consent/provider/cost limits without the corresponding approval.
+the existing consent/provider/resource limits without the corresponding approval.
 
 ## Production diagnostic evidence
 
@@ -114,3 +118,76 @@ reads, and expiry deleted/failed/overdue counts. Alert when cleanup lag exceeds 
 hours, any key/decryption mismatch occurs, cleanup failures persist, or plaintext
 payload-log detection is nonzero. Labels must not include tenant IDs, session IDs,
 correlation IDs, payloads, ciphertext, prompts, screenshots, URLs, or exception text.
+
+## Locator trace sessions (v4)
+
+Open `/agent?vision=<session_id>` to read the saved result, chronological operations,
+selected before/after images, branch paths and verified/unresolved locator catalog.
+Selecting a historical frame does not move the browser. Enable Follow latest to
+follow new operations; scrubbing keeps your selection through polling. Legacy
+sessions retain their original frame/trajectory view and are labeled evidence-only.
+
+Exploration completion, draft creation, approval, deterministic execution and report
+availability are independent states. Follow the explicit draft link to review the
+source and its Vision provenance. Approving a draft creates one v1 Playwright run;
+repeating the same decision returns that run. The run link shows its unchanged
+runner verdict and advisory report. A generation/report failure leaves the trace
+and result export available. Export contains metadata only, without image bytes,
+private storage keys or provider URLs.
+
+The worker grounds a model coordinate against the live page and verifies the
+unique locator and actionability before acting. The control plane commits an
+operation intent and its actual before image before dispatch; it commits after
+image/outcome immediately afterward, then acknowledges staged-file cleanup.
+Lost responses reconcile the same operation ID. Unknown actions are not repeated.
+Sibling branches require checkpoint verification; back, popup closure and replay
+remain separate trace operations. URL equality alone does not prove restoration.
+
+Typed inputs remain unbound in generated drafts and block their affected branches.
+Ambiguous, sensitive or unsupported targets remain unresolved; canvas, closed
+shadow roots and unsupported frames have no pixel fallback. Restoring arbitrary
+application/server state is not guaranteed. Observed visibility/actionability does
+not establish business success. Resource limits and live consent/policy checks
+still apply, including between image upload and a provider request.
+
+Operation frames are private evidence subject to the existing explicit-deletion
+policy. Deleting frames removes bytes first and retains metadata tombstones.
+Failed deletion remains auditable and retryable; neither deletion nor export
+modifies a run verdict. Result and trace endpoints require the session's project
+permission and use private, no-store responses.
+
+## Local rollout and rollback
+
+The deployment setting `VISION_TRACE_V4_ENABLED` defaults to false and selects the
+writer only for newly accepted sessions. It does not enable tenant Vision consent,
+change providers, or rewrite existing session versions. Idempotent resubmission
+keeps the originally recorded version across a flag change.
+
+1. Back up the intended local application database before a real upgrade. Verify
+   the additive head `f9a0b1c2d3e4` against a disposable database with legacy rows.
+   Do not overwrite volumes or downgrade evidence tables.
+2. Drain active sessions before restarting a worker. Deploy the worker supporting
+   legacy plus v4 and its authenticated capability response, then the control-plane
+   reader/orchestrator and dashboard. Apply the additive schema before enabling a
+   new writer. v4 requires the separate `VISION_WORKER_SECRET` boundary.
+3. Run the synthetic v2 manifest cases with an owned loopback target and fixture
+   models. Set `VISION_TRACE_V4_ENABLED=true` only after the schema and worker are
+   ready. Existing tenant policy and raw-image consent are still required.
+4. Roll back new submissions by setting the flag false. Keep the v4 worker and
+   evidence readers while existing v4 sessions finish or become interrupted; do
+   not switch a running session's protocol or remove its history.
+
+Monitor counts for unknown operations, restoration failures, staged-frame cleanup
+failures, handoff failures, commit/read latency and deadline stops. Use safe codes
+and aggregates, never locator values, page text, typed values, URLs or exception
+payloads as labels. A real-provider/target canary requires an authorized target
+and tenant scope; the synthetic suite is not a production-readiness certificate.
+
+For test isolation, the trace fixtures use an owned PostgreSQL service on
+`127.0.0.1:55437` with disposable UUID databases. Install the worker's pinned
+Playwright browser before running them. Run the Python baseline in a fresh
+process with dotenv disabled, no provider credentials, and only loopback network
+access. The configured-stack Compose dashboard workflow is separate: it creates
+users/runs and can invoke configured providers, so do not run it as a fixture-only
+check. Record skipped Compose checks explicitly. Browser dashboard tests require
+`VISION_DASHBOARD_URL` pointing to a local dashboard with intercepted API fixtures.

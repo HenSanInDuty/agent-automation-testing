@@ -1,5 +1,6 @@
 """Aggregate safe, fixture-derived results for vision model rollout gates."""
 
+from collections import Counter
 from dataclasses import asdict, dataclass
 from typing import Literal
 
@@ -107,3 +108,47 @@ def _validated_action(content: str | None):
 def _rate(values) -> float:
     items = list(values)
     return sum(items) / len(items) if items else 0.0
+
+
+def summarize_locator_trace(
+    snapshot, *, expected_locator_values: set[str], post_commit_read_seconds: list[float],
+    deterministic_rerun_succeeded: bool, duplicate_physical_actions: int,
+) -> dict[str, object]:
+    """Aggregate actual synthetic trace observations, without copying locator values."""
+    operations = snapshot["operations"]
+    locators = snapshot["locators"]
+    verified = [item for item in locators if item.status == "verified"]
+    frames = {item.metadata.id: item.metadata for item in snapshot["frames"]}
+    missing = Counter()
+    retained = 0
+    for operation in operations:
+        for role in ("before", "after"):
+            frame = frames.get(getattr(operation, f"actual_{role}_frame_id"))
+            if frame and not frame.deleted_at:
+                retained += 1
+            else:
+                reason = "deleted" if frame else (
+                    getattr(operation, f"{role}_unavailable_reason") or "not_captured"
+                )
+                missing[reason] += 1
+    restoration = [o for o in operations if o.purpose in {"restore", "replay"}]
+    branches = [b for h in snapshot["handoffs"] for b in h.branches]
+    return {
+        "schema_version": "v2", "scope": "synthetic_fixture_only",
+        "locator_grounding": {"numerator": len(verified), "denominator": len(locators)},
+        "wrong_target_count": sum(
+            not item.descriptor or item.descriptor.value not in expected_locator_values
+            or not item.target_match for item in verified
+        ),
+        "frame_completeness": {"numerator": retained, "denominator": len(operations) * 2},
+        "missing_frame_reasons": dict(missing),
+        "restore_verified_count": sum(
+            o.checkpoint_id is not None and o.status == "completed" for o in restoration
+        ),
+        "restore_failure_count": sum(o.status in {"failed", "unknown"} for o in restoration),
+        "post_commit_read_latency_seconds": list(post_commit_read_seconds),
+        "eligible_branches": sum(b.status == "ready" for b in branches),
+        "total_branches": len(branches),
+        "deterministic_rerun_succeeded": deterministic_rerun_succeeded,
+        "duplicate_physical_actions": duplicate_physical_actions,
+    }

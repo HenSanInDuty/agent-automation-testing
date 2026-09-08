@@ -35,6 +35,7 @@ from infrastructure.workflows.temporal import (
     TestRunWorkflow,
     dispatch_test_run,
 )
+from infrastructure.workflows.vision_publisher import publish_vision_once
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         RustFSArtifactStore(settings),
                     ),
                 ).execute()
+            published += await publish_vision_once(session_factory, settings)
             if published:
                 log_event(
                     logger,

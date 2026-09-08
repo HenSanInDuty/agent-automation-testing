@@ -1,0 +1,25 @@
+{
+  "schema_version": "v2",
+  "classification": "synthetic_local_only",
+  "playwright_version": "1.50.1",
+  "provider": "injected_fixture_models_only",
+  "cases": [
+    {"id": "branches-approval-rerun-report", "test": "tests/test_vision_locator_pipeline.py"},
+    {"id": "live-commit-loss-recovery-policy-restoration", "test": "tests/test_vision_live_persistence.py"},
+    {"id": "grounding-duplicates-overlay-scopes-sensitive", "test": "workers/playwright/src/vision-locators.spec.ts"},
+    {"id": "same-url-popup-input-scroll-unknown-retry", "test": "workers/playwright/src/vision-operations.spec.ts"},
+    {"id": "authorization-deletion-export-links", "test": "tests/test_vision_results.py"},
+    {"id": "legacy-seven-frame-six-sibling-and-live-ui", "test": "workers/playwright/src/vision-dashboard.spec.ts"},
+    {"id": "additive-upgrade-writer-rollback", "test": "tests/test_vision_migration_compatibility.py"}
+  ],
+  "positive_grounding_required_rate": 1.0,
+  "wrong_target_count_required": 0,
+  "duplicate_physical_actions_required": 0,
+  "unsupported_target_policy": "explicit_unresolved_without_coordinate_execution",
+  "metrics": "benchmark.vision.summarize_locator_trace",
+  "limitations": [
+    "Fixture rates do not predict arbitrary target compatibility.",
+    "Post-commit read latency measures the authorized API read after a known commit, not provider or browser latency.",
+    "No real provider, Drive, configured application database or production target is used."
+  ]
+}

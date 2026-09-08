@@ -1,5 +1,6 @@
 import { apiRequest, ControlPlaneError, idempotencyKey } from "./api-client.ts";
-import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisualReplayFrames, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy, VisionProgressActivity } from "./generation-types";
+import type { VisualTrace, VisualLocator, VisionResult } from "./generation-types";
+import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisualReplayFrames, VisualTrajectory, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy, VisionProgressActivity } from "./generation-types";
 export { ControlPlaneError } from "./api-client.ts";
 
 export function submitGeneration(apiUrl: string, payload: { project_id: string; target_url: string; request: string }) {
@@ -50,6 +51,7 @@ export function listVisualExplorations(apiUrl: string, projectId: string) { retu
 export function getVisualExploration(apiUrl: string, id: string) { return apiRequest<VisualExploration>(apiUrl, `/api/v1/vision/explorations/${id}`); }
 export function listVisualActions(apiUrl: string, id: string) { return apiRequest<VisualAction[]>(apiUrl, `/api/v1/vision/explorations/${id}/actions`); }
 export function listVisualReplayFrames(apiUrl: string, id: string) { return apiRequest<VisualReplayFrames>(apiUrl, `/api/v1/vision/explorations/${id}/replay-frames`); }
+export function getVisualTrajectory(apiUrl: string, id: string) { return apiRequest<VisualTrajectory>(apiUrl, `/api/v1/vision/explorations/${id}/trajectory`); }
 export async function getVisualReplayFrameBlob(apiUrl: string, sessionId: string, frameId: string) {
   const response = await fetch(`${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/replay-frames/${encodeURIComponent(frameId)}`, { credentials: "include", headers: { Accept: "image/png" } });
   if (!response.ok) throw new ControlPlaneError(response.status, "Replay frame is unavailable.");
@@ -61,3 +63,40 @@ export function listVisionProgress(apiUrl: string, id: string) { return apiReque
 export function visionProgressStreamUrl(apiUrl: string, id: string) { return `${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(id)}/activities/stream`; }
 export function listVisionDebugEvidence(apiUrl: string, id: string) { return apiRequest<VisionDebugEvidence[]>(apiUrl, `/api/v1/vision/explorations/${id}/debug-evidence`); }
 export function getVisionDebugEvidence(apiUrl: string, sessionId: string, evidenceId: string) { return apiRequest<VisionDebugEvidencePayload>(apiUrl, `/api/v1/vision/explorations/${sessionId}/debug-evidence/${evidenceId}`); }
+
+export function getVisionResult(apiUrl: string, sessionId: string, signal?: AbortSignal) {
+  return apiRequest<VisionResult>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/result`, { signal, cache: "no-store" });
+}
+export async function getVisualTrace(apiUrl: string, sessionId: string, signal?: AbortSignal): Promise<VisualTrace> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let result: VisualTrace | undefined;
+    try {
+      for (let page = 0; page < 100; page++) {
+        const query = new URLSearchParams({ limit: "100", after_sequence: String(result?.next_sequence ?? 0) });
+        if (result) query.set("revision", result.revision);
+        const next: VisualTrace = await apiRequest(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/trace?${query}`, { signal, cache: "no-store" });
+        if (next.session_id !== sessionId || (result && next.has_more && next.next_sequence <= result.next_sequence)) throw new Error("Invalid trace page");
+        result = result ? { ...next, items: [...result.items, ...next.items], locators: [...result.locators, ...next.locators] } : next;
+        if (!next.has_more) return result;
+      }
+      throw new Error("Trace page limit reached");
+    } catch (error) {
+      if (!(error instanceof ControlPlaneError) || error.status !== 409 || attempt > 0) throw error;
+    }
+  }
+  throw new Error("Trace changed during loading");
+}
+export function getVisualLocators(apiUrl: string, sessionId: string, afterId?: string, signal?: AbortSignal) {
+  const query = new URLSearchParams({ limit: "100" });
+  if (afterId) query.set("after_id", afterId);
+  return apiRequest<{ items: VisualLocator[]; has_more: boolean; next_id: string | null }>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/locators?${query}`, { signal });
+}
+export async function getOperationFrameBlob(apiUrl: string, sessionId: string, frameId: string, signal?: AbortSignal) {
+  const response = await fetch(`${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/operation-frames/${encodeURIComponent(frameId)}`, { credentials: "include", signal, cache: "no-store" });
+  if (!response.ok) throw new ControlPlaneError(response.status, "Frame unavailable or access revoked.");
+  return response.blob();
+}
+export function deleteOperationFrames(apiUrl: string, sessionId: string, frameId?: string) {
+  return apiRequest<void>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/operation-frames${frameId ? `/${encodeURIComponent(frameId)}` : ""}`, { method: "DELETE", body: JSON.stringify({ confirm: true }) });
+}
+export function visionResultExportUrl(apiUrl: string, sessionId: string) { return `${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/result/export`; }

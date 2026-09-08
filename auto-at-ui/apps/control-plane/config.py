@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     agent_generation_prompt_version: str = "test-generation-v5"
     agent_generation_redaction_policy_version: str = "generation-redaction-v1"
     vision_enabled: bool = False
+    vision_trace_v4_enabled: bool = False
     vision_provider: str = "huggingface"
     vision_model: str = "Qwen/Qwen3.8-27B:deepinfra"
     vision_raw_screenshot_transfer_accepted: bool = False

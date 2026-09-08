@@ -54,6 +54,7 @@ export type ProjectExecutionPolicy = {
   vision_max_states: number;
 };
 export type VisualExploration = {
+  trace_version?: "legacy" | "v4";
   id: string;
   project_id: string;
   correlation_id: string;
@@ -84,6 +85,9 @@ export type VisualReplayFrame = {
   actions: VisualAction[];
 };
 export type VisualReplayFrames = { items: VisualReplayFrame[] };
+export type VisualTrajectoryState = { id: string; parent_id: string | null; hop: number; sequence: number | null; captured_at: string; frame_id: string | null };
+export type VisualTrajectoryEdge = { id: string; parent_state_id: string; proposal_id: string; attempt: number; action: VisualAction["action"]; confidence: number; status: string; outcome_code: string | null; child_state_id: string | null; observed_at: string | null; duration_ms: number; url_change: string };
+export type VisualTrajectory = { session: { id: string; state: string; safe_failure_reason: string | null }; trajectory_available: boolean; legacy_label: string | null; states: VisualTrajectoryState[]; proposals: { id: string; state_id: string | null; sequence: number; action: VisualAction["action"]; confidence: number | null }[]; edges: VisualTrajectoryEdge[] };
 export type VisionProgressActivity = {
   id: string;
   run_id: string | null;
@@ -105,3 +109,10 @@ export type VisionDebugEvidence = {
   retention_until: string;
 };
 export type VisionDebugEvidencePayload = VisionDebugEvidence & { payload: string };
+
+export type OperationFrame = { id: string | null; availability: "retained" | "deleted" | "missing"; reason_code: string | null; captured_at?: string };
+export type VisualOperation = { id: string; sequence: number; purpose: "setup" | "explore" | "restore" | "replay"; action_kind: string; status: string; started_at: string; outcome_code: string | null; state_id: string | null; locator_id: string | null; before: OperationFrame; after: OperationFrame };
+export type VisualLocator = { id: string; operation_id: string; status: string; reason_code: string | null; verified_at: string | null; descriptor: { strategy: string; role: string | null; value: string; scope: { kind: string; selector: string }[] } | null; bounding_box: { x: number; y: number; width: number; height: number } | null };
+export type VisualTrace = { schema_version: string; session_id: string; revision: string; trace_version: string; items: VisualOperation[]; locators: VisualLocator[]; next_sequence: number; has_more: boolean };
+export type VisionHandoffBranch = { id: string; status: "ready" | "blocked"; reason_code: string | null; steps: { operation_id: string; locator_id: string | null; input_reference: string | null }[] };
+export type VisionResult = { schema_version: string; session_id: string; project_id: string; revision: string; exploration_state: string; completion_reason: string | null; evidence_status: string; counts: Record<string, number>; branches: { id: string; status: string; reason_code: string | null }[]; handoffs: { id: string; branches: VisionHandoffBranch[] }[]; links: Record<"handoff" | "generation" | "draft" | "run" | "report", { state: string; id: string | null; href: string | null; reason_code?: string | null }>; limitations: string[] };

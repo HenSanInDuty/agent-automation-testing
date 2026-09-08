@@ -147,6 +147,30 @@ def test_candidate_batch_is_strict_and_can_expand_a_state() -> None:
         validate_visual_candidate_batch_output(json.dumps({"actions": candidates}), 2)
 
 
+def test_candidate_batches_share_session_guard_and_have_no_single_action_instruction():
+    from agents.shared.runtime import AgentStepGuard
+    from agents.vision.executor import policy_to_step_guard
+
+    bounded = policy(max_steps=1)
+    guard = AgentStepGuard(policy_to_step_guard(bounded))
+    model = FakeModel(
+        response('{"candidates":[{"kind":"stop","confidence":1,"expected_outcome":"Done"}]}')
+    )
+    options = dict(
+        screenshot=b"\x89PNG\r\n\x1a\n",
+        content_type="image/png",
+        task_intent="fixture",
+        policy=bounded,
+        model=model,
+        max_candidates=1,
+        guard=guard,
+    )
+    assert asyncio.run(execute_visual_candidate_batch(**options)).status == "completed"
+    assert asyncio.run(execute_visual_candidate_batch(**options)).detail == "vision guard exhausted"
+    assert model.calls == 1
+    assert "one candidate JSON object" not in model.payload["messages"][0]["content"]
+
+
 @pytest.mark.parametrize(
     ("model_response", "maximum", "code"),
     [
@@ -202,7 +226,7 @@ def test_candidate_batch_classifies_provider_transport_and_redacts_bounded_captu
             max_candidates=1,
         )
     )
-    capture = VisualDiagnosticCapture.from_content("token=top-secret\n{\"candidates\": []}")
+    capture = VisualDiagnosticCapture.from_content('token=top-secret\n{"candidates": []}')
 
     assert outcome.diagnostic_code == VisualDiagnosticCode.PROVIDER_TRANSPORT
     assert capture.content is not None and "top-secret" not in capture.content

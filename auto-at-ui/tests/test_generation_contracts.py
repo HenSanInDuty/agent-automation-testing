@@ -133,3 +133,24 @@ def test_generated_execution_rejects_prohibited_source(source: str) -> None:
 
     with pytest.raises(ValidationError, match="prohibited|only"):
         validate_generated_execution_request(request, policy)
+
+
+def test_vision_provenance_is_optional_and_idempotency_includes_handoff_identity():
+    from uuid import uuid4
+
+    from auto_at.contracts.generation import (
+        PlanningProvenance,
+        VisionPlanningSource,
+        vision_generation_key,
+    )
+
+    legacy = PlanningProvenance(provider="fixture", model="fixture", prompt_version="v1",
+                                redaction_policy_version="v1")
+    assert legacy.vision_source is None
+    source = VisionPlanningSource(session_id=uuid4(), handoff_id=uuid4(), handoff_hash="a" * 64)
+    key = vision_generation_key(source, "Explore")
+    assert key == vision_generation_key(source, "Explore")
+    for changes in ({"handoff_id": uuid4()}, {"handoff_hash": "b" * 64}, {"session_id": uuid4()}):
+        assert key != vision_generation_key(source.model_copy(update=changes), "Explore")
+    with pytest.raises(ValidationError):
+        VisionPlanningSource(session_id=uuid4(), handoff_id=uuid4())

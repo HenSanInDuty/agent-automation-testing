@@ -46,6 +46,27 @@ class RecordingReportingHandler(RecordingTriageHandler):
     pass
 
 
+def test_deferred_v4_vision_does_not_get_marked_published_or_block_run_dispatch():
+    event = OutboxEvent(
+        id=uuid4(),
+        tenant_id="tenant-a",
+        event_type="agent.visual_exploration.requested.v1",
+        schema_version="v1",
+        correlation_id=uuid4(),
+        causation_id=None,
+        idempotency_key="vision-fixture",
+    )
+    run = requested_event()
+    outbox, workflows = InMemoryOutbox([event, run]), RecordingWorkflowStarter()
+
+    class Deferred:
+        async def execute(self, event):
+            return "deferred"
+
+    assert asyncio.run(PublishOutbox(outbox, workflows, vision=Deferred()).execute()) == 1
+    assert workflows.started == [run] and event.id not in outbox.published
+
+
 def requested_event() -> OutboxEvent:
     run_id = uuid4()
     return OutboxEvent(

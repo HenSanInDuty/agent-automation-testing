@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -15,7 +16,7 @@ from agents.vision.intent import decrypt_visual_intent
 from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
 from config import Settings
 from domain.activity import ActivityEvent
-from domain.entities import VisualReplayFrameRecord
+from domain.entities import VisualReplayFrameRecord, VisualTrajectoryEdgeRecord
 from domain.ports import VerifiedVisualReplayStore
 from domain.runs import AuditEvent, OutboxEvent
 from infrastructure.persistence.models import (
@@ -50,6 +51,9 @@ class VisionEventProcessor:
         if not isinstance(raw_id, str):
             raise ValueError("visual exploration event is missing session_id")
         session = self._sessions.get(event.tenant_id, UUID(raw_id))
+        if session is not None and getattr(session, "trace_version", "legacy") == "v4":
+            # The infrastructure publisher invokes v4 outside its legacy transaction.
+            return "deferred"
         if session is None or session.state in {"completed", "unavailable", "cancelled"}:
             return "already_processed"
         runtime = resolve_agent_runtime(
@@ -72,8 +76,13 @@ class VisionEventProcessor:
             self._progress(session, "started", "started")
             # A checkpoint is an in-memory ancestor action path.  The worker replays it
             # in a new context, so siblings are isolated and BFS can backtrack safely.
-            queue: list[tuple[UUID, UUID | None, int, list[dict[str, object]]]] = [
-                (uuid4(), None, 0, [])
+            queue: list[
+                tuple[
+                    UUID, UUID | None, int, list[dict[str, object]],
+                    VisualTrajectoryEdgeRecord | None, str | None, int | None,
+                ]
+            ] = [
+                (uuid4(), None, 0, [], None, None, None)
             ]
             visited, sequence, last_model_call = 0, 0, None
             max_hops = min(session.max_hops, policy.vision_max_hops)
@@ -81,26 +90,56 @@ class VisionEventProcessor:
             worker_session_open = True
             async with httpx.AsyncClient(timeout=runtime.vision.max_session_seconds) as client:
                 while queue and visited < max_states:
-                    state_id, parent_id, hop, replay_path = queue.pop(0)
-                    response = await client.post(
-                        f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/tree-states",
-                        headers={
-                            "X-Auto-At-Vision-Worker-Secret": self._settings.vision_worker_secret
-                        },
-                        json={
-                            "contract_version": "v2",
-                            "id": str(session.id),
-                            "node_id": str(state_id),
-                            "target_url": session.target_url,
-                            "allowed_origins": policy.allowed_origins,
-                            "max_hops": max_hops,
-                            "max_states": max_states,
-                            "max_screenshot_bytes": runtime.vision.max_screenshot_bytes,
-                            "max_session_seconds": runtime.vision.max_session_seconds,
-                            "replay_path": replay_path,
-                        },
-                    )
-                    response.raise_for_status()
+                    (
+                        state_id, parent_id, hop, replay_path, originating_edge,
+                        parent_url_fingerprint, originating_sequence,
+                    ) = queue.pop(0)
+                    try:
+                        response = await client.post(
+                            f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/tree-states",
+                            headers={
+                                "X-Auto-At-Vision-Worker-Secret": (
+                                    self._settings.vision_worker_secret
+                                )
+                            },
+                            json={
+                                "contract_version": "v3",
+                                "id": str(session.id),
+                                "node_id": str(state_id),
+                                "target_url": session.target_url,
+                                "allowed_origins": policy.allowed_origins,
+                                "max_hops": max_hops,
+                                "max_states": max_states,
+                                "max_screenshot_bytes": runtime.vision.max_screenshot_bytes,
+                                "max_session_seconds": runtime.vision.max_session_seconds,
+                                "replay_path": replay_path,
+                                **(
+                                    {"parent_url_fingerprint": parent_url_fingerprint}
+                                    if parent_url_fingerprint is not None
+                                    else {}
+                                ),
+                            },
+                        )
+                        response.raise_for_status()
+                        observation = response.json()
+                        url_fingerprint = observation.get("url_fingerprint")
+                        url_change = observation.get("url_change")
+                        duration_ms = observation.get("duration_ms")
+                        if (
+                            not isinstance(url_fingerprint, str)
+                            or not isinstance(duration_ms, int)
+                            or duration_ms < 0
+                            or duration_ms > 3_600_000
+                            or url_change not in {"unchanged", "changed", "unavailable"}
+                        ):
+                            raise ValueError("worker observation metadata is invalid")
+                    except Exception:
+                        if originating_edge is not None and originating_sequence is not None:
+                            self._finalize_edge(
+                                session, originating_edge, originating_sequence,
+                                status="failed", outcome_code="capture_failed",
+                            )
+                        raise
                     path = (root / f"tree-{state_id}.png").resolve()
                     if root not in path.parents or not path.is_file():
                         raise ValueError("visual screenshot is unavailable")
@@ -136,6 +175,23 @@ class VisionEventProcessor:
                     )
                     self._sessions.add_replay_frame(frame)
                     visited += 1
+                    if originating_edge is not None and originating_sequence is not None:
+                        status = "terminal" if hop >= max_hops else (
+                            "no_meaningful_change" if url_change == "unchanged" else "observed"
+                        )
+                        self._finalize_edge(
+                            session,
+                            originating_edge,
+                            originating_sequence,
+                            status=status,
+                            outcome_code="hop_limit" if hop >= max_hops else None,
+                            child_state_id=state_id,
+                            observed_at=frame.captured_at,
+                            duration_ms=duration_ms,
+                            url_fingerprint=url_fingerprint,
+                            url_change=url_change,
+                            child_screenshot_checksum=checksum,
+                        )
                     self._progress(
                         session,
                         "state.captured",
@@ -223,8 +279,7 @@ class VisionEventProcessor:
                             value = getattr(action, field, None)
                             if isinstance(value, (int, float)):
                                 safe_action[field] = value
-                        self._sessions.add_action(
-                            VisualActionProposalModel(
+                        proposal = VisualActionProposalModel(
                                 id=uuid4(),
                                 tenant_id=session.tenant_id,
                                 session_id=session.id,
@@ -238,22 +293,27 @@ class VisionEventProcessor:
                                 model=session.model,
                                 prompt_version=session.prompt_version,
                             )
+                        self._sessions.add_action(proposal)
+                        edge = VisualTrajectoryEdgeRecord(
+                            id=uuid4(), tenant_id=session.tenant_id, session_id=session.id,
+                            parent_state_id=state_id, proposal_id=proposal.id, attempt=1,
+                            action=safe_action, confidence=action.confidence, status="proposed",
+                            outcome_code=None, child_state_id=None, observed_at=None,
+                            duration_ms=0, url_fingerprint=None, url_change="unavailable",
+                            child_screenshot_checksum=None, created_at=datetime.now(UTC),
                         )
-                        progress_metadata = {
-                            "state_sequence": visited,
-                            "action_sequence": sequence,
-                            "action_kind": action.kind,
-                            "confidence": action.confidence,
-                        }
-                        for field in ("x", "y", "delta_y", "duration_ms"):
-                            value = getattr(action, field, None)
-                            if isinstance(value, (int, float)):
-                                progress_metadata[field] = value
+                        self._sessions.add_trajectory_edge(edge)
                         self._progress(
                             session,
-                            "action.recorded",
-                            f"action.recorded:{sequence}",
-                            progress_metadata,
+                            "edge.proposed",
+                            f"edge.proposed:{edge.id}",
+                            {
+                                "state_sequence": visited,
+                                "action_sequence": sequence,
+                                "action_kind": action.kind,
+                                "confidence": action.confidence,
+                                "coordinate_available": action.kind in {"click", "type"},
+                            },
                         )
                         if action.kind != "stop" and visited + len(queue) < max_states:
                             queue.append(
@@ -262,7 +322,26 @@ class VisionEventProcessor:
                                     state_id,
                                     hop + 1,
                                     replay_path + [action.model_dump(mode="json")],
+                                    edge,
+                                    url_fingerprint,
+                                    sequence,
                                 )
+                            )
+                        elif action.kind == "stop":
+                            self._finalize_edge(
+                                session,
+                                edge,
+                                sequence,
+                                status="terminal",
+                                outcome_code="model_stop",
+                            )
+                        else:
+                            self._finalize_edge(
+                                session,
+                                edge,
+                                sequence,
+                                status="terminal",
+                                outcome_code="state_limit",
                             )
             session.state = "completed"
             draft_handoff = False
@@ -355,6 +434,46 @@ class VisionEventProcessor:
                 metadata=metadata,
             )
         )
+
+    def _finalize_edge(
+        self,
+        session,
+        edge: VisualTrajectoryEdgeRecord,
+        action_sequence: int,
+        *,
+        status: str,
+        outcome_code: str | None,
+        child_state_id: UUID | None = None,
+        observed_at: datetime | None = None,
+        duration_ms: int = 0,
+        url_fingerprint: str | None = None,
+        url_change: str = "unavailable",
+        child_screenshot_checksum: str | None = None,
+    ) -> None:
+        finalized = replace(
+            edge, status=status, outcome_code=outcome_code, child_state_id=child_state_id,
+            observed_at=observed_at, duration_ms=duration_ms, url_fingerprint=url_fingerprint,
+            url_change=url_change, child_screenshot_checksum=child_screenshot_checksum,
+        )
+        self._sessions.add_trajectory_edge(finalized)
+        if status in {"observed", "no_meaningful_change"}:
+            self._progress(
+                session, "edge.observed", f"edge.observed:{edge.id}",
+                {
+                    "state_sequence": action_sequence,
+                    "action_sequence": action_sequence,
+                    "outcome": status,
+                    "duration_ms": duration_ms,
+                    "url_change": url_change,
+                },
+            )
+        else:
+            self._progress(
+                session, "edge.terminal" if status == "terminal" else "edge.failed",
+                f"edge.{status}:{edge.id}",
+                {"state_sequence": action_sequence, "action_sequence": action_sequence,
+                 "outcome_code": outcome_code or "capture_failed"},
+            )
 
     def _capture_rejected_batch(
         self, *, session, state_id: UUID, attempt_key: str, outcome

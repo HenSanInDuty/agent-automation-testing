@@ -7,6 +7,21 @@ from typing import Protocol
 from uuid import UUID
 
 from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
+from auto_at.contracts.vision import (
+    VisualCheckpoint,
+    VisualLocatorEvidence,
+    VisualLocatorHandoff,
+    VisualOperation,
+    VisualOperationFrame,
+)
+from auto_at.contracts.vision_worker import (
+    VisualWorkerAck,
+    VisualWorkerExecute,
+    VisualWorkerIdentity,
+    VisualWorkerOpen,
+    VisualWorkerOperationResult,
+    VisualWorkerPrepare,
+)
 
 from domain.activity import ActivityEvent
 from domain.entities import (
@@ -16,9 +31,12 @@ from domain.entities import (
     ProposalRecord,
     RunReportRecord,
     TestCase,
+    VisualOperationFrameRecord,
     VisualReplayFrameRecord,
+    VisualTrajectoryEdgeRecord,
 )
 from domain.runs import AuditEvent, OutboxEvent, TestRun
+from domain.vision import VisualSessionLease, VisualSessionScope
 
 
 class ProjectRepository(Protocol):
@@ -71,6 +89,101 @@ class VerifiedVisualReplayStore(Protocol):
     def read_replay_frame(self, frame: VisualReplayFrameRecord) -> bytes: ...
 
     def delete_replay_frame(self, frame: VisualReplayFrameRecord) -> None: ...
+
+
+class VerifiedVisualOperationStore(Protocol):
+    """Create-only deterministic keys: identical retries succeed, different bytes fail."""
+
+    def write_operation_frame(self, frame: VisualOperationFrameRecord, content: bytes) -> None: ...
+
+    def read_operation_frame(self, frame: VisualOperationFrameRecord) -> bytes: ...
+
+    def delete_operation_frame(self, frame: VisualOperationFrameRecord) -> None: ...
+
+
+class VisualTraceUnitOfWork(Protocol):
+    """Each call commits and closes its transaction before returning detached values."""
+
+    def claim(
+        self, scope: VisualSessionScope, owner: UUID, *, lease_seconds: int = 30
+    ) -> VisualSessionLease | None: ...
+
+    def renew(
+        self, lease: VisualSessionLease, *, lease_seconds: int = 30
+    ) -> VisualSessionLease: ...
+
+    def commit_prepared(
+        self, lease: VisualSessionLease, operation: VisualOperation
+    ) -> VisualOperation: ...
+
+    def commit_captured(
+        self, lease: VisualSessionLease, record: VisualOperationFrameRecord, content: bytes,
+        operation: VisualOperation, locator: VisualLocatorEvidence | None = None,
+        *, checkpoint: VisualCheckpoint | None = None,
+        semantic_change: str = "unavailable", duration_ms: int = 0,
+    ) -> VisualOperation: ...
+
+    def commit_operation(
+        self, lease: VisualSessionLease, operation: VisualOperation
+    ) -> VisualOperation: ...
+
+    def commit_checkpoint(
+        self, lease: VisualSessionLease, checkpoint: VisualCheckpoint
+    ) -> None: ...
+
+    def commit_handoff(
+        self, lease: VisualSessionLease, handoff: VisualLocatorHandoff
+    ) -> VisualLocatorHandoff: ...
+
+    def read_snapshot(self, scope: VisualSessionScope) -> dict[str, tuple]: ...
+
+    def get_session(self, tenant_id: str, session_id: UUID) -> object | None: ...
+
+    def context(self, scope: VisualSessionScope) -> tuple: ...
+
+    def running(self, lease: VisualSessionLease, prompt_version: str) -> object: ...
+
+    def finish(
+        self, lease: VisualSessionLease, reason: str | None = None, *,
+        handoff: VisualLocatorHandoff | None = None, intent: str | None = None,
+        handoff_reason: str | None = None,
+    ) -> str: ...
+
+    def progress(self, lease: VisualSessionLease, stage: str, key: str, metadata=None) -> None: ...
+
+    def proposals(self, lease: VisualSessionLease, state_id: UUID, candidates: list) -> None: ...
+
+    def finish_edge(self, lease: VisualSessionLease, edge: VisualTrajectoryEdgeRecord) -> None: ...
+
+    def read_frame(self, scope: VisualSessionScope, frame_id: UUID) -> bytes: ...
+
+    def operation_owners(self, scope: VisualSessionScope) -> dict: ...
+
+    def adopt_result(
+        self, lease: VisualSessionLease, operation_id: UUID, old_token: int
+    ) -> None: ...
+
+
+class VisualWorkerTransport(Protocol):
+    async def open(self, request: VisualWorkerOpen) -> str: ...
+
+    async def prepare(self, request: VisualWorkerPrepare) -> VisualWorkerOperationResult: ...
+
+    async def execute(self, request: VisualWorkerExecute) -> VisualWorkerOperationResult: ...
+
+    async def read(
+        self, identity: VisualWorkerIdentity, operation_id: UUID
+    ) -> VisualWorkerOperationResult: ...
+
+    async def frame(self, identity: VisualWorkerIdentity, frame: VisualOperationFrame) -> bytes: ...
+
+    async def acknowledge(self, request: VisualWorkerAck) -> VisualWorkerOperationResult: ...
+
+    async def checkpoint(
+        self, identity: VisualWorkerIdentity, checkpoint_id: UUID
+    ) -> tuple[VisualCheckpoint, bool]: ...
+
+    async def close(self, identity: VisualWorkerIdentity) -> None: ...
 
 
 class RunnerTransport(Protocol):
@@ -178,6 +291,20 @@ class VisualExplorationRepository(Protocol):
     def delete_replay_frame(self, tenant_id: str, session_id: UUID, frame_id: UUID) -> bool: ...
 
     def delete_replay_frames(self, tenant_id: str, session_id: UUID) -> int: ...
+
+    def add_trajectory_edge(
+        self, edge: VisualTrajectoryEdgeRecord
+    ) -> VisualTrajectoryEdgeRecord: ...
+
+    def list_trajectory_edges(
+        self, tenant_id: str, session_id: UUID
+    ) -> list[VisualTrajectoryEdgeRecord]: ...
+
+    def list_trajectory_edges_for_state(
+        self, tenant_id: str, session_id: UUID, state_id: UUID
+    ) -> list[VisualTrajectoryEdgeRecord]: ...
+
+    def list_states(self, tenant_id: str, session_id: UUID) -> list[object]: ...
 
     def add_debug_evidence(self, evidence: object) -> object: ...
 

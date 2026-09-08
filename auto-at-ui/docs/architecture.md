@@ -44,3 +44,27 @@ rules in the browser. A decision request reaches the same immutable API flow
 as all other clients; only the control plane can create the versioned test case
 and its single v1 run.
 
+
+## Vision locator traces
+
+A visual proposal is advisory until the v4 worker verifies a unique live locator.
+The application orchestrates fenced, short database transactions through the trace
+unit-of-work port. Intent and before-frame commits precede dispatch; outcome and
+after-frame commits precede staging acknowledgment. Remote browser/model/storage
+I/O occurs outside the outbox publisher transaction. Recovery reconciles the same
+operation and stops on unknown execution instead of repeating physical actions.
+
+Checkpoints and immutable operation ancestry separate observed business branches
+from back/restore/replay operations. The handoff and generation request commit
+together. A centralized structured prompt can select only recorded branches and
+assertion references; deterministic rendering supplies the verified locators.
+Unbound typed inputs block affected branches. Existing explicit draft approval
+creates the same target-neutral v1 execution request; the model cannot modify its
+verdict. Results join session, handoff, generation, draft, run and report through
+scoped identifiers. Trace images are authorized private evidence; metadata exports
+and deletion tombstones preserve history without exposing storage keys.
+
+`VISION_TRACE_V4_ENABLED` selects only new-session writers. Additive migration and
+legacy/v4 readers allow rollback without rewriting sessions or deleting evidence.
+See the [Vision runbook](vision-agent-operations.md) for ordering, limits and the
+synthetic validation boundary.

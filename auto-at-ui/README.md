@@ -255,3 +255,19 @@ workers/playwright/       TypeScript Playwright execution adapter
 packages/contracts/       Target-neutral Python runner contracts
 docs/                     Architecture and ADRs
 ```
+
+## Vision results and grounded drafts
+
+Open `/agent?vision=<session_id>` for a saved exploration result, operation trace,
+branch paths and locator catalog. The draft link opens review; approval creates
+one deterministic Playwright run, whose page shows the verdict and report.
+Exploration can succeed while generation or reporting is unavailable; its evidence
+remains readable and exportable. Legacy sessions keep their original evidence view.
+
+The v4 writer is gated by `VISION_TRACE_V4_ENABLED=false` by default. It requires
+the additive schema and a v4-capable worker before enabling new sessions; existing
+consent and provider settings still apply. Typed inputs and unsupported locators
+remain explicit limitations. See the [Vision runbook](docs/vision-agent-operations.md)
+and [synthetic v2 manifest](benchmark/vision/v2/manifest.json) for validation and
+rollback. This change does not enable a tenant, alter image retention or certify a
+real-provider canary.

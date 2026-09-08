@@ -39,6 +39,7 @@ class SubmitVisualExploration:
         actor: str,
         intent_encryption_key: str | None,
         intent_retention_days: int,
+        trace_v4_enabled: bool = False,
     ) -> VisualExplorationSessionModel:
         policy = runtime.vision
         if not policy.enabled or not policy.raw_screenshot_transfer_accepted:
@@ -83,7 +84,8 @@ class SubmitVisualExploration:
             policy_version=AGENT_RUNTIME_CONFIG_KEY,
             provider=policy.provider,
             model=policy.model,
-            prompt_version="vision-exploration-v2",
+            prompt_version="vision-exploration-v3" if trace_v4_enabled else "vision-exploration-v2",
+            trace_version="v4" if trace_v4_enabled else "legacy",
             max_steps=policy.max_steps,
             max_hops=project_policy.vision_max_hops,
             max_states=project_policy.vision_max_states,

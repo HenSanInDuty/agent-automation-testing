@@ -1,0 +1,16 @@
+{
+  "contract": "VisualLocatorDescriptor",
+  "accepted": false,
+  "payload": {
+    "strategy": "role",
+    "role": "button",
+    "value": "Explore",
+    "exact": true,
+    "scope": [
+      {
+        "kind": "cross_origin",
+        "selector": "iframe"
+      }
+    ]
+  }
+}

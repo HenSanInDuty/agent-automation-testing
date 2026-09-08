@@ -7,6 +7,7 @@ from typing import Any
 
 from auto_at.contracts.vision import VisualAction
 
+from agents.prompts.vision import VISION_BATCH_IMAGE_INSTRUCTION, VISION_SINGLE_IMAGE_INSTRUCTION
 from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
 from agents.vision.diagnostics import (
@@ -69,7 +70,7 @@ async def execute_visual_action(
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Return one candidate action for the supplied image."},
+                    {"type": "text", "text": VISION_SINGLE_IMAGE_INSTRUCTION},
                     {
                         "type": "image_url",
                         "image_url": {"url": image_data_uri},
@@ -111,6 +112,7 @@ async def execute_visual_candidate_batch(
     policy: VisionPolicy,
     model: LanguageModel,
     max_candidates: int,
+    guard: AgentStepGuard | None = None,
     image_url: str | None = None,
     requested_tokens: int = 1_000,
 ) -> VisualCandidateBatchOutcome:
@@ -129,6 +131,9 @@ async def execute_visual_candidate_batch(
         return VisualCandidateBatchOutcome(
             status="unavailable", detail="candidate batch cap is invalid"
         )
+    guard = guard or AgentStepGuard(policy_to_step_guard(policy))
+    if not guard.allow_next_step(requested_tokens=requested_tokens, evidence_bytes=len(screenshot)):
+        return VisualCandidateBatchOutcome(status="unavailable", detail="vision guard exhausted")
     image_data_uri = (
         image_url or f"data:{content_type};base64,{b64encode(screenshot).decode('ascii')}"
     )
@@ -141,7 +146,7 @@ async def execute_visual_candidate_batch(
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Return candidate actions for this state."},
+                    {"type": "text", "text": VISION_BATCH_IMAGE_INSTRUCTION},
                     {"type": "image_url", "image_url": {"url": image_data_uri}},
                 ],
             },

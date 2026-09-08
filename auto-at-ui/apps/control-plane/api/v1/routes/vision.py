@@ -18,6 +18,8 @@ from application.vision_replay import (
     VisionReplayDeletionError,
     VisionReplayNotFoundError,
 )
+from application.vision_results import VisionResults, VisionRevisionChanged
+from application.vision_trajectory import VisionTrajectory, VisionTrajectoryNotFoundError
 from config import Settings, get_settings
 from domain.authorization import (
     AuthorizationError,
@@ -26,8 +28,8 @@ from domain.authorization import (
     actor_for_tenant,
     require,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi.responses import JSONResponse, StreamingResponse
 from infrastructure.artifacts.rustfs import RustFSArtifactStore
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
@@ -37,6 +39,7 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyGenerationRepository,
     SqlAlchemyOutboxEventRepository,
     SqlAlchemyVisionRepository,
+    SqlAlchemyVisualTraceRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
 from pydantic import BaseModel, ConfigDict, Field
@@ -83,6 +86,7 @@ class ExplorationResponse(BaseModel):
     max_screenshot_bytes: int
     max_session_seconds: int
     safe_failure_reason: str | None
+    trace_version: str = "legacy"
 
 
 class VisualActionResponse(BaseModel):
@@ -112,6 +116,54 @@ class ReplayFrameListResponse(BaseModel):
 class ReplayDeleteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     confirm: Literal[True]
+
+
+class TrajectoryStateResponse(BaseModel):
+    id: UUID
+    parent_id: UUID | None
+    hop: int
+    sequence: int | None
+    captured_at: datetime
+    frame_id: UUID | None
+
+
+class TrajectoryProposalResponse(BaseModel):
+    id: UUID
+    state_id: UUID | None
+    sequence: int
+    action: dict[str, object]
+    confidence: float | None
+
+
+class TrajectoryEdgeResponse(BaseModel):
+    id: UUID
+    parent_state_id: UUID
+    proposal_id: UUID
+    attempt: int
+    action: dict[str, object]
+    confidence: float
+    status: str
+    outcome_code: str | None
+    child_state_id: UUID | None
+    observed_at: datetime | None
+    duration_ms: int
+    url_change: str
+
+
+class TrajectorySessionResponse(BaseModel):
+    id: UUID
+    state: str
+    safe_failure_reason: str | None
+
+
+class TrajectoryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session: TrajectorySessionResponse
+    trajectory_available: bool
+    legacy_label: str | None
+    states: list[TrajectoryStateResponse]
+    proposals: list[TrajectoryProposalResponse]
+    edges: list[TrajectoryEdgeResponse]
 
 
 class ExplorationListResponse(BaseModel):
@@ -160,6 +212,7 @@ def _response(record: object) -> ExplorationResponse:
         max_screenshot_bytes=record.max_screenshot_bytes,
         max_session_seconds=record.max_session_seconds,
         safe_failure_reason=record.safe_failure_reason,
+        trace_version=getattr(record, "trace_version", "legacy"),
     )
 
 
@@ -231,6 +284,7 @@ def submit_exploration(
                 actor=principal.subject,
                 intent_encryption_key=settings.vision_intent_encryption_key,
                 intent_retention_days=settings.vision_intent_retention_days,
+                trace_v4_enabled=settings.vision_trace_v4_enabled,
             )
             return _response(record)
     except AuthorizationError as error:
@@ -255,6 +309,23 @@ def get_exploration(
         except AuthorizationError as error:
             raise HTTPException(status_code=404, detail="Visual exploration not found.") from error
         return _response(record)
+
+
+@router.get("/explorations/{session_id}/trajectory", response_model=TrajectoryResponse)
+def get_trajectory(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> TrajectoryResponse:
+    with create_session_factory(settings)() as session:
+        try:
+            snapshot = VisionTrajectory(SqlAlchemyVisionRepository(session)).read(
+                tenant_id=tenant_id, principal=principal, session_id=session_id
+            )
+        except VisionTrajectoryNotFoundError as error:
+            raise HTTPException(status_code=404, detail="Visual exploration not found.") from error
+    return TrajectoryResponse.model_validate(snapshot)
 
 
 @router.get("/explorations/{session_id}/actions", response_model=list[VisualActionResponse])
@@ -304,9 +375,7 @@ def _replay_response(frame, actions) -> ReplayFrameResponse:
     )
 
 
-@router.get(
-    "/explorations/{session_id}/replay-frames", response_model=ReplayFrameListResponse
-)
+@router.get("/explorations/{session_id}/replay-frames", response_model=ReplayFrameListResponse)
 def list_replay_frames(
     session_id: UUID,
     tenant_id: Annotated[str, Depends(current_tenant)],
@@ -316,7 +385,8 @@ def list_replay_frames(
     with create_session_factory(settings)() as session:
         try:
             frames, actions = VisionReplay(
-                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyVisionRepository(session),
+                RustFSArtifactStore(settings),
                 SqlAlchemyAuditEventRepository(session),
             ).list(tenant_id=tenant_id, principal=principal, session_id=session_id)
         except VisionReplayNotFoundError as error:
@@ -335,7 +405,8 @@ def get_replay_frame(
     with transactional_session(create_session_factory(settings)) as session:
         try:
             content = VisionReplay(
-                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyVisionRepository(session),
+                RustFSArtifactStore(settings),
                 SqlAlchemyAuditEventRepository(session),
             ).read(
                 tenant_id=tenant_id, principal=principal, session_id=session_id, frame_id=frame_id
@@ -364,7 +435,8 @@ def delete_replay_frame(
     with transactional_session(create_session_factory(settings)) as session:
         try:
             VisionReplay(
-                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyVisionRepository(session),
+                RustFSArtifactStore(settings),
                 SqlAlchemyAuditEventRepository(session),
             ).delete_one(
                 tenant_id=tenant_id, principal=principal, session_id=session_id, frame_id=frame_id
@@ -390,7 +462,8 @@ def delete_replay_frames(
     with transactional_session(create_session_factory(settings)) as session:
         try:
             VisionReplay(
-                SqlAlchemyVisionRepository(session), RustFSArtifactStore(settings),
+                SqlAlchemyVisionRepository(session),
+                RustFSArtifactStore(settings),
                 SqlAlchemyAuditEventRepository(session),
             ).delete_all(tenant_id=tenant_id, principal=principal, session_id=session_id)
         except VisionReplayNotFoundError as error:
@@ -553,3 +626,145 @@ def list_explorations(
                 continue
             visible.append(_response(record))
     return ExplorationListResponse(items=visible, total=len(visible))
+
+
+def _results(session, settings):
+    return VisionResults(
+        SqlAlchemyVisionRepository(session),
+        SqlAlchemyVisualTraceRepository(session),
+        RustFSArtifactStore(settings),
+        SqlAlchemyAuditEventRepository(session),
+    )
+
+
+@router.get("/explorations/{session_id}/trace")
+def get_trace(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    after_sequence: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
+    revision: str | None = Query(default=None, pattern="^[a-f0-9]{64}$"),
+):
+    with transactional_session(create_session_factory(settings)) as session:
+        session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        try:
+            data = _results(session, settings).read_trace(
+                tenant_id=tenant_id,
+                principal=principal,
+                session_id=session_id,
+                after_sequence=after_sequence,
+                limit=limit,
+                revision=revision,
+            )
+        except VisionReplayNotFoundError:
+            raise HTTPException(404, "Visual exploration not found.") from None
+        except VisionRevisionChanged:
+            raise HTTPException(409, "Trace changed; restart pagination.") from None
+    return JSONResponse(data, headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/explorations/{session_id}/locators")
+def get_locators(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    status: Literal["verified", "ambiguous", "not_found", "stale", "unsupported", "redacted"]
+    | None = None,
+    after_id: UUID | None = None,
+    limit: int = Query(default=100, ge=1, le=100),
+):
+    with transactional_session(create_session_factory(settings)) as session:
+        session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        try:
+            data = _results(session, settings).locators(
+                tenant_id=tenant_id,
+                principal=principal,
+                session_id=session_id,
+                status=status,
+                after_id=after_id,
+                limit=limit,
+            )
+        except VisionReplayNotFoundError:
+            raise HTTPException(404, "Visual exploration not found.") from None
+    return JSONResponse(data, headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/explorations/{session_id}/result")
+@router.get("/explorations/{session_id}/result/export")
+def get_result(
+    session_id: UUID,
+    request: Request,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+):
+    with transactional_session(create_session_factory(settings)) as session:
+        session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        try:
+            data = _results(session, settings).result(
+                tenant_id=tenant_id,
+                principal=principal,
+                session_id=session_id,
+            )
+        except VisionReplayNotFoundError:
+            raise HTTPException(404, "Visual exploration not found.") from None
+    headers = {"Cache-Control": "private, no-store"}
+    if request.url.path.endswith("/export"):
+        headers["Content-Disposition"] = f'attachment; filename="vision-{session_id}.json"'
+    return JSONResponse(data, headers=headers)
+
+
+@router.get("/explorations/{session_id}/operation-frames/{frame_id}")
+def get_operation_frame(
+    session_id: UUID,
+    frame_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+):
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            content, content_type = _results(session, settings).read_frame(
+                tenant_id=tenant_id,
+                principal=principal,
+                session_id=session_id,
+                frame_id=frame_id,
+            )
+        except (VisionReplayNotFoundError, ValueError, RuntimeError):
+            raise HTTPException(404, "Operation frame unavailable.") from None
+    return Response(
+        content, media_type=content_type, headers={"Cache-Control": "private, no-store"}
+    )
+
+
+@router.delete("/explorations/{session_id}/operation-frames/{frame_id}", status_code=204)
+@router.delete("/explorations/{session_id}/operation-frames", status_code=204)
+def delete_operation_frames(
+    session_id: UUID,
+    payload: ReplayDeleteRequest,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    frame_id: UUID | None = None,
+):
+    del payload
+    failed = False
+    with transactional_session(create_session_factory(settings)) as session:
+        try:
+            _results(session, settings).delete_frames(
+                tenant_id=tenant_id,
+                principal=principal,
+                session_id=session_id,
+                frame_id=frame_id,
+            )
+        except VisionReplayNotFoundError:
+            raise HTTPException(404, "Visual exploration not found.") from None
+        except VisionReplayDeletionError:
+            # Preserve audit and any prior successful tombstones when a later object fails.
+            failed = True
+    if failed:
+        raise HTTPException(409, "Operation evidence deletion is unavailable.")
+    return Response(status_code=204)

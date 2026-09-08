@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from enum import StrEnum
+from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
@@ -96,6 +97,22 @@ class DraftState(StrEnum):
     REJECTED = "rejected"
 
 
+class VisionPlanningSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    session_id: UUID
+    handoff_id: UUID
+    handoff_hash: str = Field(pattern=_SHA256)
+
+
+def vision_generation_key(source: VisionPlanningSource, redacted_request: str) -> str:
+    """Bind generation idempotency to the immutable observation package."""
+    return request_hash(
+        f"vision-v1:{source.session_id}:{source.handoff_id}:"
+        f"{source.handoff_hash}:{request_hash(redacted_request)}"
+    )
+
+
 class PlanningProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -103,6 +120,30 @@ class PlanningProvenance(BaseModel):
     model: str = Field(min_length=1, max_length=200)
     prompt_version: str = Field(min_length=1, max_length=100)
     redaction_policy_version: str = Field(min_length=1, max_length=100)
+    vision_source: VisionPlanningSource | None = None
+    selected_branch_ids: list[UUID] = Field(default_factory=list, max_length=50)
+    operation_ids: list[UUID] = Field(default_factory=list, max_length=5000)
+
+
+class VisionGroundedAssertion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    branch_id: UUID
+    operation_id: UUID
+    locator_id: UUID
+    kind: Literal["visible", "enabled"]
+
+
+class VisionGroundedPlannerOutput(BaseModel):
+    """The planner selects evidence; it cannot author executable source or selectors."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=200)
+    selected_branch_ids: list[UUID] = Field(min_length=1, max_length=50)
+    assertions: list[VisionGroundedAssertion] = Field(default_factory=list, max_length=500)
+    assumptions: list[str] = Field(default_factory=list, max_length=50)
+    stop_conditions: list[str] = Field(default_factory=list, max_length=50)
 
 
 class TestGenerationPlanningRequest(BaseModel):
@@ -117,6 +158,7 @@ class TestGenerationPlanningRequest(BaseModel):
     target_url: str
     redacted_request: str = Field(min_length=1, max_length=8_000)
     request_hash: str = Field(pattern=_SHA256)
+    vision_source: VisionPlanningSource | None = None
 
     @field_validator("target_url")
     @classmethod

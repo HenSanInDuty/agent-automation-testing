@@ -1,0 +1,20 @@
+{
+  "contract": "VisualLocatorDescriptor",
+  "accepted": true,
+  "payload": {
+    "strategy": "role",
+    "role": "button",
+    "value": "Explore",
+    "exact": true,
+    "scope": [
+      {
+        "kind": "iframe",
+        "selector": "iframe[id=\"embedded\"]"
+      },
+      {
+        "kind": "shadow",
+        "selector": "section[id=\"shell\"]"
+      }
+    ]
+  }
+}

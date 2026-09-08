@@ -3,6 +3,10 @@ import { mkdir, rm, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
+// New sessions explicitly opt into v4; legacy v1/v3 observations retain their
+// readers during rollout and cannot be used to replay a v4 session.
+export { VisualOperationWorker } from "./vision-operations.js";
+
 type Action =
   | { kind: "click"; x: number; y: number }
   | { kind: "type"; x: number; y: number; text: string }
@@ -15,13 +19,17 @@ export type VisualRequest = {
   max_steps: number; max_screenshot_bytes: number; max_session_seconds: number;
 };
 export type VisualTreeRequest = Omit<VisualRequest, "contract_version" | "max_steps"> & {
-  contract_version: "v2"; node_id: string; max_hops: number; max_states: number; replay_path: unknown[];
+  contract_version: "v3"; node_id: string; max_hops: number; max_states: number; replay_path: unknown[];
+  parent_url_fingerprint?: string;
 };
 export type Observation = {
   session_id: string; sequence: number; checksum: string; content_type: "image/png";
   byte_count: number; terminal: boolean;
 };
-export type TreeObservation = Observation & { node_id: string; hop: number };
+export type TreeObservation = Observation & {
+  node_id: string; hop: number; duration_ms: number; url_fingerprint: string;
+  url_change: "unchanged" | "changed" | "unavailable";
+};
 
 type ActiveSession = {
   request: VisualRequest; browser: Browser; context: BrowserContext; page: Page;
@@ -68,11 +76,13 @@ export function actionOf(value: unknown): Action {
 export function visualTreeRequestOf(value: unknown): VisualTreeRequest {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("visual tree request must be an object");
   const request = value as Record<string, unknown>;
-  if (request.contract_version !== "v2" || typeof request.id !== "string" || typeof request.node_id !== "string" ||
+  if (request.contract_version !== "v3" || typeof request.id !== "string" || typeof request.node_id !== "string" ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request.node_id) ||
     typeof request.target_url !== "string" || !Array.isArray(request.allowed_origins) || !request.allowed_origins.every((item) => typeof item === "string") ||
     !Number.isInteger(request.max_hops) || !Number.isInteger(request.max_states) || !Number.isInteger(request.max_screenshot_bytes) ||
-    !Number.isInteger(request.max_session_seconds) || !Array.isArray(request.replay_path)) throw new Error("visual tree request does not satisfy contract v2");
+    !Number.isInteger(request.max_session_seconds) || !Array.isArray(request.replay_path) ||
+    (request.parent_url_fingerprint !== undefined &&
+      (typeof request.parent_url_fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(request.parent_url_fingerprint)))) throw new Error("visual tree request does not satisfy contract v3");
   if ((request.max_hops as number) < 1 || (request.max_hops as number) > 10 || (request.max_states as number) < 1 || (request.max_states as number) > 200 ||
     (request.max_screenshot_bytes as number) < 1024 || (request.max_session_seconds as number) < 1 ||
     request.replay_path.length > (request.max_hops as number) || !allowed(request.target_url, request.allowed_origins)) throw new Error("visual tree request violates worker policy");
@@ -115,6 +125,7 @@ async function applyAction(page: Page, action: Action): Promise<void> {
 export async function observeVisualTreeState(value: unknown, artifactRoot: string): Promise<TreeObservation> {
   const request = visualTreeRequestOf(value);
   const path = request.replay_path.map(actionOf);
+  const startedAt = Date.now();
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, acceptDownloads: false, serviceWorkers: "block" });
   const page = await context.newPage();
@@ -132,8 +143,12 @@ export async function observeVisualTreeState(value: unknown, artifactRoot: strin
     const bytes = await stat(screenshotPath);
     if (bytes.size > request.max_screenshot_bytes) throw new Error("visual screenshot exceeds byte cap");
     const content = await import("node:fs/promises").then(({ readFile }) => readFile(screenshotPath));
+    const urlFingerprint = createHash("sha256").update(page.url()).digest("hex");
     return { session_id: request.id, sequence: path.length + 1, node_id: request.node_id, hop: path.length,
-      checksum: createHash("sha256").update(content).digest("hex"), content_type: "image/png", byte_count: bytes.size, terminal: path.length >= request.max_hops };
+      checksum: createHash("sha256").update(content).digest("hex"), content_type: "image/png", byte_count: bytes.size, terminal: path.length >= request.max_hops,
+      duration_ms: Date.now() - startedAt, url_fingerprint: urlFingerprint,
+      url_change: request.parent_url_fingerprint === undefined ? "unavailable" :
+        request.parent_url_fingerprint === urlFingerprint ? "unchanged" : "changed" };
   } finally {
     await context.clearCookies();
     await context.close();

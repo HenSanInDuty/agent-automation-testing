@@ -3,7 +3,19 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -95,7 +107,10 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     """Advisory-session metadata; screenshots never persist here."""
 
     __tablename__ = "visual_exploration_sessions"
-    __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "idempotency_key"),
+        UniqueConstraint("tenant_id", "project_id", "id", name="uq_visual_session_scope"),
+    )
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), index=True)
     correlation_id: Mapped[UUID] = mapped_column(index=True)
@@ -115,6 +130,15 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     max_session_seconds: Mapped[int] = mapped_column(Integer)
     max_cost_usd: Mapped[str] = mapped_column(String(32))
     max_requests_per_minute: Mapped[int] = mapped_column(Integer)
+    trace_version: Mapped[str] = mapped_column(
+        String(20), default="legacy", server_default="legacy"
+    )
+    lease_owner: Mapped[UUID | None] = mapped_column(nullable=True)
+    fencing_token: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    next_operation_sequence: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     safe_failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(
@@ -162,6 +186,7 @@ class VisualExplorationStateModel(TenantRecord, Base):
     parent_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
     hop: Mapped[int] = mapped_column(Integer)
     screenshot_checksum: Mapped[str] = mapped_column(String(64))
+    checkpoint: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
@@ -192,6 +217,42 @@ class VisualReplayFrameModel(TenantRecord, Base):
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)
     captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class VisualTrajectoryEdgeModel(TenantRecord, Base):
+    """Append-only, redacted parent/proposal/outcome links for Vision exploration."""
+
+    __tablename__ = "visual_trajectory_edges"
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id", "proposal_id", "attempt", name="uq_visual_trajectory_attempt"
+        ),
+        Index("ix_visual_trajectory_edges_tenant_session", "tenant_id", "session_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("visual_exploration_sessions.id"), index=True
+    )
+    parent_state_id: Mapped[UUID] = mapped_column(
+        ForeignKey("visual_exploration_states.id"), index=True
+    )
+    proposal_id: Mapped[UUID] = mapped_column(ForeignKey("visual_action_proposals.id"), index=True)
+    child_state_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("visual_exploration_states.id"), nullable=True, index=True
+    )
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    action: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    outcome_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    url_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    url_change: Mapped[str] = mapped_column(String(32), nullable=False, default="unavailable")
+    child_screenshot_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
 
 
 class VisionDebugEvidenceModel(TenantRecord, Base):
@@ -226,6 +287,122 @@ class VisionDebugEvidenceModel(TenantRecord, Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class VisualOperationModel(TenantRecord, Base):
+    __tablename__ = "visual_operations"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "session_id", "sequence", name="uq_visual_operation_sequence"
+        ),
+        UniqueConstraint("tenant_id", "session_id", "id", name="uq_visual_operation_scope"),
+        UniqueConstraint(
+            "tenant_id", "session_id", "proposal_id", "attempt", name="uq_visual_operation_attempt"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "project_id", "session_id"],
+            [
+                "visual_exploration_sessions.tenant_id",
+                "visual_exploration_sessions.project_id",
+                "visual_exploration_sessions.id",
+            ],
+            name="fk_visual_operation_session",
+        ),
+        CheckConstraint("sequence > 0 AND attempt > 0", name="ck_visual_operation_sequence"),
+        Index("ix_visual_operations_timeline", "tenant_id", "project_id", "session_id", "sequence"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    project_id: Mapped[UUID] = mapped_column()
+    session_id: Mapped[UUID] = mapped_column()
+    sequence: Mapped[int] = mapped_column(Integer)
+    attempt: Mapped[int] = mapped_column(Integer)
+    state_id: Mapped[UUID | None] = mapped_column(ForeignKey("visual_exploration_states.id"))
+    proposal_id: Mapped[UUID | None] = mapped_column(ForeignKey("visual_action_proposals.id"))
+    status: Mapped[str] = mapped_column(String(32))
+    fencing_token: Mapped[int] = mapped_column(Integer)
+    payload: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
+class VisualOperationFrameModel(TenantRecord, Base):
+    __tablename__ = "visual_operation_frames"
+    __table_args__ = (
+        UniqueConstraint("operation_id", "role", name="uq_visual_operation_frame_role"),
+        UniqueConstraint("tenant_id", "session_id", "id", name="uq_visual_operation_frame_scope"),
+        ForeignKeyConstraint(
+            ["tenant_id", "session_id", "operation_id"],
+            ["visual_operations.tenant_id", "visual_operations.session_id", "visual_operations.id"],
+            name="fk_visual_operation_frame_operation",
+        ),
+        CheckConstraint("role IN ('before', 'after')", name="ck_visual_operation_frame_role"),
+        Index("ix_visual_operation_frames_session", "tenant_id", "project_id", "session_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    project_id: Mapped[UUID] = mapped_column()
+    session_id: Mapped[UUID] = mapped_column()
+    operation_id: Mapped[UUID] = mapped_column()
+    role: Mapped[str] = mapped_column(String(10))
+    checksum: Mapped[str] = mapped_column(String(64))
+    byte_count: Mapped[int] = mapped_column(Integer)
+    content_type: Mapped[str] = mapped_column(String(100))
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    storage_key: Mapped[str] = mapped_column(Text)
+
+
+class VisualLocatorEvidenceModel(TenantRecord, Base):
+    __tablename__ = "visual_locator_evidence"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "session_id", "operation_id"],
+            ["visual_operations.tenant_id", "visual_operations.session_id", "visual_operations.id"],
+            name="fk_visual_locator_operation",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "session_id", "originating_frame_id"],
+            [
+                "visual_operation_frames.tenant_id",
+                "visual_operation_frames.session_id",
+                "visual_operation_frames.id",
+            ],
+            name="fk_visual_locator_frame",
+        ),
+        Index("ix_visual_locator_session", "tenant_id", "project_id", "session_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    project_id: Mapped[UUID] = mapped_column()
+    session_id: Mapped[UUID] = mapped_column()
+    operation_id: Mapped[UUID] = mapped_column()
+    state_id: Mapped[UUID] = mapped_column(ForeignKey("visual_exploration_states.id"))
+    proposal_id: Mapped[UUID] = mapped_column(ForeignKey("visual_action_proposals.id"))
+    originating_frame_id: Mapped[UUID] = mapped_column()
+    status: Mapped[str] = mapped_column(String(32))
+    payload: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
+class VisualLocatorHandoffModel(TenantRecord, Base):
+    __tablename__ = "visual_locator_handoffs"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "session_id", "version", name="uq_visual_handoff_version"),
+        ForeignKeyConstraint(
+            ["tenant_id", "project_id", "session_id"],
+            [
+                "visual_exploration_sessions.tenant_id",
+                "visual_exploration_sessions.project_id",
+                "visual_exploration_sessions.id",
+            ],
+            name="fk_visual_handoff_session",
+        ),
+        Index("ix_visual_handoff_generation", "tenant_id", "project_id", "generation_request_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    project_id: Mapped[UUID] = mapped_column()
+    session_id: Mapped[UUID] = mapped_column()
+    version: Mapped[int] = mapped_column(Integer)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict[str, object]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # The reciprocal request FK is inserted after the immutable handoff exists.
+    generation_request_id: Mapped[UUID | None] = mapped_column(nullable=True)
+
+
 class GenerationRequestModel(TenantRecord, Base):
     __tablename__ = "generation_requests"
     __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)
@@ -238,6 +415,9 @@ class GenerationRequestModel(TenantRecord, Base):
     state: Mapped[str] = mapped_column(String(32), index=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(200))
+    vision_handoff_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("visual_locator_handoffs.id"), nullable=True, index=True
+    )
 
 
 class GeneratedTestDraftModel(TenantRecord, Base):

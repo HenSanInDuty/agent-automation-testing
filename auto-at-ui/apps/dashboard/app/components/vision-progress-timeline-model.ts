@@ -1,6 +1,6 @@
 import type { VisionProgressActivity } from "../generation-types";
 
-export type VisionProgressConnection = "connecting" | "live" | "polling";
+export type VisionProgressConnection = "connecting" | "live" | "polling" | "complete";
 
 const stages: Record<string, string> = {
   queued: "Exploration queued",
@@ -9,8 +9,25 @@ const stages: Record<string, string> = {
   "candidate.requested": "Requesting advisory candidates",
   "candidate.received": "Advisory candidates received",
   "action.recorded": "Candidate action recorded",
+  "edge.proposed": "Candidate branch proposed",
+  "edge.observed": "Candidate branch observed",
+  "edge.failed": "Candidate branch unavailable",
+  "edge.terminal": "Candidate branch terminal",
   "limit.reached": "Configured exploration limit reached",
   "draft.handoff": "Preparing generated-draft handoff",
+  "operation.prepared": "Before frame saved",
+  "operation.executing": "Performing browser action",
+  "operation.completed": "Browser operation recorded",
+  "operation.failed": "Browser operation failed",
+  "operation.rejected": "Browser action rejected",
+  "operation.unknown": "Browser action outcome unknown",
+  "locator.verified": "Locator verified",
+  "locator.unresolved": "Locator unresolved",
+  "state.restore_started": "Returning to the previous state",
+  "state.restored": "Previous state verified",
+  "state.restore_failed": "Could not restore the previous state",
+  "handoff.ready": "Evidence ready for draft generation",
+  "handoff.unavailable": "Insufficient evidence for draft generation",
   completed: "Advisory exploration completed",
   unavailable: "Advisory exploration unavailable",
 };
@@ -44,6 +61,7 @@ export function visionProgressLabel(stage: string): string {
 }
 
 export function visionConnectionLabel(connection: VisionProgressConnection): string {
+  if (connection === "complete") return "Saved progress";
   if (connection === "live") return "Live updates connected";
   if (connection === "polling") return "Reconnecting - polling fallback active";
   return "Connecting to live updates";

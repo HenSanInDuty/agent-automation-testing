@@ -6,10 +6,32 @@ from uuid import UUID, uuid4
 
 from auto_at.contracts.agent import ProposalKind, RunReport, RunReportStatus
 from auto_at.contracts.execution import RunStatus, TargetType
+from auto_at.contracts.vision import VisualOperationFrame
 
 
 class ApprovalStateError(ValueError):
     """Raised when an approval would replace a recorded final decision."""
+
+
+@dataclass(frozen=True)
+class VisualOperationFrameRecord:
+    """Private storage identity; public serializers use metadata only."""
+
+    metadata: VisualOperationFrame
+    storage_key: str
+
+    def __post_init__(self) -> None:
+        frame = self.metadata
+        # Hash tenant text so it can never introduce path components.
+        from hashlib import sha256
+
+        tenant = sha256(frame.tenant_id.encode()).hexdigest()
+        expected = (
+            f"vision-operations/{tenant}/{frame.project_id}/{frame.session_id}/"
+            f"{frame.operation_id}/{frame.role}"
+        )
+        if self.storage_key != expected:
+            raise ValueError("operation frame requires its deterministic private storage key")
 
 
 @dataclass(frozen=True)
@@ -59,6 +81,29 @@ class VisualReplayFrameRecord:
     content_type: str
     captured_at: datetime
     deleted_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class VisualTrajectoryEdgeRecord:
+    """Redacted proposal identity with one permitted, terminal outcome finalization."""
+
+    id: UUID
+    tenant_id: str
+    session_id: UUID
+    parent_state_id: UUID
+    proposal_id: UUID
+    attempt: int
+    action: dict[str, object]
+    confidence: float
+    status: str
+    outcome_code: str | None
+    child_state_id: UUID | None
+    observed_at: datetime | None
+    duration_ms: int
+    url_fingerprint: str | None
+    url_change: str
+    child_screenshot_checksum: str | None
+    created_at: datetime
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,20 @@
+{
+  "contract": "VisualOperation",
+  "accepted": true,
+  "payload": {
+    "schema_version": "v1",
+    "id": "00000000-0000-0000-0000-000000000001",
+    "tenant_id": "fixture-tenant",
+    "project_id": "00000000-0000-0000-0000-000000000002",
+    "session_id": "00000000-0000-0000-0000-000000000003",
+    "sequence": 1,
+    "purpose": "setup",
+    "action_kind": "navigate",
+    "started_at": "2026-09-07T16:30:00Z",
+    "status": "unknown",
+    "ended_at": "2026-09-07T16:31:00Z",
+    "outcome_code": "worker_lost",
+    "before_unavailable_reason": "capture_failed",
+    "after_unavailable_reason": "worker_lost"
+  }
+}

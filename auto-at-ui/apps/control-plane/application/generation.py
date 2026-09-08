@@ -17,8 +17,10 @@ from auto_at.contracts.generation import (
     DraftState,
     GeneratedTestDraft,
     ProjectExecutionPolicy,
+    VisionPlanningSource,
     redact_generation_request,
     request_hash,
+    vision_generation_key,
 )
 from domain.ports import GeneratedSourcePreflight
 from domain.runs import AuditEvent, OutboxEvent
@@ -61,6 +63,7 @@ class SubmitGeneration:
         target_url: str,
         natural_language_request: str,
         idempotency_key: str,
+        vision_handoff_id: UUID | None = None,
     ):
         redacted = redact_generation_request(natural_language_request)
         if redacted != natural_language_request:
@@ -70,12 +73,24 @@ class SubmitGeneration:
             project_id=project_id, allowed_origins=policy.allowed_origins
         ).allows(target_url):
             raise ValueError("target URL origin is not allowed by the project execution policy")
+        if vision_handoff_id is not None:
+            handoff = self._repository.get_vision_handoff(tenant_id, project_id, vision_handoff_id)
+            if handoff is None or not any(b.status == "ready" for b in handoff.branches):
+                raise ValueError("vision handoff unavailable")
+            self._repository.validate_vision_target(handoff, target_url)
+            source = VisionPlanningSource(
+                session_id=handoff.session_id,
+                handoff_id=handoff.id,
+                handoff_hash=handoff.content_hash,
+            )
+            idempotency_key = vision_generation_key(source, redacted)
         existing = self._repository.get_request_by_key(tenant_id, idempotency_key)
         if existing is not None:
             if (
                 existing.project_id != project_id
                 or existing.target_url != target_url
                 or existing.request_hash != request_hash(redacted)
+                or getattr(existing, "vision_handoff_id", None) != vision_handoff_id
             ):
                 raise GenerationStateError("idempotency key belongs to a different request")
             return existing
@@ -90,6 +105,7 @@ class SubmitGeneration:
             state="queued",
             failure_reason=None,
             idempotency_key=idempotency_key,
+            vision_handoff_id=vision_handoff_id,
         )
         self._repository.add_request(record)
         self._audits.append(
@@ -139,6 +155,15 @@ def complete_generation(
         raise GenerationStateError("generation request cannot be completed")
     if draft.correlation_id != request.correlation_id:
         raise GenerationStateError("generation draft correlation_id does not match request")
+    if getattr(request, "vision_handoff_id", None) is not None:
+        handoff = repository.get_vision_handoff(
+            tenant_id, request.project_id, request.vision_handoff_id
+        )
+        expected = VisionPlanningSource(
+            session_id=handoff.session_id, handoff_id=handoff.id, handoff_hash=handoff.content_hash
+        )
+        if draft.provenance.vision_source != expected:
+            raise GenerationStateError("draft vision provenance mismatch")
     validate_playwright_test_source(draft.playwright_test_source)
     record = GeneratedTestDraftModel(
         id=draft.id,
@@ -204,7 +229,11 @@ def fail_generation(
 
 class DecideGeneratedDraft:
     def __init__(
-        self, repository: SqlAlchemyGenerationRepository, audits, outbox, runs,
+        self,
+        repository: SqlAlchemyGenerationRepository,
+        audits,
+        outbox,
+        runs,
         preflight: GeneratedSourcePreflight | None = None,
     ) -> None:
         self._repository, self._audits, self._outbox, self._runs = repository, audits, outbox, runs
@@ -223,7 +252,7 @@ class DecideGeneratedDraft:
                 and existing.decided_by == decided_by
                 and existing.reason == reason
             ):
-                return draft, existing
+                return draft, existing, None
             raise GenerationStateError("draft already has an immutable final decision")
         if draft.state != DraftState.PENDING_REVIEW.value:
             raise GenerationStateError("only pending-review drafts can be decided")
@@ -258,9 +287,12 @@ class DecideGeneratedDraft:
                         )
                     )
                 except RuntimeError:
-                    repair = SubmitGeneration(
-                        self._repository, self._audits, self._outbox
-                    ).execute(
+                    if getattr(request, "vision_handoff_id", None) is not None:
+                        # The renderer is deterministic; freeform repair would discard grounding.
+                        raise GenerationStateError(
+                            "Vision source failed pinned-worker preflight"
+                        ) from None
+                    repair = SubmitGeneration(self._repository, self._audits, self._outbox).execute(
                         tenant_id=tenant_id,
                         project_id=request.project_id,
                         correlation_id=request.correlation_id,

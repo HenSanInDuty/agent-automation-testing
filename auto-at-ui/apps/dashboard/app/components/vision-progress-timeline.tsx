@@ -35,7 +35,11 @@ export function VisionProgressTimeline({ apiUrl, sessionId, live, onActivity }: 
       timer = window.setInterval(refresh, 5_000);
     };
     refresh();
-    if (!live || typeof EventSource === "undefined") {
+    if (!live) {
+      setConnection("complete");
+      return () => { disposed = true; };
+    }
+    if (typeof EventSource === "undefined") {
       polling();
       return () => { disposed = true; if (timer) window.clearInterval(timer); };
     }

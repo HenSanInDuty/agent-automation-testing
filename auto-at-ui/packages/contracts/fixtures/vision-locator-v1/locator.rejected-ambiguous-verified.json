@@ -1,0 +1,43 @@
+{
+  "contract": "VisualLocatorEvidence",
+  "accepted": false,
+  "payload": {
+    "schema_version": "v1",
+    "id": "00000000-0000-0000-0000-000000000001",
+    "tenant_id": "fixture-tenant",
+    "project_id": "00000000-0000-0000-0000-000000000002",
+    "session_id": "00000000-0000-0000-0000-000000000003",
+    "operation_id": "00000000-0000-0000-0000-000000000004",
+    "state_id": "00000000-0000-0000-0000-000000000005",
+    "proposal_id": "00000000-0000-0000-0000-000000000006",
+    "originating_frame_id": "00000000-0000-0000-0000-000000000007",
+    "descriptor": {
+      "strategy": "role",
+      "role": "button",
+      "value": "Explore",
+      "exact": true,
+      "scope": [
+        {
+          "kind": "iframe",
+          "selector": "iframe[id=\"embedded\"]"
+        },
+        {
+          "kind": "shadow",
+          "selector": "section[id=\"shell\"]"
+        }
+      ]
+    },
+    "bounding_box": {
+      "x": 0.1,
+      "y": 0.1,
+      "width": 0.2,
+      "height": 0.1
+    },
+    "matched_count": 2,
+    "target_match": true,
+    "actionable": true,
+    "model_confidence": 0.5,
+    "verified_at": "2026-09-07T16:30:01Z",
+    "status": "verified"
+  }
+}

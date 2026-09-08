@@ -3,6 +3,11 @@
 These tests deliberately use the control-plane container as the caller.  That
 exercises the same Docker-network boundary used by the local dispatcher while
 keeping the browser target deterministic and local.
+
+The complete v4 locator pipeline uses an owned PostgreSQL database and loopback
+worker in test_vision_locator_pipeline.py. A passing Compose v1 check does not
+certify v4 capability. The dashboard workflow below writes to the configured
+stack and may trigger its reporting provider; run it only in an isolated stack.
 """
 
 import json

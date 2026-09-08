@@ -1,0 +1,58 @@
+{
+  "schema_version": "v2",
+  "scope": "synthetic_local_only",
+  "recorded_at": "2026-09-08T23:41:48.245389+07:00",
+  "python": {
+    "passed": 354,
+    "skipped": 3,
+    "duration_seconds": 146.56,
+    "isolation": "dotenv disabled; provider credentials removed; Python sockets/DNS loopback only; UUID disposable PostgreSQL database"
+  },
+  "worker": {
+    "passed": 52,
+    "skipped": 1,
+    "duration_seconds": 49.7,
+    "playwright_version": "1.50.1",
+    "dashboard": "production build with intercepted API fixtures"
+  },
+  "dashboard": {
+    "passed": 27,
+    "typecheck": "passed",
+    "production_build": "passed"
+  },
+  "ruff": "passed",
+  "generated_contracts_check": "passed",
+  "alembic_head": "f9a0b1c2d3e4",
+  "pipeline": {
+    "schema_version": "v2",
+    "scope": "synthetic_fixture_only",
+    "locator_grounding": {
+      "numerator": 2,
+      "denominator": 2
+    },
+    "wrong_target_count": 0,
+    "frame_completeness": {
+      "numerator": 10,
+      "denominator": 10
+    },
+    "missing_frame_reasons": {},
+    "restore_verified_count": 1,
+    "restore_failure_count": 0,
+    "post_commit_read_latency_seconds": [
+      0.03236499999911757
+    ],
+    "eligible_branches": 2,
+    "total_branches": 2,
+    "deterministic_rerun_succeeded": true,
+    "duplicate_physical_actions": 0
+  },
+  "skips": [
+    "Three configured-stack Compose tests excluded by the isolated runner; they do not validate the current source in an owned deployment.",
+    "One worker test requires /ms-playwright in the pinned Docker image; real local generated-source execution passed in the Python pipeline."
+  ],
+  "not_run": [
+    "Application database migration/deployment",
+    "Real provider/Drive canary",
+    "Production target evaluation"
+  ]
+}

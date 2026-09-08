@@ -86,3 +86,30 @@ async def test_transport_diagnostic_classifies_response_without_returning_text()
         "http_status": 400,
         "categories": ["image", "url", "format", "invalid"],
     }
+
+
+def test_locator_metrics_keep_missing_denominator_and_exclude_descriptors():
+    from types import SimpleNamespace as Item
+
+    from benchmark.vision import summarize_locator_trace
+
+    snapshot = {
+        "operations": [Item(
+            actual_before_frame_id="before", actual_after_frame_id=None,
+            before_unavailable_reason=None, after_unavailable_reason="capture_failed",
+            purpose="restore", checkpoint_id="checkpoint", status="failed",
+        )],
+        "frames": [Item(metadata=Item(id="before", deleted_at=True))],
+        "locators": [Item(status="verified", descriptor=Item(value="fixture-private-label"),
+                          target_match=False)],
+        "handoffs": [Item(branches=[Item(status="blocked")])],
+    }
+    metrics = summarize_locator_trace(
+        snapshot, expected_locator_values={"expected"}, post_commit_read_seconds=[0.01],
+        deterministic_rerun_succeeded=False, duplicate_physical_actions=0,
+    )
+    assert metrics["frame_completeness"] == {"numerator": 0, "denominator": 2}
+    assert metrics["missing_frame_reasons"] == {"deleted": 1, "capture_failed": 1}
+    assert metrics["wrong_target_count"] == metrics["restore_failure_count"] == 1
+    assert metrics["restore_verified_count"] == metrics["eligible_branches"] == 0
+    assert "private-label" not in str(metrics) and "cost" not in str(metrics)

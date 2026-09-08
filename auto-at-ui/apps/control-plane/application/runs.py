@@ -447,7 +447,9 @@ class PublishOutbox:
                 event.event_type == "agent.visual_exploration.requested.v1"
                 and self._vision is not None
             ):
-                await self._vision.execute(event)
+                outcome = await self._vision.execute(event)
+                if outcome in {"deferred", "busy"}:
+                    continue
             else:
                 continue
             self._outbox.mark_published(event.id, datetime.now(UTC))

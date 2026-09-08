@@ -31,6 +31,15 @@ class Events:
         ("draft.handoff", {"outcome": "accepted"}),
         ("completed", {"state_count": 1, "action_count": 1}),
         ("unavailable", {}),
+        ("operation.prepared", {"operation_id": str(uuid4()), "operation_sequence": 1}),
+        ("operation.completed", {"purpose": "explore"}),
+        ("operation.failed", {}),
+        ("operation.unknown", {}),
+        ("locator.verified", {}),
+        ("locator.unresolved", {}),
+        ("state.restore_started", {}),
+        ("state.restored", {}),
+        ("state.restore_failed", {}),
     ],
 )
 def test_vision_progress_stages_are_session_scoped(stage: str, metadata: dict[str, object]) -> None:
