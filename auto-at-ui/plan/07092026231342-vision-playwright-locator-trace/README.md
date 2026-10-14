@@ -112,6 +112,70 @@ Nhận xét trước đây rằng session 437e… “không thay đổi giao di�
 
 Current state: all seven phases are completed. Earlier dated checkpoints below are retained as history; they do not represent current blockers. The user declined monetary cost accounting/reservations/missing-price gating. The compatible fields remain metadata only; step, rate, byte, deadline and traversal limits remain enforced.
 
+### Local deployment follow-up — 2026-10-11
+
+Status: completed. Resumed from the user's request to continue unfinished work.
+The checkout was clean at commit `9a597bd`. Read-only inspection found the local
+schema already at `f9a0b1c2d3e4`, the v4 writer enabled, and a prior v4 session
+stopped at its first setup operation (`prepare_unavailable` / `operation_unavailable`).
+Those deployment facts supersede the historical "not deployed" record below;
+they do not establish a successful provider canary.
+
+Reproduction isolated a storage incompatibility: the pinned RustFS alpha.69
+returns `NoSuchKey` on a conditional create of a never-used object key. Worker
+prepare and frame retrieval succeeded independently. Compose now pins alpha.73,
+which includes upstream fix https://github.com/rustfs/rustfs/pull/1034; conditional
+creation and immutable evidence checks remain unchanged.
+
+New integration tests in `tests/test_rustfs_operation_storage.py` run against the
+actual pinned image with disposable tmpfs storage. First writes, identical retries,
+conflicting bytes and four competing writers passed (five independent race rounds).
+The initial fixture startup exposed a tmpfs ownership/permission mismatch with
+the image's UID 10001; the fixture now assigns the correct ownership and bounds
+S3 readiness timeouts.
+
+Local RustFS was backed up while stopped to
+`auto-at-backup/rustfs-before-conditional-fix-20261011/rustfs-data.tar.gz` and then
+recreated on alpha.73. All 274 existing objects (1,915,776 bytes) retain the same
+aggregate key/content/metadata checksum before and after replacement. A synthetic
+worker navigation against the local benchmark target persisted and read-verified
+both actual before/after frames, completed, and acknowledged staging cleanup.
+Its temporary worker session and storage objects were removed.
+
+Changed paths: `docker-compose.yml`, `tests/test_rustfs_operation_storage.py`,
+`docs/vision-agent-operations.md`, and this canonical README. No provider/model,
+tenant consent, retention, execution contract, approval flow or existing session
+verdict changed. No real-provider/Drive canary was run.
+
+Validation completed:
+- `uv run pytest tests/test_rustfs_operation_storage.py -q --tb=short --show-capture=no`:
+  **2 passed** against the pinned real image.
+- Full Python suite via `uv run python -` invoking `pytest.main`: **356 passed,
+  3 skipped** (153.41s). The harness disabled dotenv/provider credentials and
+  non-loopback Python networking; the three configured-stack Compose tests were
+  deliberately skipped because they may invoke real providers. Vision database
+  fixtures used disposable UUID databases on the owned PostgreSQL port 55437.
+  Eight older tests used the local default database with their existing fixture
+  cleanup; all eight were additionally rerun against a fresh UUID database on
+  port 55437: **8 passed** (3.52s). This first full run is not claimed as wholly
+  isolated from the application database.
+- `uv run ruff check .`, `docker compose config --quiet`,
+  `uv run python packages/contracts/export_vision_worker.py --check`, and
+  `git diff --check`: passed.
+- Deployed local smoke: worker prepare, real before-frame storage/read-back,
+  benchmark-target navigation, real after-frame storage/read-back and ACK passed.
+  A final inventory after synthetic cleanup still contains exactly 274 objects,
+  1,915,776 bytes, and aggregate digest
+  `b4573bfcb3646a6c89a9e8507ce42b9bafe7735f9dc4c6c43d606c97a2338e21`.
+
+The database backup/migration boundary is unchanged (no application schema
+upgrade was needed). The stopped-volume RustFS backup remains in the ignored
+backup directory. Temporary RustFS containers and synthetic evidence were cleaned
+up; the owned PostgreSQL test service is stopped after validation. Existing failed
+sessions retain their historical outcomes. A new real-target/provider canary
+still needs an authorized target/tenant scope; no end-to-end provider success is
+claimed by these local checks.
+
 - Historical Phase 3 checkpoint (2026-09-08 21:42 +07:00; resolved by the user: no cost accounting required): `VisionPolicy.max_cost_usd` and session `max_cost_usd` are stored, but no Vision caller or shared guard accounts for monetary cost. The shared guard limits steps and per-request tokens/bytes only. Enforcing the planned cumulative dollar cap requires an approved cost reservation source; adding a new configurable reservation changes runtime policy shape. Asked whether to add an administrator-configured conservative reservation per request and block live calls when missing, or keep live calls disabled pending pricing direction. Safe independent work underway: typed transport, operation commit/capture/ACK/reconciliation, immutable RustFS storage and disposable-PostgreSQL tests. No live v4 model writer enabled; later phases remain not started until this decision is resolved.
 
 - Phase 3 started 2026-09-08 21:34 +07:00: implement short-transaction operation orchestration, typed v4 transport, durable RustFS evidence/ACK and retry reconciliation. Existing uncommitted changes preserved. Docker daemon is currently stopped; checking local startup for required disposable PostgreSQL validation.

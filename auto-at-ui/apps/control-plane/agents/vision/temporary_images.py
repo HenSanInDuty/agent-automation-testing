@@ -10,6 +10,7 @@ from uuid import UUID
 import httpx
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from domain.vision import VisionImageAuthorizationRequired
 
 
 class SupabaseTemporaryVisionImageStore:
@@ -170,6 +171,13 @@ class GoogleDriveTemporaryVisionImageStore:
                         "grant_type": "refresh_token",
                     },
                 )
+            if response.status_code == 400:
+                try:
+                    body = response.json()
+                except ValueError:
+                    body = None
+                if isinstance(body, dict) and body.get("error") == "invalid_grant":
+                    raise VisionImageAuthorizationRequired("image_delivery_auth_required")
             response.raise_for_status()
             token = response.json().get("access_token")
             if not isinstance(token, str) or not token:

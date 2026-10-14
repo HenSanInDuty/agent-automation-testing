@@ -306,7 +306,11 @@ export class VisualOperationWorker {
         }
         requireVision(allowedOrigin(afterPage.url(), session.request.allowed_origins), "origin_denied");
         if (session.policyFailure) throw new VisionWorkerError(session.policyFailure);
-        const settled = await settleState(afterPage, Math.min(session.deadline, Date.now() + 1500));
+        // DOMContentLoaded can precede hydration and carousel initialization by
+        // several seconds. Allow navigation to settle without relaxing state
+        // equality or exceeding the session deadline; local actions stay short.
+        const settleTimeout = action.kind === "navigate" ? 10_000 : 1500;
+        const settled = await settleState(afterPage, Math.min(session.deadline, Date.now() + settleTimeout));
         if (!settled.settled) { status = "failed"; code = "settle_timeout"; }
         session.state = settled.state; runtime.result.state_fingerprint = settled.state.fingerprint;
         runtime.result.semantic_change = runtime.before.semantic_fingerprint === settled.state.semantic_fingerprint ? "unchanged" : "changed";

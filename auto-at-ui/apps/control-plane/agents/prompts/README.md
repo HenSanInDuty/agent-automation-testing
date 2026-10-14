@@ -8,7 +8,7 @@ the existing fail-closed, advisory boundaries.
 | --- | --- | --- |
 | `generation.py` | `agents.generation.planner` | Governed Playwright test drafting. |
 | `vision_generation.py` | `agents.generation.vision_plan` | v1: select immutable branch/assertion references for deterministic rendering. |
-| `vision.py` | `agents.vision.service`, `agents.vision.executor` | v3: independent sibling candidate batches, trusted locator/restore boundary; separate single-action output. |
+| `vision.py` | `agents.vision.service`, `agents.vision.executor` | v4: broad button exploration includes custom controls and scrolling; bounded independent siblings, trusted locator/restore boundary; separate single-action output. |
 | `triage.py` | `agents.triage.executor` | Advisory failure classification. |
 | `demo.py` | `agents.demo.weather` | Local weather demonstration only. |
 

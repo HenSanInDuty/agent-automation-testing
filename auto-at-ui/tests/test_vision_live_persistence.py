@@ -376,7 +376,8 @@ def live_browser_worker():
 
 @pytest.mark.parametrize(
     "variant",
-    ["branches", "modal", "restore_failed", "cancelled", "model_failed", "generation_failed"],
+    ["branches", "modal", "restore_failed", "cancelled", "model_failed", "generation_failed",
+     "image_auth_failed"],
 )
 def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
     trace_database,
@@ -473,6 +474,10 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
                     await release.wait()
                     if variant == "model_failed":
                         return VisualCandidateBatchOutcome(status="unavailable")
+                    if variant == "image_auth_failed":
+                        from domain.vision import VisionImageAuthorizationRequired
+
+                        raise VisionImageAuthorizationRequired("image_delivery_auth_required")
                 actions = [StopAction(confidence=1, expected_outcome="fixture stop")]
             return VisualCandidateBatchOutcome(status="completed", actions=actions)
 
@@ -532,9 +537,11 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
     asyncio.run(scenario())
     record = uow.get_session(scope.tenant_id, scope.session_id)
     snapshot = uow.read_snapshot(scope)
-    if variant in {"restore_failed", "cancelled", "model_failed"}:
+    if variant in {"restore_failed", "cancelled", "model_failed", "image_auth_failed"}:
         assert record.state == ("cancelled" if variant == "cancelled" else "unavailable")
         assert record.safe_failure_reason
+        if variant == "image_auth_failed":
+            assert record.safe_failure_reason == "image_delivery_auth_required"
         assert len(snapshot["frames"]) >= 4
         assert not any(
             locator.descriptor and locator.descriptor.value == "Branch B"

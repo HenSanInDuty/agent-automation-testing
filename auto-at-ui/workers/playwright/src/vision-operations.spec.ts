@@ -194,6 +194,41 @@ for (const [name, selector, code] of [
   expect(result.frames.map((f) => f.role)).toEqual(["before", "after"]);
 });
 
+test("setup waits for delayed hydration and records the settled checkpoint", async () => {
+  await page.route(target.origin + "/", (route) => route.fulfill({ contentType: "text/html", body: `
+    <button aria-label="Loading">Loading</button><script>
+      const button = document.querySelector('button');
+      let count = 0;
+      const timer = setInterval(() => button.setAttribute('data-changing', String(++count)), 20);
+      setTimeout(() => {
+        clearInterval(timer);
+        button.textContent = 'Ready'; button.setAttribute('aria-label', 'Ready');
+      }, 2500);
+    </script>` }));
+  const result = await setup();
+  ledger(result, "navigate", 1);
+  expect(await page.getByRole("button", { name: "Ready" }).count()).toBe(1);
+  expect(result.duration_ms).toBeGreaterThanOrEqual(2500);
+  expect(result.duration_ms).toBeLessThan(10_000);
+  expect((await worker.checkpoint(identity, identity.session_id, result.checkpoint!.id)).matches_current).toBe(true);
+});
+
+test("setup still fails when navigation never settles and retains both frames", async () => {
+  await page.route(target.origin + "/", (route) => route.fulfill({ contentType: "text/html", body: `
+    <button>Loading</button><script>
+      let count = 0;
+      setInterval(() => document.querySelector('button').setAttribute('data-changing', String(++count)), 20);
+    </script>` }));
+  const result = await run({ kind: "navigate" }, {
+    purpose: "setup", checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+  });
+  expect(result.operation).toMatchObject({ status: "failed", outcome_code: "settle_timeout" });
+  expect(result.frames.map((frame) => frame.role)).toEqual(["before", "after"]);
+  expect(result.checkpoint).toBeNull();
+  expect(result.replayable).toBe(false);
+  expect(result.duration_ms).toBeLessThan(13_000);
+});
+
 test("settle timeout is bounded and retains after evidence", async () => {
   await setup();
   await page.getByRole("button", { name: "No operation" }).evaluate((el) => {

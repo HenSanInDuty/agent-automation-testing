@@ -1,6 +1,6 @@
 """Prompts for bounded, advisory Vision exploration."""
 
-VISION_PROMPT_VERSION = "vision-exploration-v3"
+VISION_PROMPT_VERSION = "vision-exploration-v4"
 VISION_SINGLE_IMAGE_INSTRUCTION = "Return one candidate action for the supplied image."
 VISION_BATCH_IMAGE_INSTRUCTION = "Return candidate actions for this state."
 
@@ -37,4 +37,11 @@ def build_visual_candidate_batch_prompt(task_intent: str, max_candidates: int) -
         " Candidates are independent sibling alternatives from this exact image, not a sequence."
         " The trusted browser verifies locators and restores state; never invent selectors or"
         " claim an action or test succeeded."
+        " For a task asking to check all buttons, propose distinct visible interactive controls"
+        " across the page, not just one representative control. Include icon controls, links,"
+        " tabs, menus and custom controls that may be implemented as div or span elements."
+        " Include a scroll candidate when more controls may be below the viewport."
+        " Do not infer the underlying HTML tag from pixels or equate a rendered page with"
+        " completed button coverage. Stay within the candidate cap; uncertainty or limits"
+        " must not be described as verification of every control."
     )

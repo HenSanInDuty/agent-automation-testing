@@ -25,6 +25,28 @@ records or logs. Private replay/operation evidence is stored separately in RustF
 For My Drive OAuth, no credential-file mount is required by the supplied local
 Compose configuration.
 
+If navigation succeeds but exploration stops before candidates arrive, inspect
+the session completion reason. `image_delivery_auth_required` means Google
+rejected the refresh grant with `invalid_grant`; no candidate model call or
+button coverage was completed. Reauthorize the same OAuth client and account,
+replace `GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN` in the local secret configuration,
+recreate the consuming containers, and start a new session. A plain container
+restart does not reload Compose environment values. Keep the previous trace.
+For [OAuth Playground](https://developers.google.com/oauthplayground/), use your
+own client credentials, register its URL as an authorized redirect URI, request
+offline access with the existing Drive scope, and exchange the authorization
+code for a refresh token. Never paste tokens into logs or tickets. External apps
+in Testing receive Drive refresh tokens that expire after seven days; see
+[Google's refresh-token expiration rules](https://developers.google.com/identity/protocols/oauth2#expiration).
+
+Button exploration includes custom controls implemented with `div`/`span` when
+the worker can identify an interactive ancestor and verify a unique supported
+locator. Click handlers and pointer cursors supplement semantic roles; arbitrary
+containers do not become verified controls. Prompts request distinct sibling
+controls and scrolling for broad button checks. State, depth, time and model-call
+limits still bound coverage; a completed navigation or exploration does not prove
+every button works.
+
 Run the fixture-only checks before any provider call:
 
 ```bash
@@ -157,6 +179,31 @@ modifies a run verdict. Result and trace endpoints require the session's project
 permission and use private, no-store responses.
 
 ## Local rollout and rollback
+
+The local Compose store is pinned to RustFS `1.0.0-alpha.73`. The previous
+`1.0.0-alpha.69` image rejects a first `PutObject` with `If-None-Match: *` as
+`NoSuchKey`; a v4 session then stops with `operation_unavailable` before browser
+execution because its before image cannot be persisted. The upstream
+[conditional-create fix](https://github.com/rustfs/rustfs/pull/1034) is included in
+[alpha.73](https://github.com/rustfs/rustfs/releases/tag/1.0.0-alpha.73).
+Keep the conditional write and checksum read-back: an unconditional retry would
+allow a competing writer to replace evidence.
+
+Before replacing an existing local storage container, stop storage writes, back
+up its stopped data volume, and retain that backup. After the upgrade, verify
+existing object bytes and metadata and run:
+
+```text
+docker pull rustfs/rustfs:1.0.0-alpha.73
+uv run pytest tests/test_rustfs_operation_storage.py -q
+```
+
+These tests derive the image from Compose, create disposable containers with
+loopback-only ports and synthetic credentials, and exercise first writes,
+idempotent retries, conflicting bytes and competing writers. They do not access
+the application bucket or invoke an LLM. Docker and the pinned image are required;
+an unavailable prerequisite is reported as skipped, not passed. This validates
+the local single-node topology, not distributed-storage concurrency.
 
 The deployment setting `VISION_TRACE_V4_ENABLED` defaults to false and selects the
 writer only for newly accepted sessions. It does not enable tenant Vision consent,

@@ -231,7 +231,8 @@ services:
     restart: unless-stopped
 
   rustfs:
-    image: rustfs/rustfs:1.0.0-alpha.69
+    # Includes the conditional-create fix required by immutable Vision frames.
+    image: rustfs/rustfs:1.0.0-alpha.73
     command: /data
     environment:
       RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-LOCALRUSTFSADMIN}

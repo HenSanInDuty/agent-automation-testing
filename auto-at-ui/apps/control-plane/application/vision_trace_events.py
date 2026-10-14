@@ -18,7 +18,7 @@ from auto_at.contracts.vision_worker import (
 )
 from domain.entities import VisualTrajectoryEdgeRecord
 from domain.ports import VisualTraceUnitOfWork, VisualWorkerTransport
-from domain.vision import VisualSessionScope
+from domain.vision import VisionImageAuthorizationRequired, VisualSessionScope
 
 from application.vision_handoff import build_vision_handoff
 from application.vision_operations import ExecuteVisualOperation, VisualOperationStopped, evolve
@@ -450,8 +450,12 @@ class VisionTraceEventProcessor:
             )
         except Exception as error:
             reason = (
-                str(error)
+                "image_delivery_auth_required"
+                if isinstance(error, VisionImageAuthorizationRequired)
+                else str(error)
                 if isinstance(error, VisualOperationStopped)
+                else "session_timeout"
+                if isinstance(error, TimeoutError)
                 else "visual_exploration_unavailable"
             )
             try:

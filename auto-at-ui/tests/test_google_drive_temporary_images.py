@@ -3,7 +3,37 @@ import json
 from uuid import uuid4
 
 import httpx
+import pytest
 from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
+from domain.vision import VisionImageAuthorizationRequired
+
+
+def test_expired_oauth_stops_before_upload_with_safe_reauthorization_reason():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        assert request.url == "https://oauth2.googleapis.com/token"
+        return httpx.Response(400, json={
+            "error": "invalid_grant", "error_description": "sentinel-private-provider-detail",
+        })
+
+    store = GoogleDriveTemporaryVisionImageStore(
+        service_account_file=None, folder_id="fixture", ttl=60,
+        oauth_client_id="fixture-client", oauth_client_secret="fixture-secret",
+        oauth_refresh_token="fixture-refresh", transport=httpx.MockTransport(handler),
+    )
+
+    async def deliver():
+        async with store.deliver(
+            tenant_id="fixture", session_id=uuid4(), sequence=1, image=b"fixture-image",
+        ):
+            pytest.fail("expired OAuth must not deliver an image to the model")
+
+    with pytest.raises(VisionImageAuthorizationRequired) as error:
+        asyncio.run(deliver())
+    assert str(error.value) == "image_delivery_auth_required"
+    assert len(requests) == 1
 
 
 def test_google_drive_temporary_delivery_unlists_then_deletes_the_file() -> None:

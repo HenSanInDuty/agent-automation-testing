@@ -6,6 +6,11 @@ from uuid import UUID
 
 from auto_at.contracts.vision import VisualOperation
 
+
+class VisionImageAuthorizationRequired(RuntimeError):
+    """Image delivery requires renewed authorization; no provider details escape."""
+
+
 FINAL_OPERATION_STATUSES = frozenset({"completed", "failed", "unknown", "rejected"})
 _TRANSITIONS = {
     "prepared": {"prepared", "executing", "failed", "unknown", "rejected"},

@@ -4,12 +4,13 @@ const dashboard = process.env.VISION_DASHBOARD_URL;
 test.skip(!dashboard, "Set VISION_DASHBOARD_URL to the local dashboard fixture server.");
 const sessionA = "00000000-0000-4000-8000-000000000001";
 const sessionB = "00000000-0000-4000-8000-000000000002";
+const sessionC = "00000000-0000-4000-8000-000000000004";
 const project = "00000000-0000-4000-8000-000000000003";
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1kAAAAASUVORK5CYII=", "base64");
 
 async function fixture(page: Page, legacy = false) {
   page.on("pageerror", (error) => { console.log("Fixture dashboard error:", error.message); });
-  const state = { extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running" };
+  const state = { extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, visionEnabled: false, submissions: [] as unknown[] };
   const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60 });
   const frame = (id: string) => ({ id, availability: "retained", reason_code: null });
   const operation = (number: number, id: string) => ({ id: `${id}-op${number}`, sequence: number, purpose: number === 1 ? "setup" : number === 3 ? "restore" : "explore", action_kind: number === 1 ? "navigate" : number === 3 ? "back" : "click", status: "completed", started_at: "2026-09-08T12:00:00Z", outcome_code: "observed", state_id: "root", locator_id: `${id}-locator${number}`, before: frame(`${id}-before${number}`), after: frame(`${id}-after${number}`) });
@@ -17,20 +18,24 @@ async function fixture(page: Page, legacy = false) {
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
-    const id = path.includes(sessionB) ? sessionB : sessionA;
+    const id = path.includes(sessionC) ? sessionC : path.includes(sessionB) ? sessionB : sessionA;
     const headers = { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true" };
     const json = (body: unknown) => route.fulfill({ json: body, headers });
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers });
     if (path.endsWith("/auth/me")) return json({ role: "viewer", email: "reader@fixture.test", tenant_id: "fixture" });
     if (path.endsWith("/projects")) return json([{ id: project, name: "Fixture project", default_target: "web_ui" }]);
-    if (path.endsWith("/policy")) return json({ enabled: false, raw_screenshot_transfer_accepted: false, allowed_origins: [], vision_max_hops: 3, vision_max_states: 8 });
-    if (path.endsWith("/explorations")) return json({ items: [session(sessionA), session(sessionB)], total: 2 });
+    if (path.endsWith("/policy")) return json({ enabled: state.visionEnabled, raw_screenshot_transfer_accepted: state.visionEnabled, allowed_origins: [], vision_max_hops: 3, vision_max_states: 8 });
+    if (path.endsWith("/explorations") && route.request().method() === "POST") {
+      state.submissions.push(route.request().postDataJSON());
+      return json(session(sessionC));
+    }
+    if (path.endsWith("/explorations")) return json({ items: [...(state.submissions.length ? [session(sessionC)] : []), session(sessionA), session(sessionB)], total: state.submissions.length ? 3 : 2 });
     if (path.endsWith("/trace")) {
       state.calls++;
       if (state.delay && id === sessionA) { state.delay = false; await new Promise<void>((resolve) => { state.release = resolve; }); }
       return json({ session_id: id, schema_version: "v1", revision: String(state.extra), trace_version: legacy ? "legacy" : "v4", items: Array.from({ length: 4 + state.extra }, (_, n) => operation(n + 1, id)), locators: locators(id), next_sequence: 4 + state.extra, has_more: false });
     }
-    if (path.endsWith("/result")) return json({ schema_version: "v1", session_id: id, project_id: project, revision: String(state.extra), exploration_state: state.exploration, completion_reason: null, evidence_status: legacy ? "legacy_evidence_only" : "available", counts: { operations: 4 + state.extra, verified_locators: 2 }, branches: [], handoffs: [{ id: "handoff", branches: [2, 4].map((n, i) => ({ id: `branch${i}`, status: "ready", reason_code: null, steps: [{ operation_id: `${id}-op1` }, { operation_id: `${id}-op${n}` }] })) }], links: { handoff: { state: "ready" }, generation: { state: "failed" }, draft: { state: "not_started" }, run: { state: "failed", id: "run-fixture", href: "/runs/run-fixture" }, report: { state: "unavailable" } }, limitations: ["Business outcome unverified."] });
+    if (path.endsWith("/result")) return json({ schema_version: "v1", session_id: id, project_id: project, revision: String(state.extra), exploration_state: state.exploration, completion_reason: state.completionReason, evidence_status: legacy ? "legacy_evidence_only" : "available", counts: { operations: 4 + state.extra, verified_locators: 2 }, branches: [], handoffs: [{ id: "handoff", branches: [2, 4].map((n, i) => ({ id: `branch${i}`, status: "ready", reason_code: null, steps: [{ operation_id: `${id}-op1` }, { operation_id: `${id}-op${n}` }] })) }], links: { handoff: { state: "ready" }, generation: { state: "failed" }, draft: { state: "not_started" }, run: { state: "failed", id: "run-fixture", href: "/runs/run-fixture" }, report: { state: "unavailable" } }, limitations: ["Business outcome unverified."] });
     if (path.endsWith("/locators")) return json({ items: locators(id), has_more: false, next_id: null });
     if (path.includes("/operation-frames/")) {
       if (path.endsWith("after2")) return route.fulfill({ status: 404, json: { detail: "Frame unavailable." }, headers });
@@ -46,6 +51,18 @@ async function fixture(page: Page, legacy = false) {
   });
   return state;
 }
+
+test("image authorization failure explains why completed navigation is not completed coverage", async ({ page }) => {
+  const state = await fixture(page);
+  state.exploration = "unavailable";
+  state.completionReason = "image_delivery_auth_required";
+  state.extra = -3;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const result = page.getByRole("region", { name: "Vision result", exact: true });
+  await expect(result).toContainText("Google Drive authorization must be renewed");
+  await expect(result).toContainText("Button coverage is incomplete");
+  await expect(page.getByRole("region", { name: "Operation trace", exact: true })).toContainText("setup");
+});
 
 test("saved branches, independent image errors, scrub preservation and live follow", async ({ page }) => {
   test.setTimeout(60_000);
@@ -65,7 +82,6 @@ test("saved branches, independent image errors, scrub preservation and live foll
   await expect(trace.getByLabel("Selected operation")).toContainText("Operation 2");
   await trace.getByLabel("Follow live").check();
   await expect(trace.getByLabel("Selected operation")).toContainText("Operation 5");
-  await page.getByText("Start an exploration and settings", { exact: true }).click();
   const input = page.getByLabel("Target URL", { exact: true });
   await input.fill("https://fixture.test/"); await input.press("Home");
   await expect(trace.getByLabel("Selected operation")).toContainText("Operation 5");
@@ -75,6 +91,30 @@ test("saved branches, independent image errors, scrub preservation and live foll
   await page.reload();
   await expect(page.getByRole("region", { name: "Vision result", exact: true })).toContainText(sessionA);
   await expect(page.getByText("Saved progress", { exact: true })).toBeVisible();
+});
+
+test("a saved session leaves the new exploration form visible and a new session survives reload", async ({ page }) => {
+  const state = await fixture(page);
+  state.visionEnabled = true;
+  state.exploration = "unavailable";
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const form = page.getByRole("region", { name: "Vision exploration", exact: true });
+  await expect(form.getByRole("heading", { name: "Start a new Vision exploration" })).toBeInViewport();
+  await expect(form.getByLabel("Target URL", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Vision result", exact: true })).toContainText(sessionA);
+  await form.getByLabel("Target URL", { exact: true }).fill("https://fixture.test/");
+  await form.getByLabel("Exploration intent", { exact: true }).fill("Explore the fixture navigation");
+  await form.getByLabel("Use Vision Agent", { exact: true }).check();
+  await form.getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  expect(state.submissions).toHaveLength(0);
+  await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(sessionC));
+  await expect(page.getByRole("region", { name: "Vision result", exact: true })).toContainText(sessionC);
+  expect(state.submissions).toEqual([{ project_id: project, target_url: "https://fixture.test/", task_intent: "Explore the fixture navigation", use_vision: true }]);
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Vision result", exact: true })).toContainText(sessionC);
+  await expect(form.getByLabel("Target URL", { exact: true })).toBeVisible();
+  expect(state.submissions).toHaveLength(1);
 });
 
 test("switching session discards a late response from the prior session", async ({ page }) => {

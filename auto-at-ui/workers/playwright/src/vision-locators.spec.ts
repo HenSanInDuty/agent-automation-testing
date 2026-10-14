@@ -23,6 +23,23 @@ test("duplicate accessible names stay ambiguous without a unique fallback", asyn
   const result = await groundLocator(page, 330 / 1279, 30 / 719);
   expect(result).toMatchObject({ status: "ambiguous", reason_code: "multiple_matches", matched_count: 2 });
 });
+test("custom div controls resolve from nested content and execute through verified locators", async ({ page }) => {
+  await page.setContent(`<div id="custom" onclick="this.dataset.clicked='yes'" style="width:160px;height:40px"><span>Open menu</span></div>
+    <div id="delegated" style="cursor:pointer;width:160px;height:40px"><span>Next slide</span></div>`);
+  await page.locator("#delegated").evaluate((el) => el.addEventListener("click", () => el.setAttribute("data-clicked", "yes")));
+  for (const id of ["custom", "delegated"]) {
+    const result = await ground(page, page.locator(`#${id} span`));
+    expect(result).toMatchObject({ status: "verified", descriptor: { strategy: "css", value: `div[id="${id}"]` } });
+    await result.locator!.click();
+    expect(await page.locator(`#${id}`).getAttribute("data-clicked")).toBe("yes");
+    await result.target?.dispose();
+  }
+});
+test("plain divs and custom controls without a unique identity stay unresolved", async ({ page }) => {
+  await page.setContent('<div id="plain">Content</div><div onclick="void 0">Unidentified control</div>');
+  expect((await ground(page, page.locator("#plain"))).status).toBe("unsupported");
+  expect((await ground(page, page.locator("div").nth(1))).reason_code).toBe("no_grounded_locator");
+});
 test("open shadow and same-origin iframe carry explicit grounded scopes", async ({ page }) => {
   const shadow = await ground(page, page.getByRole("button", { name: "Shadow action" }));
   expect(shadow).toMatchObject({ status: "verified", descriptor: { scope: [{ kind: "shadow", selector: 'section[id="shadow-host"]' }] } });

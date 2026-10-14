@@ -38,11 +38,18 @@ async function hitTarget(page: Page, x: number, y: number): Promise<{
       }
       if (element?.tagName === "IFRAME") return element;
       let current = element;
+      let pointerTarget: Element | null = null;
       while (current) {
         if (current.matches('button,a[href],input,textarea,select,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="textbox"],[contenteditable="true"]')) return current;
+        if (current instanceof HTMLElement && !current.matches("body,html,canvas")) {
+          if (typeof current.onclick === "function") return current;
+          // Pointer cursors inherit into nested icons/text. Keep the outermost
+          // pointer element, while preferring a semantic control or click handler.
+          if (getComputedStyle(current).cursor === "pointer") pointerTarget = current;
+        }
         current = current.parentElement ?? ((current.getRootNode() as ShadowRoot).host || null);
       }
-      return null;
+      return pointerTarget;
     }, { x, y });
     const target = handle.asElement() as ElementHandle<Element> | null;
     if (!target) { await handle.dispose(); return "unsupported_target"; }
