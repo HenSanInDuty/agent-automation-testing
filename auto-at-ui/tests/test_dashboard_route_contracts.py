@@ -19,6 +19,7 @@ from main import app
         ("get", "/api/v1/activities?run_id=not-a-uuid"),
         ("get", f"/api/v1/test-generations/requests/{uuid4()}"),
         ("get", "/api/v1/vision/policy"),
+        ("get", "/api/v1/vision/providers"),
         ("get", "/api/v1/vision/explorations"),
         ("get", f"/api/v1/vision/explorations/{uuid4()}"),
         ("get", f"/api/v1/vision/explorations/{uuid4()}/actions"),

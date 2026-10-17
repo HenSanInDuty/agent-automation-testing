@@ -8,17 +8,21 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import httpx
-from agents.shared.openrouter import create_vision_language_model
-from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, resolve_agent_runtime
+from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentStepGuard, resolve_agent_runtime
 from agents.vision.debug_evidence import DebugEvidenceUnavailableError, encrypt_debug_evidence
-from agents.vision.executor import execute_visual_candidate_batch
+from agents.vision.executor import policy_to_step_guard
 from agents.vision.intent import decrypt_visual_intent
-from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
+from auto_at.contracts.generation import ProjectExecutionPolicy
 from config import Settings
 from domain.activity import ActivityEvent
 from domain.entities import VisualReplayFrameRecord, VisualTrajectoryEdgeRecord
 from domain.ports import VerifiedVisualReplayStore
 from domain.runs import AuditEvent, OutboxEvent
+from domain.vision import (
+    VISION_MODEL_FAILURE_REASONS,
+    VisionImageAuthorizationRequired,
+    vision_model_failure_reason,
+)
 from infrastructure.persistence.models import (
     VisionDebugEvidenceModel,
     VisualActionProposalModel,
@@ -26,6 +30,8 @@ from infrastructure.persistence.models import (
 )
 
 from application.generation import SubmitGeneration
+from application.vision_model_batch import VisionModelBatch, VisionModelSession
+from application.vision_operations import VisualOperationStopped
 
 
 class VisionEventProcessor:
@@ -34,6 +40,7 @@ class VisionEventProcessor:
     def __init__(
         self, sessions, configs, generation, audits, activities, outbox, settings: Settings,
         replay_store: VerifiedVisualReplayStore | None = None,
+        *, model_batch: VisionModelBatch | None = None, read_policy=None,
     ) -> None:
         self._sessions, self._configs, self._generation = sessions, configs, generation
         self._audits, self._activities, self._outbox, self._settings = (
@@ -43,6 +50,11 @@ class VisionEventProcessor:
             settings,
         )
         self._replay_store = replay_store
+        self._model_batch = model_batch
+        self._read_policy = read_policy or (lambda tenant_id, project_id: (
+            self._configs.get(tenant_id, AGENT_RUNTIME_CONFIG_KEY),
+            self._generation.get_policy(tenant_id, project_id),
+        ))
 
     async def execute(self, event: OutboxEvent) -> str:
         if event.event_type != "agent.visual_exploration.requested.v1":
@@ -56,19 +68,61 @@ class VisionEventProcessor:
             return "deferred"
         if session is None or session.state in {"completed", "unavailable", "cancelled"}:
             return "already_processed"
-        runtime = resolve_agent_runtime(
-            self._settings, self._configs.get(event.tenant_id, AGENT_RUNTIME_CONFIG_KEY)
-        )
-        if not runtime.vision.enabled or not runtime.vision.raw_screenshot_transfer_accepted:
-            return self._unavailable(session, "vision policy is disabled")
+        if session.state == "running":
+            # Legacy replay has no durable operation handle to reconcile uncertain actions.
+            return self._unavailable(session, "visual_exploration_unavailable")
         worker_session_open = False
         try:
+            config, policy = self._read_policy(session.tenant_id, session.project_id)
+            try:
+                runtime = resolve_agent_runtime(self._settings, config).vision
+            except ValueError:
+                raise VisualOperationStopped("policy_disabled") from None
+            started_at = datetime.now(UTC)
+            deadline = started_at + timedelta(
+                seconds=min(session.max_session_seconds, runtime.max_session_seconds)
+            )
+
+            def check_policy():
+                config, latest = self._read_policy(session.tenant_id, session.project_id)
+                try:
+                    live = resolve_agent_runtime(self._settings, config).vision
+                except ValueError:
+                    raise VisualOperationStopped("policy_disabled") from None
+                if (
+                    not live.enabled or not live.raw_screenshot_transfer_accepted
+                    or live.raw_screenshot_transfer_provider != session.provider
+                    or (live.provider, live.model) != (session.provider, session.model)
+                    or latest is None or policy is None
+                    or latest.allowed_origins != policy.allowed_origins
+                    or not ProjectExecutionPolicy(
+                        project_id=session.project_id, allowed_origins=latest.allowed_origins
+                    ).allows(session.target_url)
+                ):
+                    raise VisualOperationStopped("policy_disabled")
+                if remaining_seconds(live) <= 0:
+                    raise VisualOperationStopped("session_timeout")
+                return live, latest
+
+            def remaining_seconds(live):
+                return (min(deadline, started_at + timedelta(
+                    seconds=live.max_session_seconds
+                )) - datetime.now(UTC)).total_seconds()
+
+            check_policy()
+            effective = runtime.model_copy(update={
+                "max_steps": min(session.max_steps, runtime.max_steps),
+                "max_screenshot_bytes": min(
+                    session.max_screenshot_bytes, runtime.max_screenshot_bytes
+                ),
+            })
+            guard = AgentStepGuard(policy_to_step_guard(effective))
+            model_calls = 0
             intent = decrypt_visual_intent(
                 session.encrypted_task_intent,
                 self._settings.vision_intent_encryption_key,
                 session.intent_retention_until,
             )
-            policy = self._generation.get_policy(event.tenant_id, session.project_id)
             if policy is None or not self._settings.vision_worker_secret:
                 raise ValueError("visual worker is unavailable")
             root = Path(self._settings.artifact_root, "vision", str(session.id)).resolve()
@@ -88,38 +142,51 @@ class VisionEventProcessor:
             max_hops = min(session.max_hops, policy.vision_max_hops)
             max_states = min(session.max_states, policy.vision_max_states)
             worker_session_open = True
-            async with httpx.AsyncClient(timeout=runtime.vision.max_session_seconds) as client:
+            async with httpx.AsyncClient(timeout=runtime.max_session_seconds) as client:
                 while queue and visited < max_states:
+                    live, latest = check_policy()
+                    max_hops = min(max_hops, latest.vision_max_hops)
+                    max_states = min(max_states, latest.vision_max_states)
+                    if visited >= max_states:
+                        break
                     (
                         state_id, parent_id, hop, replay_path, originating_edge,
                         parent_url_fingerprint, originating_sequence,
                     ) = queue.pop(0)
+                    if hop > max_hops:
+                        continue
                     try:
-                        response = await client.post(
-                            f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/tree-states",
-                            headers={
-                                "X-Auto-At-Vision-Worker-Secret": (
-                                    self._settings.vision_worker_secret
-                                )
-                            },
-                            json={
-                                "contract_version": "v3",
-                                "id": str(session.id),
-                                "node_id": str(state_id),
-                                "target_url": session.target_url,
-                                "allowed_origins": policy.allowed_origins,
-                                "max_hops": max_hops,
-                                "max_states": max_states,
-                                "max_screenshot_bytes": runtime.vision.max_screenshot_bytes,
-                                "max_session_seconds": runtime.vision.max_session_seconds,
-                                "replay_path": replay_path,
-                                **(
-                                    {"parent_url_fingerprint": parent_url_fingerprint}
-                                    if parent_url_fingerprint is not None
-                                    else {}
-                                ),
-                            },
-                        )
+                        async with asyncio.timeout(remaining_seconds(live)):
+                            response = await client.post(
+                                f"{self._settings.playwright_worker_url.rstrip('/')}/visual-explorations/tree-states",
+                                headers={
+                                    "X-Auto-At-Vision-Worker-Secret": (
+                                        self._settings.vision_worker_secret
+                                    )
+                                },
+                                json={
+                                    "contract_version": "v3",
+                                    "id": str(session.id),
+                                    "node_id": str(state_id),
+                                    "target_url": session.target_url,
+                                    "allowed_origins": policy.allowed_origins,
+                                    "max_hops": max_hops,
+                                    "max_states": max_states,
+                                    "max_screenshot_bytes": min(
+                                        session.max_screenshot_bytes, live.max_screenshot_bytes
+                                    ),
+                                    "max_session_seconds": min(
+                                        session.max_session_seconds, live.max_session_seconds
+                                    ),
+                                    "replay_path": replay_path,
+                                    **(
+                                        {"parent_url_fingerprint": parent_url_fingerprint}
+                                        if parent_url_fingerprint is not None
+                                        else {}
+                                    ),
+                                },
+                                timeout=remaining_seconds(live),
+                            )
                         response.raise_for_status()
                         observation = response.json()
                         url_fingerprint = observation.get("url_fingerprint")
@@ -144,7 +211,9 @@ class VisionEventProcessor:
                     if root not in path.parents or not path.is_file():
                         raise ValueError("visual screenshot is unavailable")
                     image = path.read_bytes()
-                    if len(image) > runtime.vision.max_screenshot_bytes or not image.startswith(
+                    if len(image) > min(
+                        session.max_screenshot_bytes, live.max_screenshot_bytes
+                    ) or not image.startswith(
                         b"\x89PNG\r\n\x1a\n"
                     ):
                         raise ValueError("visual screenshot failed verification")
@@ -174,6 +243,7 @@ class VisionEventProcessor:
                         )
                     )
                     self._sessions.add_replay_frame(frame)
+                    check_policy()
                     visited += 1
                     if originating_edge is not None and originating_sequence is not None:
                         status = "terminal" if hop >= max_hops else (
@@ -217,41 +287,41 @@ class VisionEventProcessor:
                         continue
                     if last_model_call is not None:
                         remaining = (
-                            60 / runtime.vision.max_requests_per_minute
+                            60 / min(
+                                session.max_requests_per_minute, live.max_requests_per_minute
+                            )
                             - (datetime.now(UTC) - last_model_call).total_seconds()
                         )
                         if remaining > 0:
-                            await asyncio.sleep(remaining)
-                    store = GoogleDriveTemporaryVisionImageStore(
-                        service_account_file=self._settings.google_drive_service_account_file,
-                        oauth_client_id=self._settings.google_drive_oauth_client_id,
-                        oauth_client_secret=self._settings.google_drive_oauth_client_secret,
-                        oauth_refresh_token=self._settings.google_drive_oauth_refresh_token,
-                        folder_id=self._settings.google_drive_vision_folder_id,
-                        ttl=self._settings.vision_temporary_url_ttl_seconds,
-                        delete_after_delivery=self._settings.google_drive_vision_delete_after_delivery,
+                            async with asyncio.timeout(remaining_seconds(live)):
+                                await asyncio.sleep(remaining)
+                    live, latest = check_policy()
+                    if model_calls >= min(session.max_steps, live.max_steps):
+                        raise VisualOperationStopped("step_limit")
+                    if hop >= min(max_hops, latest.vision_max_hops):
+                        continue
+                    remaining_states = (
+                        min(max_states, latest.vision_max_states) - visited - len(queue)
                     )
-                    async with store.deliver(
-                        tenant_id=session.tenant_id,
-                        session_id=session.id,
-                        sequence=visited,
-                        image=image,
-                    ) as image_url:
-                        self._progress(
-                            session,
-                            "candidate.requested",
-                            f"candidate.requested:{state_id}",
-                            {"state_sequence": visited, "hop": hop},
-                        )
-                        outcome = await execute_visual_candidate_batch(
-                            screenshot=image,
-                            content_type="image/png",
-                            image_url=image_url,
-                            task_intent=intent,
-                            policy=runtime.vision,
-                            model=create_vision_language_model(self._settings, runtime.vision),
-                            max_candidates=min(20, remaining_states),
-                        )
+                    if remaining_states < 1:
+                        continue
+                    self._progress(
+                        session, "candidate.requested", f"candidate.requested:{state_id}",
+                        {"state_sequence": visited, "hop": hop},
+                    )
+                    if self._model_batch is None:
+                        raise VisualOperationStopped("model_unavailable")
+                    model_calls += 1
+                    outcome = await self._model_batch(
+                        session=VisionModelSession(
+                            session.tenant_id, session.id, session.provider, session.model,
+                        ),
+                        screenshot=image, task_intent=intent, policy=live,
+                        max_candidates=min(20, remaining_states), guard=guard,
+                        sequence=model_calls, check_policy=check_policy,
+                        remaining_seconds=remaining_seconds(live),
+                    )
+                    check_policy()
                     last_model_call = datetime.now(UTC)
                     if outcome.actions is None:
                         self._capture_rejected_batch(
@@ -261,7 +331,7 @@ class VisionEventProcessor:
                             outcome=outcome,
                         )
                         return self._unavailable(
-                            session, outcome.detail or "vision model request failed"
+                            session, vision_model_failure_reason(outcome.failure_reason)
                         )
                     self._progress(
                         session,
@@ -386,8 +456,15 @@ class VisionEventProcessor:
                 )
             )
             return session.state
-        except Exception:
-            return self._unavailable(session, "visual exploration is unavailable")
+        except Exception as error:
+            reason = (
+                "image_delivery_auth_required"
+                if isinstance(error, VisionImageAuthorizationRequired)
+                else str(error) if isinstance(error, VisualOperationStopped)
+                else "session_timeout" if isinstance(error, TimeoutError)
+                else "visual_exploration_unavailable"
+            )
+            return self._unavailable(session, reason)
         finally:
             if worker_session_open:
                 try:
@@ -405,8 +482,12 @@ class VisionEventProcessor:
                     pass
 
     def _unavailable(self, session, reason: str) -> str:
+        if reason not in VISION_MODEL_FAILURE_REASONS | {
+            "policy_disabled", "session_timeout", "image_delivery_auth_required", "step_limit",
+        }:
+            reason = "visual_exploration_unavailable"
         session.state, session.safe_failure_reason = "unavailable", reason
-        self._progress(session, "unavailable", "unavailable")
+        self._progress(session, "unavailable", "unavailable", {"reason_code": reason})
         self._audits.append(
             AuditEvent(
                 id=uuid4(),

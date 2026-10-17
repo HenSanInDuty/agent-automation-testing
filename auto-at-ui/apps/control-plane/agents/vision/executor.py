@@ -1,16 +1,19 @@
 """One-shot, fail-safe execution of a visual action candidate."""
 
 from base64 import b64encode
+from contextlib import AbstractAsyncContextManager, nullcontext
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Any
 
+import httpx
 from auto_at.contracts.vision import VisualAction
 
 from agents.prompts.vision import VISION_BATCH_IMAGE_INSTRUCTION, VISION_SINGLE_IMAGE_INSTRUCTION
 from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
 from agents.vision.diagnostics import (
+    VisionProviderFailure,
     VisualDiagnosticCapture,
     VisualDiagnosticCode,
     VisualDiagnosticFailure,
@@ -39,6 +42,7 @@ class VisualCandidateBatchOutcome:
     detail: str | None = None
     diagnostic_code: VisualDiagnosticCode | None = None
     diagnostic_capture: VisualDiagnosticCapture | None = None
+    failure_reason: str | None = None
 
 
 async def execute_visual_action(
@@ -115,9 +119,13 @@ async def execute_visual_candidate_batch(
     guard: AgentStepGuard | None = None,
     image_url: str | None = None,
     requested_tokens: int = 1_000,
+    image_delivery: AbstractAsyncContextManager[str | None] | None = None,
 ) -> VisualCandidateBatchOutcome:
     """Invoke once for a state; reply is advisory and cannot choose traversal order."""
-    if not policy.enabled or not policy.raw_screenshot_transfer_accepted:
+    if (
+        not policy.enabled or not policy.raw_screenshot_transfer_accepted
+        or policy.raw_screenshot_transfer_provider != policy.provider
+    ):
         return VisualCandidateBatchOutcome(status="unavailable", detail="vision policy is disabled")
     if len(screenshot) > policy.max_screenshot_bytes:
         return VisualCandidateBatchOutcome(
@@ -131,9 +139,27 @@ async def execute_visual_candidate_batch(
         return VisualCandidateBatchOutcome(
             status="unavailable", detail="candidate batch cap is invalid"
         )
+    if type(requested_tokens) is not int or not 1 <= requested_tokens <= 100_000:
+        return VisualCandidateBatchOutcome(
+            status="unavailable", detail="vision token cap is invalid"
+        )
     guard = guard or AgentStepGuard(policy_to_step_guard(policy))
     if not guard.allow_next_step(requested_tokens=requested_tokens, evidence_bytes=len(screenshot)):
         return VisualCandidateBatchOutcome(status="unavailable", detail="vision guard exhausted")
+    # Reserve the guard before any external image transfer. Context failures (such
+    # as revoked live consent or expired Drive OAuth) belong to the orchestrator.
+    async with image_delivery or nullcontext(image_url) as delivered_url:
+        return await _invoke_candidate_batch(
+            screenshot=screenshot, content_type=content_type, task_intent=task_intent,
+            model=model, max_candidates=max_candidates, requested_tokens=requested_tokens,
+            image_url=delivered_url,
+        )
+
+
+async def _invoke_candidate_batch(
+    *, screenshot: bytes, content_type: str, task_intent: str, model: LanguageModel,
+    max_candidates: int, requested_tokens: int, image_url: str | None,
+) -> VisualCandidateBatchOutcome:
     image_data_uri = (
         image_url or f"data:{content_type};base64,{b64encode(screenshot).decode('ascii')}"
     )
@@ -166,6 +192,7 @@ async def execute_visual_candidate_batch(
             detail="vision model returned an invalid candidate batch",
             diagnostic_code=failure.code,
             diagnostic_capture=_capture_for_failure(failure),
+            failure_reason=_failure_reason(error),
         )
     try:
         content = _content_from_response(response)
@@ -181,6 +208,7 @@ async def execute_visual_candidate_batch(
             diagnostic_capture=_capture_for_failure(
                 failure, locals().get("content")
             ),
+            failure_reason="model_output_invalid",
         )
     return VisualCandidateBatchOutcome(
         status="completed", actions=actions, latency_seconds=perf_counter() - started
@@ -205,22 +233,49 @@ def _content_from_response(response: Any) -> str:
     choices = response.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
         raise VisualDiagnosticFailure(VisualDiagnosticCode.RESPONSE_MISSING_CHOICES)
+    if choices[0].get("finish_reason") not in (None, "stop"):
+        raise VisualDiagnosticFailure(VisualDiagnosticCode.RESPONSE_INCOMPLETE)
     message = choices[0].get("message")
+    if isinstance(message, dict) and message.get("refusal"):
+        raise VisualDiagnosticFailure(VisualDiagnosticCode.RESPONSE_REFUSED)
     if not isinstance(message, dict) or not isinstance(message.get("content"), str):
         raise VisualDiagnosticFailure(VisualDiagnosticCode.RESPONSE_MISSING_CONTENT)
     return message["content"]
 
 
 def _provider_failure(error: Exception) -> VisualDiagnosticFailure:
+    if isinstance(error, VisualDiagnosticFailure):
+        return error
+    if isinstance(error, VisionProviderFailure):
+        return VisualDiagnosticFailure(
+            VisualDiagnosticCode.PROVIDER_HTTP if error.provider_status
+            else VisualDiagnosticCode.PROVIDER_TRANSPORT,
+            provider_status=error.provider_status, provider_category=error.provider_category,
+        )
     status = getattr(getattr(error, "response", None), "status_code", None)
     if isinstance(status, int):
         return VisualDiagnosticFailure(
             VisualDiagnosticCode.PROVIDER_HTTP, provider_status=status, provider_category="http"
         )
-    category = "timeout" if isinstance(error, TimeoutError) else "transport"
+    category = (
+        "timeout" if isinstance(error, (TimeoutError, httpx.TimeoutException)) else "transport"
+    )
     return VisualDiagnosticFailure(
         VisualDiagnosticCode.PROVIDER_TRANSPORT, provider_category=category
     )
+
+
+def _failure_reason(error: Exception) -> str:
+    if isinstance(error, VisionProviderFailure):
+        return error.reason
+    if isinstance(error, VisualDiagnosticFailure):
+        return "model_output_invalid"
+    if isinstance(error, (TimeoutError, httpx.TimeoutException)):
+        return "provider_timeout"
+    status = getattr(getattr(error, "response", None), "status_code", None)
+    if isinstance(status, int):
+        return VisionProviderFailure.from_status(status).reason
+    return "provider_unavailable"
 
 
 def _capture_for_failure(

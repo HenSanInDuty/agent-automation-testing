@@ -92,6 +92,24 @@ test("prepare requires durable before ACK; duplicate execute performs only one c
   await expect(worker.frame(identity, identity.session_id, result.operation.id, result.frames[0].id)).rejects.toThrow("frame_unavailable");
   expect(worker.read(identity, identity.session_id, result.operation.id).acknowledged).toBe(true);
 });
+
+test("synthetic div/span buttons and a scrolled offscreen control execute with paired frames", async () => {
+  await setup();
+  for (const [name, y, sequence] of [["Custom div action", 580, 2], ["Custom span action", 640, 3]] as const) {
+    const result = await run(click(y)); ledger(result, "click", sequence);
+    expect(result.locator?.descriptor).toMatchObject({ strategy: "role", role: "button", value: name });
+    expect(await page.getByRole("button", { name }).getAttribute("data-clicked")).toBe("yes");
+  }
+  await expect(page.getByRole("button", { name: "Offscreen action" })).not.toBeInViewport();
+  const scrolled = await run({ kind: "scroll", delta_y: 1000 }); ledger(scrolled, "scroll", 4);
+  const control = page.getByRole("button", { name: "Offscreen action" });
+  await expect(control).toBeInViewport();
+  const box = (await control.boundingBox())!;
+  const clicked = await run({ kind: "click", x: (box.x + box.width / 2) / 1279, y: (box.y + box.height / 2) / 719 });
+  ledger(clicked, "click", 5);
+  expect(await control.getAttribute("data-clicked")).toBe("yes");
+  for (const frame of clicked.frames) expect(digest(await worker.frame(identity, identity.session_id, clicked.operation.id, frame.id))).toBe(frame.checksum);
+});
 test("hydration replacing an identical DOM target rejects stale prepared locator", async () => {
   await setup(); const prepared = await worker.prepare(command(click(340)));
   await page.getByRole("button", { name: "Icon action" }).evaluate((el) => el.replaceWith(el.cloneNode(true)));

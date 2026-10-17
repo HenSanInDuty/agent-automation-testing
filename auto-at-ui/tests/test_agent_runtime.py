@@ -1,4 +1,5 @@
 import pytest
+from agents.shared.gemini import GeminiVisionLanguageModel
 from agents.shared.openrouter import (
     OpenAICompatibleLanguageModel,
     create_language_model,
@@ -9,6 +10,7 @@ from agents.shared.runtime import (
     AgentRuntimeConfig,
     AgentStepGuard,
     StepGuardPolicy,
+    VisionPolicy,
     resolve_agent_runtime,
 )
 from config import Settings
@@ -184,3 +186,75 @@ def test_vision_policy_rejects_missing_consent_and_invalid_guards(
                 "vision": vision,
             }
         )
+
+
+def test_legacy_hf_consent_is_bound_only_to_huggingface() -> None:
+    policy = VisionPolicy(enabled=True, raw_screenshot_transfer_accepted=True)
+    assert policy.raw_screenshot_transfer_provider == "huggingface"
+    with pytest.raises(ValueError, match="provider-bound"):
+        VisionPolicy(
+            enabled=True, provider="gemini", model="gemini-3.8-flash",
+            raw_screenshot_transfer_accepted=True,
+        )
+
+
+@pytest.mark.parametrize("binding", [None, "huggingface"])
+def test_enabled_gemini_environment_requires_its_own_consent(binding) -> None:
+    with pytest.raises(ValueError, match="provider-bound"):
+        AgentRuntimeConfig.from_settings(Settings(
+            _env_file=None, vision_enabled=True, vision_provider="gemini",
+            vision_model="gemini-3.8-flash", vision_raw_screenshot_transfer_accepted=True,
+            vision_raw_screenshot_transfer_provider=binding,
+        ))
+
+
+def test_disabled_gemini_can_load_without_consent_or_credential() -> None:
+    runtime = AgentRuntimeConfig.from_settings(Settings(
+        _env_file=None, vision_enabled=False, vision_provider="gemini",
+        vision_model="gemini-3.8-flash", vision_raw_screenshot_transfer_accepted=False,
+        vision_raw_screenshot_transfer_provider="gemini", gemini_api_key=None,
+    ))
+    assert not runtime.vision.enabled
+    assert runtime.vision.raw_screenshot_transfer_provider is None
+    with pytest.raises(ValueError, match="adapter"):
+        runtime.with_override({"provider": "gemini"})
+
+
+@pytest.mark.parametrize("model", ["", "   ", "gemini-other"])
+def test_gemini_only_accepts_the_selected_model(model) -> None:
+    with pytest.raises(ValueError):
+        VisionPolicy(provider="gemini", model=model)
+
+
+def test_runtime_provider_switch_cannot_reuse_environment_consent() -> None:
+    runtime = AgentRuntimeConfig.from_settings(Settings(
+        _env_file=None, vision_enabled=True, vision_provider="huggingface",
+        vision_raw_screenshot_transfer_accepted=True,
+        vision_raw_screenshot_transfer_provider=None,
+    ))
+    with pytest.raises(ValueError, match="provider-bound"):
+        runtime.with_override({"vision": {"provider": "gemini", "model": "gemini-3.8-flash"}})
+    updated = runtime.with_override({"vision": {
+        "provider": "gemini", "model": "gemini-3.8-flash",
+        "raw_screenshot_transfer_provider": "gemini",
+        "raw_screenshot_transfer_accepted": True,
+    }})
+    assert updated.vision.enabled
+    assert updated.vision.raw_screenshot_transfer_provider == "gemini"
+    legacy = updated.with_override({"vision": {
+        "provider": "huggingface", "model": "custom/model",
+        "raw_screenshot_transfer_accepted": True,
+    }})
+    assert legacy.vision.raw_screenshot_transfer_provider == "huggingface"
+    with pytest.raises(ValueError, match="provider-bound"):
+        updated.with_override({"vision": {"raw_screenshot_transfer_accepted": True}})
+
+
+def test_gemini_factory_is_vision_only_and_keeps_general_text_factory():
+    settings = Settings(_env_file=None, gemini_api_key="fixture", huggingface_api_key="hf_fixture")
+    policy = VisionPolicy(provider="gemini", model="gemini-3.8-flash")
+    assert isinstance(create_vision_language_model(settings, policy), GeminiVisionLanguageModel)
+    assert isinstance(
+        create_language_model(settings, AgentRuntimeConfig.from_settings(settings)),
+        OpenAICompatibleLanguageModel,
+    )

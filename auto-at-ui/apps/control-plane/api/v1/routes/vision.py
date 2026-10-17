@@ -11,8 +11,9 @@ from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
-from application.vision import SubmitVisualExploration, VisionStateError
+from application.vision import SubmitVisualExploration, VisionPolicyChanged, VisionStateError
 from application.vision_debug_evidence import DebugEvidenceNotFoundError, ReadVisionDebugEvidence
+from application.vision_policy import VisionPolicies, VisionPolicyError
 from application.vision_replay import (
     VisionReplay,
     VisionReplayDeletionError,
@@ -42,9 +43,10 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyVisualTraceRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from api.v1.dependencies.authorization import current_principal, current_tenant
+from api.v1.dependencies.authorization import current_principal, current_tenant, require_csrf
+from api.v1.dependencies.vision import vision_policies, vision_policy_correlation_id
 from api.v1.routes.activities import ActivityResponse, _sse_event
 
 router = APIRouter(prefix="/vision", tags=["vision"])
@@ -56,6 +58,7 @@ class VisionPolicyResponse(BaseModel):
     provider: str
     model: str
     raw_screenshot_transfer_accepted: bool
+    raw_screenshot_transfer_provider: Literal["huggingface", "gemini"] | None = None
     max_steps: int
     max_screenshot_bytes: int
     max_session_seconds: int
@@ -70,6 +73,31 @@ class SubmitExplorationRequest(BaseModel):
     target_url: str = Field(min_length=1, max_length=2_000)
     task_intent: str = Field(min_length=1, max_length=4_000)
     use_vision: bool
+    expected_provider: Literal["huggingface", "gemini"] | None = None
+    expected_model: str | None = Field(default=None, min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def expected_pair(self):
+        if (self.expected_provider is None) != (self.expected_model is None):
+            raise ValueError("expected_provider and expected_model must be supplied together")
+        return self
+
+
+class VisionProviderModelResponse(BaseModel):
+    id: str
+    display_name: str
+
+
+class VisionProviderResponse(BaseModel):
+    id: Literal["huggingface", "gemini"]
+    display_name: str
+    models: list[VisionProviderModelResponse]
+    configured: bool
+    supports_inline_images: bool
+
+
+class VisionProvidersResponse(BaseModel):
+    items: list[VisionProviderResponse]
 
 
 class ExplorationResponse(BaseModel):
@@ -193,10 +221,6 @@ def _runtime(
     )
 
 
-def _policy_response(runtime: AgentRuntimeConfig) -> VisionPolicyResponse:
-    return VisionPolicyResponse.model_validate(runtime.vision.model_dump())
-
-
 def _response(record: object) -> ExplorationResponse:
     return ExplorationResponse(
         id=record.id,
@@ -219,35 +243,54 @@ def _response(record: object) -> ExplorationResponse:
 @router.get("/policy", response_model=VisionPolicyResponse)
 def get_policy(
     tenant_id: Annotated[str, Depends(current_tenant)],
-    settings: Annotated[Settings, Depends(get_settings)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    policies: Annotated[VisionPolicies, Depends(vision_policies)],
 ) -> VisionPolicyResponse:
-    with create_session_factory(settings)() as session:
-        configs = SqlAlchemyConfigurationRepository(session)
-        return _policy_response(_runtime(settings, configs, tenant_id))
+    try:
+        return VisionPolicyResponse.model_validate(policies.read(tenant_id, principal).model_dump())
+    except AuthorizationError as error:
+        raise HTTPException(status_code=403, detail="Tenant access denied.") from error
+    except VisionPolicyError as error:
+        raise HTTPException(status_code=422, detail={"code": error.code}) from error
 
 
-@router.put("/policy", response_model=VisionPolicyResponse)
+@router.get("/providers", response_model=VisionProvidersResponse)
+def get_providers(
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    policies: Annotated[VisionPolicies, Depends(vision_policies)],
+) -> VisionProvidersResponse:
+    try:
+        return VisionProvidersResponse(items=policies.providers(tenant_id, principal))
+    except AuthorizationError as error:
+        raise HTTPException(status_code=403, detail="Tenant access denied.") from error
+    except VisionPolicyError as error:
+        raise HTTPException(status_code=422, detail={"code": error.code}) from error
+
+
+@router.put(
+    "/policy", response_model=VisionPolicyResponse, dependencies=[Depends(require_csrf)],
+)
 def set_policy(
     payload: VisionPolicyResponse,
     tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
-    settings: Annotated[Settings, Depends(get_settings)],
+    policies: Annotated[VisionPolicies, Depends(vision_policies, scope="function")],
+    correlation_id: Annotated[UUID, Depends(vision_policy_correlation_id)],
 ) -> VisionPolicyResponse:
     try:
-        require(actor_for_tenant(principal, tenant_id), Permission.MANAGE_TENANT)
+        updated = policies.update(tenant_id, principal, payload.model_dump(), correlation_id)
+        return VisionPolicyResponse.model_validate(updated.model_dump())
     except AuthorizationError as error:
-        raise HTTPException(status_code=404, detail="Tenant not found.") from error
-    with transactional_session(create_session_factory(settings)) as session:
-        configs = SqlAlchemyConfigurationRepository(session)
-        merged = _runtime(settings, configs, tenant_id).model_dump()
-        merged["vision"] = payload.model_dump()
-        updated = AgentRuntimeConfig.model_validate(merged)
-        configs.set(tenant_id, AGENT_RUNTIME_CONFIG_KEY, updated.model_dump())
-    return _policy_response(updated)
+        raise HTTPException(status_code=403, detail="Tenant access denied.") from error
+    except VisionPolicyError as error:
+        code = 409 if error.code == "provider_not_configured" else 422
+        raise HTTPException(status_code=code, detail={"code": error.code}) from error
 
 
 @router.post(
-    "/explorations", response_model=ExplorationResponse, status_code=status.HTTP_202_ACCEPTED
+    "/explorations", response_model=ExplorationResponse, status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_csrf)],
 )
 def submit_exploration(
     payload: SubmitExplorationRequest,
@@ -276,7 +319,9 @@ def submit_exploration(
             ).execute(
                 tenant_id=tenant_id,
                 project_id=payload.project_id,
-                correlation_id=payload.correlation_id,
+                correlation_id=(
+                    payload.correlation_id if "correlation_id" in payload.model_fields_set else None
+                ),
                 target_url=payload.target_url,
                 task_intent=payload.task_intent,
                 idempotency_key=idempotency_key,
@@ -285,10 +330,14 @@ def submit_exploration(
                 intent_encryption_key=settings.vision_intent_encryption_key,
                 intent_retention_days=settings.vision_intent_retention_days,
                 trace_v4_enabled=settings.vision_trace_v4_enabled,
+                expected_provider=payload.expected_provider,
+                expected_model=payload.expected_model,
             )
             return _response(record)
     except AuthorizationError as error:
         raise HTTPException(status_code=404, detail="Project not found.") from error
+    except VisionPolicyChanged as error:
+        raise HTTPException(status_code=409, detail={"code": "vision_policy_changed"}) from error
     except VisionStateError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

@@ -1,15 +1,22 @@
 import asyncio
 import hashlib
+import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
-from agents.vision.diagnostics import VisualDiagnosticCapture, VisualDiagnosticCode
+import pytest
+from agents.shared.runtime import VisionPolicy
+from agents.vision.diagnostics import (
+    VisionProviderFailure,
+    VisualDiagnosticCapture,
+    VisualDiagnosticCode,
+)
 from agents.vision.executor import VisualCandidateBatchOutcome
 from application.vision_events import VisionEventProcessor
-from auto_at.contracts.vision import ClickAction
 from config import Settings
 from domain.runs import OutboxEvent
+from infrastructure.vision.model_batch import VisionModelBatch
 
 
 class Sessions:
@@ -127,8 +134,27 @@ def test_rejected_batch_capture_is_encrypted_audited_and_never_leaks_model_text(
     )
 
 
+def test_interrupted_legacy_session_does_not_replay_uncertain_browser_actions():
+    session = SimpleNamespace(
+        id=uuid4(), tenant_id="tenant-a", correlation_id=uuid4(), state="running",
+    )
+    events = Events()
+    processor = VisionEventProcessor(
+        Sessions(session), object(), object(), events, events, events, Settings(_env_file=None),
+    )
+    assert asyncio.run(processor.execute(event(session))) == "unavailable"
+    assert session.safe_failure_reason == "visual_exploration_unavailable"
+    assert asyncio.run(processor.execute(event(session))) == "already_processed"
+
+
+@pytest.mark.parametrize("provider", ["huggingface", "gemini"])
+@pytest.mark.parametrize("variant", [
+    "success", "switch_before", "switch_after", "revoke", "origin", "model", "disabled",
+    "provider_auth_failed", "provider_billing_required", "provider_rate_limited",
+    "provider_timeout", "model_output_invalid", "missing_key", "image_auth", "step_limit",
+])
 def test_capture_is_durably_stored_before_temporary_provider_delivery(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, provider, variant
 ) -> None:
     class CaptureSessions(Sessions):
         def __init__(self, session):
@@ -161,6 +187,8 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
             path = tmp_path / "vision" / str(session.id) / f"tree-{state_id}.png"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"\x89PNG\r\n\x1a\ncaptured")
+            if variant == "switch_before":
+                change_policy()
             return SimpleNamespace(
                 raise_for_status=lambda: None,
                 json=lambda: {
@@ -175,9 +203,12 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
 
     class TemporaryImageStore:
         def __init__(self, *_args, **_kwargs):
-            pass
+            assert provider == "huggingface", "Gemini must not construct Drive"
 
         async def __aenter__(self):
+            if variant == "image_auth":
+                from domain.vision import VisionImageAuthorizationRequired
+                raise VisionImageAuthorizationRequired("image_delivery_auth_required")
             return "https://temporary.example/image"
 
         async def __aexit__(self, *_args):
@@ -189,7 +220,8 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
     class ExplorationGeneration:
         def get_policy(self, _tenant_id, _project_id):
             return SimpleNamespace(
-                allowed_origins=["https://example.test"], vision_max_hops=1, vision_max_states=2
+                allowed_origins=["https://example.test"],
+                vision_max_hops=2 if variant == "step_limit" else 1, vision_max_states=3
             )
 
     session = SimpleNamespace(
@@ -197,41 +229,96 @@ def test_capture_is_durably_stored_before_temporary_provider_delivery(
         project_id=uuid4(),
         encrypted_task_intent="",
         intent_retention_until=datetime.now(UTC) + timedelta(days=1),
-        max_hops=1, max_states=2, target_url="https://example.test", policy_version="policy-v1",
-        provider="provider", model="model", prompt_version="prompt-v1",
+        max_hops=2 if variant == "step_limit" else 1, max_states=3,
+        max_steps=1 if variant == "step_limit" else 3, max_screenshot_bytes=1_000_000,
+        max_session_seconds=10, max_requests_per_minute=10_000,
+        target_url="https://example.test", policy_version="policy-v1",
+        provider=provider, model="gemini-3.8-flash" if provider == "gemini" else "fixture-model",
+        prompt_version="prompt-v1",
     )
     sessions, events, replay_store = CaptureSessions(session), Events(), ReplayStore()
-    runtime = SimpleNamespace(
-        vision=SimpleNamespace(
-            enabled=True, raw_screenshot_transfer_accepted=True, max_session_seconds=10,
-            max_screenshot_bytes=1_000, max_requests_per_minute=60,
-        )
+    policy = VisionPolicy(
+        enabled=True, provider=provider, model=session.model,
+        raw_screenshot_transfer_accepted=True, raw_screenshot_transfer_provider=provider,
+        max_session_seconds=10, max_requests_per_minute=10_000,
     )
-    monkeypatch.setattr("application.vision_events.resolve_agent_runtime", lambda *_args: runtime)
+    project_policy = ExplorationGeneration().get_policy(None, None)
+    config = {"vision": policy.model_dump()}
+    calls = []
+
+    def change_policy():
+        if variant in {"switch_before", "switch_after"}:
+            other = "huggingface" if provider == "gemini" else "gemini"
+            config["vision"].update(
+                provider=other, model="gemini-3.8-flash" if other == "gemini" else "other-hf",
+                raw_screenshot_transfer_provider=other,
+            )
+        elif variant == "origin":
+            project_policy.allowed_origins = ["https://different.test"]
+        elif variant == "model":
+            config["vision"]["model"] = "other-model"
+        elif variant == "revoke":
+            config["vision"]["raw_screenshot_transfer_provider"] = (
+                "gemini" if provider == "huggingface" else "huggingface"
+            )
+        elif variant == "disabled":
+            config["vision"]["enabled"] = False
+
+    def read_policy(*_):
+        # Return detached snapshots like the real reader.
+        return config, SimpleNamespace(**vars(project_policy))
+
+    class Model:
+        async def ainvoke(self, payload, **kwargs):
+            assert sessions.frames and replay_store.frames
+            image_url = payload["messages"][1]["content"][1]["image_url"]["url"]
+            assert image_url.startswith("data:image/png") == (provider == "gemini")
+            calls.append(payload)
+            change_policy()
+            if variant.startswith("provider_"):
+                raise VisionProviderFailure(variant)
+            content = "invalid" if variant == "model_output_invalid" else json.dumps({
+                "candidates": [{"kind": "click", "x": 0.5, "y": 0.5,
+                             "confidence": 0.9, "expected_outcome": "fixture"}]
+            })
+            return {"choices": [{"message": {"content": content}}]}
+
     monkeypatch.setattr("application.vision_events.decrypt_visual_intent", lambda *_args: "safe")
     monkeypatch.setattr("application.vision_events.httpx.AsyncClient", lambda **_kwargs: Client())
-    monkeypatch.setattr(
-        "application.vision_events.GoogleDriveTemporaryVisionImageStore", TemporaryImageStore
+    settings = Settings(
+        _env_file=None, artifact_root=str(tmp_path), vision_worker_secret="worker-secret",
+        gemini_api_key=None if variant == "missing_key" else "synthetic-gemini",
+        huggingface_api_key=None if variant == "missing_key" else "synthetic-hf",
     )
-    monkeypatch.setattr(
-        "application.vision_events.execute_visual_candidate_batch",
-        lambda **_kwargs: asyncio.sleep(0, result=VisualCandidateBatchOutcome(
-            status="completed",
-            actions=[
-                ClickAction(
-                    kind="click", confidence=0.9, x=0.5, y=0.5, expected_outcome="safe"
-                )
-            ],
-        )),
-    )
-    monkeypatch.setattr(
-        "application.vision_events.create_vision_language_model", lambda *_args: object()
-    )
-
     processor = VisionEventProcessor(
         sessions, Configs(), ExplorationGeneration(), events, events, events,
-        Settings(artifact_root=str(tmp_path), vision_worker_secret="worker-secret"), replay_store,
+        settings, replay_store, read_policy=read_policy,
+        model_batch=VisionModelBatch(
+            settings, model_factory=lambda *_args, **_kwargs: Model(),
+            image_store_factory=TemporaryImageStore,
+        ),
     )
+    expected_reason = (
+        "policy_disabled" if variant in {
+            "switch_before", "switch_after", "revoke", "origin", "model", "disabled"
+        } else "provider_not_configured" if variant == "missing_key"
+        else "image_delivery_auth_required" if variant == "image_auth" and provider == "huggingface"
+        else variant if variant.startswith("provider_") or variant in {
+            "model_output_invalid", "step_limit"
+        } else None
+    )
+    if expected_reason:
+        assert asyncio.run(processor.execute(event(session))) == "unavailable"
+        assert session.safe_failure_reason == expected_reason
+        assert len(sessions.frames) == (2 if variant == "step_limit" else 1)
+        assert len(sessions.actions) == (1 if variant == "step_limit" else 0)
+        assert any(getattr(e, "metadata", {}).get("reason_code") == expected_reason
+                   for e in events.items)
+        assert not any(getattr(e, "stage", "") == "draft.handoff" for e in events.items)
+        call_count = len(calls)
+        assert asyncio.run(processor.execute(event(session))) == "already_processed"
+        assert len(calls) == call_count
+        return
 
     assert asyncio.run(processor.execute(event(session))) == "completed"
     assert len(replay_store.frames) == len(sessions.frames) == 2

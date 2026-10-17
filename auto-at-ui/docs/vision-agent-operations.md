@@ -2,7 +2,7 @@
 
 ## Local evaluation only
 
-Vision exploration is disabled by default. Before a local evaluation, use an
+Vision exploration is disabled by default. For the Hugging Face path, use an
 evaluation-only Hugging Face token with the smallest practical scope and place
 it only in local secret configuration as `HUGGINGFACE_API_KEY`. Never put a
 token in tenant settings, reports, browser requests, logs, fixtures, or source
@@ -61,7 +61,8 @@ or provider output in reports.
 ## Consent and disablement
 
 A tenant administrator must explicitly acknowledge raw screenshot transfer to
-Hugging Face before enabling vision. The policy is tenant-scoped. To stop
+the selected provider before enabling vision. Consent is bound to that provider;
+old HF consent does not authorize Google. The policy is tenant-scoped. To stop
 future exploration immediately, disable the tenant's Vision policy in
 `/agent`; this preserves prior runs and does not alter any deterministic test
 result. Do not delete artifacts to enact a kill switch.
@@ -238,3 +239,108 @@ access. The configured-stack Compose dashboard workflow is separate: it creates
 users/runs and can invoke configured providers, so do not run it as a fixture-only
 check. Record skipped Compose checks explicitly. Browser dashboard tests require
 `VISION_DASHBOARD_URL` pointing to a local dashboard with intercepted API fixtures.
+
+## Gehihi (Google Gemini) local setup
+
+This is an opt-in synthetic evaluation path, approved in [ADR-009](adr/009-gehihi-vision-provider.md).
+No implementation or fixture test enables a tenant. Google model quality and
+account quota remain unvalidated until an explicitly requested canary.
+
+1. Obtain an evaluation key through the operator's secret workflow and set
+   `GEMINI_API_KEY` server-side. Never paste it into chat, dashboard, logs or reports.
+   `.env.example` contains only an empty placeholder. Both `control-plane` and
+   `temporal-worker` receive the existing Compose `env_file`. Drain active work
+   and deploy both updated services before enabling Gemini. If Compose environment
+   values change, recreate those consuming services; a plain container restart
+   does not reload them. No application migration is added by this provider.
+2. Inspect **Vision settings** as the tenant administrator. Select **Gehihi
+   (Google Gemini)** and `gemini-3.8-flash`, read the raw-screenshot disclosure,
+   accept transfer to Google, enable and save. Switching providers clears consent
+   and enablement; confirm again. No key entry is available in this UI.
+   Existing step/byte/time/rate guards can be managed through the policy API.
+3. Confirm the intended tenant and project origin policy. Tenant overrides take
+   precedence over environment defaults: changing `VISION_PROVIDER` alone does
+   not switch an existing tenant. Environment-based Gemini enablement also needs
+   `VISION_RAW_SCREENSHOT_TRANSFER_ACCEPTED=true` and
+   `VISION_RAW_SCREENSHOT_TRANSFER_PROVIDER=gemini`; prefer scoped tenant settings.
+4. Start only an approved synthetic target. The run dialog uses saved settings;
+   save or discard draft changes first. A stale confirmation refreshes settings
+   and requires a new confirmation. Existing sessions retain their recipient/model.
+   `VISION_TRACE_V4_ENABLED` is unchanged and only chooses new-session writers.
+
+Gemini uses inline PNG delivery and does not require Drive OAuth. HF retains its
+own Drive image path and consent. Screenshots are raw pixels, potentially including
+PII or secrets; there is no screenshot anonymizer. Google's free tier has data-use
+conditions, including product improvement. Before each canary, verify current
+[model availability](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash),
+[data-use/pricing terms](https://ai.google.dev/gemini-api/docs/pricing) and account
+quota in [Google AI Studio](https://aistudio.google.com/). Documentation was
+rechecked on 2026-10-17; presence of a key is not proof of credentials or free quota.
+
+Only run a live canary when requested with a ready key, safe target and tenant:
+one synthetic session, `max_steps=3`, `max_requests_per_minute=5`,
+`max_session_seconds=120`, no automatic retry or fallback. Do not enable billing.
+Check recipient/model, a subsequent action if the model proposes one, before/after
+evidence and audit. Record quota/output failures honestly. The existing 1000-token
+candidate response cap has only mocked-output validation; thinking/output may
+exhaust it in a real call. Do not silently raise guards or change models.
+
+Local guards do not account for the shared Google project's quota or reserve
+money. `max_cost_usd` remains metadata. General text generation is unchanged:
+an HF 402 during draft generation is a separate result, even if Vision succeeded.
+No generated source executes without the existing explicit approval.
+
+### Safe failures and evidence
+
+Open `/agent?vision=<session_id>` for saved progress, partial trace, replay and
+metadata export. Use correlation IDs and safe audit codes when investigating.
+Never log provider request bodies, image data, key values or raw error bodies.
+
+| Code | Meaning / response |
+| --- | --- |
+| `provider_not_configured` | Server key absent; configure the intended services before enabling. |
+| `provider_auth_failed` | Access rejected (401/403); operator checks key and permissions. |
+| `provider_billing_required` | Provider returned 402; stop, do not automatically enable billing. |
+| `provider_rate_limited` | 429 quota/rate rejection; inspect account limits, no automatic retry. |
+| `provider_model_unavailable` | Selected model unavailable (404); no fallback. |
+| `provider_timeout` | Request/session deadline reached. |
+| `provider_unavailable`, `model_unavailable` | Transport/provider failure or legacy generic reason. |
+| `model_output_invalid` | Invalid JSON, refusal, truncation, schema or coordinates; no derived action. |
+| `policy_disabled` | Current policy, consent, recipient or allowed origins changed. |
+| `vision_policy_changed` | Submission confirmation is stale; refresh and confirm again. |
+| `image_delivery_auth_required` | HF Drive grant must be renewed; Gemini does not use this path. |
+
+Partial evidence remains available after failure. Unknown browser outcomes are
+not replayed. Raw image retention in private RustFS and seven-day encrypted debug
+retention are unchanged, as are project read permissions and tenant-admin deletion.
+Policy updates atomically store scoped before/after config snapshots referenced
+by the audit entity ID, including actor/correlation and no secrets.
+
+### Disablement and binary rollback
+
+Disable the affected tenant policy first; drain or stop active sessions using the
+existing lifecycle. Do not replay unknown actions. Preserve evidence and audit.
+On the new binary, the tenant may stay disabled or explicitly choose HF with its
+previous model and freshly accepted HF consent. Never reinterpret Google consent
+as HF consent or redirect an already-created session.
+
+Before deploying an old API/worker binary with `extra=forbid`:
+
+1. Back up affected non-secret `agent.runtime.v1` overrides, tenant IDs and prior
+   HF model choices. Prepare each scoped replacement on the new binary, preserving
+   all unrelated runtime sections.
+2. Set `vision.enabled=false`, `vision.provider=huggingface`, the previous valid
+   HF model and `raw_screenshot_transfer_accepted=false`. Remove
+   `raw_screenshot_transfer_provider` from the replacement JSON immediately before
+   downgrade; saving through the new API normalizes it back into the new schema.
+   Use the existing authorized configuration maintenance workflow for that removal.
+3. Reset Gemini environment provider/model defaults and remove the new binding
+   setting from the old deployment. Keep Vision disabled. Verify a copy of every
+   replacement deserializes with the exact target binary before downgrading API
+   and worker together. Do not point old workers at new policy JSON.
+4. Verify historical `gemini` sessions remain readable as stored strings and retain
+   their operations, artifacts, drafts and audit. Record the rollback; do not drop
+   tables, rewrite sessions or remove history. Enabling HF afterward needs new consent.
+
+Reproducible fixture commands and measured results are in the
+[Gehihi evaluation record](../benchmark/vision/gehihi/README.md).

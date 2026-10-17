@@ -1,6 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getVisualTrace, getOperationFrameBlob } from "./generation-api.ts";
+import { getVisionProviders } from "./generation-api.ts";
+
+test("provider catalogue and confirmation preserve API shape and structured errors", async () => {
+  const original = globalThis.fetch;
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init); requests.push(request);
+    return request.method === "POST" ? new Response(JSON.stringify({ detail: { code: "vision_policy_changed", ignored: "private diagnostic" } }), { status: 409 }) : new Response('{"items":[]}');
+  };
+  try {
+    assert.deepEqual(await getVisionProviders("http://fixture"), { items: [] });
+    const payload = { project_id: "p", target_url: "https://fixture.test", task_intent: "Explore", use_vision: true as const, expected_provider: "gemini", expected_model: "gemini-3.8-flash" };
+    await assert.rejects(submitVisualExploration("http://fixture", payload), (error: unknown) => error instanceof ControlPlaneError && error.status === 409 && error.code === "vision_policy_changed" && !error.message.includes("private"));
+    assert.match(requests[0].url, /vision\/providers$/);
+    assert.deepEqual(await requests[1].json(), payload);
+    assert.equal(requests[1].credentials, "include");
+    assert.equal(requests[1].headers.has("X-CSRF-Token"), true);
+  } finally { globalThis.fetch = original; }
+});
 import { ControlPlaneError, decideProposal, deleteVisualReplayFrame, getPolicy, getVisionPolicy, getVisualReplayFrameBlob, getVisualTrajectory, listDrafts, listProposals, listVisualActions, listVisualReplayFrames, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
 
 test("generation submission sends session credentials and an idempotency key", async () => {

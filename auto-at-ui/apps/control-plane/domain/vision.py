@@ -11,6 +11,17 @@ class VisionImageAuthorizationRequired(RuntimeError):
     """Image delivery requires renewed authorization; no provider details escape."""
 
 
+VISION_MODEL_FAILURE_REASONS = frozenset({
+    "provider_not_configured", "provider_auth_failed", "provider_billing_required",
+    "provider_rate_limited", "provider_model_unavailable", "provider_timeout",
+    "provider_unavailable", "model_output_invalid", "model_unavailable",
+})
+
+
+def vision_model_failure_reason(reason: str | None) -> str:
+    return reason if reason in VISION_MODEL_FAILURE_REASONS else "model_unavailable"
+
+
 FINAL_OPERATION_STATUSES = frozenset({"completed", "failed", "unknown", "rejected"})
 _TRANSITIONS = {
     "prepared": {"prepared", "executing", "failed", "unknown", "rejected"},

@@ -1,0 +1,152 @@
+{
+  "schema_version": "gehihi-fixture-v1",
+  "classification": "synthetic_local_only",
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "prompt_version": "vision-exploration-v4",
+  "transport": "inline_png_mock_http",
+  "responses": "mocked",
+  "playwright_version": "1.50.1",
+  "fixture_version": "gehihi-controls-v1",
+  "source_hash_algorithm": "sha256_utf8_lf",
+  "sources": {
+    "workers/playwright/src/fixtures/vision-target.ts": "595352f9393e84987546e7663e91167eda4204b42061eba5611e1264eaaeb434",
+    "workers/playwright/src/fixtures/vision-integration-server.ts": "5a5a1d5816901de56871458d09d7fc76b02dcec87f6363bc5816db5ac67d6daa",
+    "workers/playwright/src/vision-operations.spec.ts": "871666c49b06b3ab78d7558eb7d3392c0e539baa406468e5b5b5a468bdf9ae52",
+    "workers/playwright/src/vision-locators.spec.ts": "e98ee8aae6325f16190e1b34c1534ef1ab2795b47fdfae81230b11949b5ebe03",
+    "tests/test_vision_provider_integration.py": "81a0c1a4772f8ecddb74f85271ef16e84e11aa8023341499d5b1ac553904ddc3",
+    "tests/test_vision_live_persistence.py": "3cdfa3ff4de1bbe67cea88ed2f0516c14da283bd8d307abbf07ddc29ff3cf43d",
+    "tests/test_gemini_vision_model.py": "0e0c53da1565b94367407b88746cdd6fe892a3d080adca9f967be6ff1629c3d2",
+    "apps/control-plane/agents/prompts/vision.py": "a5a8375f344eb0ff4ba4eae3d2e91f78a0aa4f5b3fb2686157dd9165eb78c043"
+  },
+  "cases": [
+    {
+      "id": "native-button",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"click\",\"x\":0.08,\"y\":0.47,\"confidence\":0.9,\"expected_outcome\":\"Synthetic control observed\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "workers/playwright/src/vision-operations.spec.ts",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "link",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"click\",\"x\":0.08,\"y\":0.056,\"confidence\":0.9,\"expected_outcome\":\"Synthetic control observed\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "tests/test_vision_provider_integration.py",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "div-role-button",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"click\",\"x\":0.08,\"y\":0.807,\"confidence\":0.9,\"expected_outcome\":\"Synthetic control observed\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "workers/playwright/src/vision-operations.spec.ts",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "span-role-button",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"click\",\"x\":0.08,\"y\":0.89,\"confidence\":0.9,\"expected_outcome\":\"Synthetic control observed\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "workers/playwright/src/vision-operations.spec.ts",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "disabled-control",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"stop\",\"confidence\":1,\"expected_outcome\":\"Bounded synthetic exploration stopped\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "workers/playwright/src/vision-locators.spec.ts",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "offscreen-scroll",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"scroll\",\"delta_y\":1000,\"confidence\":0.9,\"expected_outcome\":\"Synthetic offscreen control revealed\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "workers/playwright/src/vision-operations.spec.ts",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "sibling-candidates",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"click\",\"x\":0.08,\"y\":0.056,\"confidence\":0.9,\"expected_outcome\":\"Synthetic control observed\"},{\"kind\":\"click\",\"x\":0.08,\"y\":0.139,\"confidence\":0.9,\"expected_outcome\":\"Synthetic control observed\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "tests/test_vision_live_persistence.py",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "model-stop",
+      "status": 200,
+      "content": "{\"candidates\":[{\"kind\":\"stop\",\"confidence\":1,\"expected_outcome\":\"Bounded synthetic exploration stopped\"}]}",
+      "expected_status": "completed",
+      "expected_reason": null,
+      "evidence": "tests/test_vision_executor.py",
+      "invariant": "Validated advisory candidates; deterministic worker remains authoritative"
+    },
+    {
+      "id": "invalid-json",
+      "status": 200,
+      "content": "not json",
+      "message_extra": {},
+      "expected_status": "unavailable",
+      "expected_reason": "model_output_invalid",
+      "evidence": "tests/test_gemini_vision_model.py",
+      "invariant": "No candidates; one request only; preserve safe failure"
+    },
+    {
+      "id": "refusal",
+      "status": 200,
+      "content": null,
+      "message_extra": {
+        "refusal": "synthetic refusal"
+      },
+      "expected_status": "unavailable",
+      "expected_reason": "model_output_invalid",
+      "evidence": "tests/test_gemini_vision_model.py",
+      "invariant": "No candidates; one request only; preserve safe failure"
+    },
+    {
+      "id": "out-of-bounds",
+      "status": 200,
+      "content": "{\"candidates\": [{\"kind\": \"click\", \"x\": 1.5, \"y\": 0.5, \"confidence\": 0.9, \"expected_outcome\": \"Synthetic control observed\"}]}",
+      "message_extra": {},
+      "expected_status": "unavailable",
+      "expected_reason": "model_output_invalid",
+      "evidence": "tests/test_gemini_vision_model.py",
+      "invariant": "No candidates; one request only; preserve safe failure"
+    },
+    {
+      "id": "quota-429",
+      "status": 429,
+      "content": null,
+      "message_extra": {},
+      "expected_status": "unavailable",
+      "expected_reason": "provider_rate_limited",
+      "evidence": "tests/test_gemini_vision_model.py",
+      "invariant": "No candidates; one request only; preserve safe failure"
+    },
+    {
+      "id": "policy-revoke",
+      "evidence": "tests/test_vision_provider_integration.py",
+      "invariant": "Legacy/v4 stop after revocation without executing returned candidates; retain navigation evidence"
+    }
+  ],
+  "expected_response_metrics": {
+    "schema_valid": 8,
+    "response_cases": 12,
+    "normalized_coordinate_candidates": 6,
+    "coordinate_candidates": 7,
+    "safe_rejections": 4
+  },
+  "trace_metrics_source": "benchmark.vision.summarize_locator_trace",
+  "live_canary": "not_run"
+}

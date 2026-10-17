@@ -8,6 +8,7 @@ import { VisionLocatorCatalog } from "./vision-locator-catalog";
 import { selectedOperation, shouldPollVisionResult } from "./vision-operation-model";
 import { VisionOperationLedger } from "./vision-operation-ledger";
 import { VisionResultSummary } from "./vision-result-summary";
+import { visionProviderLabel } from "./vision-provider-model";
 
 export function VisionSessionDetail({ apiUrl, session, canDelete }: { apiUrl: string; session: VisualExploration; canDelete: boolean }) {
   const [result, setResult] = useState<VisionResult | null>(null);
@@ -65,6 +66,7 @@ export function VisionSessionDetail({ apiUrl, session, canDelete }: { apiUrl: st
     finally { setDeletion(null); setDeleting(false); }
   }
   return <div aria-label="Saved Vision session">
+    <p>Session provider: {visionProviderLabel(session.provider)} · Model: <code>{session.model}</code></p>
     {error && <p role="alert">{error}</p>}
     {result ? <VisionResultSummary result={result} apiUrl={apiUrl} /> : !error && <p role="status">Loading exploration result…</p>}
     {trace?.trace_version === "v4" && !deleting && <VisionOperationLedger apiUrl={apiUrl} sessionId={session.id} items={trace.items} locators={trace.locators} branches={result?.handoffs.at(-1)?.branches ?? []} selectedId={selected} onSelect={(id) => { setFollow(false); setSelected(id); }} follow={follow} onFollow={setFollow} onDelete={canDelete ? setDeletion : undefined} />}

@@ -10,8 +10,9 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 
 async function fixture(page: Page, legacy = false) {
   page.on("pageerror", (error) => { console.log("Fixture dashboard error:", error.message); });
-  const state = { extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, visionEnabled: false, submissions: [] as unknown[] };
-  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60 });
+  const state = { extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[],
+    policy: { enabled: false, provider: "huggingface", model: "custom/hf-model", raw_screenshot_transfer_accepted: true, raw_screenshot_transfer_provider: "huggingface" as string | null, max_steps: 3, max_screenshot_bytes: 1000, max_session_seconds: 120, max_cost_usd: 0, max_requests_per_minute: 5 } };
+  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60 });
   const frame = (id: string) => ({ id, availability: "retained", reason_code: null });
   const operation = (number: number, id: string) => ({ id: `${id}-op${number}`, sequence: number, purpose: number === 1 ? "setup" : number === 3 ? "restore" : "explore", action_kind: number === 1 ? "navigate" : number === 3 ? "back" : "click", status: "completed", started_at: "2026-09-08T12:00:00Z", outcome_code: "observed", state_id: "root", locator_id: `${id}-locator${number}`, before: frame(`${id}-before${number}`), after: frame(`${id}-after${number}`) });
   const locators = (id: string) => [2, 4].map((n) => ({ id: `${id}-locator${n}`, operation_id: `${id}-op${n}`, status: "verified", reason_code: null, verified_at: "2026-09-08T12:00:00Z", descriptor: { strategy: "role", role: "button", value: n === 2 ? "Branch A" : "Branch B", scope: [] }, bounding_box: { x: .2, y: .2, width: .2, height: .1 } }));
@@ -22,11 +23,24 @@ async function fixture(page: Page, legacy = false) {
     const headers = { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true" };
     const json = (body: unknown) => route.fulfill({ json: body, headers });
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers });
-    if (path.endsWith("/auth/me")) return json({ role: "viewer", email: "reader@fixture.test", tenant_id: "fixture" });
+    if (path.endsWith("/auth/me")) return json({ role: state.role, email: "reader@fixture.test", tenant_id: "fixture" });
     if (path.endsWith("/projects")) return json([{ id: project, name: "Fixture project", default_target: "web_ui" }]);
-    if (path.endsWith("/policy")) return json({ enabled: state.visionEnabled, raw_screenshot_transfer_accepted: state.visionEnabled, allowed_origins: [], vision_max_hops: 3, vision_max_states: 8 });
+    if (path.endsWith("/vision/providers")) return state.catalogueFails ? route.fulfill({ status: 503, json: {}, headers }) : json({ items: [
+      { id: "huggingface", display_name: "Hugging Face", models: [{ id: "custom/hf-model", display_name: "custom/hf-model" }], configured: true, supports_inline_images: false },
+      { id: "gemini", display_name: "Gehihi (Google Gemini)", models: [{ id: "gemini-3.8-flash", display_name: "gemini-3.8-flash" }], configured: state.configured, supports_inline_images: true },
+    ] });
+    if (path.endsWith("/vision/policy")) {
+      if (route.request().method() === "PUT") {
+        state.writes.push(route.request().postDataJSON());
+        if (state.saveFails) return route.fulfill({ status: 409, json: { detail: { code: "provider_not_configured" } }, headers });
+        state.policy = route.request().postDataJSON();
+      }
+      return json(state.policy);
+    }
+    if (path.endsWith("/policy")) return json({ allowed_origins: [], vision_max_hops: 3, vision_max_states: 8 });
     if (path.endsWith("/explorations") && route.request().method() === "POST") {
       state.submissions.push(route.request().postDataJSON());
+      if (state.stale) return route.fulfill({ status: 409, json: { detail: { code: "vision_policy_changed" } }, headers });
       return json(session(sessionC));
     }
     if (path.endsWith("/explorations")) return json({ items: [...(state.submissions.length ? [session(sessionC)] : []), session(sessionA), session(sessionB)], total: state.submissions.length ? 3 : 2 });
@@ -95,7 +109,7 @@ test("saved branches, independent image errors, scrub preservation and live foll
 
 test("a saved session leaves the new exploration form visible and a new session survives reload", async ({ page }) => {
   const state = await fixture(page);
-  state.visionEnabled = true;
+  state.policy.enabled = true;
   state.exploration = "unavailable";
   await page.goto(`${dashboard}/agent?vision=${sessionA}`);
   const form = page.getByRole("region", { name: "Vision exploration", exact: true });
@@ -110,7 +124,7 @@ test("a saved session leaves the new exploration form visible and a new session 
   await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(sessionC));
   await expect(page.getByRole("region", { name: "Vision result", exact: true })).toContainText(sessionC);
-  expect(state.submissions).toEqual([{ project_id: project, target_url: "https://fixture.test/", task_intent: "Explore the fixture navigation", use_vision: true }]);
+  expect(state.submissions).toEqual([{ project_id: project, target_url: "https://fixture.test/", task_intent: "Explore the fixture navigation", use_vision: true, expected_provider: "huggingface", expected_model: "custom/hf-model" }]);
   await page.reload();
   await expect(page.getByRole("region", { name: "Vision result", exact: true })).toContainText(sessionC);
   await expect(form.getByLabel("Target URL", { exact: true })).toBeVisible();
@@ -142,4 +156,115 @@ test("legacy seven-frame gallery can select the sixth sibling", async ({ page })
   await expect(trajectory.getByRole("heading", { name: /After/ })).toContainText("7");
   await trajectory.getByRole("button", { name: "View this frame", exact: true }).click();
   await expect(trajectory.getByText("Current gallery selection: state 7.")).toBeVisible();
+});
+
+async function openSettings(page: Page) {
+  await page.locator("summary").filter({ hasText: /^Vision settings$/ }).click();
+  return page.getByRole("region", { name: "Vision settings", exact: true });
+}
+
+async function prepareExploration(page: Page) {
+  const form = page.getByRole("region", { name: "Vision exploration", exact: true });
+  await form.getByLabel("Target URL", { exact: true }).fill("https://fixture.test/");
+  await form.getByLabel("Exploration intent", { exact: true }).fill("Explore synthetic controls");
+  await form.getByLabel("Use Vision Agent", { exact: true }).check();
+  return form;
+}
+
+test("admin saves Gehihi consent, reloads and submits the saved model; historical session keeps its provider", async ({ page }) => {
+  const state = await fixture(page); state.role = "tenant_admin";
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  let settings = await openSettings(page);
+  await expect(settings.getByLabel("Vision model", { exact: true })).toHaveValue("custom/hf-model");
+  await settings.getByLabel("Vision provider", { exact: true }).selectOption("gemini");
+  await expect(settings.getByLabel("Vision model", { exact: true })).toHaveValue("gemini-3.8-flash");
+  const consent = settings.getByRole("checkbox", { name: /I accept raw screenshot/ });
+  await expect(consent).not.toBeChecked();
+  await expect(settings.getByLabel("Enable vision exploration")).not.toBeChecked();
+  await consent.check(); await settings.getByLabel("Enable vision exploration").check();
+  await settings.getByRole("button", { name: "Save vision settings" }).click();
+  await expect(page.getByText("Vision policy saved by the control plane.")).toBeVisible();
+  expect(state.policy.raw_screenshot_transfer_provider).toBe("gemini");
+  await page.reload(); settings = await openSettings(page);
+  await expect(settings.getByLabel("Vision provider", { exact: true })).toHaveValue("gemini");
+  await expect(settings.getByRole("checkbox", { name: /I accept raw screenshot/ })).toBeChecked();
+  await expect(page.getByLabel("Saved Vision session")).toContainText("Session provider: Hugging Face");
+  const form = await prepareExploration(page);
+  await form.getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Gehihi (Google Gemini)");
+  await expect(dialog).toContainText("gemini-3.8-flash");
+  await expect(dialog).toContainText("data-use conditions");
+  await dialog.getByRole("button", { name: "Start advisory exploration" }).click();
+  await expect(page).toHaveURL(new RegExp(sessionC));
+  expect(state.submissions[0]).toMatchObject({ expected_provider: "gemini", expected_model: "gemini-3.8-flash" });
+  await expect(page.getByLabel("Saved Vision session")).toContainText("Session provider: Gehihi (Google Gemini)");
+});
+
+test("unsaved and failed saves keep saved recipient and block runs until discarded", async ({ page }) => {
+  const state = await fixture(page); state.role = "tenant_admin"; state.policy.enabled = true; state.saveFails = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const form = await prepareExploration(page); const settings = await openSettings(page);
+  await settings.getByLabel("Vision provider", { exact: true }).selectOption("gemini");
+  await expect(form).toContainText("Raw screenshots may be sent to Hugging Face");
+  await expect(form.getByRole("button", { name: "Start advisory exploration" })).toBeDisabled();
+  await settings.getByRole("button", { name: "Save vision settings" }).click();
+  await expect(page.getByText(/The Vision provider is not configured/)).toBeVisible();
+  await expect(settings.getByLabel("Vision provider", { exact: true })).toHaveValue("gemini");
+  await expect(form).toContainText("Raw screenshots may be sent to Hugging Face");
+  await settings.getByRole("button", { name: "Discard changes" }).click();
+  await expect(settings.getByLabel("Vision model", { exact: true })).toHaveValue("custom/hf-model");
+  await form.getByRole("button", { name: "Start advisory exploration" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Hugging Face");
+  expect(state.submissions).toHaveLength(0);
+});
+
+test("stale confirmation sends frozen recipient, refreshes policy and requires a fresh confirmation", async ({ page }) => {
+  const state = await fixture(page); state.policy.enabled = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const form = await prepareExploration(page);
+  await form.getByRole("button", { name: "Start advisory exploration" }).click();
+  state.policy = { ...state.policy, provider: "gemini", model: "gemini-3.8-flash", raw_screenshot_transfer_provider: "gemini" }; state.stale = true;
+  await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByText(/Vision settings changed. Review/)).toBeVisible();
+  await expect(form).toContainText("sent to Google");
+  await expect(form.getByLabel("Use Vision Agent", { exact: true })).not.toBeChecked();
+  expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0]).toMatchObject({ expected_provider: "huggingface", expected_model: "custom/hf-model" });
+  state.stale = false;
+  await form.getByLabel("Use Vision Agent", { exact: true }).check();
+  await form.getByRole("button", { name: "Start advisory exploration" }).click();
+  await expect(page.getByRole("dialog")).toContainText("gemini-3.8-flash");
+  await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration" }).click();
+  await expect(page).toHaveURL(new RegExp(sessionC));
+  expect(state.submissions).toHaveLength(2);
+});
+
+test("missing key blocks enablement without a key input and catalogue failure can be retried", async ({ page }) => {
+  const state = await fixture(page); state.role = "tenant_admin"; state.configured = false; state.catalogueFails = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const settings = await openSettings(page);
+  await expect(settings.getByText("Vision settings could not be loaded.")).toBeVisible();
+  state.catalogueFails = false;
+  await settings.getByRole("button", { name: "Retry Vision settings" }).click();
+  await settings.getByLabel("Vision provider", { exact: true }).selectOption("gemini");
+  await expect(settings).toContainText("Gehihi (Google Gemini) is not configured on the server.");
+  await settings.getByRole("checkbox", { name: /I accept raw screenshot/ }).check();
+  await expect(settings.getByLabel("Enable vision exploration")).toBeDisabled();
+  await expect(settings.getByRole("textbox")).toHaveCount(0);
+});
+
+test("nonadmin reads policy and safe failures while partial trace and draft failure stay visible", async ({ page }) => {
+  const state = await fixture(page); state.exploration = "unavailable"; state.completionReason = "provider_rate_limited";
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const settings = await openSettings(page);
+  await expect(settings).toContainText("Provider: Hugging Face");
+  await expect(settings.getByRole("combobox")).toHaveCount(0);
+  await expect(settings.getByRole("button", { name: "Save vision settings" })).toHaveCount(0);
+  const result = page.getByRole("region", { name: "Vision result", exact: true });
+  await expect(result).toContainText("quota or request rate limit");
+  await expect(result).toContainText("Draft generation failed");
+  await expect(page.getByRole("region", { name: "Operation trace", exact: true })).toContainText("setup");
+  expect(state.writes).toHaveLength(0);
 });

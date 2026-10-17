@@ -18,9 +18,14 @@ from auto_at.contracts.vision_worker import (
 )
 from domain.entities import VisualTrajectoryEdgeRecord
 from domain.ports import VisualTraceUnitOfWork, VisualWorkerTransport
-from domain.vision import VisionImageAuthorizationRequired, VisualSessionScope
+from domain.vision import (
+    VisionImageAuthorizationRequired,
+    VisualSessionScope,
+    vision_model_failure_reason,
+)
 
 from application.vision_handoff import build_vision_handoff
+from application.vision_model_batch import VisionModelBatch, VisionModelSession
 from application.vision_operations import ExecuteVisualOperation, VisualOperationStopped, evolve
 
 
@@ -35,7 +40,8 @@ class Branch:
 
 class VisionTraceEventProcessor:
     def __init__(
-        self, uow: VisualTraceUnitOfWork, worker: VisualWorkerTransport, settings, model_batch
+        self, uow: VisualTraceUnitOfWork, worker: VisualWorkerTransport, settings,
+        model_batch: VisionModelBatch,
     ):
         self.uow, self.worker, self.settings, self.model_batch = uow, worker, settings, model_batch
 
@@ -54,7 +60,10 @@ class VisionTraceEventProcessor:
         previous_state = record.state
         record = self.uow.running(lease, VISION_PROMPT_VERSION)
         _, config, policy = self.uow.context(scope)
-        runtime = resolve_agent_runtime(self.settings, config).vision
+        try:
+            runtime = resolve_agent_runtime(self.settings, config).vision
+        except ValueError:
+            return self.uow.finish(lease, "policy_disabled")
         deadline = record.updated_at + timedelta(
             seconds=min(
                 record.max_session_seconds,
@@ -67,18 +76,22 @@ class VisionTraceEventProcessor:
 
         def check_policy():
             current, config, latest = self.uow.context(scope)
-            live = resolve_agent_runtime(self.settings, config).vision
+            try:
+                live = resolve_agent_runtime(self.settings, config).vision
+            except ValueError:
+                raise VisualOperationStopped("policy_disabled") from None
             if (
                 current.state != "running"
                 or not live.enabled
                 or not live.raw_screenshot_transfer_accepted
+                or live.raw_screenshot_transfer_provider != record.provider
                 or latest is None
                 or live.provider != record.provider
                 or live.model != record.model
+                or latest.allowed_origins != policy.allowed_origins
                 or not ProjectExecutionPolicy(
                     project_id=record.project_id, allowed_origins=latest.allowed_origins
                 ).allows(record.target_url)
-                or latest.allowed_origins != policy.allowed_origins
             ):
                 raise VisualOperationStopped("policy_disabled")
             if datetime.now(UTC) >= record.updated_at + timedelta(
@@ -263,7 +276,10 @@ class VisionTraceEventProcessor:
                     wait = interval - (datetime.now(UTC) - last_call).total_seconds()
                     if wait > 0:
                         await operations.bounded(lambda: asyncio.sleep(wait))
-                live, _ = check_policy()
+                live, latest = check_policy()
+                remaining = min(max_states, latest.vision_max_states) - visited - len(queue)
+                if remaining < 1 or branch.hop >= min(max_hops, latest.vision_max_hops):
+                    return
                 image = self.uow.read_frame(scope, branch.result.operation.actual_after_frame_id)
                 if len(image) > min(record.max_screenshot_bytes, live.max_screenshot_bytes):
                     raise VisualOperationStopped("screenshot_byte_limit")
@@ -277,7 +293,9 @@ class VisionTraceEventProcessor:
                 last_call = datetime.now(UTC)
                 outcome = await operations.bounded(
                     lambda: self.model_batch(
-                        session=record,
+                        session=VisionModelSession(
+                            record.tenant_id, record.id, record.provider, record.model,
+                        ),
                         screenshot=image,
                         task_intent=intent,
                         policy=live,
@@ -285,11 +303,18 @@ class VisionTraceEventProcessor:
                         guard=guard,
                         sequence=calls,
                         check_policy=check_policy,
+                        remaining_seconds=(
+                            min(deadline, record.updated_at + timedelta(
+                                seconds=live.max_session_seconds
+                            )) - datetime.now(UTC)
+                        ).total_seconds(),
                     )
                 )
                 check_policy()
                 if outcome.actions is None:
-                    raise VisualOperationStopped("model_unavailable")
+                    raise VisualOperationStopped(
+                        vision_model_failure_reason(outcome.failure_reason)
+                    )
                 self.uow.progress(
                     operations.lease,
                     "candidate.received",

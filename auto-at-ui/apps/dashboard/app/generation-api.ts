@@ -1,5 +1,5 @@
 import { apiRequest, ControlPlaneError, idempotencyKey } from "./api-client.ts";
-import type { VisualTrace, VisualLocator, VisionResult } from "./generation-types";
+import type { VisualTrace, VisualLocator, VisionResult, VisionProvider } from "./generation-types";
 import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisualReplayFrames, VisualTrajectory, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy, VisionProgressActivity } from "./generation-types";
 export { ControlPlaneError } from "./api-client.ts";
 
@@ -43,8 +43,9 @@ export function listProposals(apiUrl: string, decided?: boolean, runId?: string)
 }
 export function decideProposal(apiUrl: string, id: string, approved: boolean, reason: string) { return apiRequest<ProposalDecision>(apiUrl, `/api/v1/proposals/${id}/decision`, { method: "POST", body: JSON.stringify({ approved, reason: reason || null }) }); }
 export function getVisionPolicy(apiUrl: string) { return apiRequest<VisionPolicy>(apiUrl, "/api/v1/vision/policy"); }
+export function getVisionProviders(apiUrl: string) { return apiRequest<{ items: VisionProvider[] }>(apiUrl, "/api/v1/vision/providers"); }
 export function setVisionPolicy(apiUrl: string, policy: VisionPolicy) { return apiRequest<VisionPolicy>(apiUrl, "/api/v1/vision/policy", { method: "PUT", body: JSON.stringify(policy) }); }
-export function submitVisualExploration(apiUrl: string, payload: { project_id: string; target_url: string; task_intent: string; use_vision: true }) {
+export function submitVisualExploration(apiUrl: string, payload: { project_id: string; target_url: string; task_intent: string; use_vision: true; expected_provider?: string; expected_model?: string }) {
   return apiRequest<VisualExploration>(apiUrl, "/api/v1/vision/explorations", { method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify(payload) });
 }
 export function listVisualExplorations(apiUrl: string, projectId: string) { return apiRequest<{ items: VisualExploration[]; total: number }>(apiUrl, `/api/v1/vision/explorations?project_id=${encodeURIComponent(projectId)}`); }

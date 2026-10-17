@@ -37,11 +37,19 @@ export type Page<T> = { items: T[]; total: number; limit: number; offset: number
 export type Run = { id: string; correlation_id: string; status: string; revision: string };
 export type Artifact = { id: string; kind: string; uri: string; checksum: string; size: number; content_type: string | null };
 
+export type VisionProvider = {
+  id: string;
+  display_name: string;
+  models: { id: string; display_name: string }[];
+  configured: boolean;
+  supports_inline_images: boolean;
+};
 export type VisionPolicy = {
   enabled: boolean;
   provider: string;
   model: string;
   raw_screenshot_transfer_accepted: boolean;
+  raw_screenshot_transfer_provider?: string | null;
   max_steps: number;
   max_screenshot_bytes: number;
   max_session_seconds: number;

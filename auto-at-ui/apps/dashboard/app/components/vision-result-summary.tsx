@@ -2,14 +2,14 @@ import Link from "next/link";
 import type { VisionResult } from "../generation-types";
 import { visionResultExportUrl } from "../generation-api";
 import { visionResultLabel } from "./vision-operation-model";
+import { visionFailureMessage } from "./vision-provider-model";
 
 export function VisionResultSummary({ result, apiUrl }: { result: VisionResult; apiUrl: string }) {
   return <section className="workspace-section" aria-label="Vision result">
     <h2>{visionResultLabel(result.exploration_state)}</h2>
     <p>Selected session: <code>{result.session_id}</code></p>
-    <p>{result.completion_reason === "image_delivery_auth_required"
-      ? "Exploration stopped because Google Drive authorization must be renewed. An administrator must reconnect image delivery, then start a new exploration. Button coverage is incomplete."
-      : result.completion_reason?.replaceAll("_", " ")}</p>
+    <p>{visionFailureMessage(result.completion_reason) ?? result.completion_reason?.replaceAll("_", " ")}</p>
+    <p>Exploration is bounded and does not prove every control works. Draft generation uses a separate text provider; its outcome is shown independently below.</p>
     {result.evidence_status === "legacy_evidence_only" && <p>Legacy evidence only. Verified locators were not recorded for this session.</p>}
     <dl className="vision-counts">{Object.entries(result.counts).map(([key, value]) => <div key={key}><dt>{key.replaceAll("_", " ")}</dt><dd>{value}</dd></div>)}</dl>
     <ul className="stack-list">{Object.entries(result.links).map(([key, link]) => <li key={key}><strong>{key}: </strong>{key === "generation" && link.state === "failed" ? "Draft generation failed" : visionResultLabel(link.state)}{link.reason_code && ` — ${link.reason_code.replaceAll("_", " ")}`}{link.href && <> · <Link href={link.href}>{key === "draft" ? "Review draft" : key === "report" ? "View Playwright result" : "Open run"}</Link></>}</li>)}</ul>

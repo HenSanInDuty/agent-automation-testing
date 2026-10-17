@@ -1,6 +1,7 @@
 export class ControlPlaneError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) { super(message); this.status = status; }
+  readonly code?: string;
+  constructor(status: number, message: string, code?: string) { super(message); this.status = status; this.code = code; }
 }
 
 function csrfToken(): string {
@@ -17,8 +18,10 @@ export async function apiRequest<T>(apiUrl: string, path: string, init: RequestI
   if (init.method && !["GET", "HEAD"].includes(init.method)) headers.set("X-CSRF-Token", csrfToken());
   const response = await fetch(`${apiUrl}${path}`, { ...init, headers, credentials: "include" });
   if (!response.ok) {
-    const body = await response.json().catch(() => null) as { detail?: string } | null;
-    throw new ControlPlaneError(response.status, body?.detail ?? "The control plane rejected this request.");
+    const body = await response.json().catch(() => null) as { detail?: unknown } | null;
+    const detail = body?.detail;
+    const code = detail && typeof detail === "object" && "code" in detail && typeof detail.code === "string" ? detail.code : undefined;
+    throw new ControlPlaneError(response.status, typeof detail === "string" ? detail : "The control plane rejected this request.", code);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }

@@ -213,6 +213,7 @@ def test_candidate_batch_failure_codes_are_stable_and_detail_is_generic(
     assert outcome.detail == "vision model returned an invalid candidate batch"
     assert outcome.diagnostic_code == code
     assert outcome.diagnostic_capture is not None
+    assert outcome.failure_reason == "model_output_invalid"
 
 
 def test_candidate_batch_classifies_provider_transport_and_redacts_bounded_capture() -> None:
@@ -299,3 +300,62 @@ def test_huggingface_adapter_sends_multimodal_bytes_only_in_provider_request() -
     assert captured["model"] == "Qwen/Qwen2.5-VL-7B-Instruct"
     assert captured["messages"][1]["content"][1]["type"] == "image_url"
     assert captured["response_format"] == {"type": "json_object"}
+
+
+@pytest.mark.parametrize("envelope", [
+    {"finish_reason": "length"}, {"finish_reason": "content_filter"},
+    {"finish_reason": "tool_calls"}, {"finish_reason": []},
+    {"refusal": "Declined"},
+])
+def test_refused_or_incomplete_response_rejects_even_valid_candidate_json(envelope):
+    reply = response(
+        '{"candidates":[{"kind":"click","x":0.5,"y":0.2,'
+        '"confidence":0.9,"expected_outcome":"Open custom div"}]}'
+    )
+    if "refusal" in envelope:
+        reply["choices"][0]["message"].update(envelope)
+    else:
+        reply["choices"][0].update(envelope)
+    outcome = asyncio.run(execute_visual_candidate_batch(
+        screenshot=b"png", content_type="image/png", task_intent="Check",
+        policy=policy(), model=FakeModel(reply), max_candidates=2,
+    ))
+    assert outcome.failure_reason == "model_output_invalid" and outcome.actions is None
+
+
+def test_candidate_out_of_bounds_is_invalid_output():
+    outcome = asyncio.run(execute_visual_candidate_batch(
+        screenshot=b"png", content_type="image/png", task_intent="Check", policy=policy(),
+        model=FakeModel(response(
+            '{"candidates":[{"kind":"click","x":1.1,"y":0.5,'
+            '"confidence":0.9,"expected_outcome":"Open"}]}'
+        )), max_candidates=2,
+    ))
+    assert outcome.failure_reason == "model_output_invalid"
+    assert outcome.diagnostic_code == VisualDiagnosticCode.INVALID_CANDIDATE_SCHEMA
+
+
+def test_debug_capture_removes_echoed_gemini_key_and_inline_image(caplog):
+    from base64 import b64encode
+
+    key = "AIza" + "fixture-secret_" * 3
+    encoded = b64encode(b"synthetic-private-pixels").decode()
+    model = FakeModel(response(f"invalid JSON {key} data:image/png;base64,{encoded}"))
+    outcome = asyncio.run(execute_visual_candidate_batch(
+        screenshot=b"png", content_type="image/png", task_intent="Check",
+        policy=policy(), model=model, max_candidates=2,
+    ))
+    assert outcome.failure_reason == "model_output_invalid"
+    assert outcome.diagnostic_capture.content == "invalid JSON [REDACTED] [REDACTED]"
+    assert key not in repr(outcome) + caplog.text
+    assert encoded not in repr(outcome) + caplog.text
+
+
+@pytest.mark.parametrize("tokens", [0, -1, 100001, True, "1000"])
+def test_invalid_token_cap_does_not_invoke_model(tokens):
+    model = FakeModel({})
+    result = asyncio.run(execute_visual_candidate_batch(
+        screenshot=b"png", content_type="image/png", task_intent="Check",
+        policy=policy(), model=model, max_candidates=2, requested_tokens=tokens,
+    ))
+    assert result.status == "unavailable" and model.calls == 0

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     huggingface_api_key: str | None = None
+    gemini_api_key: str | None = Field(default=None, repr=False, exclude=True)
     huggingface_base_url: str = "https://router.huggingface.co/v1"
     agent_provider: str = "huggingface"
     agent_model: str = "Qwen/Qwen2.5-Coder-32B-Instruct"
@@ -55,6 +56,7 @@ class Settings(BaseSettings):
     vision_provider: str = "huggingface"
     vision_model: str = "Qwen/Qwen3.8-27B:deepinfra"
     vision_raw_screenshot_transfer_accepted: bool = False
+    vision_raw_screenshot_transfer_provider: str | None = None
     vision_max_steps: int = Field(default=3, ge=1, le=10)
     vision_max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)
     vision_max_session_seconds: int = Field(default=120, ge=1, le=3_600)

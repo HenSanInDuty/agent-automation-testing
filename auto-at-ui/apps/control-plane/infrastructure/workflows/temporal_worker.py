@@ -30,6 +30,8 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyVisionRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
+from infrastructure.persistence.vision_unit_of_work import SqlAlchemyVisionPolicyReader
+from infrastructure.vision.model_batch import VisionModelBatch
 from infrastructure.workflows.temporal import (
     TemporalWorkflowStarter,
     TestRunWorkflow,
@@ -81,6 +83,8 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         SqlAlchemyOutboxEventRepository(session),
                         settings,
                         RustFSArtifactStore(settings),
+                        model_batch=VisionModelBatch(settings),
+                        read_policy=SqlAlchemyVisionPolicyReader(session_factory),
                     ),
                 ).execute()
             published += await publish_vision_once(session_factory, settings)

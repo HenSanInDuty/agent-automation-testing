@@ -4,6 +4,7 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
+from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
 from agents.vision.intent import encrypt_visual_intent
 from auto_at.contracts.generation import ProjectExecutionPolicy, redact_generation_request
@@ -13,6 +14,10 @@ from infrastructure.persistence.models import VisualExplorationSessionModel
 
 
 class VisionStateError(ValueError):
+    pass
+
+
+class VisionPolicyChanged(VisionStateError):
     pass
 
 
@@ -31,7 +36,7 @@ class SubmitVisualExploration:
         *,
         tenant_id: str,
         project_id: UUID,
-        correlation_id: UUID,
+        correlation_id: UUID | None,
         target_url: str,
         task_intent: str,
         idempotency_key: str,
@@ -40,37 +45,57 @@ class SubmitVisualExploration:
         intent_encryption_key: str | None,
         intent_retention_days: int,
         trace_v4_enabled: bool = False,
+        expected_provider: str | None = None,
+        expected_model: str | None = None,
     ) -> VisualExplorationSessionModel:
         policy = runtime.vision
-        if not policy.enabled or not policy.raw_screenshot_transfer_accepted:
-            raise VisionStateError("vision exploration is disabled by tenant policy")
+        if (expected_provider is None) != (expected_model is None):
+            raise VisionStateError("expected_provider and expected_model must be supplied together")
         if redact_generation_request(task_intent) != task_intent:
             raise VisionStateError("task intent contains credentials and cannot be accepted")
         project = self._catalog.get_project(tenant_id, project_id)
-        project_policy = self._generation.get_policy(tenant_id, project_id)
         if project is None or project.default_target != "web_ui":
             raise VisionStateError("vision exploration supports only web_ui projects")
+        existing = self._repository.get_by_key(tenant_id, idempotency_key)
+        intent_hash = hashlib.sha256(task_intent.encode("utf-8")).hexdigest()
+        if existing is not None:
+            if (
+                existing.tenant_id != tenant_id
+                or existing.project_id != project_id
+                or (correlation_id is not None and existing.correlation_id != correlation_id)
+                or existing.target_url != target_url
+                or existing.intent_hash != intent_hash
+            ):
+                raise VisionStateError("idempotency key belongs to a different exploration")
+            if expected_provider is not None and (expected_provider, expected_model) != (
+                existing.provider, existing.model
+            ):
+                raise VisionPolicyChanged("vision_policy_changed")
+            return existing
+        if expected_provider is not None and (expected_provider, expected_model) != (
+            policy.provider, policy.model
+        ):
+            raise VisionPolicyChanged("vision_policy_changed")
+        if policy.provider == "gemini" and expected_provider is None:
+            raise VisionStateError("expected_provider and expected_model are required for Gemini")
+        if (
+            not policy.enabled or not policy.raw_screenshot_transfer_accepted
+            or policy.raw_screenshot_transfer_provider != policy.provider
+        ):
+            raise VisionStateError("vision exploration is disabled by tenant policy")
+        project_policy = self._generation.get_policy(tenant_id, project_id)
         if project_policy is None or not ProjectExecutionPolicy(
             project_id=project_id, allowed_origins=project_policy.allowed_origins
         ).allows(target_url):
             raise VisionStateError(
                 "target URL origin is not allowed by the project execution policy"
             )
-        existing = self._repository.get_by_key(tenant_id, idempotency_key)
-        intent_hash = hashlib.sha256(task_intent.encode("utf-8")).hexdigest()
-        if existing is not None:
-            if (
-                existing.project_id != project_id
-                or existing.target_url != target_url
-                or existing.intent_hash != intent_hash
-            ):
-                raise VisionStateError("idempotency key belongs to a different exploration")
-            return existing
         try:
             encrypted_intent = encrypt_visual_intent(task_intent, intent_encryption_key)
         except ValueError as error:
             raise VisionStateError("vision request encryption is not configured") from error
         now = datetime.now(UTC)
+        correlation_id = correlation_id or uuid4()
         record = VisualExplorationSessionModel(
             id=uuid4(),
             tenant_id=tenant_id,
@@ -84,7 +109,7 @@ class SubmitVisualExploration:
             policy_version=AGENT_RUNTIME_CONFIG_KEY,
             provider=policy.provider,
             model=policy.model,
-            prompt_version="vision-exploration-v3" if trace_v4_enabled else "vision-exploration-v2",
+            prompt_version=VISION_PROMPT_VERSION,
             trace_version="v4" if trace_v4_enabled else "legacy",
             max_steps=policy.max_steps,
             max_hops=project_policy.vision_max_hops,

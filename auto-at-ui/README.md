@@ -258,6 +258,21 @@ docs/                     Architecture and ADRs
 
 ## Vision results and grounded drafts
 
+Tenant administrators can choose **Gehihi (Google Gemini)** with
+`gemini-3.8-flash` in `/agent` → Vision settings. Configure the optional
+`GEMINI_API_KEY` only on the server, deploy both API and worker, then explicitly
+accept Google screenshot transfer and save the tenant policy. The catalogue
+reports key presence only. Gemini sends images inline and needs no Drive OAuth;
+Hugging Face retains its existing image-delivery path. Defaults stay HF/disabled.
+
+Only approved synthetic data is permitted for this local evaluation. Screenshots
+are raw, and free-tier terms/quota must be checked before a live demo. Saved
+settings determine the run confirmation; unsaved edits block submission. The
+session keeps its original provider/model. Text draft generation uses its separate
+provider and may fail independently. See [Gehihi setup and rollback](docs/vision-agent-operations.md#gehihi-google-gemini-local-setup)
+and [offline evaluation evidence](benchmark/vision/gehihi/README.md). A live
+provider canary has not been run.
+
 Open `/agent?vision=<session_id>` for a saved exploration result, operation trace,
 branch paths and locator catalog. The draft link opens review; approval creates
 one deterministic Playwright run, whose page shows the verdict and report.

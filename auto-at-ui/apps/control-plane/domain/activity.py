@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from domain.vision import VISION_MODEL_FAILURE_REASONS
+
 _SENSITIVE_KEYS = {"authorization", "cookie", "password", "secret", "token", "api_key"}
 _SOURCES = {"control_plane", "workflow", "worker", "generation", "triage", "reporting", "vision"}
 _STATUSES = {
@@ -94,7 +96,9 @@ _VISION_PROGRESS = {
         "Visual exploration completed.",
         frozenset({"state_count", "action_count"}),
     ),
-    "unavailable": ("unavailable", "Visual exploration is unavailable.", frozenset()),
+    "unavailable": (
+        "unavailable", "Visual exploration is unavailable.", frozenset({"reason_code"}),
+    ),
 }
 
 for _stage, _summary in {
@@ -207,6 +211,9 @@ class ActivityEvent:
         if "reason_code" in safe_metadata and safe_metadata["reason_code"] not in {
             "handoff_branch_limit", "handoff_incomplete", "no_eligible_branches",
             "generation_request_unavailable",
+            "policy_disabled", "session_timeout", "image_delivery_auth_required",
+            "visual_exploration_unavailable", "step_limit",
+            *VISION_MODEL_FAILURE_REASONS,
         }:
             raise ValueError("vision progress reason is invalid")
         if set(safe_metadata) - allowed_keys:

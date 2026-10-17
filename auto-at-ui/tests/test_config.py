@@ -35,3 +35,15 @@ def test_settings_accepts_standard_google_oauth_environment(monkeypatch) -> None
     assert settings.google_drive_oauth_client_id == "client-id"
     assert settings.google_drive_oauth_client_secret == "client-secret"
     assert settings.google_drive_oauth_refresh_token == "refresh-token"
+
+
+def test_gemini_key_is_optional_and_excluded_from_repr_and_serialization(monkeypatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    assert Settings(_env_file=None).gemini_api_key is None
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-gemini-secret")
+    monkeypatch.setenv("VISION_RAW_SCREENSHOT_TRANSFER_PROVIDER", "gemini")
+    settings = Settings(_env_file=None)
+    assert settings.gemini_api_key == "synthetic-gemini-secret"
+    assert settings.vision_raw_screenshot_transfer_provider == "gemini"
+    assert "synthetic-gemini-secret" not in repr(settings)
+    assert "gemini_api_key" not in settings.model_dump()

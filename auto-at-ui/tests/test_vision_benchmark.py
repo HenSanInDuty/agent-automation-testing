@@ -5,6 +5,59 @@ from benchmark.vision_diagnostics import classify_vision_transport
 from benchmark.vision import VisionBenchmarkObservation, evaluate_vision_observations
 
 
+def test_gehihi_manifest_provenance_and_mocked_response_gates():
+    import json
+    from hashlib import sha256
+    from pathlib import Path
+
+    from agents.prompts.vision import VISION_PROMPT_VERSION
+    from agents.shared.vision_providers import GEMINI_VISION_MODEL
+    from test_gemini_vision_model import invoke
+
+    root = Path(__file__).parents[1]
+    manifest = json.loads((root / "benchmark/vision/gehihi/manifest.json").read_text())
+    assert manifest["classification"] == "synthetic_local_only"
+    assert manifest["responses"] == "mocked" and manifest["live_canary"] == "not_run"
+    assert manifest["prompt_version"] == VISION_PROMPT_VERSION
+    assert manifest["model"] == GEMINI_VISION_MODEL
+    for path, expected in manifest["sources"].items():
+        assert sha256((root / path).read_text(encoding="utf-8").encode()).hexdigest() == expected
+    observed = dict(schema_valid=0, response_cases=0, normalized_coordinate_candidates=0,
+                    coordinate_candidates=0, safe_rejections=0)
+    for case in manifest["cases"]:
+        assert (root / case["evidence"]).is_file() and case["invariant"]
+        if "status" not in case:
+            continue  # Live policy/SQL invariants run in the cited integration tests.
+        calls = []
+
+        def response(request, case=case, calls=calls):
+            calls.append(request)
+            return httpx.Response(case["status"], json={"choices": [{"message": {
+                "content": case["content"], **case.get("message_extra", {}),
+            }}]})
+
+        result = invoke(response)
+        assert len(calls) == 1
+        assert result.status == case["expected_status"], case["id"]
+        assert result.failure_reason == case["expected_reason"], case["id"]
+        observed["response_cases"] += 1
+        observed["schema_valid"] += result.status == "completed"
+        observed["safe_rejections"] += result.status == "unavailable"
+        if result.status == "unavailable":
+            assert result.actions is None
+        try:
+            candidates = json.loads(case["content"])["candidates"]
+        except (ValueError, TypeError):
+            candidates = []
+        for candidate in candidates:
+            if candidate["kind"] in {"click", "type"}:
+                observed["coordinate_candidates"] += 1
+                observed["normalized_coordinate_candidates"] += (
+                    0 <= candidate["x"] <= 1 and 0 <= candidate["y"] <= 1
+                )
+    assert observed == manifest["expected_response_metrics"]
+
+
 def test_fixture_benchmark_scores_safe_actions_and_excludes_raw_content() -> None:
     metrics = evaluate_vision_observations([
         VisionBenchmarkObservation(

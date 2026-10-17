@@ -17,7 +17,7 @@ from domain.activity import ActivityEvent
 from domain.entities import VisualOperationFrameRecord
 from domain.ports import VerifiedVisualOperationStore
 from domain.runs import AuditEvent
-from domain.vision import VisualSessionLease, VisualSessionScope
+from domain.vision import VISION_MODEL_FAILURE_REASONS, VisualSessionLease, VisualSessionScope
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -96,7 +96,7 @@ class SqlAlchemyVisualTraceUnitOfWork:
             record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
             if record.state == "queued":
                 record.state, record.updated_at = "running", datetime.now(UTC)
-                record.prompt_version = prompt_version
+                # Submit owns provenance; starting historical work must not rewrite it.
                 self._progress(session, lease, "started", "started")
             return self._detached(record)
 
@@ -169,6 +169,9 @@ class SqlAlchemyVisualTraceUnitOfWork:
                 lease,
                 "unavailable" if reason else "completed",
                 "unavailable" if reason else "completed",
+                {"reason_code": reason} if reason in VISION_MODEL_FAILURE_REASONS | {
+                    "policy_disabled", "session_timeout", "image_delivery_auth_required",
+                } else None,
             )
             SqlAlchemyAuditEventRepository(session).append(
                 AuditEvent(
@@ -428,3 +431,16 @@ class SqlAlchemyVisualTraceUnitOfWork:
     def tombstone_frame(self, scope: VisualSessionScope, frame_id: UUID) -> bool:
         with transactional_session(self._factory) as session:
             return SqlAlchemyVisualTraceRepository(session).tombstone_frame(scope, frame_id)
+
+
+class SqlAlchemyVisionPolicyReader:
+    """Fresh detached reads even while the legacy writer retains its transaction."""
+
+    def __init__(self, factory):
+        self._factory = factory
+
+    def __call__(self, tenant_id, project_id):
+        with transactional_session(self._factory) as session:
+            config = SqlAlchemyConfigurationRepository(session).get(tenant_id, "agent.runtime.v1")
+            policy = SqlAlchemyGenerationRepository(session).get_policy(tenant_id, project_id)
+            return config, SqlAlchemyVisualTraceUnitOfWork._detached(policy)

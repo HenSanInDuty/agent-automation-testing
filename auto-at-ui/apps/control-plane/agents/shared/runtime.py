@@ -5,6 +5,8 @@ from collections.abc import Mapping
 from config import Settings
 from pydantic import BaseModel, Field, model_validator
 
+from agents.shared.vision_providers import VisionProviderId, validate_vision_model
+
 AGENT_RUNTIME_CONFIG_KEY = "agent.runtime.v1"
 
 
@@ -32,9 +34,10 @@ class VisionPolicy(BaseModel):
     model_config = {"extra": "forbid"}
 
     enabled: bool = False
-    provider: str = "huggingface"
+    provider: VisionProviderId = "huggingface"
     model: str = Field(default="Qwen/Qwen3.8-27B:deepinfra", max_length=200)
     raw_screenshot_transfer_accepted: bool = False
+    raw_screenshot_transfer_provider: VisionProviderId | None = None
     max_steps: int = Field(default=3, ge=1, le=10)
     max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)
     max_session_seconds: int = Field(default=120, ge=1, le=3_600)
@@ -43,12 +46,19 @@ class VisionPolicy(BaseModel):
 
     @model_validator(mode="after")
     def validate_enabled_policy(self) -> "VisionPolicy":
-        if self.provider != "huggingface":
-            raise ValueError("vision supports only the installed huggingface provider")
-        if self.enabled and not self.raw_screenshot_transfer_accepted:
-            raise ValueError("enabled vision requires raw screenshot transfer consent")
-        if self.enabled and not self.model.strip():
-            raise ValueError("enabled vision requires a configured model")
+        validate_vision_model(self.provider, self.model)
+        if not self.raw_screenshot_transfer_accepted:
+            self.raw_screenshot_transfer_provider = None
+        elif self.provider == "huggingface" and self.raw_screenshot_transfer_provider is None:
+            # Only legacy HF consent may infer a recipient.
+            self.raw_screenshot_transfer_provider = "huggingface"
+        if self.enabled and (
+            not self.raw_screenshot_transfer_accepted
+            or self.raw_screenshot_transfer_provider != self.provider
+        ):
+            raise ValueError(
+                "enabled vision requires provider-bound raw screenshot transfer consent"
+            )
         return self
 
 
@@ -100,6 +110,7 @@ class AgentRuntimeConfig(BaseModel):
                 provider=settings.vision_provider,
                 model=settings.vision_model,
                 raw_screenshot_transfer_accepted=settings.vision_raw_screenshot_transfer_accepted,
+                raw_screenshot_transfer_provider=settings.vision_raw_screenshot_transfer_provider,
                 max_steps=settings.vision_max_steps,
                 max_screenshot_bytes=settings.vision_max_screenshot_bytes,
                 max_session_seconds=settings.vision_max_session_seconds,
@@ -112,7 +123,19 @@ class AgentRuntimeConfig(BaseModel):
         """Validate one tenant's non-secret database override over environment defaults."""
         if override is None:
             return self
-        return type(self).model_validate(_merge(self.model_dump(), override))
+        merged = _merge(self.model_dump(), override)
+        vision_override = override.get("vision")
+        if isinstance(vision_override, Mapping) and (
+            "raw_screenshot_transfer_provider" not in vision_override
+            and (
+                "raw_screenshot_transfer_accepted" in vision_override
+                or vision_override.get("provider", self.vision.provider) != self.vision.provider
+            )
+        ):
+            # An explicitly supplied legacy consent cannot inherit another recipient
+            # from deployment defaults. The policy validator only infers old HF consent.
+            merged["vision"]["raw_screenshot_transfer_provider"] = None
+        return type(self).model_validate(merged)
 
 
 class AgentStepGuard:

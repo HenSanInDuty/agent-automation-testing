@@ -33,6 +33,9 @@ export async function startVisionTarget() {
       <button id="hydrate" style="position:absolute;left:300px;top:360px">Hydrate</button>
       <button style="position:absolute;left:300px;top:420px" onclick="alert('fixture')">Dialog</button>
       <a style="position:absolute;left:300px;top:470px" href="/download" download>Download fixture</a>
+      <div role="button" tabindex="0" class="action" style="top:560px" onclick="this.dataset.clicked='yes'">Custom div action</div>
+      <span role="button" tabindex="0" class="action" style="top:620px" onclick="this.dataset.clicked='yes'">Custom span action</span>
+      <button class="action" style="top:1500px" onclick="this.dataset.clicked='yes'">Offscreen action</button>
       <script>document.getElementById('shadow-host').attachShadow({mode:'open'}).innerHTML='<button aria-label="Shadow action">Shadow</button>';</script>
     </body></html>`);
   });

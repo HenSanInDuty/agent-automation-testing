@@ -19,6 +19,8 @@ class VisualDiagnosticCode(StrEnum):
     RESPONSE_NOT_OBJECT = "response_not_object"
     RESPONSE_MISSING_CHOICES = "response_missing_choices"
     RESPONSE_MISSING_CONTENT = "response_missing_content"
+    RESPONSE_REFUSED = "response_refused"
+    RESPONSE_INCOMPLETE = "response_incomplete"
     INVALID_JSON = "invalid_json"
     INVALID_ROOT_SHAPE = "invalid_root_shape"
     INVALID_CANDIDATE_SCHEMA = "invalid_candidate_schema"
@@ -26,6 +28,28 @@ class VisualDiagnosticCode(StrEnum):
     CANDIDATE_LIMIT_EXCEEDED = "candidate_limit_exceeded"
     REDACTION_FAILED = "redaction_failed"
     PAYLOAD_TOO_LARGE = "payload_too_large"
+
+
+class VisionProviderFailure(ValueError):
+    """Safe provider failure, without request, response body or credential objects."""
+
+    def __init__(
+        self, reason: str, *, provider_status: int | None = None,
+        provider_category: str | None = None,
+    ) -> None:
+        self.reason = reason
+        self.provider_status = provider_status
+        self.provider_category = provider_category
+        super().__init__(reason)
+
+    @classmethod
+    def from_status(cls, status: int) -> VisionProviderFailure:
+        reason = {
+            401: "provider_auth_failed", 403: "provider_auth_failed",
+            402: "provider_billing_required", 404: "provider_model_unavailable",
+            429: "provider_rate_limited",
+        }.get(status, "provider_unavailable")
+        return cls(reason, provider_status=status, provider_category="http")
 
 
 class VisualDiagnosticFailure(ValueError):
@@ -45,6 +69,8 @@ class VisualDiagnosticFailure(ValueError):
 
 
 _SECRET_PATTERNS = (
+    compile(r"AIza[0-9A-Za-z_-]{20,}"),
+    compile(r"(?i)data:image/[^\s;,\"']+;base64,[a-z0-9+/=_-]*"),
     compile(r"(?i)(?:bearer\s+)[a-z0-9._~+/-]+=*"),
     compile(r"(?i)(?:api[_-]?key|password|secret|token)\s*[:=]\s*[^\s,;]+"),
     compile(r"(?i)(?:set-cookie|cookie)\s*[:=]\s*[^\r\n]+"),

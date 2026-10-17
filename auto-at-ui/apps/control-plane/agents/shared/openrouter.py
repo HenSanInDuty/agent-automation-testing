@@ -6,6 +6,7 @@ import httpx
 from config import Settings
 from huggingface_hub import AsyncInferenceClient
 
+from agents.shared.gemini import GeminiVisionLanguageModel
 from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentRuntimeConfig, VisionPolicy
 
@@ -84,8 +85,16 @@ def create_language_model(settings: Settings, runtime: AgentRuntimeConfig) -> La
     raise ValueError(f"unsupported language-model provider: {runtime.provider}")
 
 
-def create_vision_language_model(settings: Settings, policy: VisionPolicy) -> LanguageModel:
-    """Construct the vision-only Hugging Face gateway from its own policy."""
+def create_vision_language_model(
+    settings: Settings, policy: VisionPolicy, *, timeout_seconds: float = 30,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> LanguageModel:
+    """Construct a vision gateway from its own policy; text selection is separate."""
+    if policy.provider == "gemini":
+        return GeminiVisionLanguageModel(
+            api_key=settings.gemini_api_key, model=policy.model,
+            timeout_seconds=timeout_seconds, transport=transport,
+        )
     if policy.provider != "huggingface":
         raise ValueError(f"unsupported vision provider: {policy.provider}")
     if not settings.huggingface_api_key:
@@ -98,6 +107,7 @@ def create_vision_language_model(settings: Settings, policy: VisionPolicy) -> La
             api_key=settings.huggingface_api_key,
             base_url=settings.huggingface_base_url,
             model=policy.model,
+            transport=transport,
         )
     return HuggingFaceVisionLanguageModel(
         api_key=settings.huggingface_api_key,
