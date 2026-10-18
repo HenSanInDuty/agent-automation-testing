@@ -118,9 +118,19 @@ export type VisionDebugEvidence = {
 };
 export type VisionDebugEvidencePayload = VisionDebugEvidence & { payload: string };
 
+export type VisionExplorationReport = {
+  status: "partial" | "in_progress";
+  coverage: "not_established";
+  stop_reason: string | null;
+  limits: { max_steps: number; max_hops: number; max_states: number; max_session_seconds: number };
+  summary: { controls_acted_on: number; actions_rejected: number; actions_failed: number; actions_unknown: number; scrolls_completed: number; candidates_not_attempted: number };
+  findings: { operation_id: string; sequence: number; action_kind: string; status: string; reason_code: string | null; target: string | null; url_change: string; visual_change: string }[];
+};
+
+export type ExecutedClick = { x: number; y: number; viewport_width: number; viewport_height: number; before_frame_id: string; confirmed_at: string };
 export type OperationFrame = { id: string | null; availability: "retained" | "deleted" | "missing"; reason_code: string | null; captured_at?: string };
-export type VisualOperation = { id: string; sequence: number; purpose: "setup" | "explore" | "restore" | "replay"; action_kind: string; status: string; started_at: string; outcome_code: string | null; state_id: string | null; locator_id: string | null; before: OperationFrame; after: OperationFrame };
+export type VisualOperation = { executed_click?: ExecutedClick | null; id: string; sequence: number; purpose: "setup" | "explore" | "restore" | "replay"; action_kind: string; status: string; started_at: string; outcome_code: string | null; state_id: string | null; locator_id: string | null; before: OperationFrame; after: OperationFrame };
 export type VisualLocator = { id: string; operation_id: string; status: string; reason_code: string | null; verified_at: string | null; descriptor: { strategy: string; role: string | null; value: string; scope: { kind: string; selector: string }[] } | null; bounding_box: { x: number; y: number; width: number; height: number } | null };
 export type VisualTrace = { schema_version: string; session_id: string; revision: string; trace_version: string; items: VisualOperation[]; locators: VisualLocator[]; next_sequence: number; has_more: boolean };
 export type VisionHandoffBranch = { id: string; status: "ready" | "blocked"; reason_code: string | null; steps: { operation_id: string; locator_id: string | null; input_reference: string | null }[] };
-export type VisionResult = { schema_version: string; session_id: string; project_id: string; revision: string; exploration_state: string; completion_reason: string | null; evidence_status: string; counts: Record<string, number>; branches: { id: string; status: string; reason_code: string | null }[]; handoffs: { id: string; branches: VisionHandoffBranch[] }[]; links: Record<"handoff" | "generation" | "draft" | "run" | "report", { state: string; id: string | null; href: string | null; reason_code?: string | null }>; limitations: string[] };
+export type VisionResult = { exploration_report?: VisionExplorationReport; schema_version: string; session_id: string; project_id: string; revision: string; exploration_state: string; completion_reason: string | null; evidence_status: string; counts: Record<string, number>; branches: { id: string; status: string; reason_code: string | null }[]; handoffs: { id: string; branches: VisionHandoffBranch[] }[]; links: Record<"handoff" | "generation" | "draft" | "run" | "report", { state: string; id: string | null; href: string | null; reason_code?: string | null }>; limitations: string[] };

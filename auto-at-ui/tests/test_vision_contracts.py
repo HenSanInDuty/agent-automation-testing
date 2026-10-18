@@ -138,6 +138,54 @@ def test_locator_parity_fixtures():
                 model.model_validate(fixture["payload"])
 
 
+@pytest.mark.parametrize("change", [
+    {"x": -0.1}, {"y": 1.1}, {"x": float("nan")}, {"y": float("inf")},
+    {"viewport_width": 1}, {"viewport_height": 20000},
+])
+def test_executed_click_coordinates_are_bounded(change):
+    from auto_at.contracts.vision import VisualExecutedClick
+
+    value = dict(x=0.5, y=0.5, viewport_width=1280, viewport_height=720,
+                 before_frame_id=uuid4(), confirmed_at=datetime.now(UTC))
+    with pytest.raises(ValidationError):
+        VisualExecutedClick.model_validate(value | change)
+
+
+@pytest.mark.parametrize("status", ["completed", "failed", "rejected", "unknown", "prepared"])
+def test_click_evidence_requires_a_confirmed_final_operation(status):
+    from auto_at.contracts.vision import VisualOperation
+
+    now, before = datetime.now(UTC), uuid4()
+    value = dict(
+        id=uuid4(), tenant_id="fixture", project_id=uuid4(), session_id=uuid4(), sequence=1,
+        purpose="explore", action_kind="click", started_at=now,
+        ended_at=None if status == "prepared" else now, status=status,
+        actual_before_frame_id=before, after_unavailable_reason="capture_failed",
+        outcome_code="observed",
+        executed_click=dict(x=0.5, y=0.5, viewport_width=1280, viewport_height=720,
+                            before_frame_id=before, confirmed_at=now),
+    )
+    if status in {"completed", "failed"}:
+        assert VisualOperation.model_validate(value).executed_click.before_frame_id == before
+        for changes in (
+            {"before_frame_id": uuid4()},
+            {"confirmed_at": "2000-01-01T00:00:00Z"},
+            {"confirmed_at": "2100-01-01T00:00:00Z"},
+            {"confirmed_at": "2026-01-01T00:00:00"},
+        ):
+            with pytest.raises(ValidationError):
+                VisualOperation.model_validate(
+                    value | {"executed_click": value["executed_click"] | changes}
+                )
+        with pytest.raises(ValidationError):
+            VisualOperation.model_validate(value | {"action_kind": "type"})
+        value.pop("executed_click")
+        assert VisualOperation.model_validate(value).executed_click is None
+    else:
+        with pytest.raises(ValidationError):
+            VisualOperation.model_validate(value)
+
+
 def test_input_reference_blocks_executable_branch_and_never_contains_typed_values():
     from auto_at.contracts.vision import VisualHandoffBranch, VisualHandoffStep
 

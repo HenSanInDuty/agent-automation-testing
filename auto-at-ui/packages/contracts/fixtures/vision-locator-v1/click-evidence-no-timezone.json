@@ -1,0 +1,27 @@
+{
+  "contract": "VisualOperation",
+  "accepted": false,
+  "payload": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "tenant_id": "fixture",
+    "project_id": "00000000-0000-4000-8000-000000000002",
+    "session_id": "00000000-0000-4000-8000-000000000003",
+    "sequence": 1,
+    "purpose": "explore",
+    "action_kind": "click",
+    "status": "completed",
+    "started_at": "2026-10-19T00:00:00Z",
+    "ended_at": "2026-10-19T00:00:02Z",
+    "outcome_code": "observed",
+    "actual_before_frame_id": "00000000-0000-4000-8000-000000000004",
+    "after_unavailable_reason": "capture_failed",
+    "executed_click": {
+      "x": 0.3,
+      "y": 0.4,
+      "viewport_width": 1280,
+      "viewport_height": 720,
+      "before_frame_id": "00000000-0000-4000-8000-000000000004",
+      "confirmed_at": "2026-10-19T00:00:01"
+    }
+  }
+}

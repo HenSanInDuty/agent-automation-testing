@@ -171,6 +171,7 @@ class SqlAlchemyVisualTraceUnitOfWork:
                 "unavailable" if reason else "completed",
                 {"reason_code": reason} if reason in VISION_MODEL_FAILURE_REASONS | {
                     "policy_disabled", "session_timeout", "image_delivery_auth_required",
+                    "initial_capture_failed", "capture_failed",
                 } else None,
             )
             SqlAlchemyAuditEventRepository(session).append(

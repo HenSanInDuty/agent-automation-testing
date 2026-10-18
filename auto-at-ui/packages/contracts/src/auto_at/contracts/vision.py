@@ -317,6 +317,19 @@ class VisualLocatorEvidence(VisualTraceIdentity):
         return self
 
 
+class VisualExecutedClick(BaseModel):
+    """Confirmed Playwright input point in the recorded before viewport, never proposal text."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    x: float = Field(ge=0, le=1, allow_inf_nan=False)
+    y: float = Field(ge=0, le=1, allow_inf_nan=False)
+    viewport_width: int = Field(gt=1, le=16384)
+    viewport_height: int = Field(gt=1, le=16384)
+    before_frame_id: UUID
+    confirmed_at: datetime
+
+
 class VisualOperation(VisualTraceIdentity):
     sequence: int = Field(ge=1, le=100_000)
     attempt: int = Field(default=1, ge=1, le=100)
@@ -341,6 +354,7 @@ class VisualOperation(VisualTraceIdentity):
     after_page_id: UUID | None = None
     url_change: Literal["unchanged", "changed", "unavailable"] = "unavailable"
     visual_change: Literal["unchanged", "changed", "unavailable"] = "unavailable"
+    executed_click: VisualExecutedClick | None = None
 
     @model_validator(mode="after")
     def lifecycle_shape(self) -> "VisualOperation":
@@ -367,6 +381,20 @@ class VisualOperation(VisualTraceIdentity):
                 raise ValueError("frame and unavailable reason are mutually exclusive")
         if self.parent_operation_id == self.id:
             raise ValueError("operation cannot parent itself")
+        if click := self.executed_click:
+            if (
+                self.action_kind != "click"
+                or self.status not in {"completed", "failed"}
+                or click.before_frame_id != self.actual_before_frame_id
+                or self.ended_at is None
+            ):
+                raise ValueError("confirmed click requires finalized click and its before frame")
+            if not all(t.tzinfo is not None for t in (
+                self.started_at, click.confirmed_at, self.ended_at,
+            )):
+                raise ValueError("confirmed click timestamps require time zones")
+            if not self.started_at <= click.confirmed_at <= self.ended_at:
+                raise ValueError("confirmed click timestamp must fall within operation lifetime")
         return self
 
 

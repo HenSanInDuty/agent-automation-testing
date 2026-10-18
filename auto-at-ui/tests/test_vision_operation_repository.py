@@ -23,6 +23,11 @@ def test_short_commits_visible_to_independent_reader_and_finalization_immutable(
     item = operation(scope)
     assert uow.commit_prepared(lease, item) == item
     assert uow.commit_prepared(lease, item) == item
+    # Old JSON omitted the additive field: an idempotent prepare must still match.
+    with factory.begin() as writer:
+        model = writer.get(VisualOperationModel, item.id)
+        model.payload = {k: v for k, v in model.payload.items() if k != "executed_click"}
+    assert uow.commit_prepared(lease, item) == item
     with factory() as reader:
         assert reader.scalar(select(VisualOperationModel)).status == "prepared"
     before = frame(item, "before")
@@ -183,6 +188,24 @@ def test_browser_actions_require_their_own_grounded_locator(trace_database):
     uow.commit_captured(lease, before, b"synthetic-frame", item, locator)
     uow.commit_operation(lease, evolve(item, status="executing"))
     assert uow.read_snapshot(scope)["locators"] == (locator,)
+    running = evolve(item, status="executing")
+    after = frame(item, "after")
+    confirmed_at = datetime.now(UTC)
+    completed = evolve(
+        running, status="completed", ended_at=confirmed_at, outcome_code="observed",
+        actual_after_frame_id=after.metadata.id,
+        executed_click=dict(
+            x=0.25, y=0.3, viewport_width=1280, viewport_height=720,
+            before_frame_id=before.metadata.id, confirmed_at=confirmed_at,
+        ),
+    )
+    uow.commit_captured(lease, after, b"synthetic-frame", completed)
+    assert uow.commit_operation(lease, completed) == completed
+    assert uow.read_snapshot(scope)["operations"][0].executed_click == completed.executed_click
+    with pytest.raises(ValueError, match="immutable"):
+        uow.commit_operation(lease, evolve(
+            completed, executed_click=completed.executed_click.model_dump() | {"x": 0.4},
+        ))
     with pytest.raises(IntegrityError):
         uow.commit_prepared(
             lease,

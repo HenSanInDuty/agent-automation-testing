@@ -34,7 +34,12 @@ export function visualHttpHandler(root: string, secret: () => string | undefined
       }
       else {
         requireVision(uuid(sessionId), "invalid_session_id");
-        if (parts[3] === "operations") {
+        if (parts.length === 4 && parts[3] === "origins" && method === "GET") {
+          result = worker.origins(headerIdentity, sessionId);
+        } else if (parts.length === 4 && parts[3] === "screen" && method === "GET") {
+          const frame = await worker.screen(headerIdentity, sessionId);
+          response.writeHead(200, { "content-type": "image/png", "cache-control": "no-store" }).end(frame); return;
+        } else if (parts[3] === "operations") {
           if (method === "POST") requireVision(payload?.session_id === sessionId, "scope_mismatch");
           if (parts.length === 5 && operationId === "prepare" && method === "POST") result = await worker.prepare(payload);
           else {

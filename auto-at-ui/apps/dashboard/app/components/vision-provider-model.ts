@@ -31,6 +31,10 @@ export function visionConfirmation(saved: VisionPolicy): { expected_provider: st
 }
 
 const failureMessages: Record<string, string> = {
+  state_restore_failed: "Vision could not restore the recorded page state, so exploration stopped. Check the rejected operations below for the underlying cause.",
+  origin_denied: "The browser blocked a request outside the project's allowed origins. Review the permitted domains before starting a new session.",
+  initial_capture_failed: "Vision could not capture the opened page. Exploration stopped before requesting model actions. Use Reload to start a new session.",
+  capture_failed: "Vision could not capture the page after a browser action. Exploration stopped; recorded actions remain available.",
   provider_not_configured: "The Vision provider is not configured on the server. Ask a tenant administrator to check its availability.",
   provider_auth_failed: "The Vision provider rejected access. An administrator must check the server credentials and permissions.",
   provider_billing_required: "The Vision provider requires billing for this request. Exploration stopped; no provider fallback was attempted.",
@@ -40,6 +44,8 @@ const failureMessages: Record<string, string> = {
   model_unavailable: "The Vision model is unavailable. Retained evidence remains available.",
   provider_timeout: "The Vision provider did not respond within the allowed time. Exploration stopped.",
   model_output_invalid: "The Vision model returned an invalid response or coordinates. No action was taken from that response.",
+  vision_reload_active: "This session is still running. Wait for it to finish before reloading.",
+  vision_reload_intent_unavailable: "The saved request has expired or is unavailable. Enter the target URL and exploration intent to start a new session.",
   policy_disabled: "Exploration stopped because its policy or consent was disabled or changed.",
   policy_changed: "Exploration stopped because its policy or consent changed.",
   vision_policy_changed: "Vision settings changed. Review the refreshed settings and confirm a new exploration.",

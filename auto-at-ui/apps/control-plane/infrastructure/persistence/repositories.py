@@ -1054,7 +1054,7 @@ class SqlAlchemyVisualTraceRepository:
         self._check_identity(operation, lease.scope)
         existing = self._get(VisualOperationModel, lease.scope, operation.id)
         if existing:
-            if existing.payload != operation.model_dump(mode="json"):
+            if VisualOperation.model_validate(existing.payload) != operation:
                 raise ValueError("duplicate operation differs from persisted intent")
             return VisualOperation.model_validate(existing.payload)
         if operation.status != "prepared" or operation.sequence != model.next_operation_sequence:

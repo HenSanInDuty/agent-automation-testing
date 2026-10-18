@@ -11,6 +11,7 @@ from auto_at.contracts.vision_worker import (
     VisualWorkerIdentity,
     VisualWorkerOpen,
     VisualWorkerOperationResult,
+    VisualWorkerOriginObservations,
     VisualWorkerPrepare,
 )
 
@@ -64,6 +65,23 @@ class HttpVisualWorker:
         ):
             raise VisualWorkerUnavailable("worker capability response invalid")
         return fingerprint
+
+    async def screen(self, identity: VisualWorkerIdentity) -> bytes:
+        data, content_type = await self._request(
+            "GET", f"/visual-explorations/{identity.session_id}/screen", identity, cap=2_000_000,
+        )
+        if content_type != "image/png" or not data.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise VisualWorkerUnavailable("worker screen invalid")
+        return data
+
+    async def origins(self, identity: VisualWorkerIdentity) -> VisualWorkerOriginObservations:
+        data, _ = await self._request(
+            "GET", f"/visual-explorations/{identity.session_id}/origins", identity,
+        )
+        result = VisualWorkerOriginObservations.model_validate_json(data)
+        if any(getattr(result, key) != value for key, value in identity.model_dump().items()):
+            raise VisualWorkerUnavailable("worker origin observations scope mismatch")
+        return result
 
     async def _result(self, method, path, identity, payload=None):
         data, _ = await self._request(method, path, identity, payload)

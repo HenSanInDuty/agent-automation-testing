@@ -9,7 +9,6 @@ from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AgentStepGuard, resolve_agent_runtime
 from agents.vision.executor import policy_to_step_guard
 from agents.vision.intent import decrypt_visual_intent
-from auto_at.contracts.generation import ProjectExecutionPolicy
 from auto_at.contracts.vision import VisualOperation
 from auto_at.contracts.vision_worker import (
     VisualWorkerAction,
@@ -27,6 +26,7 @@ from domain.vision import (
 from application.vision_handoff import build_vision_handoff
 from application.vision_model_batch import VisionModelBatch, VisionModelSession
 from application.vision_operations import ExecuteVisualOperation, VisualOperationStopped, evolve
+from application.vision_origins import RecordVisualOrigins
 
 
 @dataclass
@@ -73,6 +73,7 @@ class VisionTraceEventProcessor:
         max_states = min(record.max_states, policy.vision_max_states) if policy else 0
         max_hops = min(record.max_hops, policy.vision_max_hops) if policy else 0
         calls = 0
+        model_failure = None
 
         def check_policy():
             current, config, latest = self.uow.context(scope)
@@ -88,10 +89,6 @@ class VisionTraceEventProcessor:
                 or latest is None
                 or live.provider != record.provider
                 or live.model != record.model
-                or latest.allowed_origins != policy.allowed_origins
-                or not ProjectExecutionPolicy(
-                    project_id=record.project_id, allowed_origins=latest.allowed_origins
-                ).allows(record.target_url)
             ):
                 raise VisualOperationStopped("policy_disabled")
             if datetime.now(UTC) >= record.updated_at + timedelta(
@@ -113,6 +110,7 @@ class VisionTraceEventProcessor:
             check_policy,
         )
         opened = False
+        origins = RecordVisualOrigins(operations)
         try:
             if previous_state == "running" or lease.fencing_token > 1:
                 # Recovery is evidence-only: the BFS queue and input values are memory-only.
@@ -229,6 +227,7 @@ class VisionTraceEventProcessor:
                     ),
                 )
                 result = await operations.execute(operation, command)
+                await origins.capture()
                 requests[operation.id], results[operation.id] = command, result
                 fingerprint = result.state_fingerprint or fingerprint
                 if result.operation.status == "unknown":
@@ -247,7 +246,8 @@ class VisionTraceEventProcessor:
                 checkpoint_id=root_checkpoint,
                 checkpoint_state_id=root_state,
             )
-            if root.operation.status != "completed" or root.checkpoint is None:
+            if (root.operation.status != "completed" or root.checkpoint is None
+                    or root.operation.actual_after_frame_id is None):
                 raise VisualOperationStopped("initial_capture_failed")
             visited = 1
             current = Branch(root_state, root.checkpoint, 0, (root.operation.id,), root)
@@ -262,8 +262,10 @@ class VisionTraceEventProcessor:
             last_call = None
 
             async def propose(branch):
-                nonlocal calls, last_call, proposal_sequence
+                nonlocal calls, last_call, proposal_sequence, model_failure
                 live, latest = check_policy()
+                if model_failure:
+                    return
                 if branch.hop >= min(max_hops, latest.vision_max_hops):
                     return
                 remaining = min(max_states, latest.vision_max_states) - visited - len(queue)
@@ -280,7 +282,10 @@ class VisionTraceEventProcessor:
                 remaining = min(max_states, latest.vision_max_states) - visited - len(queue)
                 if remaining < 1 or branch.hop >= min(max_hops, latest.vision_max_hops):
                     return
-                image = self.uow.read_frame(scope, branch.result.operation.actual_after_frame_id)
+                frame_id = branch.result.operation.actual_after_frame_id
+                if frame_id is None:
+                    raise VisualOperationStopped("capture_failed")
+                image = self.uow.read_frame(scope, frame_id)
                 if len(image) > min(record.max_screenshot_bytes, live.max_screenshot_bytes):
                     raise VisualOperationStopped("screenshot_byte_limit")
                 self.uow.progress(
@@ -311,10 +316,20 @@ class VisionTraceEventProcessor:
                     )
                 )
                 check_policy()
+                await origins.capture()
                 if outcome.actions is None:
-                    raise VisualOperationStopped(
-                        vision_model_failure_reason(outcome.failure_reason)
+                    reason = vision_model_failure_reason(outcome.failure_reason)
+                    if reason != "model_output_invalid":
+                        raise VisualOperationStopped(reason)
+                    # A malformed reply supplies no new actions. Previously validated
+                    # siblings remain usable after normal checkpoint/locator checks.
+                    # Do not retry the model or turn partial exploration into success.
+                    model_failure = reason
+                    self.uow.progress(
+                        operations.lease, "candidate.unavailable", f"candidate.failed:{calls}",
+                        {"reason_code": reason},
                     )
+                    return
                 self.uow.progress(
                     operations.lease,
                     "candidate.received",
@@ -470,10 +485,14 @@ class VisionTraceEventProcessor:
                     if str(error) == "handoff_branch_limit"
                     else "handoff_incomplete"
                 )
+            await origins.capture()
             return self.uow.finish(
-                operations.lease, handoff=handoff, intent=intent, handoff_reason=handoff_reason
+                operations.lease, model_failure, handoff=handoff, intent=intent,
+                handoff_reason=handoff_reason,
             )
         except Exception as error:
+            if opened:
+                await origins.capture()
             reason = (
                 "image_delivery_auth_required"
                 if isinstance(error, VisionImageAuthorizationRequired)

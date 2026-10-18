@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CodeBlock } from "./components/code-block";
@@ -10,6 +10,7 @@ import { PageHeader } from "./components/page-header";
 import { EmptyState, LoadingState } from "./components/states";
 import { StatusBadge } from "./components/status-badge";
 import { VisionDashboard } from "./vision-dashboard";
+import { agentWorkspaceTab } from "./components/agent-workspace-model";
 import { ControlPlaneError, decideDraft, getArtifacts, getDraft, getGenerationRequest, getPolicy, getRun, setPolicy, submitGeneration } from "./generation-api";
 import { shouldPollGeneration } from "./generation-polling";
 import type { Artifact, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
@@ -37,8 +38,13 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const [notice, setNotice] = useState("");
   const [decision, setDecision] = useState<boolean | null>(null);
   const [isDeciding, setIsDeciding] = useState(false);
-  const [activeTab, setActiveTab] = useState<"generation" | "vision">("generation");
-  useEffect(() => { if (visionId) setActiveTab("vision"); }, [visionId]);
+  const [activeTab, setActiveTab] = useState<"generation" | "vision">(() => agentWorkspaceTab(draftId));
+  const [visionProjectId, setVisionProjectId] = useState("");
+  const [loadedPolicyProject, setLoadedPolicyProject] = useState("");
+  const policyProjectId = activeTab === "vision" ? visionProjectId : projectId;
+  const policyContext = useRef("");
+  policyContext.current = apiUrl + ":" + policyProjectId;
+  useEffect(() => { setActiveTab(agentWorkspaceTab(draftId)); }, [draftId, visionId]);
   const visionSource = draft?.provenance.vision_source as { session_id?: string } | undefined;
   const canDecide = useMemo(() => draft?.state === "pending_review", [draft]);
 
@@ -64,14 +70,19 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   }, [apiUrl, draft, draftId, generation?.id]);
 
   useEffect(() => {
-    if (!projectId) { setOrigins(""); setSavedOrigins([]); setVisionMaxHops(5); setVisionMaxStates(50); return; }
-    getPolicy(apiUrl, projectId).then((policy) => {
+    let disposed = false;
+    setLoadedPolicyProject("");
+    if (!policyProjectId) { setOrigins(""); setSavedOrigins([]); setVisionMaxHops(5); setVisionMaxStates(50); return; }
+    getPolicy(apiUrl, policyProjectId).then((policy) => {
+      if (disposed) return;
+      setLoadedPolicyProject(policyProjectId);
       setSavedOrigins(policy.allowed_origins);
       setOrigins(policy.allowed_origins.join(", "));
       setVisionMaxHops(policy.vision_max_hops);
       setVisionMaxStates(policy.vision_max_states);
-    }).catch((error) => setNotice(errorMessage(error)));
-  }, [apiUrl, projectId]);
+    }).catch((error) => { if (!disposed) setNotice(errorMessage(error)); });
+    return () => { disposed = true; };
+  }, [apiUrl, policyProjectId]);
 
   useEffect(() => {
     if (!generation || !shouldPollGeneration(generation.state)) return;
@@ -108,12 +119,14 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   }
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    try { const policy = await setPolicy(apiUrl, projectId, { allowed_origins: origins.split(/\s|,/).filter(Boolean), vision_max_hops: visionMaxHops, vision_max_states: visionMaxStates }); setSavedOrigins(policy.allowed_origins); setOrigins(policy.allowed_origins.join(", ")); setVisionMaxHops(policy.vision_max_hops); setVisionMaxStates(policy.vision_max_states); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
-    catch (error) { setNotice(errorMessage(error)); }
+    if (!policyProjectId || loadedPolicyProject !== policyProjectId) return;
+    const expected = policyContext.current;
+    try { const policy = await setPolicy(apiUrl, policyProjectId, { allowed_origins: origins.split(/\s|,/).filter(Boolean), vision_max_hops: visionMaxHops, vision_max_states: visionMaxStates }); if (expected !== policyContext.current) return; setSavedOrigins(policy.allowed_origins); setOrigins(policy.allowed_origins.join(", ")); setVisionMaxHops(policy.vision_max_hops); setVisionMaxStates(policy.vision_max_states); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
+    catch (error) { if (expected === policyContext.current) setNotice(errorMessage(error)); }
   }
-  const renderProjectPolicy = (showVisionLimits: boolean) => <section className="workspace-section"><h2>Project policy</h2><p>Only project administrators can save the origin allowlist{showVisionLimits ? " and Vision tree bounds" : ""}.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com or *" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><p><code>*</code> permits this project to access every HTTP(S) website. Use it only when that broad browser access is intended.</p>{showVisionLimits && <><label className="field">Vision maximum hops <input required type="number" min="1" max="10" value={visionMaxHops} onChange={(e) => setVisionMaxHops(Number(e.target.value))} /></label><label className="field">Vision maximum states <input required type="number" min="1" max="200" value={visionMaxStates} onChange={(e) => setVisionMaxStates(Number(e.target.value))} /></label></>}<div className="form-actions"><button className="button button--secondary" type="submit" disabled={!projectId}>Save project policy</button></div></form><h3>Saved allowed origins</h3>{savedOrigins.length ? <ul className="stack-list">{savedOrigins.map((origin) => <li key={origin}><code>{origin}</code></li>)}</ul> : <p>No origin policy has been saved for this project.</p>}</section>;
+  const renderProjectPolicy = (showVisionLimits: boolean) => <section className="workspace-section"><h2>Project policy</h2>{showVisionLimits && <p>Vision continues across external origins and records them in the session log. The origin allowlist below applies to deterministic test runs.</p>}<p>Only project administrators can save the origin allowlist{showVisionLimits ? " and Vision tree bounds" : ""}.</p><form onSubmit={savePolicy} className="form-grid form-grid--one"><label className="field">Allowed origins <input required placeholder="https://example.com or *" value={origins} onChange={(e) => setOrigins(e.target.value)} /></label><p><code>*</code> permits this project to access every HTTP(S) website. Use it only when that broad browser access is intended.</p>{showVisionLimits && <><label className="field">Vision maximum hops <input required type="number" min="1" max="10" value={visionMaxHops} onChange={(e) => setVisionMaxHops(Number(e.target.value))} /></label><label className="field">Vision maximum states <input required type="number" min="1" max="200" value={visionMaxStates} onChange={(e) => setVisionMaxStates(Number(e.target.value))} /></label></>}<div className="form-actions"><button className="button button--secondary" type="submit" disabled={!policyProjectId || loadedPolicyProject !== policyProjectId}>Save project policy</button></div></form><h3>Saved allowed origins</h3>{savedOrigins.length ? <ul className="stack-list">{savedOrigins.map((origin) => <li key={origin}><code>{origin}</code></li>)}</ul> : <p>No origin policy has been saved for this project.</p>}</section>;
 
-  return <><PageHeader eyebrow="Governed intelligence" title="Agent workspace" description="Request a bounded Playwright draft or explore a site with Vision, then make one auditable decision." />
+  return <><PageHeader title="Agent" description="Watch the website and follow each browser action." />
     <div className="agent-tabs" role="tablist" aria-label="Agent capability"><button type="button" role="tab" aria-selected={activeTab === "generation"} className={`agent-tabs__tab ${activeTab === "generation" ? "agent-tabs__tab--active" : ""}`} onClick={() => setActiveTab("generation")}>Playwright test</button><button type="button" role="tab" aria-selected={activeTab === "vision"} className={`agent-tabs__tab ${activeTab === "vision" ? "agent-tabs__tab--active" : ""}`} onClick={() => setActiveTab("vision")}>Vision Agent</button></div>
     {activeTab === "generation" && <><section className="workspace-section"><h2>Request a Playwright test</h2><p>The dashboard is an API client: it never authorizes, redacts, generates, approves, or executes a test itself.</p>
       <form onSubmit={submit} className="form-grid"><label className="field">Project<select required value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={Boolean(draftId) || !projectOptions.length}><option value="">{projectOptions.length ? "Choose a project" : "No projects available"}</option>{projectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label><label className="field">Target URL <input required type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} readOnly={Boolean(draftId)} /></label><label className="field form-grid--full">Natural-language request <textarea required value={naturalRequest} onChange={(e) => setNaturalRequest(e.target.value)} readOnly={Boolean(draftId)} /></label>{draftId ? <p className="form-grid--full">Source request is shown for review only. Use the decision controls below; this page will not submit another generation request.</p> : <div className="form-actions form-grid--full"><button className="button" type="submit" disabled={!projectId}>Submit for generation</button>{!projectOptions.length && <Link href="/projects">Create a project</Link>}</div>}</form>
@@ -125,6 +138,6 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
     {run && <><section className="workspace-section" aria-label="Deterministic run"><div className="section-heading"><h2>Deterministic v1 run</h2><StatusBadge status={run.status} /></div><ul className="detail-list"><li>Run: <code>{run.id}</code></li><li>Correlation: <code>{run.correlation_id}</code></li></ul><h3>Evidence</h3>{artifacts.length ? <ul className="stack-list">{artifacts.map((artifact) => <li key={artifact.id}>{artifact.kind}: <code>{artifact.checksum}</code> ({artifact.size} bytes)</li>)}</ul> : <EmptyState title="No evidence has been recorded">Artifacts are published by the deterministic runner when the configured artifact policy requires them.</EmptyState>}</section><ActivityTimeline apiUrl={apiUrl} runId={run.id} live={["queued", "running"].includes(run.status)} /></>}
     <ConfirmDialog open={decision !== null} title={decision ? "Approve this draft?" : "Reject this draft?"} description={decision ? "Approval is final and creates one deterministic v1 run." : "Rejection is final and cannot be changed later."} confirmLabel={decision ? "Approve and dispatch" : "Reject draft"} onConfirm={() => { if (decision !== null) void decide(decision); }} onCancel={() => setDecision(null)} busy={isDeciding} />
     </>}
-    {activeTab === "vision" && <VisionDashboard apiUrl={apiUrl} projectPolicy={renderProjectPolicy(true)} />}
+    {activeTab === "vision" && <VisionDashboard apiUrl={apiUrl} onProjectChange={setVisionProjectId} projectPolicy={<>{notice && <p role="status">{notice}</p>}{renderProjectPolicy(true)}</>} />}
   </>;
 }

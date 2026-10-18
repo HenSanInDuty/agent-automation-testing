@@ -12,25 +12,43 @@ export async function inspectState(page: Page): Promise<RuntimeState> {
     const semantics: unknown[] = [], forms: unknown[] = [], presence: unknown[] = [];
     let nodes = 0;
     // Object methods stay self-contained when tsx serializes this browser callback.
-    const traversal = { visit(root: Document | ShadowRoot, path: string) {
+    type Clip = { left: number; top: number; right: number; bottom: number };
+    const traversal = { visit(root: Document | ShadowRoot, path: string, clip: Clip, offsetX = 0, offsetY = 0) {
+      let scopes = 0;
       for (const el of Array.from(root.querySelectorAll("*"))) {
         if (++nodes > 5000) throw new Error("state_structure_limit");
         const rect = el.getBoundingClientRect();
-        const attrs = Array.from(el.attributes).filter((a) => !["value", "style"].includes(a.name)).map((a) => [a.name, a.value.slice(0, 240)]);
-        const text = Array.from(el.childNodes).filter((node) => node.nodeType === Node.TEXT_NODE).map((node) => node.textContent?.slice(0, 240));
-        semantics.push([path, el.tagName, attrs, text, rect.width > 0 && rect.height > 0, Math.round(el.scrollLeft), Math.round(el.scrollTop)]);
+        const bounds = { left: Math.max(clip.left, rect.left + offsetX), top: Math.max(clip.top, rect.top + offsetY),
+          right: Math.min(clip.right, rect.right + offsetX), bottom: Math.min(clip.bottom, rect.bottom + offsetY) };
+        const visible = bounds.right > bounds.left && bounds.bottom > bounds.top &&
+          el.ownerDocument.defaultView!.getComputedStyle(el).visibility === "visible";
+        // Proposals come from a viewport screenshot. Offscreen carousels and
+        // hidden tracking nodes must not invalidate that image's checkpoint.
+        // Keep visible attributes/text and clipped geometry: moving a control,
+        // revealing an overlay or changing its identity still invalidates it.
+        if (visible) {
+          const attrs = Array.from(el.attributes).filter((a) => !["value", "style"].includes(a.name)).map((a) => [a.name, a.value.slice(0, 240)]);
+          const text = Array.from(el.childNodes).filter((node) => node.nodeType === Node.TEXT_NODE).map((node) => node.textContent?.slice(0, 240));
+          const labelled = (el.getAttribute("aria-labelledby") ?? "").split(/\s+/)
+            .map((id) => el.ownerDocument.getElementById(id)?.textContent?.slice(0, 240) ?? "");
+          semantics.push([path, el.tagName, attrs, text, labelled,
+            Object.values(bounds).map(Math.round), Math.round(el.scrollLeft), Math.round(el.scrollTop)]);
+        }
+        // Form presence and values remain page-wide, including hidden/offscreen
+        // inputs. Values never leave worker memory or enter public fingerprints.
         if (el.matches("input,textarea,select,[contenteditable=true]")) {
           const input = el as HTMLInputElement;
           presence.push([path, el.tagName, input.type, input.name, input.disabled, input.readOnly]);
           forms.push([input.value ?? el.textContent, input.checked, (el as HTMLSelectElement).selectedIndex]);
         }
-        if (el.shadowRoot) this.visit(el.shadowRoot, `${path}/shadow/${nodes}`);
+        if (el.shadowRoot) this.visit(el.shadowRoot, `${path}/shadow/${scopes++}`, clip, offsetX, offsetY);
         if (el instanceof HTMLIFrameElement) {
-          try { if (el.contentDocument) this.visit(el.contentDocument, `${path}/frame/${nodes}`); } catch { /* unsupported opaque frame */ }
+          if (el.contentDocument) this.visit(el.contentDocument, `${path}/frame/${scopes++}`, bounds,
+            rect.left + offsetX + el.clientLeft, rect.top + offsetY + el.clientTop);
         }
       }
     } };
-    traversal.visit(document, "page");
+    traversal.visit(document, "page", { left: 0, top: 0, right: innerWidth, bottom: innerHeight });
     return { semantics, forms, presence, scroll_x: Math.round(scrollX), scroll_y: Math.round(scrollY) };
   });
   const state = { url_fingerprint: digest(page.url()), semantic_fingerprint: digest(canonical(observed.semantics)),

@@ -1,6 +1,7 @@
 """Synthetic HTTP and conditional S3 responses; no provider or application database."""
 
 import asyncio
+from datetime import UTC, datetime
 from io import BytesIO
 from uuid import uuid4
 
@@ -15,6 +16,87 @@ from infrastructure.vision_worker import HttpVisualWorker, VisualWorkerUnavailab
 from vision_trace_fixtures import evolve, frame, operation
 
 PNG = b"\x89PNG\r\n\x1a\nfixture"
+
+
+def test_worker_transport_preserves_confirmed_click():
+    intent, before, identity = fixture()
+    now = datetime.now(UTC)
+    operation = evolve(
+        intent, action_kind="click", status="failed", ended_at=now,
+        outcome_code="settle_timeout", actual_before_frame_id=before.metadata.id,
+        after_unavailable_reason="capture_failed",
+        executed_click=dict(x=0.4, y=0.5, viewport_width=1280, viewport_height=720,
+                            before_frame_id=before.metadata.id, confirmed_at=now),
+    )
+    result = VisualWorkerOperationResult(
+        operation=operation, frames=(before.metadata,), locator=None, prepared_handle=uuid4(),
+        state_fingerprint=None, checkpoint=None, semantic_change="unavailable",
+        duration_ms=1, acknowledged=False, replayable=False,
+    )
+
+    async def read():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, json=result.model_dump(mode="json")),
+        )) as client:
+            return await HttpVisualWorker(client, "http://worker.test", "fixture-only").read(
+                identity, intent.id,
+            )
+
+    assert asyncio.run(read()).operation.executed_click == operation.executed_click
+
+
+@pytest.mark.parametrize("wrong_scope", [False, True])
+def test_origin_observation_transport_checks_scope(wrong_scope):
+    identity = VisualWorkerIdentity(
+        tenant_id="tenant", project_id=uuid4(), session_id=uuid4(), fencing_token=3,
+    )
+
+    def response(request):
+        assert request.url.path.endswith(f"/{identity.session_id}/origins")
+        assert request.headers["x-auto-at-vision-fencing-token"] == "3"
+        return httpx.Response(200, json={
+            **identity.model_dump(mode="json"),
+            "tenant_id": "other" if wrong_scope else "tenant", "items": [], "truncated": False,
+        })
+
+    async def read():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
+            worker = HttpVisualWorker(client, "http://worker.test", "fixture-only")
+            return await worker.origins(identity)
+
+    if wrong_scope:
+        with pytest.raises(VisualWorkerUnavailable):
+            asyncio.run(read())
+    else:
+        assert asyncio.run(read()).items == ()
+
+
+@pytest.mark.parametrize("failure", [None, "type", "signature", "oversize"])
+def test_live_screen_transport_is_bounded_and_private(failure):
+    identity = VisualWorkerIdentity(
+        tenant_id="tenant", project_id=uuid4(), session_id=uuid4(), fencing_token=3,
+    )
+
+    def response(request):
+        assert request.url.path.endswith(f"/{identity.session_id}/screen")
+        assert request.headers["x-auto-at-vision-fencing-token"] == "3"
+        assert request.headers["x-auto-at-vision-worker-secret"] == "fixture-only"
+        return httpx.Response(200, content=(
+            PNG + b"x" * 2_000_000 if failure == "oversize"
+            else b"invalid" if failure == "signature" else PNG
+        ), headers={"content-type": "text/plain" if failure == "type" else "image/png"})
+
+    async def read():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
+            return await HttpVisualWorker(client, "http://worker.test", "fixture-only").screen(
+                identity,
+            )
+
+    if failure:
+        with pytest.raises(VisualWorkerUnavailable):
+            asyncio.run(read())
+    else:
+        assert asyncio.run(read()) == PNG
 
 
 def fixture():

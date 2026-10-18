@@ -7,7 +7,11 @@ from uuid import UUID, uuid4
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
 from agents.vision.intent import encrypt_visual_intent
-from auto_at.contracts.generation import ProjectExecutionPolicy, redact_generation_request
+from auto_at.contracts.generation import (
+    ProjectExecutionPolicy,
+    origin_for_url,
+    redact_generation_request,
+)
 from domain.activity import ActivityEvent
 from domain.runs import AuditEvent, OutboxEvent
 from infrastructure.persistence.models import VisualExplorationSessionModel
@@ -84,9 +88,18 @@ class SubmitVisualExploration:
         ):
             raise VisionStateError("vision exploration is disabled by tenant policy")
         project_policy = self._generation.get_policy(tenant_id, project_id)
-        if project_policy is None or not ProjectExecutionPolicy(
-            project_id=project_id, allowed_origins=project_policy.allowed_origins
-        ).allows(target_url):
+        try:
+            origin_for_url(target_url)
+        except ValueError:
+            raise VisionStateError("target URL must be HTTP(S) without credentials") from None
+        if project_policy is None:
+            raise VisionStateError("project exploration limits are not configured")
+        if (
+            not trace_v4_enabled and (not project_policy.allowed_origins
+            or not ProjectExecutionPolicy(
+                project_id=project_id, allowed_origins=project_policy.allowed_origins
+            ).allows(target_url))
+        ):
             raise VisionStateError(
                 "target URL origin is not allowed by the project execution policy"
             )

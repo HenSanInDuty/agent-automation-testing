@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from auto_at.contracts.vision_worker import VisualExternalOrigin
+
 from domain.vision import VISION_MODEL_FAILURE_REASONS
 
 _SENSITIVE_KEYS = {"authorization", "cookie", "password", "secret", "token", "api_key"}
@@ -20,6 +22,17 @@ _STATUSES = {
 }
 
 _VISION_PROGRESS = {
+    "origin.observed": (
+        "info", "External origin observed; browsing continued.",
+        frozenset({"origin", "request_kind"}),
+    ),
+    "origin.observations_limited": (
+        "info", "External-origin log reached its 100-entry limit; browsing continued.",
+        frozenset(),
+    ),
+    "origin.observation_unavailable": (
+        "unavailable", "External-origin observations could not be refreshed.", frozenset(),
+    ),
     "queued": ("queued", "Visual exploration queued.", frozenset()),
     "started": ("running", "Visual exploration started.", frozenset()),
     "state.captured": (
@@ -36,6 +49,10 @@ _VISION_PROGRESS = {
         "running",
         "Visual action candidates were received.",
         frozenset({"state_sequence", "candidate_count"}),
+    ),
+    "candidate.unavailable": (
+        "info", "No new candidates accepted; validated queued candidates may continue.",
+        frozenset({"reason_code"}),
     ),
     "action.recorded": (
         "running",
@@ -208,11 +225,14 @@ class ActivityEvent:
             raise ValueError("vision progress stage or key is invalid")
         status, safe_summary, allowed_keys = definition
         safe_metadata = metadata or {}
+        if stage == "origin.observed":
+            VisualExternalOrigin.model_validate({**safe_metadata, "observed_at": occurred_at})
         if "reason_code" in safe_metadata and safe_metadata["reason_code"] not in {
             "handoff_branch_limit", "handoff_incomplete", "no_eligible_branches",
             "generation_request_unavailable",
             "policy_disabled", "session_timeout", "image_delivery_auth_required",
             "visual_exploration_unavailable", "step_limit",
+            "initial_capture_failed", "capture_failed",
             *VISION_MODEL_FAILURE_REASONS,
         }:
             raise ValueError("vision progress reason is invalid")

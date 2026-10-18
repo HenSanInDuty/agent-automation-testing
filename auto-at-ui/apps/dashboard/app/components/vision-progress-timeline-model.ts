@@ -3,11 +3,15 @@ import type { VisionProgressActivity } from "../generation-types";
 export type VisionProgressConnection = "connecting" | "live" | "polling" | "complete";
 
 const stages: Record<string, string> = {
+  "origin.observed": "External origin recorded",
+  "origin.observations_limited": "External-origin log limit reached",
+  "origin.observation_unavailable": "External-origin log temporarily unavailable",
   queued: "Exploration queued",
   started: "Starting advisory exploration",
   "state.captured": "Capturing a permitted page state",
   "candidate.requested": "Requesting advisory candidates",
   "candidate.received": "Advisory candidates received",
+  "candidate.unavailable": "Invalid model response; continuing queued candidates",
   "action.recorded": "Candidate action recorded",
   "edge.proposed": "Candidate branch proposed",
   "edge.observed": "Candidate branch observed",
@@ -15,7 +19,7 @@ const stages: Record<string, string> = {
   "edge.terminal": "Candidate branch terminal",
   "limit.reached": "Configured exploration limit reached",
   "draft.handoff": "Preparing generated-draft handoff",
-  "operation.prepared": "Before frame saved",
+  "operation.prepared": "Browser action prepared",
   "operation.executing": "Performing browser action",
   "operation.completed": "Browser operation recorded",
   "operation.failed": "Browser operation failed",

@@ -103,6 +103,14 @@ export function validateVision<T = unknown>(name: string, input: unknown): T {
     requireVision(final === (v.ended_at !== null) && v.parent_operation_id !== v.id);
     if (final) requireVision(v.outcome_code && Date.parse(v.ended_at) >= Date.parse(v.started_at));
     if (["executing", "completed"].includes(v.status)) requireVision(v.actual_before_frame_id);
+    if (v.executed_click) {
+      const click = v.executed_click;
+      requireVision(v.action_kind === "click" && ["completed", "failed"].includes(v.status) &&
+        click.before_frame_id === v.actual_before_frame_id && v.ended_at);
+      requireVision([v.started_at, click.confirmed_at, v.ended_at].every((time: string) => /(?:Z|[+-]\d\d:\d\d)$/.test(time)));
+      requireVision(Date.parse(v.started_at) <= Date.parse(click.confirmed_at) &&
+        Date.parse(click.confirmed_at) <= Date.parse(v.ended_at));
+    }
     for (const role of ["before", "after"]) {
       const frame = v[`actual_${role}_frame_id`], reason = v[`${role}_unavailable_reason`];
       requireVision(!(frame && reason));

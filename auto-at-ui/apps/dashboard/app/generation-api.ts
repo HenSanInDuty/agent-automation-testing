@@ -48,6 +48,9 @@ export function setVisionPolicy(apiUrl: string, policy: VisionPolicy) { return a
 export function submitVisualExploration(apiUrl: string, payload: { project_id: string; target_url: string; task_intent: string; use_vision: true; expected_provider?: string; expected_model?: string }) {
   return apiRequest<VisualExploration>(apiUrl, "/api/v1/vision/explorations", { method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify(payload) });
 }
+export function reloadVisualExploration(apiUrl: string, sessionId: string, confirmation: { expected_provider: string; expected_model: string }) {
+  return apiRequest<VisualExploration>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/reload`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify(confirmation) });
+}
 export function listVisualExplorations(apiUrl: string, projectId: string) { return apiRequest<{ items: VisualExploration[]; total: number }>(apiUrl, `/api/v1/vision/explorations?project_id=${encodeURIComponent(projectId)}`); }
 export function getVisualExploration(apiUrl: string, id: string) { return apiRequest<VisualExploration>(apiUrl, `/api/v1/vision/explorations/${id}`); }
 export function listVisualActions(apiUrl: string, id: string) { return apiRequest<VisualAction[]>(apiUrl, `/api/v1/vision/explorations/${id}/actions`); }
@@ -96,6 +99,11 @@ export async function getOperationFrameBlob(apiUrl: string, sessionId: string, f
   const response = await fetch(`${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/operation-frames/${encodeURIComponent(frameId)}`, { credentials: "include", signal, cache: "no-store" });
   if (!response.ok) throw new ControlPlaneError(response.status, "Frame unavailable or access revoked.");
   return response.blob();
+}
+export async function getVisionScreen(apiUrl: string, sessionId: string, signal?: AbortSignal): Promise<Blob | null> {
+  const response = await fetch(`${apiUrl}/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/screen`, { credentials: "include", signal, cache: "no-store" });
+  if (!response.ok) throw new ControlPlaneError(response.status, "Live screen unavailable.");
+  return response.status === 204 ? null : response.blob();
 }
 export function deleteOperationFrames(apiUrl: string, sessionId: string, frameId?: string) {
   return apiRequest<void>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/operation-frames${frameId ? `/${encodeURIComponent(frameId)}` : ""}`, { method: "DELETE", body: JSON.stringify({ confirm: true }) });

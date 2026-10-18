@@ -187,6 +187,10 @@ def test_provider_browser_trace_and_safe_stop(
         "invalid": "model_output_invalid", "coordinates": "model_output_invalid",
         "missing_key": "provider_not_configured",
     }.get(variant, "policy_disabled" if variant != "success" else None)
+    if backend == "v4" and variant == "origin_after":
+        # v4 records external origins without using the deterministic allowlist
+        # as a gate. Legacy sessions still enforce their saved origin policy.
+        reason = None
     assert asyncio.run(scenario()) == ("unavailable" if reason else "completed")
     assert len(requests) == (0 if variant in {"missing_key", "switch_before"} else 1)
     record = uow.get_session(scope.tenant_id, scope.session_id)

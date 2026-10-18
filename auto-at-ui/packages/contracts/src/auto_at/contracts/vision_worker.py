@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Literal
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from auto_at.contracts.vision import (
@@ -12,7 +13,7 @@ from auto_at.contracts.vision import (
     VisualOperation,
     VisualOperationFrame,
 )
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class VisualWorkerIdentity(BaseModel):
@@ -27,12 +28,37 @@ class VisualWorkerIdentity(BaseModel):
 
 class VisualWorkerOpen(VisualWorkerIdentity):
     target_url: str = Field(min_length=1, max_length=2000)
-    allowed_origins: tuple[str, ...] = Field(min_length=1, max_length=100)
+    allowed_origins: tuple[str, ...] = Field(min_length=0, max_length=100)
     deadline: datetime
     max_session_seconds: int = Field(ge=1, le=3600)
     max_states: int = Field(ge=1, le=200)
     max_hops: int = Field(ge=1, le=10)
     max_screenshot_bytes: int = Field(ge=1024, le=5_000_000)
+
+
+class VisualExternalOrigin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    origin: str = Field(min_length=1, max_length=500)
+    request_kind: Literal["navigation", "popup", "resource", "websocket"]
+    observed_at: datetime
+
+    @field_validator("origin")
+    @classmethod
+    def origin_only(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None
+                or parsed.path or parsed.query or parsed.fragment
+                or value != f"{parsed.scheme}://{parsed.netloc}"
+                or any(char.isspace() or ord(char) < 32 for char in value)):
+            raise ValueError("observation must contain only an HTTP origin")
+        return value
+
+
+class VisualWorkerOriginObservations(VisualWorkerIdentity):
+    items: tuple[VisualExternalOrigin, ...] = Field(max_length=100)
+    truncated: bool
 
 
 class VisualWorkerAction(BaseModel):

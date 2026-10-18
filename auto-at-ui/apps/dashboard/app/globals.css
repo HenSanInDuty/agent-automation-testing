@@ -103,3 +103,65 @@ h3 { font-size: 1rem; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
 
 .vision-counts { display:grid; grid-template-columns:repeat(auto-fit,minmax(8rem,1fr)); gap:1rem; }.vision-counts dd { margin:0; font-size:1.35rem; font-weight:700; }.vision-operation-list { max-height:22rem; overflow:auto; padding-left:1.5rem; }.vision-operation-list li { margin:.5rem 0; }.vision-operation-list [aria-current=step] { outline:2px solid var(--color-focus); }.vision-operation-frames { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }.vision-operation-frames figure { margin:0; min-width:0; }.vision-operation-frames img { width:100%; }.vision-operation-frames figcaption { margin:.5rem 0; } @media(max-width:700px) { .vision-operation-frames { grid-template-columns:1fr; } }
+
+.vision-workspace, .vision-session-detail { display: grid; gap: var(--space-5); min-width: 0; }
+.vision-workspace > *, .vision-session-detail > * { min-width: 0; margin-block: 0; }
+.vision-workspace > .workspace-section, .vision-session-detail > .workspace-section { margin-top: 0; }
+.vision-workspace .workspace-section { overflow-wrap: anywhere; }
+.vision-workspace details > section { margin-top: var(--space-4); }
+.vision-live-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: var(--space-5); align-items: stretch; }
+.vision-live-workspace > .workspace-section { display: flex; flex-direction: column; height: clamp(28rem, 40vw, 34rem); min-width: 0; margin: 0; }
+.vision-live-workspace h2 { margin-bottom: var(--space-2); }
+.vision-live-workspace p { margin-bottom: var(--space-3); }
+.vision-live-workspace > .workspace-section > :last-child { margin-bottom: 0; }
+.vision-screen-viewport { display: grid; flex: 1; min-height: 0; place-items: center; overflow: hidden; margin-bottom: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-subtle); }
+.vision-screen-viewport img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.vision-screen-viewport > p { padding: var(--space-4); text-align: center; color: var(--color-ink-muted); }
+.vision-live-workspace [role="log"] { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+.vision-progress-card .stack-list { display: grid; gap: var(--space-3); margin: 0; padding-left: 1.25rem; }
+.vision-progress-card small { display: block; margin-top: var(--space-1); color: var(--color-ink-muted); }
+@media (max-width: 900px) {
+  .vision-live-workspace { grid-template-columns: 1fr; }
+  .vision-live-workspace > .workspace-section { height: auto; }
+  .vision-screen-viewport { flex: auto; aspect-ratio: 16 / 9; }
+  .vision-live-workspace [role="log"] { flex: auto; max-height: 24rem; }
+}
+.vision-exploration-report { scroll-margin-top: 24px; }
+.vision-exploration-report .table-wrap { max-height: 32rem; }
+.vision-exploration-report caption { padding: 1rem; text-align: left; font-weight: 600; }
+.vision-exploration-report td { overflow-wrap: anywhere; }
+.vision-session-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.vision-session-toolbar .button { font-size: .875rem; }
+.vision-workspace [hidden] { display: none; }
+.vision-live-workspace .vision-operation-list { flex: 1; min-height: 0; max-height: none; padding: 3px; margin: var(--space-3) 0; list-style: none; overflow-y: auto; }
+.vision-operation-list li { margin: 0 0 var(--space-2); }
+.vision-step { display: flex; gap: var(--space-3); width: 100%; padding: var(--space-3); text-align: left; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--color-ink); }
+.vision-step:hover { background: var(--color-surface-subtle); }
+.vision-step[aria-current="step"] { background: #edf3ff; outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.vision-step strong, .vision-step small { display: block; }
+.vision-step small { color: var(--color-ink-muted); font-size: .8rem; margin-top: var(--space-1); }
+.vision-step-number { flex: none; color: var(--color-ink-muted); font-size: .8rem; padding-top: .15rem; }
+.vision-steps-card .section-heading { flex-wrap: wrap; }
+.vision-steps-card .section-heading label, .vision-step-filters, .vision-trace-position, .vision-selected-step { font-size: .8125rem; }
+.vision-step-filters[open] { max-height: 10rem; overflow: auto; }
+.vision-trace-position input { display: block; width: 100%; }
+.vision-selected-step { border-top: 1px solid var(--color-border); padding-top: var(--space-2); margin-top: var(--space-2); }
+.vision-selected-step p { margin: var(--space-1) 0 0; color: var(--color-ink-muted); }
+.vision-screen-card > .button-row { margin-bottom: var(--space-2); }
+.vision-result-compact p:last-child { margin-bottom: 0; }
+.vision-report-link { justify-self: start; font-size: .875rem; }
+.vision-settings-notice { font-size: .875rem; color: var(--color-ink-muted); }
+.vision-progress-card [role="log"] { max-height: 24rem; overflow-y: auto; }
+.vision-screen-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.vision-screen-content .vision-screen-viewport { position: relative; }
+.vision-click-marker { position: absolute; z-index: 1; width: 32px; height: 32px; border: 3px solid #facc15; border-radius: 50%; background: rgb(250 204 21 / .15); box-shadow: 0 0 0 2px #172033, 0 0 0 4px rgb(255 255 255 / .9); transform: translate(-50%, -50%); pointer-events: none; }
+.vision-click-marker::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: #172033; transform: translate(-50%, -50%); }
+.vision-click-marker--pulse { animation: vision-click-pulse .6s ease-out 2; }
+.vision-click-caption { color: var(--color-ink-muted); font-size: .75rem; margin: 0; }
+@keyframes vision-click-pulse { from { box-shadow: 0 0 0 2px #172033, 0 0 0 4px rgb(250 204 21 / .7); } to { box-shadow: 0 0 0 2px #172033, 0 0 0 12px rgb(250 204 21 / 0); } }
+@media (prefers-reduced-motion: reduce) { .vision-click-marker--pulse { animation: none; } }
+@media (max-width: 900px) {
+  .vision-live-workspace .vision-operation-list { flex: auto; max-height: 20rem; }
+  .vision-session-toolbar { align-items: flex-start; }
+}
+.vision-exploration-report thead { position: sticky; top: 0; background: var(--color-surface); }

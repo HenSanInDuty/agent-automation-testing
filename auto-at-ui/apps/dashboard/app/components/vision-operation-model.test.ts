@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { selectedOperation, shouldPollVisionResult, visionResultLabel } from "./vision-operation-model.ts";
+import { operationLabel, operationStatus, selectedOperation, shouldPollVisionResult, visionResultLabel } from "./vision-operation-model.ts";
+
+test("steps distinguish execution outcomes and hide technical selectors", () => {
+  assert.equal(operationStatus("rejected"), "Not executed");
+  assert.equal(operationStatus("unknown"), "Outcome unknown");
+  assert.equal(operationStatus("completed"), "Performed");
+  const operation = { action_kind: "click" } as never;
+  assert.equal(operationLabel(operation, { status: "verified", descriptor: { strategy: "role", value: "Open details" } } as never), "Click “Open details”");
+  assert.equal(operationLabel(operation, { status: "verified", descriptor: { strategy: "css", value: '[name="internal"]' } } as never), "Click");
+});
 
 test("polling preserves a scrubbed operation and follows latest only when enabled", () => {
   const items = [{ id: "root" }, { id: "a" }, { id: "restore" }, { id: "b" }] as never;

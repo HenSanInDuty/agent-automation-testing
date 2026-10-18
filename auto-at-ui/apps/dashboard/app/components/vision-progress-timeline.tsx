@@ -18,6 +18,9 @@ export function VisionProgressTimeline({ apiUrl, sessionId, live, onActivity }: 
 }) {
   const [items, setItems] = useState<VisionProgressActivity[]>([]);
   const [connection, setConnection] = useState<VisionProgressConnection>("connecting");
+  const [error, setError] = useState("");
+  const log = useRef<HTMLDivElement>(null);
+  const follow = useRef(true);
   const onActivityRef = useRef(onActivity);
   onActivityRef.current = onActivity;
 
@@ -26,10 +29,11 @@ export function VisionProgressTimeline({ apiUrl, sessionId, live, onActivity }: 
     let timer: number | undefined;
     const refresh = () => listVisionProgress(apiUrl, sessionId).then((events) => {
       if (!disposed) {
-        setItems(orderedVisionProgress(events));
+        setItems((current) => orderedVisionProgress([...current, ...events]));
+        setError("");
         onActivityRef.current();
       }
-    }).catch(() => undefined);
+    }).catch(() => { if (!disposed) setError("Progress history is unavailable. Retrying while the session is running."); });
     const polling = () => {
       setConnection("polling");
       timer = window.setInterval(refresh, 5_000);
@@ -63,8 +67,13 @@ export function VisionProgressTimeline({ apiUrl, sessionId, live, onActivity }: 
     return () => { disposed = true; source.close(); if (timer) window.clearInterval(timer); };
   }, [apiUrl, live, sessionId]);
 
-  return <section className="workspace-section" aria-label="Advisory session progress">
-    <div className="section-heading"><h3>Advisory session progress</h3><small aria-live="polite">{visionConnectionLabel(connection)}</small></div>
-    {items.length ? <ol className="stack-list">{items.map((item) => <li key={item.id}><StatusBadge status={item.status} /> {visionProgressLabel(item.stage)}<small>{item.safe_summary} / {new Date(item.occurred_at).toLocaleTimeString()}</small></li>)}</ol> : <p>Waiting for safe advisory progress.</p>}
+  useEffect(() => { if (log.current && follow.current) log.current.scrollTop = log.current.scrollHeight; }, [items]);
+
+  return <section className="workspace-section vision-progress-card" aria-label="Advisory session progress">
+    <h2>Advisory session progress</h2><p aria-live="polite">{visionConnectionLabel(connection)}</p>
+    {error && <p role="status">{error}</p>}
+    <div ref={log} role="log" aria-live="polite" onScroll={() => { const node = log.current; if (node) follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 40; }}>
+      {items.length ? <ol className="stack-list">{items.map((item) => <li key={item.id}><StatusBadge status={item.status} /> {visionProgressLabel(item.stage)}<small>{item.safe_summary} / {new Date(item.occurred_at).toLocaleTimeString()}</small>{item.stage === "origin.observed" && typeof item.metadata.origin === "string" && <small><code>{item.metadata.origin}</code> · {item.metadata.request_kind}</small>}{typeof item.metadata.reason_code === "string" && <small>{item.metadata.reason_code.replaceAll("_", " ")}</small>}</li>)}</ol> : <p>{live ? "Waiting for safe advisory progress." : "No progress events were saved for this session."}</p>}
+    </div>
   </section>;
 }

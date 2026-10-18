@@ -1,5 +1,103 @@
 # Vision agent operational runbook
 
+## Exploration reports and partial coverage
+
+Open **View exploration report** on a saved Vision session to see recorded
+click/type actions, rejected actions, completed scrolls, unattempted candidates,
+per-operation observations, the stopping reason and the session's saved limits.
+**Download report JSON** uses the existing authorized result export. This report
+is computed from retained trace metadata and is available for historical,
+interrupted and cancelled sessions without invoking a model or creating a run.
+It never labels observations as passing tests or asserts full page coverage.
+The separate Playwright execution report still requires draft approval and a run.
+
+An invalid model reply (`model_output_invalid`) creates no new actions. The v4
+processor records `candidate.unavailable`, stops further model calls and drains
+already validated queued candidates using normal restoration/locator checks and
+existing time/state limits. The final session remains unavailable/partial. Provider
+authentication, quota, policy, consent, unknown-action and restoration failures
+retain their stop behavior. No automatic model retry or budget increase is added.
+Prompt v6 adds explicit normalized-coordinate arithmetic and short outcome text;
+response validation and the 1000-token cap remain unchanged.
+
+## External origins in v4 exploration
+
+Vision follows external HTTP(S) navigation, redirects, popups, subresources and
+WebSockets without using the deterministic runner origin allowlist as a gate.
+The target origin is the reference site; other origins are recorded as
+`origin.observed` events in the private, tenant-scoped activity log. Each entry
+contains only the origin and request kind (navigation, popup, resource or
+websocket), with no credentials, path, query or fragment. Duplicate origin/kind
+pairs are collapsed; the session retains at most 100 pairs and emits an explicit
+limit event if more are seen. Observations are collected after browser/model
+steps and at completion, including failed explorations. The worker endpoint
+requires the shared secret and matching tenant, project, session and fencing token.
+The normal time, state/hop, action, screenshot, consent and approval limits still
+apply. Legacy exploration and deterministic test-run policies are unchanged.
+Deploy the API and both workers together for the additive private observation
+contract; no execution request/result schema or database migration is changed.
+
+## Live browser view
+
+The Agent page opens Vision by default; a draft deep link opens its review instead.
+The v4 workspace puts the website beside **Browser steps**. **New exploration**
+opens the request form; **History** opens saved sessions. Settings, exploration
+reports and technical details are collapsed. Progress still updates while details
+are closed. Select a step to view its **Before** or **After** image in the same
+viewer, then use **Return to live** to resume following.
+
+The dashboard polls the private `/api/v1/vision/explorations/{id}/screen` endpoint
+once per second after each response. This is a live screenshot preview, not a
+video recording. Safe progress events arrive through the existing SSE endpoint,
+with five-second polling if the stream disconnects. Completed sessions show the
+last retained page screenshot, or an explicit capture failure, without polling
+the worker.
+
+Confirmed clicks carry optional `executed_click` evidence: normalized viewport
+coordinates, viewport dimensions, the operation's before-frame ID and confirmation
+time. A yellow ring appears only over that retained before image after it loads.
+The worker records this only after Playwright confirms the click; a later settling
+failure can retain the point while the operation remains failed. Rejected, unknown
+or historical operations without this evidence have no inferred click marker.
+Transformed/zoomed, clipped, iframe or inconsistent viewport geometry may omit the
+point. No coordinates are backfilled from proposals or bounding-box centers.
+
+While following an active session, a newly observed confirmed click briefly shows
+its recorded before image for 1.2 seconds after image load, then returns to live.
+Trace refresh is normally five seconds, so this is not synchronized cursor video.
+An initial history load or resuming Follow does not replay old clicks; a batch
+previews only its newest click. Repeated polls do not repeat the animation. All
+steps remain selectable for static replay. After images and arbitrary live images
+never receive the earlier click's marker. Reduced motion disables the pulse.
+
+The ring follows the displayed bitmap through resizing and letterboxing. A missing,
+deleted, denied, undecodable or incompatible image receives no marker. Switching
+steps or sessions cancels pending image work and discards the prior overlay.
+The overlay is dashboard-only: target DOM, stored PNG bytes and execution verdicts
+are unchanged. Frame authorization, private no-store fetches, consent and explicit
+deletion remain as before.
+
+For the additive click-evidence rollout, drain active local sessions and deploy
+the updated control-plane/Temporal readers before the updated Playwright writer;
+deploy the dashboard alongside them. No SQL migration is needed. New readers
+accept historical payloads without the field. After new metadata has been stored,
+keep compatible readers: older strict readers reject the added field. Rolling back
+the UI is independent; never remove evidence to make a backend downgrade work.
+
+Preview uses the same human project READ authorization as private evidence;
+service principals cannot access it. Worker requests carry the server-side
+secret, tenant/project/session scope and current fencing token. Captures are
+read-only, capped at 2 MB (and the session screenshot limit), bounded by the
+session deadline and a three-second capture timeout, and shared across viewers
+for one second. Responses are `no-store`; preview bytes are held only in memory
+and are not retained or sent to the model. The existing persisted evidence and
+operation audit remain independent. Screenshots can contain target-page data.
+
+Chromium viewport captures use CDP without waiting for web fonts. A missing
+initial page capture stops with `initial_capture_failed` before any model call;
+it cannot be treated as completed coverage. Reload creates a separate session
+from the saved request and preserves the old operation history.
+
 ## Local evaluation only
 
 Vision exploration is disabled by default. For the Hugging Face path, use an
@@ -146,6 +244,12 @@ correlation IDs, payloads, ciphertext, prompts, screenshots, URLs, or exception 
 
 Open `/agent?vision=<session_id>` to read the saved result, chronological operations,
 selected before/after images, branch paths and verified/unresolved locator catalog.
+Use **Reload** on a finished session to start a new session with its saved target
+and intent, after confirming the currently saved provider/model. The original
+session stays in history. Reload requires submission permission, current Vision
+consent and a valid HTTP(S) target (legacy sessions also check the origin policy); an expired saved intent requires entering
+a new request. The Vision Agent tab always submits Vision requests and has no
+separate "Use Vision Agent" toggle.
 Selecting a historical frame does not move the browser. Enable Follow latest to
 follow new operations; scrubbing keeps your selection through polling. Legacy
 sessions retain their original frame/trajectory view and are labeled evidence-only.
@@ -165,6 +269,21 @@ image/outcome immediately afterward, then acknowledges staged-file cleanup.
 Lost responses reconcile the same operation ID. Unknown actions are not repeated.
 Sibling branches require checkpoint verification; back, popup closure and replay
 remain separate trace operations. URL equality alone does not prove restoration.
+Checkpoint semantics cover the rendered viewport (attributes, text, accessible
+labels and clipped geometry), so offscreen carousel rotations do not invalidate
+an unchanged screenshot. URL, scroll position, and page-wide form presence and
+private values still participate in verification. Visible changes, moved controls,
+overlays and changed form values invalidate the checkpoint; locator identity is
+checked again immediately before a click. This applies only to new Vision browser
+sessions and does not change deterministic test execution contracts or verdicts.
+An after image is sampled between matching state observations with a bounded,
+read-only capture retry (at most 10 seconds within the session deadline). Its
+checkpoint uses that captured state, including any
+hydration completed since settling. Restore validation uses the
+captured state; capture failure never creates a checkpoint for model proposals.
+Clicks that change URL or open a popup, history navigation and explicit navigation
+get up to 10 seconds to settle the destination; local actions retain the shorter
+1.5-second settle bound. Both remain capped by the session deadline.
 
 Typed inputs remain unbound in generated drafts and block their affected branches.
 Ambiguous, sensitive or unsupported targets remain unresolved; canvas, closed
@@ -277,6 +396,16 @@ conditions, including product improvement. Before each canary, verify current
 quota in [Google AI Studio](https://aistudio.google.com/). Documentation was
 rechecked on 2026-10-17; presence of a key is not proof of credentials or free quota.
 
+Candidate requests now use a JSON schema derived from the shared visual action
+contract, including coordinates in `[0,1]` and the requested candidate count.
+Prompt `vision-exploration-v5` requires scrolling before proposing offscreen
+controls. A provider response can still be rejected: the local validator remains
+authoritative and never clamps coordinates or accepts a partially invalid batch.
+The token, request, step and hop limits are unchanged. A session ending after
+setup with `model_output_invalid` has no valid next action; increasing hop limits
+does not address that failure. Start a new session after deploying the fix;
+terminal sessions retain their original evidence.
+
 Only run a live canary when requested with a ready key, safe target and tenant:
 one synthetic session, `max_steps=3`, `max_requests_per_minute=5`,
 `max_session_seconds=120`, no automatic retry or fallback. Do not enable billing.
@@ -306,7 +435,7 @@ Never log provider request bodies, image data, key values or raw error bodies.
 | `provider_timeout` | Request/session deadline reached. |
 | `provider_unavailable`, `model_unavailable` | Transport/provider failure or legacy generic reason. |
 | `model_output_invalid` | Invalid JSON, refusal, truncation, schema or coordinates; no derived action. |
-| `policy_disabled` | Current policy, consent, recipient or allowed origins changed. |
+| `policy_disabled` | Current policy, consent or recipient changed (legacy sessions also check allowed origins). |
 | `vision_policy_changed` | Submission confirmation is stale; refresh and confirm again. |
 | `image_delivery_auth_required` | HF Drive grant must be renewed; Gemini does not use this path. |
 

@@ -20,6 +20,7 @@ from auto_at.contracts.vision_worker import (
     VisualWorkerIdentity,
     VisualWorkerOpen,
     VisualWorkerOperationResult,
+    VisualWorkerOriginObservations,
     VisualWorkerPrepare,
 )
 
@@ -165,6 +166,10 @@ class VisualTraceUnitOfWork(Protocol):
 
 
 class VisualWorkerTransport(Protocol):
+    async def origins(self, identity: VisualWorkerIdentity) -> VisualWorkerOriginObservations: ...
+
+    async def screen(self, identity: VisualWorkerIdentity) -> bytes: ...
+
     async def open(self, request: VisualWorkerOpen) -> str: ...
 
     async def prepare(self, request: VisualWorkerPrepare) -> VisualWorkerOperationResult: ...

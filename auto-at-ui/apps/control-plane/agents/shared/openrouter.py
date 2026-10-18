@@ -88,12 +88,14 @@ def create_language_model(settings: Settings, runtime: AgentRuntimeConfig) -> La
 def create_vision_language_model(
     settings: Settings, policy: VisionPolicy, *, timeout_seconds: float = 30,
     transport: httpx.AsyncBaseTransport | None = None,
+    max_candidates: int | None = None,
 ) -> LanguageModel:
     """Construct a vision gateway from its own policy; text selection is separate."""
     if policy.provider == "gemini":
         return GeminiVisionLanguageModel(
             api_key=settings.gemini_api_key, model=policy.model,
             timeout_seconds=timeout_seconds, transport=transport,
+            max_candidates=max_candidates,
         )
     if policy.provider != "huggingface":
         raise ValueError(f"unsupported vision provider: {policy.provider}")

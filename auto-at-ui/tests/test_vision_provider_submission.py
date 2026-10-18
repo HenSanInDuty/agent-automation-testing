@@ -84,6 +84,27 @@ def counts(factory):
         ))
 
 
+@pytest.mark.parametrize("allowed", [[], ["https://unrelated.fixture.test"]])
+def test_v4_submission_does_not_require_an_origin_allowlist(submission, trace_database, allowed):
+    client, payload, _, settings = submission
+    settings.vision_trace_v4_enabled = True
+    factory, scope, *_ = trace_database
+    with factory.begin() as session:
+        session.get(ProjectExecutionPolicyModel, scope.project_id).allowed_origins = allowed
+    response = submit(client, payload)
+    assert response.status_code == 202, response.text
+    assert response.json()["trace_version"] == "v4"
+    with factory() as session:
+        assert session.get(ProjectExecutionPolicyModel, scope.project_id).allowed_origins == allowed
+
+
+@pytest.mark.parametrize("target", ["file:///tmp/test", "https://user:secret@fixture.test"])
+def test_v4_submission_still_validates_target_url(submission, target):
+    client, payload, _, settings = submission
+    settings.vision_trace_v4_enabled = True
+    assert submit(client, payload | {"target_url": target}).status_code == 422
+
+
 @pytest.mark.parametrize("v4", [False, True])
 def test_snapshot_and_retry_survive_policy_switch_and_revocation(submission, trace_database, v4):
     client, payload, policy, settings = submission

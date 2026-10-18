@@ -1,6 +1,6 @@
 # Gehihi synthetic evaluation
 
-Provider `gemini`; model `gemini-3.8-flash`; prompt `vision-exploration-v4`;
+Provider `gemini`; model `gemini-3.8-flash`; prompt `vision-exploration-v6`;
 transport `inline_png_mock_http`; fixture version `gehihi-controls-v1`;
 Playwright `1.50.1`. All model responses are **mocked**, never real model output.
 Execution date: 2026-10-17 (Asia/Saigon). Live canary: **not run**.
@@ -13,6 +13,15 @@ The manifest also points to browser/SQL tests; listing a case is not a claim tha
 the adapter test alone ran a browser or persisted a trace.
 
 ## Reproduce safely
+
+2026-10-19 click-evidence maintenance: the manifest hash for
+`workers/playwright/src/vision-operations.spec.ts` was refreshed after adding
+confirmed-click coordinate and before-frame assertions. The response cases and
+expected metrics are unchanged. The provider integration hash also reflects a
+corrected `origin_after-v4` expectation: existing v4 sessions observe origins
+without allowlist gating, while legacy sessions still stop. Current validation is recorded in
+[the focused playback plan](../../../plan/19102026043228-agent-focused-web-playback/README.md);
+the dated measurements below remain historical results.
 
 Use the repository's uv environment, pinned pnpm and installed Playwright browser.
 Use an unused owned fixture port, never the application database on 5432:
@@ -103,9 +112,74 @@ Exact commands, files and deviations are in the canonical
 The isolated PostgreSQL container and local dashboard process were stopped after
 validation; no application stack service was restarted.
 
-No prompt behavior or token guards changed. Mocked output cannot establish that
+The 2026-10-17 implementation did not change prompt behavior or token guards.
+Mocked output cannot establish that
 the 1000-token response limit is sufficient for real reasoning/output. If a future
 authorized canary truncates or exhausts quota, retain its safe failure and seek a
 separate decision before changing limits/model. The stable model name is not an
 immutable weights hash. Free-tier account availability and zero monetary cost
 are not certified by these checks.
+
+## Coordinate regression (2026-10-18)
+
+Prompt v5 explicitly confines click/type coordinates to the current screenshot
+and requests scrolling before addressing offscreen controls. Gemini candidate
+batches now use a JSON schema derived from the shared action contract, including
+coordinate ranges and the requested candidate cap. The manifest source hashes
+were refreshed for this revision; the historical full-suite results above refer
+to the previous revision. Token and traversal limits are unchanged.
+
+A live, read-only adapter replay reproduced `invalid_candidate_schema` with
+multiple click `y` values above 1, despite a complete JSON response. Replaying the
+same authorized image after the fix produced 17 validated candidates (16 click,
+1 scroll), 809 completion tokens, and a normal stop. No browser action was
+dispatched during this diagnostic. Raw image, intent and provider content are
+not included here. This verifies the corrected adapter response for that image,
+not complete browser coverage or a full live-provider exploration canary.
+
+Validation for this revision: repository Ruff passed; the isolated offline
+harness passed 187 tests with no skips, covering the adapter, model batch,
+executor, runtime, benchmark manifest, policy, submission and provider browser
+integration suites. Browser integration uses mocked provider HTTP and checks
+navigation followed by a verified click with four retained frames, plus safe
+stops on invalid coordinates. One existing Starlette/httpx deprecation warning
+remains. The diagnostic PostgreSQL container was removed after the tests.
+
+## Dynamic viewport and capture regression (2026-10-18)
+
+A real session stopped with `state_restore_failed` after setup and two rejected
+restore/replay operations. Offscreen carousel mutations invalidated the whole-DOM
+fingerprint while the model was thinking. The worker now fingerprints rendered
+viewport semantics and geometry, retaining URL, scroll and page-wide form guards.
+Checkpoint state is bound to a stable after capture, and navigation via a link
+gets the same bounded destination-settle window as explicit navigation.
+
+The isolated live-persistence suite passed 23 tests, including a continuously
+animated offscreen fixture and two sibling clicks. Browser regression checks
+cover moved controls, overlays, iframe content, hidden accessible labels,
+offscreen form values, hydration during capture, failed restoration, missing
+after images and slow destination hydration. TypeScript checks passed.
+
+After rebuilding the Docker worker, an owned, temporary browser on the authorized
+target kept its initial checkpoint valid after an 11-second model-delay simulation
+and completed five operations: navigate, click Events, back, replay navigation,
+click Guide. All five retained paired frames. This smoke uses predetermined
+coordinates through normal worker grounding; it does not call Gemini, assert
+complete button coverage, create an application session or change test verdicts.
+Temporary browser artifacts and the isolated database container were removed.
+
+## Partial-report and invalid-reply regression (2026-10-18)
+
+Prompt v6 adds explicit normalization arithmetic and a decimal-place example for
+controls near the top edge, plus short expected outcomes within the existing
+response cap. No live-provider accuracy claim is made for this prompt revision.
+Malformed responses no longer discard already validated sibling candidates;
+no model retry occurs, and the final status remains partial/unavailable.
+Every session result now includes an observation report independent of generated
+drafts and deterministic execution reports, including historical stopped sessions.
+
+Validation: 137 isolated Python checks passed across live persistence, report
+routes/authorization, executor, benchmark manifest, model batch and Gemini adapter
+suites. Twenty dashboard browser tests passed, including report discovery,
+download links, interrupted-session findings and mobile layout. TypeScript,
+Ruff and production dashboard build checks passed. Fixture providers remain mocked.

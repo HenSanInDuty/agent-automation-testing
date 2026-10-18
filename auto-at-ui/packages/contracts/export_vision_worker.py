@@ -14,6 +14,7 @@ from auto_at.contracts import vision, vision_worker  # noqa: E402
 MODELS = [
     vision.VisualLocatorDescriptor,
     vision.VisualLocatorEvidence,
+    vision.VisualExecutedClick,
     vision.VisualOperation,
     vision.VisualOperationFrame,
     vision.VisualCheckpoint,
@@ -21,6 +22,7 @@ MODELS = [
     vision.VisualWorkerCommand,
     vision_worker.VisualWorkerIdentity,
     vision_worker.VisualWorkerOpen,
+    vision_worker.VisualWorkerOriginObservations,
     vision_worker.VisualWorkerPrepare,
     vision_worker.VisualWorkerExecute,
     vision_worker.VisualWorkerAck,

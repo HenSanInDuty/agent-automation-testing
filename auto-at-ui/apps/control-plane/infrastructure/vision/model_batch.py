@@ -29,6 +29,10 @@ class VisionModelBatch:
         policy: VisionPolicy, max_candidates: int, guard: AgentStepGuard, sequence: int,
         check_policy: Callable[[], object], remaining_seconds: float,
     ) -> VisualCandidateBatchOutcome:
+        if type(max_candidates) is not int or not 1 <= max_candidates <= 20:
+            return VisualCandidateBatchOutcome(
+                status="unavailable", detail="candidate batch cap is invalid"
+            )
         if not math.isfinite(remaining_seconds) or remaining_seconds <= 0:
             return _unavailable("provider_timeout")
         if (session.provider, session.model) != (policy.provider, policy.model):
@@ -77,6 +81,7 @@ class VisionModelBatch:
                     model=_DeadlineModel(
                         self._model_factory(
                             settings, policy, timeout_seconds=min(30.0, remaining_seconds),
+                            max_candidates=max_candidates,
                         ), deadline,
                     ),
                     max_candidates=max_candidates, guard=guard, image_delivery=delivery(),

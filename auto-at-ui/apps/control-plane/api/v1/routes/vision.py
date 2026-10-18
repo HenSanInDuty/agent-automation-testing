@@ -14,12 +14,14 @@ from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
 from application.vision import SubmitVisualExploration, VisionPolicyChanged, VisionStateError
 from application.vision_debug_evidence import DebugEvidenceNotFoundError, ReadVisionDebugEvidence
 from application.vision_policy import VisionPolicies, VisionPolicyError
+from application.vision_reload import ReloadVisualExploration, VisionReloadUnavailable
 from application.vision_replay import (
     VisionReplay,
     VisionReplayDeletionError,
     VisionReplayNotFoundError,
 )
 from application.vision_results import VisionResults, VisionRevisionChanged
+from application.vision_screen import VisionScreen, VisionScreenUnavailable
 from application.vision_trajectory import VisionTrajectory, VisionTrajectoryNotFoundError
 from config import Settings, get_settings
 from domain.authorization import (
@@ -46,10 +48,32 @@ from infrastructure.persistence.session import create_session_factory, transacti
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api.v1.dependencies.authorization import current_principal, current_tenant, require_csrf
-from api.v1.dependencies.vision import vision_policies, vision_policy_correlation_id
+from api.v1.dependencies.vision import (
+    vision_policies,
+    vision_policy_correlation_id,
+    vision_reload,
+    vision_screen,
+)
 from api.v1.routes.activities import ActivityResponse, _sse_event
 
 router = APIRouter(prefix="/vision", tags=["vision"])
+
+
+@router.get("/explorations/{session_id}/screen")
+async def read_live_screen(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    service: Annotated[VisionScreen, Depends(vision_screen)],
+) -> Response:
+    try:
+        image = await service.read(tenant_id=tenant_id, principal=principal, session_id=session_id)
+    except VisionReplayNotFoundError:
+        raise HTTPException(404, "Screen unavailable.") from None
+    except VisionScreenUnavailable:
+        return Response(status_code=503, headers={"Cache-Control": "no-store", "Retry-After": "2"})
+    return Response(image, status_code=200 if image is not None else 204,
+                    media_type="image/png", headers={"Cache-Control": "private, no-store"})
 
 
 class VisionPolicyResponse(BaseModel):
@@ -86,6 +110,12 @@ class SubmitExplorationRequest(BaseModel):
 class VisionProviderModelResponse(BaseModel):
     id: str
     display_name: str
+
+
+class ReloadExplorationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_provider: Literal["huggingface", "gemini"]
+    expected_model: str = Field(min_length=1, max_length=200)
 
 
 class VisionProviderResponse(BaseModel):
@@ -342,6 +372,33 @@ def submit_exploration(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
+@router.post(
+    "/explorations/{session_id}/reload", response_model=ExplorationResponse,
+    status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_csrf)],
+)
+def reload_exploration(
+    session_id: UUID,
+    payload: ReloadExplorationRequest,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    service: Annotated[ReloadVisualExploration, Depends(vision_reload)],
+) -> ExplorationResponse:
+    try:
+        return _response(service.execute(
+            tenant_id=tenant_id, session_id=session_id, principal=principal,
+            idempotency_key=idempotency_key, **payload.model_dump(),
+        ))
+    except AuthorizationError:
+        raise HTTPException(404, "Visual exploration not found.") from None
+    except VisionPolicyChanged:
+        raise HTTPException(409, detail={"code": "vision_policy_changed"}) from None
+    except VisionReloadUnavailable as error:
+        raise HTTPException(409, detail={"code": str(error)}) from None
+    except VisionStateError as error:
+        raise HTTPException(422, detail=str(error)) from None
+
+
 @router.get("/explorations/{session_id}", response_model=ExplorationResponse)
 def get_exploration(
     session_id: UUID,
@@ -595,7 +652,9 @@ async def stream_exploration_activities(
                 yield _sse_event(event)
             yield ": keepalive\n\n"
 
-    return StreamingResponse(events(), media_type="text/event-stream")
+    return StreamingResponse(events(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-store", "X-Accel-Buffering": "no",
+    })
 
 
 @router.get(

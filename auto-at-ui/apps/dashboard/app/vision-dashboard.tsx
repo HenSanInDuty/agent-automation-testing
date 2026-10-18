@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { VisionSessionDetail } from "./components/vision-session-detail";
 import { VisionProviderSettings } from "./components/vision-provider-settings";
 import { hasUnsavedVisionPolicy, hasVisionConsent, screenshotDisclosure, visionConfirmation, visionFailureMessage, visionProviderLabel } from "./components/vision-provider-model";
-import { getVisionProviders } from "./generation-api";
+import { getVisionProviders, reloadVisualExploration } from "./generation-api";
 import type { VisionProvider } from "./generation-types";
 import { ConfirmDialog } from "./components/confirm-dialog";
 import { EmptyState, LoadingState } from "./components/states";
@@ -19,6 +19,10 @@ import type { VisualAction, VisualExploration, VisualReplayFrame, VisualTrajecto
 import { projects, type Project } from "./run-api";
 
 const terminal = new Set(["completed", "unavailable", "cancelled"]);
+type ExplorationConfirmation = ReturnType<typeof visionConfirmation> & (
+  | { kind: "new"; request: { project_id: string; target_url: string; task_intent: string } }
+  | { kind: "reload"; sessionId: string }
+);
 const message = (error: unknown) => error instanceof ControlPlaneError ? visionFailureMessage(error.code) ?? error.message : "The control plane is unavailable. Try again later.";
 
 function SafeAction({ item }: { item: VisualAction }) {
@@ -32,7 +36,7 @@ function SafeAction({ item }: { item: VisualAction }) {
   return <li><strong>{item.sequence}. {action.kind}</strong>{detail && ` — ${detail}`}{item.evidence_checksum && <><br />Screenshot checksum: <code>{item.evidence_checksum}</code></>}</li>;
 }
 
-export function VisionDashboard({ apiUrl, projectPolicy }: { apiUrl: string; projectPolicy?: ReactNode }) {
+export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { apiUrl: string; projectPolicy?: ReactNode; onProjectChange?: (projectId: string) => void }) {
   const searchParams = useSearchParams();
   const requestedSession = searchParams.get("vision");
   const [savedPolicy, setSavedPolicy] = useState<VisionPolicy | null>(null);
@@ -44,7 +48,6 @@ export function VisionDashboard({ apiUrl, projectPolicy }: { apiUrl: string; pro
   const [projectId, setProjectId] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
   const [taskIntent, setTaskIntent] = useState("");
-  const [useVision, setUseVision] = useState(false);
   const [sessions, setSessions] = useState<VisualExploration[]>([]);
   const [selected, setSelected] = useState<VisualExploration | null>(null);
   const [actions, setActions] = useState<VisualAction[]>([]);
@@ -56,18 +59,24 @@ export function VisionDashboard({ apiUrl, projectPolicy }: { apiUrl: string; pro
   const [frameImageSize, setFrameImageSize] = useState<{ width: number; height: number } | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
-  const [confirmation, setConfirmation] = useState<ReturnType<typeof visionConfirmation> | null>(null);
+  const [confirmation, setConfirmation] = useState<ExplorationConfirmation | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [replayDeletion, setReplayDeletion] = useState<"frame" | "all" | null>(null);
   const [deletingReplay, setDeletingReplay] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [debugEvidence, setDebugEvidence] = useState<VisionDebugEvidencePayload | null>(null);
   const [saving, setSaving] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const settingsRef = useRef<HTMLDetailsElement>(null);
+  const historyRef = useRef<HTMLDetailsElement>(null);
   const contextRef = useRef("");
+  const refreshing = useRef<string | null>(null);
   contextRef.current = [apiUrl, projectId, selected?.id].join("|");
   const dirty = hasUnsavedVisionPolicy(savedPolicy, draftPolicy);
   const enabled = Boolean(!settingsError && savedPolicy?.enabled && hasVisionConsent(savedPolicy) && providers.find((item) => item.id === savedPolicy.provider)?.configured);
   const active = useMemo(() => selected !== null && !terminal.has(selected.state), [selected]);
+  useEffect(() => { onProjectChange?.(projectId); }, [projectId, onProjectChange]);
 
   useEffect(() => {
     let disposed = false;
@@ -92,25 +101,29 @@ export function VisionDashboard({ apiUrl, projectPolicy }: { apiUrl: string; pro
     listVisualExplorations(apiUrl, projectId).then((page) => {
       if (disposed) return;
       setSessions(page.items);
-      setSelected((current) => current?.project_id === projectId ? page.items.find((item) => item.id === current.id) ?? null : page.items[0] ?? null);
+      setSelected((current) => current?.project_id === projectId ? page.items.find((item) => item.id === current.id) ?? current : page.items[0] ?? null);
     }).catch((error) => { if (!disposed) setNotice(message(error)); });
     return () => { disposed = true; };
   }, [apiUrl, projectId]);
   function refreshSelected(sessionId: string) {
     const expectedContext = contextRef.current;
-    void Promise.all([getVisualExploration(apiUrl, sessionId), listVisualActions(apiUrl, sessionId), getVisualTrajectory(apiUrl, sessionId), getVisionResult(apiUrl, sessionId)])
-      .then(([session, nextActions, nextTrajectory, result]) => {
+    if (refreshing.current === expectedContext) return;
+    refreshing.current = expectedContext;
+    void Promise.allSettled([getVisualExploration(apiUrl, sessionId), listVisualActions(apiUrl, sessionId), getVisualTrajectory(apiUrl, sessionId), getVisionResult(apiUrl, sessionId)])
+      .then(([sessionResult, nextActions, nextTrajectory, result]) => {
         if (contextRef.current !== expectedContext) return;
+        if (sessionResult.status !== "fulfilled") { setNotice(message(sessionResult.reason)); return; }
+        const session = sessionResult.value;
         setSelected((current) => {
           if (current?.id !== sessionId) return current;
           return current.state === session.state
             && current.safe_failure_reason === session.safe_failure_reason ? current : session;
         });
         setSessions((current) => current.map((item) => item.id === sessionId ? session : item));
-        setActions(nextActions);
-        setTrajectory(nextTrajectory);
-        setDraftId(result.links.draft.id);
-      }).catch((error) => setNotice(message(error)));
+        if (nextActions.status === "fulfilled") setActions(nextActions.value);
+        if (nextTrajectory.status === "fulfilled") setTrajectory(nextTrajectory.value);
+        if (result.status === "fulfilled") setDraftId(result.value.links.draft.id);
+      }).finally(() => { if (refreshing.current === expectedContext) refreshing.current = null; });
   }
   useEffect(() => {
     if (!selected) { setActions([]); setTrajectory(null); setDraftId(null); return; }
@@ -151,22 +164,30 @@ export function VisionDashboard({ apiUrl, projectPolicy }: { apiUrl: string; pro
   function requestExploration(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setNotice("");
     if (dirty || saving) { setNotice("Save or discard your Vision settings changes before starting an exploration."); return; }
-    if (!enabled || !useVision) { setNotice("Vision exploration is disabled by tenant policy."); return; }
-    if (savedPolicy) setConfirmation(visionConfirmation(savedPolicy));
+    if (!enabled) { setNotice("Vision exploration is disabled by tenant policy."); return; }
+    if (savedPolicy) setConfirmation({ ...visionConfirmation(savedPolicy), kind: "new", request: { project_id: projectId, target_url: targetUrl, task_intent: taskIntent } });
+  }
+  function requestReload() {
+    if (!selected || active || !enabled || dirty || saving || submitting || !savedPolicy) return;
+    setNotice("");
+    setConfirmation({ ...visionConfirmation(savedPolicy), kind: "reload", sessionId: selected.id });
   }
   async function submitExploration() {
     if (!confirmation || submitting || dirty || saving) return;
     const snapshot = confirmation;
     setSubmitting(true);
     try {
-      const session = await submitVisualExploration(apiUrl, { project_id: projectId, target_url: targetUrl, task_intent: taskIntent, use_vision: true, ...snapshot });
-      setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)]); setSelected(session); setNotice("Visual exploration queued. It is advisory and cannot change a test verdict.");
+      const provider = { expected_provider: snapshot.expected_provider, expected_model: snapshot.expected_model };
+      const session = snapshot.kind === "reload"
+        ? await reloadVisualExploration(apiUrl, snapshot.sessionId, provider)
+        : await submitVisualExploration(apiUrl, { ...snapshot.request, use_vision: true, ...provider });
+      setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)]); setSelected(session); setNewOpen(false); setNotice("Visual exploration queued.");
       const url = new URL(window.location.href);
       url.searchParams.set("vision", session.id);
       window.history.replaceState(null, "", url);
     } catch (error) {
       if (error instanceof ControlPlaneError && error.status === 409 && error.code === "vision_policy_changed") {
-        setSettingsRefresh((value) => value + 1); setUseVision(false);
+        setSettingsRefresh((value) => value + 1);
       }
       setNotice(message(error));
     } finally { setConfirmation(null); setSubmitting(false); }
@@ -200,31 +221,44 @@ export function VisionDashboard({ apiUrl, projectPolicy }: { apiUrl: string; pro
     : draftPolicy ? <VisionProviderSettings policy={draftPolicy} providers={providers} canManage={role === "tenant_admin"} saving={saving || submitting || confirmation !== null} dirty={dirty} onChange={setDraftPolicy} onSave={saveVisionPolicy} onDiscard={() => setDraftPolicy(savedPolicy)} />
     : <LoadingState title="Loading vision policy" />}</section>;
 
-  return <>
-    <section className="workspace-section" aria-label="Vision exploration">
+  return <div className="vision-workspace">
+    {selected && <div className="vision-session-toolbar" aria-label="Session controls">
+      <div><strong>{options.find((project) => project.id === selected.project_id)?.name ?? "Website exploration"}</strong> <StatusBadge status={selected.state} /></div>
+      <div className="button-row">
+        <button type="button" className="button button--secondary" aria-expanded={historyOpen} onClick={() => { setHistoryOpen(true); historyRef.current?.scrollIntoView({ block: "nearest" }); }}>History</button>
+        <button type="button" className="button button--secondary" aria-expanded={newOpen} aria-controls="vision-new" onClick={() => setNewOpen((open) => !open)}>New exploration</button>
+        <button type="button" className="button button--secondary" onClick={requestReload} disabled={active || !enabled || dirty || saving || submitting || confirmation !== null}>Reload</button>
+      </div>
+    </div>}
+    <section id="vision-new" hidden={Boolean(selected) && !newOpen} className="workspace-section" aria-label="Vision exploration">
       <h2>Start a new Vision exploration</h2>
       <p>Choose a target and describe what to explore. Previous sessions remain available below.</p>
       <form onSubmit={requestExploration} className="form-grid">
         <label className="field">Project<select required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Choose a project</option>{options.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
         <label className="field">Target URL<input required type="url" value={targetUrl} onChange={(event) => setTargetUrl(event.target.value)} /></label>
         <label className="field form-grid--full">Exploration intent<textarea required value={taskIntent} onChange={(event) => setTaskIntent(event.target.value)} /></label>
-        <label className="field field--checkbox form-grid--full"><input type="checkbox" checked={useVision} onChange={(event) => setUseVision(event.target.checked)} disabled={!enabled} /> Use Vision Agent</label>
         {!enabled && <p className="form-grid--full">Vision is unavailable until a tenant administrator enables it and accepts the raw-screenshot transfer disclosure in Vision settings below.</p>}
-        <div className="form-actions form-grid--full"><button className="button" disabled={!projectId || !enabled || !useVision || dirty || saving || submitting}>Start advisory exploration</button></div>
+        <div className="form-actions form-grid--full"><button className="button" disabled={!projectId || !enabled || dirty || saving || submitting}>Start advisory exploration</button></div>
       </form>
       {dirty && <p role="status">Save or discard your Vision settings changes before starting an exploration.</p>}
       {savedPolicy && <p>{screenshotDisclosure(savedPolicy.provider)} Any resulting test draft requires your approval before execution.</p>}
     </section>
     {notice && <p className={`notice ${notice.includes("unavailable") || notice.includes("disabled") ? "notice--error" : ""}`} role="alert">{notice}</p>}
-    <details className="workspace-section"><summary>Vision settings</summary>{visionSettings}</details>
-    {selected && <VisionSessionDetail key={`${apiUrl}:${projectId}:${selected.id}`} apiUrl={apiUrl} session={selected} canDelete={canDeleteReplay} />}
-    {selected?.trace_version === "v4" && <VisionProgressTimeline apiUrl={apiUrl} sessionId={selected.id} live={active} onActivity={() => refreshSelected(selected.id)} />}
+    {selected && <VisionSessionDetail key={`${apiUrl}:${projectId}:${selected.id}`} apiUrl={apiUrl} session={selected} canDelete={canDeleteReplay} onActivity={() => refreshSelected(selected.id)} />}
     {selected && selected.trace_version !== "v4" && trajectory && <section className="workspace-section" aria-label="Exploration evidence"><VisionTrajectory apiUrl={apiUrl} sessionId={selected.id} trajectory={trajectory} frames={frames} selectedFrame={selectedFrame} onSelectFrame={setSelectedFrame} /></section>}
-    {projectPolicy}
-    <section className="workspace-section" aria-label="Visual exploration sessions"><h2>Visual exploration sessions</h2>{sessions.length ? <ul className="stack-list">{sessions.map((session) => <li key={session.id}><button type="button" className="button button--secondary" onClick={() => { setSelected(session); const url = new URL(window.location.href); url.searchParams.set("vision", session.id); window.history.replaceState(null, "", url); }}>View</button> <StatusBadge status={session.state} /> <code>{session.id}</code></li>)}</ul> : <EmptyState title="No visual explorations">Start one only after confirming the privacy disclosure above.</EmptyState>}</section>
+    {(!enabled || dirty || settingsError) && <p className="vision-settings-notice" role="status">
+      {dirty ? "Save or discard your settings changes before starting a session." : settingsError ? "Vision settings could not be loaded." : "Starting a session requires enabled Vision settings and screenshot consent."}{" "}
+      <button type="button" className="button button--secondary" onClick={() => { if (settingsRef.current) { settingsRef.current.open = true; settingsRef.current.scrollIntoView({ block: "nearest" }); } }}>Open settings</button>
+    </p>}
+    <details ref={settingsRef} className="workspace-section"><summary>Vision settings</summary>{visionSettings}</details>
+    <details className="workspace-section"><summary>Project settings</summary>{projectPolicy}</details>
+    <details ref={historyRef} open={historyOpen} onToggle={(event) => setHistoryOpen(event.currentTarget.open)} className="workspace-section">
+      <summary>Session history</summary>
+      <section aria-label="Visual exploration sessions"><h2>Visual exploration sessions</h2>{sessions.length ? <ul className="stack-list">{sessions.map((session, index) => <li key={session.id}><button type="button" className="button button--secondary" onClick={() => { setSelected(session); setNewOpen(false); setHistoryOpen(false); const url = new URL(window.location.href); url.searchParams.set("vision", session.id); window.history.replaceState(null, "", url); }}>View</button> Exploration {sessions.length - index} <StatusBadge status={session.state} /> <details><summary>Session ID</summary><code>{session.id}</code></details></li>)}</ul> : <EmptyState title="No visual explorations">Start one only after confirming the privacy disclosure above.</EmptyState>}</section>
+    </details>
     {selected && selected.trace_version !== "v4" && <><section className="workspace-section" aria-label="Selected visual exploration"><div className="section-heading"><h2>Advisory session</h2><StatusBadge status={selected.state} /></div><ul className="detail-list"><li>Correlation: <code>{selected.correlation_id}</code></li><li>Bounded to {selected.max_hops} hops, {selected.max_states} states, and {selected.max_session_seconds} seconds.</li><li>Stop condition: state/depth limit, time limit, policy guard, provider failure, or model stop.</li>{selected.safe_failure_reason && <li>Safe failure: {selected.safe_failure_reason}</li>}</ul>{active && <LoadingState title="Visual exploration is in progress" />}<VisionProgressTimeline apiUrl={apiUrl} sessionId={selected.id} live={active} onActivity={() => refreshSelected(selected.id)} /><h3>Visual replay</h3><p>Frames may contain target-page data. They are private evidence retained until an authorized deletion, visible only to project readers, and never change a deterministic verdict.</p>{frames.length ? <><div className="stack-list" role="list">{frames.map((frame) => <button type="button" key={frame.id} className="button button--secondary" onClick={() => setSelectedFrame(frame)}>State {frame.sequence} · {frame.checksum.slice(0, 12)} · retained</button>)}</div>{selectedFrame && <><p>State {selectedFrame.sequence}, captured {new Date(selectedFrame.captured_at).toLocaleString()}: model proposals only; these were not executed test steps.</p>{frameUrl ? <div className="vision-replay-image">{frameImageSize && selectedFrame.actions.map((item) => { const position = replayMarkerPosition(item.action, frameImageSize); return position ? <span key={item.sequence} className="vision-replay-marker" style={position}>model proposal</span> : null; })}<img src={frameUrl} alt={`Captured visual exploration state ${selectedFrame.sequence}`} onLoad={(event) => setFrameImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} /></div> : frameError ? <p role="status">Replay frame unavailable.</p> : <LoadingState title="Loading replay frame" />}<ul className="stack-list">{selectedFrame.actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ul></>}</> : <p>No replay frame was retained for this exploration.</p>}<h3>Safe action candidates</h3>{actions.length ? <ul className="stack-list">{actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ul> : <p>No action candidate has been recorded.</p>}{draftId && <p><Link href={`/agent?draft=${encodeURIComponent(draftId)}`}>Review the resulting Playwright draft</Link></p>}<h3>Tenant-admin diagnostic evidence</h3><p>Available only to tenant administrators. Open it only when needed; do not copy sensitive content.</p><button type="button" className="button button--secondary" onClick={() => void inspectDebugEvidence()}>Inspect diagnostic evidence</button>{debugEvidence && <><p>Expires: {debugEvidence.retention_until}</p><pre>{debugEvidence.payload}</pre></>}</section></>}
     {selected && canDeleteReplay && frames.length > 0 && <section className="workspace-section" aria-label="Replay deletion"><h2>Delete replay evidence</h2><p>Only tenant administrators can permanently delete these private frames.</p>{selectedFrame && <button type="button" className="button button--danger" onClick={() => setReplayDeletion("frame")}>Delete selected frame</button>} <button type="button" className="button button--danger" onClick={() => setReplayDeletion("all")}>Delete all replay frames</button></section>}
-    <ConfirmDialog open={confirmation !== null} title={`Send screenshots to ${visionProviderLabel(confirmation?.expected_provider ?? "")}?`} description={`${screenshotDisclosure(confirmation?.expected_provider ?? "")} Model: ${confirmation?.expected_model ?? ""}. This starts an advisory exploration; any resulting test draft requires approval before execution.`} confirmLabel="Start advisory exploration" onConfirm={() => void submitExploration()} onCancel={() => setConfirmation(null)} busy={submitting} />
+    <ConfirmDialog open={confirmation !== null} title={`Send screenshots to ${visionProviderLabel(confirmation?.expected_provider ?? "")}?`} description={`${screenshotDisclosure(confirmation?.expected_provider ?? "")} Model: ${confirmation?.expected_model ?? ""}. ${confirmation?.kind === "reload" ? "Reload starts a new session with the saved target and intent; the previous session stays in history." : "This starts an advisory exploration."} Any resulting test draft requires approval before execution.`} confirmLabel={confirmation?.kind === "reload" ? "Start new session" : "Start advisory exploration"} onConfirm={() => void submitExploration()} onCancel={() => setConfirmation(null)} busy={submitting} />
     <ConfirmDialog open={replayDeletion !== null} title={replayDeletion === "all" ? "Delete all replay frames?" : "Delete this replay frame?"} description="This permanently removes private replay evidence. It does not change the advisory session, generated draft, or deterministic test verdict." confirmLabel="Delete replay evidence" onConfirm={() => void deleteReplay()} onCancel={() => setReplayDeletion(null)} busy={deletingReplay} />
-  </>;
+  </div>;
 }

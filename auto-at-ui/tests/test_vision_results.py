@@ -12,6 +12,35 @@ from vision_trace_fixtures import complete_operation, operation
 pytest_plugins = ["vision_trace_fixtures"]
 
 
+def test_confirmed_click_survives_trace_export_and_image_deletion(result_client, trace_database):
+    from infrastructure.persistence.models import VisualOperationModel
+    from vision_trace_fixtures import evolve
+
+    client, base, root = result_client
+    factory, _, _, _, _ = trace_database
+    # Seed an historical confirmed click without dispatching a browser or model.
+    historical = evolve(
+        root, action_kind="click", purpose="explore",
+        executed_click=dict(
+            x=0.3, y=0.4, viewport_width=1280, viewport_height=720,
+            before_frame_id=root.actual_before_frame_id, confirmed_at=root.ended_at,
+        ),
+    )
+    with factory.begin() as session:
+        session.get(VisualOperationModel, root.id).payload = historical.model_dump(mode="json")
+    expected = historical.executed_click.model_dump(mode="json")
+    assert client.get(base + "/trace").json()["items"][0]["executed_click"] == expected
+    export = client.get(base + "/result/export")
+    assert export.json()["exploration_report"]["findings"][0]["executed_click"] == expected
+    assert "private, no-store" == export.headers["cache-control"]
+    path = base + f"/operation-frames/{root.actual_before_frame_id}"
+    assert client.request("DELETE", path, json={"confirm": True}).status_code == 204
+    saved = client.get(base + "/trace").json()["items"][0]
+    assert saved["before"]["availability"] == "deleted"
+    assert saved["executed_click"] == expected
+    assert client.get(path).status_code == 404
+
+
 @pytest.fixture
 def result_client(trace_database, monkeypatch):
     factory, scope, uow, lease, store = trace_database
@@ -93,6 +122,44 @@ def test_frame_delete_keeps_tombstone_and_export_without_bytes(result_client, tr
         == 204
     )
     assert client.get(base + "/result").json()["counts"]["frames_deleted"] == 2
+
+
+def test_interrupted_session_has_an_observation_report_without_a_run(
+    result_client, trace_database,
+):
+    from vision_trace_fixtures import evolve
+
+    client, base, root = result_client
+    _, scope, uow, lease, _ = trace_database
+    complete_operation(uow, lease, operation(
+        scope, sequence=2, purpose="explore", action_kind="scroll",
+        parent_operation_id=root.id,
+    ))
+    rejected = operation(
+        scope, sequence=3, purpose="explore", action_kind="click",
+        parent_operation_id=root.id,
+    )
+    uow.commit_prepared(lease, rejected)
+    uow.commit_operation(lease, evolve(
+        rejected, status="rejected", outcome_code="unsupported_target",
+        ended_at=datetime.now(UTC), before_unavailable_reason="capture_failed",
+        after_unavailable_reason="action_not_executed",
+    ))
+    uow.finish(lease, "model_output_invalid")
+    response = client.get(base + "/result")
+    assert response.status_code == 200
+    payload = response.json()
+    report = payload["exploration_report"]
+    assert report["status"] == "partial" and report["coverage"] == "not_established"
+    assert report["stop_reason"] == "model_output_invalid"
+    assert report["summary"]["controls_acted_on"] == 0
+    assert report["summary"]["scrolls_completed"] == 1
+    assert report["summary"]["actions_rejected"] == 1
+    assert [item["sequence"] for item in report["findings"]] == [2, 3]
+    assert report["findings"][1]["reason_code"] == "unsupported_target"
+    assert payload["links"]["report"]["href"] is None
+    assert client.get(base + "/result/export").json()["exploration_report"] == report
+    assert "storage_key" not in response.text and "encrypted" not in response.text
 
 
 def test_failed_object_delete_preserves_metadata_and_commits_failure_audit(

@@ -209,6 +209,52 @@ class VisionResults:
                 "Typed inputs require binding before their branches can execute.",
             ],
         )
+        # This observation report exists independently of draft approval and a
+        # deterministic test run, including for historical interrupted sessions.
+        attempted = [o for o in operations if o.purpose == "explore"]
+        attempted_proposals = {o.proposal_id for o in attempted if o.proposal_id}
+        locator_by_id = {item.id: item for item in locators}
+        payload["exploration_report"] = dict(
+            status="partial" if terminal else "in_progress",
+            coverage="not_established",
+            stop_reason=payload["completion_reason"],
+            limits={
+                name: getattr(record, name, None)
+                for name in ("max_steps", "max_hops", "max_states", "max_session_seconds")
+            },
+            summary=dict(
+                controls_acted_on=sum(
+                    o.action_kind in {"click", "type"} and o.status == "completed"
+                    for o in attempted
+                ),
+                actions_rejected=sum(o.status == "rejected" for o in attempted),
+                actions_failed=sum(o.status == "failed" for o in attempted),
+                actions_unknown=sum(o.status == "unknown" for o in attempted),
+                scrolls_completed=sum(
+                    o.action_kind == "scroll" and o.status == "completed" for o in attempted
+                ),
+                candidates_not_attempted=sum(
+                    e.action.get("kind") != "stop" and e.proposal_id not in attempted_proposals
+                    for e in edges
+                ),
+            ),
+            findings=[
+                dict(
+                    operation_id=str(o.id), sequence=o.sequence,
+                    action_kind=o.action_kind, status=o.status, reason_code=o.outcome_code,
+                    target=(
+                        locator_by_id[o.locator_id].descriptor.value
+                        if o.locator_id in locator_by_id
+                        and locator_by_id[o.locator_id].descriptor else None
+                    ),
+                    url_change=o.url_change, visual_change=o.visual_change,
+                    executed_click=(
+                        o.executed_click.model_dump(mode="json") if o.executed_click else None
+                    ),
+                )
+                for o in attempted
+            ],
+        )
         payload["revision"] = hashlib.sha256(
             json.dumps(
                 payload | {"trace_revision": self._revision(record, snapshot)},

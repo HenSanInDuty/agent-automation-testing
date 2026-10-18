@@ -1,9 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { Duplex } from "node:stream";
 import { chromium, expect, test, type Browser, type Page } from "@playwright/test";
 import { VisualOperationWorker, type OperationResult } from "./vision-operations.js";
 import { visualHttpHandler } from "./vision-http.js";
@@ -11,11 +12,14 @@ import { digest, validateVision, type VisualWorkerIdentity } from "./vision-cont
 import { startVisionTarget } from "./fixtures/vision-target.js";
 
 let target: Awaited<ReturnType<typeof startVisionTarget>>;
+let external: Awaited<ReturnType<typeof startVisionTarget>>;
 let worker: VisualOperationWorker, identity: VisualWorkerIdentity, root: string, browser: Browser, page: Page;
 let current: string;
-test.beforeAll(async () => { target = await startVisionTarget(); });
-test.afterAll(async () => { await target.close(); });
+let closed: boolean;
+test.beforeAll(async () => { target = await startVisionTarget(); external = await startVisionTarget(); });
+test.afterAll(async () => { await target.close(); await external.close(); });
 test.beforeEach(async () => {
+  closed = false;
   root = await mkdtemp(join(tmpdir(), "auto-at-vision-operations-"));
   worker = new VisualOperationWorker(root, async (options) => { browser = await chromium.launch(options); return browser; });
   identity = { contract_version: "v4", tenant_id: "fixture-tenant", project_id: randomUUID(), session_id: randomUUID(), fencing_token: 1 };
@@ -25,7 +29,7 @@ test.beforeEach(async () => {
   current = opened.state_fingerprint; page = browser.contexts()[0].pages()[0];
 });
 test.afterEach(async () => {
-  if (worker.hasSession(identity.session_id)) await worker.close(identity, identity.session_id);
+  if (!closed && worker.hasSession(identity.session_id)) await worker.close(identity, identity.session_id);
   const path = resolve(root);
   expect(path.startsWith(resolve(tmpdir()) + sep) && path.includes("auto-at-vision-operations-")).toBe(true);
   await rm(path, { recursive: true, force: true });
@@ -52,6 +56,99 @@ async function setup(checkpoint = randomUUID()) {
   return result;
 }
 const click = (y: number) => ({ kind: "click", x: 100 / 1279, y: y / 719 });
+
+test("live screen works during an operation, respects scope and does not create actions", async () => {
+  await setup();
+  await expect(worker.screen({ ...identity, tenant_id: "other" }, identity.session_id)).rejects.toThrow("scope_mismatch");
+  await expect(worker.screen({ ...identity, fencing_token: 2 }, identity.session_id)).rejects.toThrow("stale_fencing_token");
+  const prepared = await worker.prepare(command({ kind: "wait", duration_ms: 1000 }));
+  const running = worker.execute(executeCommand(prepared));
+  const images = await Promise.all([worker.screen(identity, identity.session_id), worker.screen(identity, identity.session_id)]);
+  expect(images[0].subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+  expect(images[0]).toEqual(images[1]);
+  const result = await running;
+  expect(result.operation.sequence).toBe(2);
+  expect(result.operation.status).toBe("completed");
+  await worker.close(identity, identity.session_id);
+  closed = true;
+  await expect(worker.screen(identity, identity.session_id)).rejects.toThrow("session_unavailable");
+});
+
+test("screen capture does not wait for an unresolved font load", async () => {
+  await setup();
+  await page.evaluate(() => {
+    Object.defineProperty(document.fonts, "ready", { get: () => new Promise(() => {}) });
+  });
+  const prepared = await worker.prepare(command(click(340)));
+  expect(prepared.operation.status).toBe("prepared");
+  expect((await worker.screen(identity, identity.session_id)).length).toBeGreaterThan(100);
+});
+
+test("checkpoint and final image include hydration that finishes during capture", async () => {
+  const context = page.context(), original = context.newCDPSession.bind(context);
+  let captures = 0;
+  context.newCDPSession = async (target) => {
+    const client = await original(target), send = client.send.bind(client);
+    client.send = async (method, params) => {
+      const result = await send(method, params);
+      if (method === "Page.captureScreenshot" && page.url() !== "about:blank" && captures++ === 0) {
+        await page.evaluate(() => {
+          const input = document.createElement("input");
+          input.type = "hidden"; input.value = "synthetic-capture-value";
+          document.body.append(input);
+          const heading = document.createElement("h1");
+          heading.textContent = "Hydration finished"; document.body.append(heading);
+        });
+      }
+      return result;
+    };
+    return client;
+  };
+  const result = await setup();
+  expect(captures).toBe(2);
+  expect(result.frames.map(frame => frame.role)).toEqual(["before", "after"]);
+  expect((await worker.checkpoint(identity, identity.session_id, result.checkpoint!.id)).matches_current).toBe(true);
+  expect(JSON.stringify(result)).not.toContain("synthetic-capture-value");
+  expect((await run(click(100))).operation.status).toBe("completed");
+});
+
+test("restoration rechecks form state against the final image", async () => {
+  const rootState = await setup();
+  await run(click(40));
+  const context = page.context(), original = context.newCDPSession.bind(context);
+  let changed = false;
+  context.newCDPSession = async (target) => {
+    const client = await original(target), send = client.send.bind(client);
+    client.send = async (method, params) => {
+      const result = await send(method, params);
+      if (method === "Page.captureScreenshot" && new URL(page.url()).pathname === "/" && !changed) {
+        changed = true;
+        await page.getByRole("textbox").evaluate(el => { (el as HTMLInputElement).value = "changed-during-capture"; });
+      }
+      return result;
+    };
+    return client;
+  };
+  const result = await run({ kind: "back" }, { purpose: "restore", restore_checkpoint_id: rootState.checkpoint!.id });
+  expect(result.operation).toMatchObject({ status: "failed", outcome_code: "state_restore_failed" });
+  expect(result.frames).toHaveLength(2);
+  expect(result.replayable).toBe(false);
+  expect((await worker.prepare(command(click(100)))).operation.status).toBe("rejected");
+});
+
+test("restoration without an after image cannot authorize a sibling click", async () => {
+  const rootState = await setup();
+  await run(click(40));
+  const context = page.context(), original = context.newCDPSession.bind(context);
+  context.newCDPSession = async (target) => {
+    if (new URL(page.url()).pathname === "/") throw new Error("fixture after capture unavailable");
+    return original(target);
+  };
+  const result = await run({ kind: "back" }, { purpose: "restore", restore_checkpoint_id: rootState.checkpoint!.id });
+  expect(result.operation).toMatchObject({ status: "failed", outcome_code: "state_restore_failed", after_unavailable_reason: "capture_failed" });
+  expect(result.replayable).toBe(false);
+  expect((await worker.prepare(command(click(100)))).operation.status).toBe("rejected");
+});
 function ledger(result: OperationResult, kind: string, sequence: number) {
   expect(result.operation).toMatchObject({ action_kind: kind, sequence, status: "completed" });
   expect(result.frames.map((f) => f.role)).toEqual(["before", "after"]);
@@ -84,6 +181,7 @@ test("prepare requires durable before ACK; duplicate execute performs only one c
   await expect(worker.execute({ ...executeCommand(prepared), before_checksum: "a".repeat(64) })).rejects.toThrow("before_ack_mismatch");
   await expect(worker.prepare({ ...payload, action: click(100) })).rejects.toThrow("operation_payload_conflict");
   const result = await worker.execute(executeCommand(prepared)); ledger(result, "click", 2);
+  expect(result.operation.executed_click?.before_frame_id).toBe(prepared.operation.actual_before_frame_id);
   expect(await worker.execute(executeCommand(prepared))).toEqual(result);
   expect(worker.read(identity, identity.session_id, result.operation.id)).toEqual(result);
   expect(await page.getByRole("button", { name: "Icon action" }).getAttribute("data-count")).toBe("1");
@@ -115,6 +213,7 @@ test("hydration replacing an identical DOM target rejects stale prepared locator
   await page.getByRole("button", { name: "Icon action" }).evaluate((el) => el.replaceWith(el.cloneNode(true)));
   const result = await worker.execute(executeCommand(prepared));
   expect(result.operation).toMatchObject({ status: "rejected", outcome_code: "stale_locator" });
+  expect(result.operation.executed_click).toBeNull();
   expect(result.frames.map((f) => f.role)).toEqual(["before", "after"]);
   expect(await page.getByRole("button", { name: "Icon action" }).getAttribute("data-count")).toBeNull();
 });
@@ -159,25 +258,79 @@ test("failed restoration prevents a dependent sibling from executing", async () 
   const sibling = await worker.prepare(command(click(100)));
   expect(sibling.operation).toMatchObject({ status: "rejected", outcome_code: "state_restore_failed" });
 });
-test("origin policy covers denied popups", async () => {
-  await setup(); const denied = await run(click(460));
-  expect(denied.operation.status).not.toBe("completed");
-  expect(denied.operation.outcome_code).toBe("origin_denied");
-  expect(denied.operation.actual_before_frame_id).not.toBeNull();
+for (const popup of [false, true]) test(`external ${popup ? "popup" : "navigation"} continues and records only its origin`, async () => {
+  await page.route(`${target.origin}/`, async (route) => {
+    const response = await route.fetch();
+    const html = (await response.text()).replace('href="http://localhost:1/denied" target="_blank"',
+      `href="${external.origin}/a?token=synthetic-private#fragment" ${popup ? 'target="_blank"' : ""}`);
+    await route.fulfill({ response, body: html });
+  });
+  await setup();
+  const result = await run(click(460));
+  expect(result.operation.status).toBe("completed");
+  const observed = worker.origins(identity, identity.session_id) as { items: { origin: string; request_kind: string }[] };
+  expect(observed.items).toContainEqual(expect.objectContaining({ origin: external.origin, request_kind: popup ? "popup" : "navigation" }));
+  expect(JSON.stringify(observed)).not.toContain("synthetic-private");
+  expect(JSON.stringify(observed)).not.toContain("fragment");
+  expect(() => worker.origins({ ...identity, tenant_id: "other" }, identity.session_id)).toThrow("scope_mismatch");
+  const next = await run({ kind: "wait", duration_ms: 100 });
+  expect(next.operation.status).toBe("completed");
+});
+
+test("external subresources are loaded and deduplicated without poisoning the session", async () => {
+  await setup();
+  await page.evaluate(async (origin) => {
+    await fetch(`${origin}/resource?token=private-one`, { mode: "no-cors" });
+    await fetch(`${origin}/resource?token=private-two`, { mode: "no-cors" });
+  }, external.origin);
+  const result = await run({ kind: "wait", duration_ms: 100 });
+  expect(result.operation.status).toBe("completed");
+  const observed = worker.origins(identity, identity.session_id) as { items: unknown[] };
+  expect(observed.items).toHaveLength(1);
+  expect(observed.items[0]).toMatchObject({ origin: external.origin, request_kind: "resource" });
+  expect(external.visits.get("/resource?token=private-one")).toBe(1);
+  expect(JSON.stringify(observed)).not.toContain("private-one");
+});
+
+test("external WebSocket connects and records its origin without query values", async () => {
+  const sockets = new Set<Duplex>();
+  const server = createServer();
+  server.on("upgrade", (request, socket) => {
+    sockets.add(socket);
+    const accept = createHash("sha1").update(request.headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
+    socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    await setup();
+    await page.evaluate((url) => new Promise<void>((resolve, reject) => {
+      const socket = new WebSocket(url);
+      socket.onopen = () => { socket.close(); resolve(); };
+      socket.onerror = () => reject(new Error("fixture websocket failed"));
+    }), origin.replace("http:", "ws:") + "/socket?token=private-fixture");
+    const observations = worker.origins(identity, identity.session_id) as { items: unknown[] };
+    expect(observations.items).toContainEqual(expect.objectContaining({ origin, request_kind: "websocket" }));
+    expect(JSON.stringify(observations)).not.toContain("private-fixture");
+    expect((await run({ kind: "wait", duration_ms: 100 })).operation.status).toBe("completed");
+  } finally {
+    for (const socket of sockets) socket.destroy();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });
 test("before capture failure rejects without action and after failure retains actual action", async () => {
-  await setup(); const original = page.screenshot.bind(page);
-  page.screenshot = async () => { throw new Error("fixture capture unavailable"); };
+  await setup(); const context = page.context(); const original = context.newCDPSession.bind(context);
+  context.newCDPSession = async () => { throw new Error("fixture capture unavailable"); };
   const rejected = await worker.prepare(command(click(340)));
   expect(rejected.operation).toMatchObject({ status: "rejected", before_unavailable_reason: "capture_failed" });
-  page.screenshot = original;
+  context.newCDPSession = original;
   const prepared = await worker.prepare(command(click(340)));
-  page.screenshot = async () => { throw new Error("fixture capture unavailable"); };
+  context.newCDPSession = async () => { throw new Error("fixture capture unavailable"); };
   const result = await worker.execute(executeCommand(prepared));
   expect(result.operation).toMatchObject({ status: "completed", after_unavailable_reason: "capture_failed" });
   expect(result.frames).toHaveLength(1);
   expect(await page.getByRole("button", { name: "Icon action" }).getAttribute("data-count")).toBe("1");
-  page.screenshot = original;
+  context.newCDPSession = original;
 });
 test("browser loss during an action yields unknown and duplicate execute cannot retry", async () => {
   await setup(); const prepared = await worker.prepare(command({ kind: "wait", duration_ms: 1000 }));
@@ -247,6 +400,25 @@ test("setup still fails when navigation never settles and retains both frames", 
   expect(result.duration_ms).toBeLessThan(13_000);
 });
 
+test("a link navigation gets time to hydrate its destination before the next checkpoint", async () => {
+  await page.route(target.origin + "/a", route => route.fulfill({ contentType: "text/html", body: `
+    <button aria-label="Loading">Loading</button><script>
+      const button = document.querySelector('button');
+      let count = 0;
+      const timer = setInterval(() => button.setAttribute('data-changing', String(++count)), 20);
+      setTimeout(() => {
+        clearInterval(timer); button.textContent = 'Ready'; button.setAttribute('aria-label', 'Ready');
+      }, 2500);
+    </script>` }));
+  await setup();
+  const result = await run(click(40), { checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID() });
+  expect(result.operation).toMatchObject({ status: "completed", url_change: "changed" });
+  expect(await page.getByRole("button", { name: "Ready" }).count()).toBe(1);
+  expect(result.duration_ms).toBeGreaterThanOrEqual(2500);
+  expect(result.duration_ms).toBeLessThan(13_000);
+  expect((await worker.checkpoint(identity, identity.session_id, result.checkpoint!.id)).matches_current).toBe(true);
+});
+
 test("settle timeout is bounded and retains after evidence", async () => {
   await setup();
   await page.getByRole("button", { name: "No operation" }).evaluate((el) => {
@@ -254,8 +426,47 @@ test("settle timeout is bounded and retains after evidence", async () => {
   });
   const result = await run(click(400));
   expect(result.operation).toMatchObject({ status: "failed", outcome_code: "settle_timeout" });
+  expect(result.operation.executed_click?.before_frame_id).toBe(result.operation.actual_before_frame_id);
   expect(result.frames).toHaveLength(2);
   expect(result.duration_ms).toBeLessThan(5000);
+});
+
+test("confirmed click coordinates match browser input with borders, scrolling and popup", async () => {
+  await setup();
+  await page.evaluate(() => {
+    document.addEventListener("click", (event) => {
+      (window as unknown as { fixtureClick: { x: number; y: number } }).fixtureClick = { x: event.clientX, y: event.clientY };
+    }, true);
+  });
+  const verify = async (result: OperationResult, source = page) => {
+    const actual = await source.evaluate(() => (window as unknown as { fixtureClick: { x: number; y: number } }).fixtureClick);
+    const recorded = result.operation.executed_click!;
+    expect(recorded).not.toBeNull();
+    expect(Math.abs(recorded.x * (recorded.viewport_width - 1) - actual.x)).toBeLessThan(1);
+    expect(Math.abs(recorded.y * (recorded.viewport_height - 1) - actual.y)).toBeLessThan(1);
+    expect(recorded.before_frame_id).toBe(result.operation.actual_before_frame_id);
+    expect(recorded.before_frame_id).not.toBe(result.operation.actual_after_frame_id);
+  };
+  await verify(await run(click(340)));
+  await run({ kind: "scroll", delta_y: 1000 });
+  const box = (await page.getByRole("button", { name: "Offscreen action" }).boundingBox())!;
+  await verify(await run({ kind: "click", x: (box.x + 40) / 1279, y: (box.y + 20) / 719 }));
+  await run({ kind: "scroll", delta_y: -1000 });
+  const popup = await run(click(220));
+  await verify(popup);
+  expect(popup.operation.before_page_id).not.toBe(popup.operation.after_page_id);
+});
+
+test("click metadata is absent when Playwright click itself fails", async () => {
+  await setup();
+  const prepared = await worker.prepare(command(click(340)));
+  // Force the browser to disappear after the dispatch intent; never retry it.
+  const timer = setTimeout(() => { void browser.close(); }, 1);
+  const result = await worker.execute(executeCommand(prepared));
+  clearTimeout(timer);
+  expect(["rejected", "unknown"]).toContain(result.operation.status);
+  expect(result.operation.executed_click).toBeNull();
+  expect(await worker.execute(executeCommand(prepared))).toEqual(result);
 });
 
 test("checkpoint reads compare the live page including form values", async () => {
@@ -267,6 +478,58 @@ test("checkpoint reads compare the live page including form values", async () =>
   const rejected = await worker.prepare(command(click(100)));
   expect(rejected.operation).toMatchObject({ status: "rejected", outcome_code: "state_mismatch" });
 });
+
+test("offscreen animation survives model latency and restores for another button after operation 3", async () => {
+  await page.route(target.origin + "/", async (route) => {
+    await route.fulfill({ response: await route.fetch({ url: target.origin + "/?animated=1" }) });
+  });
+  const rootState = await setup();
+  const before = await page.locator("#carousel").textContent();
+  await page.waitForTimeout(500);
+  expect(await page.locator("#carousel").textContent()).not.toBe(before);
+  expect((await worker.checkpoint(identity, identity.session_id, rootState.checkpoint!.id)).matches_current).toBe(true);
+  ledger(await run(click(40)), "click", 2);
+  ledger(await run({ kind: "back" }, { purpose: "restore", restore_checkpoint_id: rootState.checkpoint!.id }), "back", 3);
+  await page.waitForTimeout(200);
+  const next = await run(click(100));
+  ledger(next, "click", 4);
+  expect(next.locator?.descriptor?.value).toBe("Branch B");
+});
+
+for (const change of ["move", "overlay", "offscreen_form", "iframe", "accessible_name"] as const) {
+  test(`checkpoint still rejects ${change} drift before clicking`, async () => {
+    const visitsBefore = target.visits.get("/b") ?? 0;
+    if (change === "accessible_name" || change === "offscreen_form") {
+      await page.route(target.origin + "/", async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({ response, body: (await response.text()).replace("</body>",
+          (change === "accessible_name"
+            ? '<span id="hidden-label" hidden>Original name</span><button aria-labelledby="hidden-label">Named</button>'
+            : '<input id="offscreen-form" style="position:absolute;top:1600px" value="seed">') + '</body>') });
+      });
+    }
+    const rootState = await setup();
+    if (change === "move") await page.getByRole("link", { name: "Branch B", exact: true }).evaluate((el) => {
+      (el as HTMLElement).style.transform = "translateX(200px)";
+    });
+    else if (change === "overlay") await page.evaluate(() => {
+      const overlay = document.createElement("div");
+      overlay.style.cssText = "position:fixed;inset:0;z-index:1000;background:white";
+      document.body.append(overlay);
+    });
+    else if (change === "offscreen_form") await page.locator("#offscreen-form").evaluate((el) => {
+      (el as HTMLInputElement).value = "private-offscreen-value";
+    });
+    else if (change === "iframe") await page.frameLocator("#embedded").getByRole("button").evaluate((el) => { el.textContent = "Changed"; });
+    else await page.locator("#hidden-label").evaluate((el) => { el.textContent = "Different name"; });
+    const checkpoint = await worker.checkpoint(identity, identity.session_id, rootState.checkpoint!.id);
+    expect(checkpoint.matches_current).toBe(false);
+    const result = await worker.prepare(command(click(100)));
+    expect(result.operation).toMatchObject({ status: "rejected", outcome_code: "state_mismatch" });
+    expect(target.visits.get("/b") ?? 0).toBe(visitsBefore);
+    expect(JSON.stringify(result)).not.toContain("private-offscreen-value");
+  });
+}
 
 test("state/hop and derived operation caps reject before another browser action", async () => {
   await worker.close(identity, identity.session_id);
@@ -319,6 +582,10 @@ test("HTTP endpoints require secret, scoped identity, bounded body and matching 
       target_url: target.origin, allowed_origins: [target.origin], deadline: new Date(Date.now() + 60_000).toISOString(),
       max_session_seconds: 60, max_states: 2, max_hops: 1, max_screenshot_bytes: 1_000_000 }) });
     expect(open.status).toBe(200); const opened = await open.json();
+    expect((await fetch(`${url}/${identity.session_id}/origins`, { headers })).status).toBe(422);
+    const origins = await fetch(`${url}/${identity.session_id}/origins`, { headers: scopeHeaders });
+    expect(origins.status).toBe(200);
+    expect(await origins.json()).toMatchObject({ ...identity, items: [], truncated: false });
     const prepare = await fetch(`${url}/${identity.session_id}/operations/prepare`, { method: "POST", headers,
       body: JSON.stringify(command({ kind: "navigate" }, { purpose: "setup", expected_state_fingerprint: opened.state_fingerprint })) });
     expect(prepare.status).toBe(200); const prepared = await prepare.json() as OperationResult;

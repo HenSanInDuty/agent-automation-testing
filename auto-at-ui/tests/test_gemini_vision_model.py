@@ -206,3 +206,26 @@ def test_adapter_exception_does_not_retain_http_request_or_body():
     assert str(error.value) == "provider_auth_failed"
     assert not hasattr(error.value, "request") and not hasattr(error.value, "response")
     assert KEY not in repr(error.value)
+
+
+def test_configured_candidate_schema_cannot_be_overridden_by_payload():
+    def handler(request):
+        body = json.loads(request.content)
+        assert body["response_format"]["type"] == "json_schema"
+        schema = body["response_format"]["json_schema"]["schema"]
+        assert schema["properties"]["candidates"]["maxItems"] == 3
+        return httpx.Response(200, json=REPLY)
+
+    model = GeminiVisionLanguageModel(
+        api_key=KEY, model=MODEL, max_candidates=3, transport=httpx.MockTransport(handler),
+    )
+    asyncio.run(model.ainvoke(
+        {"messages": [], "max_tokens": 1000, "response_format": {"type": "text"}},
+        response_format={"type": "text"},
+    ))
+
+
+@pytest.mark.parametrize("limit", [0, 21, True, "3"])
+def test_candidate_schema_rejects_invalid_caps(limit):
+    with pytest.raises(ValueError, match="candidate batch cap"):
+        GeminiVisionLanguageModel(api_key=KEY, model=MODEL, max_candidates=limit)

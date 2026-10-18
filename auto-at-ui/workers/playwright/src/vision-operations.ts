@@ -5,8 +5,9 @@ import { chromium, type Browser, type BrowserContext, type Page } from "@playwri
 import { allowedOrigin, canonical, digest, requireVision, validateVision, VisionWorkerError,
   type VisualWorkerIdentity, type VisualWorkerOpen, type VisualWorkerPrepare, type VisualWorkerExecute,
   type VisualWorkerAck, type VisualOperation, type VisualOperationFrame, type VisualLocatorEvidence,
-  type VisualCheckpoint, type VisualWorkerOperationResult } from "./vision-contract.js";
+  type VisualCheckpoint, type VisualWorkerOperationResult, type VisualExternalOrigin, type VisualExecutedClick } from "./vision-contract.js";
 import { groundLocator, type GroundedLocator } from "./vision-locators.js";
+import { captureVisionScreen } from "./vision-screen.js";
 import { checkpointMetadata, equivalentState, inspectState, settleState, type RuntimeState } from "./vision-checkpoints.js";
 
 export type OperationResult = VisualWorkerOperationResult;
@@ -14,6 +15,7 @@ type OperationRuntime = {
   result: OperationResult; payloadHash: string; prepare: VisualWorkerPrepare | null;
   before: RuntimeState | null; grounded?: GroundedLocator; page: Page;
   paths: Map<string, string>; replayable: boolean;
+  confirmedClick?: VisualExecutedClick;
 };
 type CheckpointRuntime = { metadata: VisualCheckpoint; state: RuntimeState };
 type Session = {
@@ -24,6 +26,8 @@ type Session = {
   checkpoints: Map<string, CheckpointRuntime>; ancestry: string[];
   exploredStates: number;
   state: RuntimeState; policyFailure: string | null; activeOperation: string | null;
+  preview?: { at: number; image: Promise<Buffer> };
+  externalOrigins: Map<string, VisualExternalOrigin>; originsTruncated: boolean;
 };
 
 export class VisualOperationWorker {
@@ -86,9 +90,7 @@ export class VisualOperationWorker {
     requireVision(!this.hasSession(request.session_id), "session_already_open");
     const deadline = Date.parse(request.deadline);
     requireVision(deadline > Date.now() && deadline <= Date.now() + request.max_session_seconds * 1000, "invalid_deadline");
-    requireVision(request.allowed_origins.every((origin) => origin === "*" || (() => {
-      try { return new URL(origin).origin === origin && allowedOrigin(origin, [origin]); } catch { return false; }
-    })()) && allowedOrigin(request.target_url, request.allowed_origins), "origin_denied");
+    requireVision(allowedOrigin(request.target_url, ["*"]), "invalid_target_url");
     this.opening.add(request.session_id);
     let browser: Browser | undefined;
     try {
@@ -96,13 +98,22 @@ export class VisualOperationWorker {
       const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, acceptDownloads: false, serviceWorkers: "block" });
       let session: Session | undefined;
       await context.route("**/*", async (route) => {
-        if (allowedOrigin(route.request().url(), request.allowed_origins)) await route.continue();
-        else { if (session) session.policyFailure = "origin_denied"; await route.abort(); }
+        const request = route.request();
+        if (session) {
+          let kind: VisualExternalOrigin["request_kind"] = "resource";
+          if (request.isNavigationRequest()) {
+            // The first popup request can arrive before Playwright creates its frame.
+            try { kind = request.frame().page() !== session.page ? "popup" : "navigation"; }
+            catch { kind = "popup"; }
+          }
+          this.observeOrigin(session, request.url(), kind);
+        }
+        await route.continue();
       });
       await context.routeWebSocket("**/*", (socket) => {
         const httpUrl = socket.url().replace(/^ws:/, "http:").replace(/^wss:/, "https:");
-        if (allowedOrigin(httpUrl, request.allowed_origins)) socket.connectToServer();
-        else { if (session) session.policyFailure = "origin_denied"; socket.close(); }
+        if (session) this.observeOrigin(session, httpUrl, "websocket");
+        socket.connectToServer();
       });
       context.on("page", (page) => {
         page.on("dialog", (dialog) => { if (session) session.policyFailure = "dialog_unsupported"; void dialog.dismiss().catch(() => undefined); });
@@ -118,7 +129,8 @@ export class VisualOperationWorker {
       const state = await inspectState(page);
       session = { request, browser, context, page, pages: new Map(), parents: new Map(), deadline,
         timer: setTimeout(() => undefined, 0), expired: false, busy: false, operations: new Map(),
-        pending: null, checkpoints: new Map(), ancestry: [], exploredStates: 0, state, policyFailure: null, activeOperation: null };
+        pending: null, checkpoints: new Map(), ancestry: [], exploredStates: 0, state, policyFailure: null, activeOperation: null,
+        externalOrigins: new Map(), originsTruncated: false };
       const opened = session;
       clearTimeout(opened.timer);
       opened.timer = setTimeout(() => { void this.expire(opened); }, Math.max(1, deadline - Date.now()));
@@ -131,14 +143,59 @@ export class VisualOperationWorker {
     finally { this.opening.delete(request.session_id); }
   }
   private budget(session: Session): number { return 1 + session.request.max_states * (2 * session.request.max_hops + 3); }
+  private observeOrigin(session: Session, url: string, kind: VisualExternalOrigin["request_kind"]): void {
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return; }
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.origin === new URL(session.request.target_url).origin) return;
+    const key = `${kind}:${parsed.origin}`;
+    if (session.externalOrigins.has(key)) return;
+    if (session.externalOrigins.size >= 100 || parsed.origin.length > 500) { session.originsTruncated = true; return; }
+    session.externalOrigins.set(key, { origin: parsed.origin, request_kind: kind, observed_at: new Date().toISOString() });
+  }
+  origins(value: unknown, id: string) {
+    const session = this.identity(value, id);
+    return validateVision("VisualWorkerOriginObservations", { ...this.scope(session.request),
+      items: [...session.externalOrigins.values()], truncated: session.originsTruncated });
+  }
+  async screen(value: unknown, id: string): Promise<Buffer> {
+    const session = this.identity(value, id);
+    const timeout = this.timeout(session);
+    // Concurrent viewers share a bounded capture; preview never acquires the action lock.
+    if (!session.preview || Date.now() - session.preview.at > 1000) {
+      const image = captureVisionScreen(session.page, timeout).then((bytes) => {
+        requireVision(bytes.length <= Math.min(session.request.max_screenshot_bytes, 2_000_000), "screenshot_byte_limit");
+        return bytes;
+      });
+      const preview = { at: Number.POSITIVE_INFINITY, image };
+      session.preview = preview;
+      void image.then(() => { preview.at = Date.now(); }, () => {
+        if (session.preview === preview) session.preview = undefined;
+      });
+    }
+    return session.preview.image;
+  }
   private directory(session: Session, operationId: string): string {
     const root = resolve(this.artifactRoot, "vision-v4");
     const directory = resolve(root, session.request.session_id, operationId);
     requireVision(directory.startsWith(root + sep), "invalid_artifact_path");
     return directory;
   }
-  private async capture(session: Session, runtime: OperationRuntime, role: "before" | "after", page: Page): Promise<void> {
-    const bytes = await page.screenshot({ type: "png", timeout: this.timeout(session) });
+  private async capture(session: Session, runtime: OperationRuntime, role: "before" | "after", page: Page, stable = false): Promise<RuntimeState | null> {
+    const timeout = this.timeout(session);
+    // Successful after-captures may need another sample after late hydration.
+    // Share one navigation-sized budget across retries, always within the session.
+    const deadline = Math.min(session.deadline, Date.now() + (stable ? 10_000 : timeout));
+    let bytes: Buffer, observed: RuntimeState | null = null;
+    for (;;) {
+      const before = stable ? await inspectState(page) : null;
+      requireVision(Date.now() < deadline, "capture_failed");
+      bytes = await captureVisionScreen(page, deadline - Date.now());
+      if (!before) break;
+      observed = await inspectState(page);
+      // Hydration may finish between settle and capture. Publish only an image
+      // bracketed by matching states; retries are read-only and share one timeout.
+      if (equivalentState(before, observed)) break;
+    }
     requireVision(bytes.length <= session.request.max_screenshot_bytes, "screenshot_byte_limit");
     const directory = this.directory(session, runtime.result.operation.id);
     await mkdir(directory, { recursive: true });
@@ -154,11 +211,13 @@ export class VisualOperationWorker {
     runtime.result.frames.push(frame); runtime.paths.set(frame.id, path);
     runtime.result.operation[`actual_${role}_frame_id`] = frame.id;
     runtime.result.operation[`${role}_page_id`] = this.pageId(session, page);
+    return observed;
   }
   private finalize(runtime: OperationRuntime, status: "completed" | "failed" | "rejected" | "unknown", code: string): void {
     if (!["prepared", "executing"].includes(runtime.result.operation.status)) return;
     const op = runtime.result.operation;
     op.status = status; op.outcome_code = code; op.ended_at = new Date().toISOString();
+    op.executed_click = ["completed", "failed"].includes(status) ? runtime.confirmedClick ?? null : null;
     if (!op.actual_before_frame_id) op.before_unavailable_reason ??= "capture_failed";
     if (!op.actual_after_frame_id) op.after_unavailable_reason ??= "capture_unavailable";
     runtime.result.duration_ms = Date.parse(op.ended_at) - Date.parse(op.started_at);
@@ -280,8 +339,36 @@ export class VisualOperationWorker {
           await runtime.page.close(); afterPage = parent;
         } else if (action.kind === "click") {
           const box = await runtime.grounded!.locator!.boundingBox(); requireVision(box, "stale_locator");
+          // Optional evidence must not affect dispatch. Playwright 1.50 adds the
+          // border width to position (padding-box relative); preserve that input.
+          const viewport = runtime.page.viewportSize();
+          const geometry = await runtime.grounded!.target!.evaluate((el) => {
+            const view = el.ownerDocument.defaultView!;
+            for (let node: Element | null = el; node;) {
+              const style = view.getComputedStyle(node);
+              if (style.transform !== "none" || (style.zoom && style.zoom !== "1" && style.zoom !== "normal")) return null;
+              node = node.parentElement ?? (node.getRootNode() instanceof ShadowRoot ? (node.getRootNode() as ShadowRoot).host : null);
+            }
+            const style = view.getComputedStyle(el);
+            return { left: parseFloat(style.borderLeftWidth) || 0, top: parseFloat(style.borderTopWidth) || 0 };
+          }).catch(() => null);
+          const groundedBox = runtime.grounded!.bounding_box;
+          const point = geometry ? {
+            x: Math.trunc((action.x! * 1279 + geometry.left) * 100) / 100,
+            y: Math.trunc((action.y! * 719 + geometry.top) * 100) / 100,
+          } : null;
+          const canRecord = viewport?.width === 1280 && viewport.height === 720 && point &&
+            point.x >= 0 && point.x <= 1279 && point.y >= 0 && point.y <= 719 &&
+            box.x >= 0 && box.y >= 0 && box.x + box.width <= 1280 && box.y + box.height <= 720 &&
+            !runtime.grounded!.descriptor?.scope.some((scope) => scope.kind === "iframe") &&
+            groundedBox && Math.abs(groundedBox.width * 1280 - box.width) < 1 &&
+            Math.abs(groundedBox.height * 720 - box.height) < 1;
           await runtime.grounded!.locator!.click({ timeout, position: {
             x: action.x! * 1279 - box.x, y: action.y! * 719 - box.y } });
+          if (canRecord) runtime.confirmedClick = {
+            x: point.x / 1279, y: point.y / 719, viewport_width: 1280, viewport_height: 720,
+            before_frame_id: beforeFrame.id, confirmed_at: new Date().toISOString(),
+          };
         } else if (action.kind === "type") {
           // Preserve append semantics; do not persist text in evidence or fill/clear.
           await runtime.grounded!.locator!.press("ControlOrMeta+End", { timeout });
@@ -304,30 +391,22 @@ export class VisualOperationWorker {
           afterPage = popups[0]; session.parents.set(afterPage, runtime.page);
           await afterPage.waitForLoadState("domcontentloaded", { timeout: this.timeout(session) }).catch(() => undefined);
         }
-        requireVision(allowedOrigin(afterPage.url(), session.request.allowed_origins), "origin_denied");
+        this.observeOrigin(session, afterPage.url(), afterPage === runtime.page ? "navigation" : "popup");
         if (session.policyFailure) throw new VisionWorkerError(session.policyFailure);
         // DOMContentLoaded can precede hydration and carousel initialization by
         // several seconds. Allow navigation to settle without relaxing state
         // equality or exceeding the session deadline; local actions stay short.
-        const settleTimeout = action.kind === "navigate" ? 10_000 : 1500;
+        const navigated = ["navigate", "back", "close_popup"].includes(action.kind) ||
+          afterPage !== runtime.page || runtime.before.url_fingerprint !== digest(afterPage.url());
+        const settleTimeout = navigated ? 10_000 : 1500;
         const settled = await settleState(afterPage, Math.min(session.deadline, Date.now() + settleTimeout));
         if (!settled.settled) { status = "failed"; code = "settle_timeout"; }
         session.state = settled.state; runtime.result.state_fingerprint = settled.state.fingerprint;
         runtime.result.semantic_change = runtime.before.semantic_fingerprint === settled.state.semantic_fingerprint ? "unchanged" : "changed";
         runtime.result.operation.url_change = runtime.before.url_fingerprint === settled.state.url_fingerprint ? "unchanged" : "changed";
-        if (command.restore_checkpoint_id) {
-          const checkpoint = session.checkpoints.get(command.restore_checkpoint_id)!;
-          requireVision(equivalentState(checkpoint.state, settled.state), "state_restore_failed");
-          session.ancestry = [...checkpoint.metadata.ancestor_operation_ids];
-        } else if (status === "completed") {
+        if (!command.restore_checkpoint_id && status === "completed") {
           if (action.kind === "navigate") session.ancestry = [request.operation_id];
           else if (command.purpose === "explore" || command.purpose === "replay") session.ancestry.push(request.operation_id);
-        }
-        if (command.checkpoint_id && status === "completed") {
-          requireVision(!session.checkpoints.has(command.checkpoint_id), "checkpoint_already_exists");
-          requireVision(session.checkpoints.size < session.request.max_states, "state_limit");
-          const metadata = checkpointMetadata(command.checkpoint_id, command.checkpoint_state_id!, [...session.ancestry], settled.state);
-          session.checkpoints.set(metadata.id, { metadata, state: settled.state }); runtime.result.checkpoint = metadata;
         }
         runtime.replayable ||= ["navigate", "scroll", "wait"].includes(action.kind);
         runtime.result.replayable = runtime.replayable && status === "completed";
@@ -337,15 +416,37 @@ export class VisualOperationWorker {
       } finally {
         session.context.off("page", onPage);
         session.activeOperation = null; session.pending = null; session.page = afterPage;
+        let captured: RuntimeState | null = null;
         try {
-          await this.capture(session, runtime, "after", afterPage);
+          // Failed/unknown actions retain diagnostic pixels even when the page
+          // never settles; only a successful action can create a checkpoint.
+          captured = await this.capture(session, runtime, "after", afterPage, status === "completed");
           const before = runtime.result.frames.find((f) => f.role === "before")!;
           const after = runtime.result.frames.find((f) => f.role === "after")!;
           runtime.result.operation.visual_change = before.checksum === after.checksum ? "unchanged" : "changed";
         } catch (error) { runtime.result.operation.after_unavailable_reason = error instanceof VisionWorkerError ? error.code : "capture_failed"; }
         try {
-          session.state = await inspectState(afterPage); runtime.result.state_fingerprint = session.state.fingerprint;
+          session.state = captured ?? await inspectState(afterPage); runtime.result.state_fingerprint = session.state.fingerprint;
         } catch { /* browser lost; last known state remains explicitly unavailable */ }
+        if (captured) {
+          runtime.result.semantic_change = runtime.before.semantic_fingerprint === captured.semantic_fingerprint ? "unchanged" : "changed";
+          runtime.result.operation.url_change = runtime.before.url_fingerprint === captured.url_fingerprint ? "unchanged" : "changed";
+          if (status === "completed" && command.restore_checkpoint_id) {
+            const checkpoint = session.checkpoints.get(command.restore_checkpoint_id)!;
+            if (!equivalentState(checkpoint.state, captured)) { status = "failed"; code = "state_restore_failed"; }
+            else session.ancestry = [...checkpoint.metadata.ancestor_operation_ids];
+          }
+          if (status === "completed" && command.checkpoint_id) {
+            // Bind the checkpoint to the committed image, not the earlier settle
+            // sample. No image means no checkpoint usable by a future proposal.
+            const metadata = checkpointMetadata(command.checkpoint_id, command.checkpoint_state_id!, [...session.ancestry], captured);
+            session.checkpoints.set(metadata.id, { metadata, state: captured }); runtime.result.checkpoint = metadata;
+          }
+        }
+        if (status === "completed" && command.restore_checkpoint_id && !captured) {
+          status = "failed"; code = "state_restore_failed";
+        }
+        runtime.result.replayable = runtime.replayable && status === "completed";
         if (status === "unknown" || code === "state_restore_failed") session.policyFailure = code;
         this.finalize(runtime, status, code);
         await runtime.grounded?.target?.dispose().catch(() => undefined); runtime.grounded = undefined;

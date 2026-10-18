@@ -36,6 +36,15 @@ export async function startVisionTarget() {
       <div role="button" tabindex="0" class="action" style="top:560px" onclick="this.dataset.clicked='yes'">Custom div action</div>
       <span role="button" tabindex="0" class="action" style="top:620px" onclick="this.dataset.clicked='yes'">Custom span action</span>
       <button class="action" style="top:1500px" onclick="this.dataset.clicked='yes'">Offscreen action</button>
+      ${path === "/?animated=1" ? `<section id="carousel" style="position:absolute;top:1800px">Slide</section>
+      <script>
+        let slide = 0;
+        setInterval(() => {
+          const carousel = document.getElementById('carousel');
+          carousel.className = 'slide-' + (++slide % 3);
+          carousel.textContent = 'Slide ' + slide;
+        }, 50);
+      </script>` : ""}
       <script>document.getElementById('shadow-host').attachShadow({mode:'open'}).innerHTML='<button aria-label="Shadow action">Shadow</button>';</script>
     </body></html>`);
   });

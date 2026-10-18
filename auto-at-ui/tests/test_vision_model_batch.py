@@ -65,7 +65,23 @@ def test_gemini_succeeds_without_drive_and_only_uses_gemini_key():
         assert checks == ["checked"]
         assert request.headers["authorization"] == "Bearer fixture-gemini-key"
         assert request.url.host == "generativelanguage.googleapis.com"
-        uri = json.loads(request.content)["messages"][1]["content"][1]["image_url"]["url"]
+        body = json.loads(request.content)
+        assert body["max_tokens"] == 1000
+        assert body["response_format"]["type"] == "json_schema"
+        schema = body["response_format"]["json_schema"]["schema"]
+        candidates = schema["properties"]["candidates"]
+        assert candidates["minItems"] == 1 and candidates["maxItems"] == 2
+        variants = candidates["items"]["anyOf"]
+        assert len(variants) == 5
+        for variant in variants:
+            assert "kind" in variant["required"]
+            assert variant["additionalProperties"] is False
+            if variant["properties"]["kind"]["enum"][0] in {"click", "type"}:
+                for axis in ("x", "y"):
+                    assert variant["properties"][axis]["minimum"] == 0
+                    assert variant["properties"][axis]["maximum"] == 1
+        assert "offscreen click" in body["messages"][0]["content"]
+        uri = body["messages"][1]["content"][1]["image_url"]["url"]
         assert b64decode(uri.partition(",")[2]) == PNG
         return httpx.Response(200, json=REPLY)
 
@@ -77,6 +93,52 @@ def test_gemini_succeeds_without_drive_and_only_uses_gemini_key():
     outcome = asyncio.run(dispatch(**options(check_policy=lambda: checks.append("checked"))))
     assert outcome.status == "completed" and outcome.actions[0].kind == "click"
     assert checks == ["checked", "checked"] and len(requests) == 1
+
+
+@pytest.mark.parametrize("y", [-0.1, 1.01, 350])
+def test_gemini_offscreen_click_still_rejects_the_entire_batch(y):
+    """Provider schema is guidance; never clamp or execute a partially invalid batch."""
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json={"choices": [{
+            "finish_reason": "stop", "message": {"content": json.dumps({"candidates": [
+                {"kind": "click", "x": 0.3, "y": 0.4, "confidence": 0.9,
+                 "expected_outcome": "Visible control opens"},
+                {"kind": "click", "x": 0.3, "y": y, "confidence": 0.9,
+                 "expected_outcome": "Offscreen control opens"},
+            ]})},
+        }]})
+
+    dispatch = VisionModelBatch(
+        settings(), image_store_factory=no_drive,
+        model_factory=partial(create_vision_language_model, transport=httpx.MockTransport(handler)),
+    )
+    outcome = asyncio.run(dispatch(**options()))
+    assert outcome.status == "unavailable" and outcome.actions is None
+    assert outcome.diagnostic_code == "invalid_candidate_schema"
+    assert outcome.failure_reason == "model_output_invalid"
+    assert len(calls) == 1
+
+
+def test_gemini_visible_click_and_scroll_are_valid_sibling_actions():
+    content = {"candidates": [
+        {"kind": "click", "x": 0.3, "y": 0.4, "confidence": 0.9,
+         "expected_outcome": "Visible control opens"},
+        {"kind": "scroll", "delta_y": 600, "confidence": 0.9,
+         "expected_outcome": "More controls become visible"},
+    ]}
+    dispatch = VisionModelBatch(
+        settings(), image_store_factory=no_drive,
+        model_factory=partial(create_vision_language_model, transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, json={"choices": [{"finish_reason": "stop",
+                "message": {"content": json.dumps(content)}}]}),
+        )),
+    )
+    outcome = asyncio.run(dispatch(**options()))
+    assert outcome.status == "completed"
+    assert [action.kind for action in outcome.actions] == ["click", "scroll"]
 
 
 @pytest.mark.parametrize("provider", ["huggingface", "gemini"])

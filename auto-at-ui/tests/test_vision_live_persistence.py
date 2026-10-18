@@ -377,7 +377,8 @@ def live_browser_worker():
 @pytest.mark.parametrize(
     "variant",
     ["branches", "modal", "restore_failed", "cancelled", "model_failed", "generation_failed",
-     "image_auth_failed"],
+     "image_auth_failed", "initial_capture_failed", "external_origin", "offscreen_animation",
+     "invalid_response", "invalid_response_scroll"],
 )
 def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
     trace_database,
@@ -389,7 +390,7 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
     import httpx
     from agents.vision.executor import VisualCandidateBatchOutcome
     from application.vision_trace_events import VisionTraceEventProcessor
-    from auto_at.contracts.vision import ClickAction, StopAction
+    from auto_at.contracts.vision import ClickAction, ScrollAction, StopAction
     from config import Settings
     from domain.runs import OutboxEvent
     from infrastructure.persistence.models import (
@@ -424,7 +425,7 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
                 lease_owner=None,
                 lease_expires_at=None,
                 fencing_token=0,
-                target_url=origin,
+                target_url=origin + ("/?animated=1" if variant == "offscreen_animation" else ""),
                 provider="huggingface",
                 model="fixture-model",
                 max_requests_per_minute=10_000,
@@ -464,16 +465,27 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
             calls += 1
             assert kwargs["screenshot"].startswith(b"\x89PNG")
             if calls == 1:
+                if variant == "offscreen_animation":
+                    # The page changes repeatedly while the model is thinking.
+                    await asyncio.sleep(0.8)
                 actions = [
                     ClickAction(x=100 / 1279, y=y / 719, confidence=0.9, expected_outcome="fixture")
                     for y in ((160, 100) if variant == "modal" else (40, 100))
                 ]
+                if variant == "invalid_response_scroll":
+                    actions[-1] = ScrollAction(
+                        delta_y=500, confidence=0.9, expected_outcome="More page controls",
+                    )
             else:
                 if calls == 2:
                     waiting.set()
                     await release.wait()
                     if variant == "model_failed":
                         return VisualCandidateBatchOutcome(status="unavailable")
+                    if variant in {"invalid_response", "invalid_response_scroll"}:
+                        return VisualCandidateBatchOutcome(
+                            status="unavailable", failure_reason="model_output_invalid",
+                        )
                     if variant == "image_auth_failed":
                         from domain.vision import VisionImageAuthorizationRequired
 
@@ -486,6 +498,38 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
                 client, settings.playwright_worker_url, settings.vision_worker_secret
             )
             original_checkpoint = worker.checkpoint
+            if variant == "external_origin":
+                from auto_at.contracts.vision_worker import VisualWorkerOriginObservations
+
+                async def observed_origins(identity):
+                    return VisualWorkerOriginObservations(
+                        **identity.model_dump(), truncated=False, items=[{
+                            "origin": "https://cdn.fixture.test", "request_kind": "resource",
+                            "observed_at": datetime.now(UTC),
+                        }],
+                    )
+
+                worker.origins = observed_origins
+
+            if variant == "initial_capture_failed":
+                original_execute, original_ack = worker.execute, worker.acknowledge
+                remote_frames = ()
+
+                async def missing_capture(request):
+                    nonlocal remote_frames
+                    result = await original_execute(request)
+                    remote_frames = tuple(frame.id for frame in result.frames)
+                    return evolve(
+                        result,
+                        operation=evolve(result.operation, actual_after_frame_id=None,
+                                         after_unavailable_reason="capture_failed"),
+                        frames=tuple(frame for frame in result.frames if frame.role == "before"),
+                    )
+
+                async def cleanup(request):
+                    return await original_ack(evolve(request, persisted_frame_ids=remote_frames))
+
+                worker.execute, worker.acknowledge = missing_capture, cleanup
 
             async def checkpoint(identity, checkpoint_id):
                 value, matches = await original_checkpoint(identity, checkpoint_id)
@@ -500,6 +544,10 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
             )
             task = asyncio.create_task(publish_vision_once(factory, settings, handler=handler))
             try:
+                if variant == "initial_capture_failed":
+                    assert await asyncio.wait_for(task, timeout=20) == 1
+                    assert calls == 0
+                    return
                 done, _ = await asyncio.wait(
                     {task, asyncio.create_task(waiting.wait())},
                     timeout=20,
@@ -528,6 +576,8 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
                         )
                 release.set()
                 assert await asyncio.wait_for(task, timeout=30) == 1
+                if variant in {"invalid_response", "invalid_response_scroll"}:
+                    assert calls == 2  # No retry or extra model request after invalid output.
             finally:
                 release.set()
                 if not task.done():
@@ -537,6 +587,44 @@ def test_publisher_browser_bfs_commits_live_frames_and_verified_sibling_restore(
     asyncio.run(scenario())
     record = uow.get_session(scope.tenant_id, scope.session_id)
     snapshot = uow.read_snapshot(scope)
+    if variant in {"invalid_response", "invalid_response_scroll"}:
+        from infrastructure.persistence.models import ActivityEventModel
+        from sqlalchemy import select
+
+        assert record.state == "unavailable"
+        assert record.safe_failure_reason == "model_output_invalid"
+        assert [o.action_kind for o in snapshot["operations"]] == [
+            "navigate", "click", "back", "wait",
+            "scroll" if variant == "invalid_response_scroll" else "click",
+        ]
+        assert all(o.status == "completed" for o in snapshot["operations"])
+        with factory() as reader:
+            assert reader.scalar(select(ActivityEventModel.id).where(
+                ActivityEventModel.visual_exploration_session_id == scope.session_id,
+                ActivityEventModel.stage == "candidate.unavailable",
+            )) is not None
+        return
+    if variant == "external_origin":
+        from infrastructure.persistence.models import ActivityEventModel
+        from sqlalchemy import select
+
+        with factory() as reader:
+            events = reader.scalars(select(ActivityEventModel).where(
+                ActivityEventModel.visual_exploration_session_id == scope.session_id,
+                ActivityEventModel.stage == "origin.observed",
+            )).all()
+            assert len(events) == 1
+            assert events[0].tenant_id == scope.tenant_id
+            assert events[0].event_metadata == {
+                "origin": "https://cdn.fixture.test", "request_kind": "resource",
+            }
+    if variant == "initial_capture_failed":
+        assert record.state == "unavailable"
+        assert record.safe_failure_reason == "initial_capture_failed"
+        assert len(snapshot["operations"]) == 1
+        assert snapshot["operations"][0].status == "completed"
+        assert len(snapshot["frames"]) == 1
+        return
     if variant in {"restore_failed", "cancelled", "model_failed", "image_auth_failed"}:
         assert record.state == ("cancelled" if variant == "cancelled" else "unavailable")
         assert record.safe_failure_reason
