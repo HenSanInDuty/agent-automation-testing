@@ -13,7 +13,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [account, setAccount] = useState<{ email: string; role: string; tenant_id: string } | null>(null);
-  const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "http://localhost:7000";
+  const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "";
   const pathname = usePathname();
   const closeDrawer = () => setDrawerOpen((open) => nextDrawerState(open, "close"));
   useEffect(() => {

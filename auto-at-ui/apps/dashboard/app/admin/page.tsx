@@ -5,7 +5,7 @@ import { PageHeader } from "../components/page-header";
 import { EmptyState, ErrorState, LoadingState } from "../components/states";
 
 type User = { id: string; email: string; role: string; enabled: boolean; force_password_change: boolean };
-const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "http://localhost:7000";
+const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "";
 const csrf = () => document.cookie.split("; ").find((cookie) => cookie.startsWith("auto_at_csrf="))?.split("=")[1] ?? "";
 
 export default function AdminPage() {

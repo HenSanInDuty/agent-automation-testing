@@ -12,7 +12,7 @@ import type { Proposal } from "../../generation-types";
 import { activities, artifacts, browserActionFrameUrl, browserActions, cancelRun, createRevisedDraft, run, runReport, type Activity, type Artifact, type BrowserAction, type RevisedDraftRequest, type Run, type RunReport } from "../../run-api";
 
 export default function RunDetailPage() {
-  const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "http://localhost:7000";
+  const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "";
   const id = String(useParams<{ id: string }>().id);
   const [item, setItem] = useState<Run | null>(null);
   const [evidence, setEvidence] = useState<Artifact[]>([]);

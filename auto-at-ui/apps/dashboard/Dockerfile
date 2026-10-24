@@ -10,8 +10,10 @@ COPY workers/playwright/package.json ./workers/playwright/package.json
 COPY apps/dashboard ./apps/dashboard
 RUN pnpm install --frozen-lockfile
 
-ARG NEXT_PUBLIC_CONTROL_PLANE_URL=http://localhost:7000
+ARG NEXT_PUBLIC_CONTROL_PLANE_URL=
+ARG CONTROL_PLANE_INTERNAL_URL=http://control-plane:7000
 ENV NEXT_PUBLIC_CONTROL_PLANE_URL=${NEXT_PUBLIC_CONTROL_PLANE_URL} \
+    CONTROL_PLANE_INTERNAL_URL=${CONTROL_PLANE_INTERNAL_URL} \
     NODE_ENV=production
 
 RUN pnpm --filter @auto-at/dashboard build

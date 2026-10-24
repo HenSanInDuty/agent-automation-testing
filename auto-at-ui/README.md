@@ -73,6 +73,18 @@ curl.exe --noproxy "*" --fail http://127.0.0.1:7000/healthz
 
 Open [the dashboard](http://127.0.0.1:3000). If `localhost` requests time out on
 Windows, use `127.0.0.1` or `curl.exe -4` to check the published IPv4 ports.
+Dashboard API requests use the dashboard's own origin and are proxied to the
+control plane, so login and CSRF cookies work with either local hostname. In
+Docker, `CONTROL_PLANE_INTERNAL_URL=http://control-plane:7000` is baked into the
+dashboard rewrite configuration; native development defaults to
+`http://127.0.0.1:7000`. Rebuild the dashboard after changing that upstream.
+Leave `NEXT_PUBLIC_CONTROL_PLANE_URL` empty for this setup. A separate browser API
+origin is an explicit deployment choice and must preserve cookie/CSRF behavior.
+If login returns success but the next session check returns 401, check that the
+browser is not mixing `127.0.0.1` and `localhost` for dashboard/API requests. The
+default [Next.js rewrite](https://nextjs.org/docs/15/app/api-reference/config/next-config-js/rewrites)
+keeps requests on the dashboard origin without relaxing HttpOnly, SameSite or CSRF
+checks. Reload the login page after rebuilding; existing accounts need no reset.
 The control-plane entrypoint applies
 pending database migrations before serving requests. Keep a database backup before
 updating an existing installation. These commands retain the named data volumes;

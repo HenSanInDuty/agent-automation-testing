@@ -63,9 +63,11 @@ services:
       context: .
       dockerfile: apps/dashboard/Dockerfile
       args:
-        NEXT_PUBLIC_CONTROL_PLANE_URL: http://localhost:${CONTROL_PLANE_PORT:-7000}
+        NEXT_PUBLIC_CONTROL_PLANE_URL: ""
+        CONTROL_PLANE_INTERNAL_URL: http://control-plane:7000
     environment:
-      NEXT_PUBLIC_CONTROL_PLANE_URL: http://localhost:${CONTROL_PLANE_PORT:-7000}
+      NEXT_PUBLIC_CONTROL_PLANE_URL: ""
+      CONTROL_PLANE_INTERNAL_URL: http://control-plane:7000
     ports:
       - "${DASHBOARD_PORT:-3000}:3000"
     depends_on:

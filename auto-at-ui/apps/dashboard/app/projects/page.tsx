@@ -6,7 +6,7 @@ import { ControlPlaneError } from "../api-client";
 import { createProject, createRun, projects, renameTestCase, testCases, type Project, type TestCase } from "../run-api";
 
 export default function ProjectsPage() {
-  const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? "http://localhost:7000"; const router = useRouter();
+  const apiUrl = process.env.NEXT_PUBLIC_CONTROL_PLANE_URL ?? ""; const router = useRouter();
   const [items, setItems] = useState<Project[]>([]); const [tests, setTests] = useState<TestCase[]>([]); const [projectId, setProjectId] = useState(""); const [testId, setTestId] = useState(""); const [url, setUrl] = useState(""); const [projectName, setProjectName] = useState(""); const [testName, setTestName] = useState(""); const [notice, setNotice] = useState("");
   useEffect(() => { projects(apiUrl).then((next) => { setItems(next); if (next[0]) setProjectId(next[0].id); }).catch((error) => setNotice(error instanceof ControlPlaneError ? error.message : "Unable to load projects.")); }, [apiUrl]);
   useEffect(() => { if (!projectId) return; testCases(apiUrl, projectId).then((next) => { setTests(next); setTestId(next[0]?.id ?? ""); }).catch((error) => setNotice(error.message)); }, [apiUrl, projectId]);
