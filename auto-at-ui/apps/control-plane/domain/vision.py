@@ -15,6 +15,13 @@ VISION_MODEL_FAILURE_REASONS = frozenset({
     "provider_not_configured", "provider_auth_failed", "provider_billing_required",
     "provider_rate_limited", "provider_model_unavailable", "provider_timeout",
     "provider_unavailable", "model_output_invalid", "model_unavailable",
+    "bridge_offline", "bridge_cli_unsupported", "bridge_login_required",
+    "bridge_model_unavailable", "bridge_stale_result", "bridge_malformed_output",
+    "bridge_cancelled", "bridge_deadline_exceeded", "bridge_policy_revoked",
+    "bridge_interrupted", "bridge_io_error", "bridge_output_limit", "bridge_queue_full",
+    "bridge_tool_rejected", "bridge_provider_unavailable",
+    "image_consent_required", "policy_changed", "step_limit",
+    "bridge_cleanup_pending",
 })
 
 

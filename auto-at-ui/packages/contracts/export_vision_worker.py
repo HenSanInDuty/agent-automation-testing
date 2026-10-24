@@ -22,6 +22,8 @@ MODELS = [
     vision.VisualWorkerCommand,
     vision_worker.VisualWorkerIdentity,
     vision_worker.VisualWorkerOpen,
+    vision_worker.VisualWorkerObserveDom,
+    vision_worker.VisualWorkerDomObservation,
     vision_worker.VisualWorkerOriginObservations,
     vision_worker.VisualWorkerPrepare,
     vision_worker.VisualWorkerExecute,

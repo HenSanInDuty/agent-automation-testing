@@ -9,6 +9,7 @@ from infrastructure.artifacts.rustfs import RustFSArtifactStore
 from infrastructure.persistence.repositories import SqlAlchemyOutboxEventRepository
 from infrastructure.persistence.session import transactional_session
 from infrastructure.persistence.vision_unit_of_work import SqlAlchemyVisualTraceUnitOfWork
+from infrastructure.vision.codex_composition import codex_candidate_factory
 from infrastructure.vision.model_batch import VisionModelBatch
 from infrastructure.vision_worker import HttpVisualWorker
 
@@ -24,6 +25,7 @@ async def publish_vision_once(factory, settings, *, handler=None):
             HttpVisualWorker(client, settings.playwright_worker_url, settings.vision_worker_secret),
             settings,
             VisionModelBatch(settings),
+            codex_candidates=codex_candidate_factory(settings, factory),
         )
         for event in events:
             if event.event_type != "agent.visual_exploration.requested.v1":

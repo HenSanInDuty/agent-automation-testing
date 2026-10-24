@@ -211,7 +211,8 @@ def test_additive_migration_preserves_legacy_rows_and_defaults(disposable_databa
         assert legacy.fencing_token == 0 and legacy.next_operation_sequence == 1
         assert legacy.lease_owner is None and legacy.lease_expires_at is None
         assert reader.get(GenerationRequestModel, request_id).vision_handoff_id is None
-        assert reader.scalar(text("SELECT version_num FROM alembic_version")) == "f9a0b1c2d3e4"
+        assert reader.scalar(text("SELECT version_num FROM alembic_version")) == "d1e2f3a4b5c6"
+        assert legacy.model_input_policy is None
     assert {
         "visual_operations",
         "visual_operation_frames",

@@ -141,6 +141,19 @@ _VISION_PROGRESS["handoff.unavailable"] = (
     "unavailable", "Exploration handoff is unavailable.", frozenset({"reason_code"}),
 )
 
+for _stage, _summary in {
+    "queued": "Waiting for Codex bridge.",
+    "started": "Codex is reading the page observation.",
+    "image_requested": "Codex requested an image of this page.",
+    "validating": "Checking Codex proposals.",
+    "completed": "Codex proposals received; browser verification is still required.",
+    "failed": "Codex proposal request stopped.",
+}.items():
+    _VISION_PROGRESS[f"codex.{_stage}"] = (
+        "unavailable" if _stage == "failed" else "running", _summary,
+        frozenset({"job_id", "call_sequence", "mode", "elapsed_ms", "reason_code"}),
+    )
+
 
 def validate_safe_metadata(value: object) -> dict[str, object]:
     if not isinstance(value, dict):
@@ -240,6 +253,15 @@ class ActivityEvent:
             raise ValueError("vision progress metadata is not allow-listed")
         if "operation_id" in safe_metadata:
             UUID(str(safe_metadata["operation_id"]))
+        if stage.startswith("codex."):
+            if "job_id" in safe_metadata:
+                UUID(str(safe_metadata["job_id"]))
+            if "mode" in safe_metadata and safe_metadata["mode"] not in {"dom", "image"}:
+                raise ValueError("invalid Codex mode")
+            for name, upper in (("call_sequence", 10), ("elapsed_ms", 3_600_000)):
+                if name in safe_metadata and (type(safe_metadata[name]) is not int
+                                              or not 0 <= safe_metadata[name] <= upper):
+                    raise ValueError("invalid Codex count")
         if "purpose" in safe_metadata and safe_metadata["purpose"] not in {
             "setup", "explore", "restore", "replay",
         }:

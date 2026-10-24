@@ -5,6 +5,10 @@ from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
+from auto_at.contracts.codex_bridge import (
+    CodexBoundObservation,
+    ElementId,
+)
 from auto_at.contracts.vision import (
     Fingerprint,
     VisualCheckpoint,
@@ -34,6 +38,30 @@ class VisualWorkerOpen(VisualWorkerIdentity):
     max_states: int = Field(ge=1, le=200)
     max_hops: int = Field(ge=1, le=10)
     max_screenshot_bytes: int = Field(ge=1024, le=5_000_000)
+    required_capabilities: tuple[Literal["dom-observation-v1"], ...] = Field(
+        default=(), max_length=1,
+    )
+
+
+class VisualWorkerObserveDom(VisualWorkerIdentity):
+    capability: Literal["dom-observation-v1"] = "dom-observation-v1"
+    expected_state_fingerprint: Fingerprint
+    snapshot_id: UUID
+    max_elements: int = Field(default=100, ge=1, le=100)
+    max_bytes: int = Field(default=65_536, ge=1024, le=65_536)
+
+
+class VisualWorkerDomObservation(VisualWorkerIdentity):
+    capability: Literal["dom-observation-v1"] = "dom-observation-v1"
+    data: CodexBoundObservation
+
+    @model_validator(mode="after")
+    def observation_scope(self):
+        observed = self.data.observation
+        if any(getattr(self, key) != getattr(observed, key)
+               for key in ("tenant_id", "project_id", "session_id", "fencing_token")):
+            raise ValueError("DOM observation scope mismatch")
+        return self
 
 
 class VisualExternalOrigin(BaseModel):
@@ -102,9 +130,15 @@ class VisualWorkerPrepare(VisualWorkerIdentity):
     restore_checkpoint_id: UUID | None = None
     replay_operation_id: UUID | None = None
     expected_locator: VisualLocatorDescriptor | None = None
+    dom_snapshot_id: UUID | None = None
+    dom_element_id: ElementId | None = None
 
     @model_validator(mode="after")
     def references(self) -> "VisualWorkerPrepare":
+        if (self.dom_snapshot_id is None) != (self.dom_element_id is None):
+            raise ValueError("DOM prepare requires snapshot and element together")
+        if self.dom_snapshot_id and self.action.kind not in {"click", "type"}:
+            raise ValueError("DOM binding requires a target action")
         if self.action.kind in {"click", "type"} and not (self.state_id and self.proposal_id):
             raise ValueError("target action requires state and proposal")
         if (self.checkpoint_id is None) != (self.checkpoint_state_id is None):

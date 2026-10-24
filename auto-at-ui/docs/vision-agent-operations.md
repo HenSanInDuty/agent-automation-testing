@@ -1,5 +1,38 @@
 # Vision agent operational runbook
 
+## Codex DOM-first sessions
+
+Use the [local bridge runbook](codex-local-bridge.md) for container qualification,
+opt-in Compose startup, migration order, failure diagnosis and scoped rollback.
+See [Codex evaluation](../benchmark/vision/codex/README.md) for synthetic versus live evidence.
+
+Codex is an optional v4 exploration provider using the existing account and pinned
+Luna model. **Vision settings** shows bridge connectivity, login, compatibility,
+model-access qualification and queue activity. A ready bridge with unverified
+model access is not proof that the account can run the selected model.
+
+Accept page-element/text transfer to OpenAI to enable DOM-first exploration.
+Screenshot permission is separate and optional. Local transport does not mean
+offline inference. If a page needs an image without permission or remaining calls,
+the session stops and explains the limitation. Each image escalation consumes an
+additional call within the same session deadline. Existing quota limits apply.
+
+Dashboard live preview is independent of model image transfer. For an active v4
+session, **Follow live** fetches a browser image immediately and then one second
+after each completed request. Capture/network latency adds to that interval.
+Keep optional OpenAI image transfer unchecked to test DOM proposals while viewing
+images; preview makes no model calls. Terminal status or revoked access stops
+polling. See the bridge runbook for startup commands and the preview test procedure.
+
+The Website banner distinguishes waiting for the bridge, reading page elements,
+requesting an image and checking proposals. Displayed call/elapsed values come
+from recorded stage metadata. Browser steps and click highlights still require
+verified worker evidence. Selecting an older step keeps its saved frame visible.
+Delayed progress cannot reopen a terminal session. Reload confirms the current
+saved provider, model and input-policy fingerprint and creates a new session.
+An old Gemini/HF session retains its original provider. A cleanup-pending message
+means cancellation is durable but temporary-file removal is not yet acknowledged.
+
 ## Exploration reports and partial coverage
 
 Open **View exploration report** on a saved Vision session to see recorded
@@ -16,7 +49,8 @@ processor records `candidate.unavailable`, stops further model calls and drains
 already validated queued candidates using normal restoration/locator checks and
 existing time/state limits. The final session remains unavailable/partial. Provider
 authentication, quota, policy, consent, unknown-action and restoration failures
-retain their stop behavior. No automatic model retry or budget increase is added.
+retain their stop behavior. Invalid output is not retried. Gemini's bounded
+transient HTTP retries are described below; session budgets are not increased.
 Prompt v6 adds explicit normalized-coordinate arithmetic and short outcome text;
 response validation and the 1000-token cap remain unchanged.
 
@@ -46,6 +80,28 @@ reports and technical details are collapsed. Progress still updates while detail
 are closed. Select a step to view its **Before** or **After** image in the same
 viewer, then use **Return to live** to resume following.
 
+The Website activity banner shows when the agent is waiting for a model response;
+the page can remain still during this stage. If a worker or stack restart interrupts
+a running session, its in-memory browser state cannot be resumed. The session ends
+with `worker_state_unavailable` and the Website banner explains that the image is
+the last saved screen. Use **Reload** to confirm a new session; retained evidence
+from the interrupted session stays available. Avoid restarting workers during an
+active exploration.
+
+Each Vision model request may wait up to 120 seconds, bounded by the session's
+remaining time. This does not extend the overall session: with a 120-second session
+and 10 seconds already spent opening the page, the model can wait at most about
+110 seconds. The limit applies to Gemini and Hugging Face Vision transports; text
+generation keeps its existing timeout. Gemini retries HTTP 500/502/503/504 up to
+two times (three attempts total), waiting 1 then 2 seconds plus up to 0.5 seconds
+jitter, or longer when Retry-After requires it. Attempts and backoff share the same
+deadline; retry is skipped if its wait cannot fit. Logs expose only HTTP status,
+attempt and wait duration. The Website remains in its model-wait state during
+backoff. Authentication, quota (429), invalid output, transport errors and timeouts
+are not retried. Hugging Face still makes one attempt. No provider fallback or
+browser-action replay occurs. Each retry resends the same image/prompt and retains
+the per-attempt token cap; up to three provider calls may be charged per batch.
+
 The dashboard polls the private `/api/v1/vision/explorations/{id}/screen` endpoint
 once per second after each response. This is a live screenshot preview, not a
 video recording. Safe progress events arrive through the existing SSE endpoint,
@@ -63,7 +119,7 @@ Transformed/zoomed, clipped, iframe or inconsistent viewport geometry may omit t
 point. No coordinates are backfilled from proposals or bounding-box centers.
 
 While following an active session, a newly observed confirmed click briefly shows
-its recorded before image for 1.2 seconds after image load, then returns to live.
+its recorded before image for 3 seconds after image load, then returns to live.
 Trace refresh is normally five seconds, so this is not synchronized cursor video.
 An initial history load or resuming Follow does not replay old clicks; a batch
 previews only its newest click. Repeated polls do not repeat the animation. All
@@ -408,7 +464,8 @@ terminal sessions retain their original evidence.
 
 Only run a live canary when requested with a ready key, safe target and tenant:
 one synthetic session, `max_steps=3`, `max_requests_per_minute=5`,
-`max_session_seconds=120`, no automatic retry or fallback. Do not enable billing.
+`max_session_seconds=120`, bounded Gemini transient HTTP retries as above and no
+provider fallback. Do not enable billing.
 Check recipient/model, a subsequent action if the model proposes one, before/after
 evidence and audit. Record quota/output failures honestly. The existing 1000-token
 candidate response cap has only mocked-output validation; thinking/output may

@@ -1,0 +1,22 @@
+{
+  "contract": "VisualWorkerPrepare",
+  "accepted": false,
+  "payload": {
+    "contract_version": "v4",
+    "tenant_id": "fixture",
+    "project_id": "00000000-0000-0000-0000-000000000001",
+    "session_id": "00000000-0000-0000-0000-000000000002",
+    "fencing_token": 1,
+    "expected_state_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "operation_id": "00000000-0000-0000-0000-000000000004",
+    "state_id": "00000000-0000-0000-0000-000000000005",
+    "proposal_id": "00000000-0000-0000-0000-000000000006",
+    "purpose": "explore",
+    "action": {
+      "kind": "click",
+      "x": 0.5,
+      "y": 0.5
+    },
+    "dom_snapshot_id": "00000000-0000-0000-0000-000000000007"
+  }
+}

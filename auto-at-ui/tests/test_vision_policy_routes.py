@@ -43,7 +43,8 @@ def test_provider_catalogue_is_readable_by_a_tenant_viewer(client):
         "X-Tenant-Id": "tenant-a", "X-Actor-Roles": "viewer",
     })
     assert response.status_code == 200
-    hf, gemini = response.json()["items"]
+    hf, gemini, codex = response.json()["items"]
+    assert codex["id"] == "codex_cli" and not codex["configured"]
     assert not hf["configured"]
     assert gemini["configured"]
     assert gemini["id"] == "gemini"
@@ -149,7 +150,9 @@ def test_old_hf_client_without_binding_remains_compatible(client):
     event, = client.audit.events
     snapshot = client.configs.get("tenant-a", VISION_POLICY_AUDIT_PREFIX + str(event.entity_id))
     assert snapshot["after"]["model"] == "custom/hf"
-    assert client.configs.get("tenant-a", AGENT_RUNTIME_CONFIG_KEY)["vision"] == response.json()
+    assert client.configs.get("tenant-a", AGENT_RUNTIME_CONFIG_KEY)["vision"] == {
+        k: v for k, v in response.json().items() if k != "input_policy_fingerprint"
+    }
 
 
 @pytest.mark.parametrize("csrf_header", [None, "wrong-token"])

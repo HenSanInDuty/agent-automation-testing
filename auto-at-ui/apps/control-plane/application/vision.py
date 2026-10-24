@@ -4,15 +4,19 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
+from agents.prompts.codex_exploration import PROMPT_VERSION as CODEX_PROMPT_VERSION
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
 from agents.vision.intent import encrypt_visual_intent
+from auto_at.contracts.codex_bridge import CodexConsentSnapshot, content_hash
 from auto_at.contracts.generation import (
     ProjectExecutionPolicy,
     origin_for_url,
     redact_generation_request,
 )
 from domain.activity import ActivityEvent
+from domain.authorization import Permission, actor_for_tenant, require
+from domain.codex_bridge import input_fingerprint, input_snapshot
 from domain.runs import AuditEvent, OutboxEvent
 from infrastructure.persistence.models import VisualExplorationSessionModel
 
@@ -25,8 +29,27 @@ class VisionPolicyChanged(VisionStateError):
     pass
 
 
+class RequestVisualExploration:
+    """Application boundary for authenticated submission and current runtime policy."""
+    def __init__(self, submit, configs, settings):
+        self.submit, self.configs, self.settings = submit, configs, settings
+
+    def execute(self, *, tenant_id, principal, project_id, **request):
+        require(actor_for_tenant(principal, tenant_id, project_id), Permission.SUBMIT_GENERATION)
+        runtime = AgentRuntimeConfig.from_settings(self.settings).with_override(
+            self.configs.get(tenant_id, AGENT_RUNTIME_CONFIG_KEY),
+        )
+        return self.submit.execute(
+            tenant_id=tenant_id, project_id=project_id, actor=principal.subject, runtime=runtime,
+            intent_encryption_key=self.settings.vision_intent_encryption_key,
+            intent_retention_days=self.settings.vision_intent_retention_days,
+            trace_v4_enabled=self.settings.vision_trace_v4_enabled, **request,
+        )
+
+
 class SubmitVisualExploration:
-    def __init__(self, repository, configs, catalog, generation, audits, activity, outbox) -> None:
+    def __init__(self, repository, configs, catalog, generation, audits, activity, outbox,
+                 readiness=None) -> None:
         self._repository = repository
         self._configs = configs
         self._catalog = catalog
@@ -34,6 +57,7 @@ class SubmitVisualExploration:
         self._audits = audits
         self._activity = activity
         self._outbox = outbox
+        self._readiness = readiness
 
     def execute(
         self,
@@ -51,6 +75,7 @@ class SubmitVisualExploration:
         trace_v4_enabled: bool = False,
         expected_provider: str | None = None,
         expected_model: str | None = None,
+        expected_input_policy_fingerprint: str | None = None,
     ) -> VisualExplorationSessionModel:
         policy = runtime.vision
         if (expected_provider is None) != (expected_model is None):
@@ -75,6 +100,13 @@ class SubmitVisualExploration:
                 existing.provider, existing.model
             ):
                 raise VisionPolicyChanged("vision_policy_changed")
+            if existing.provider == "codex_cli" and (
+                expected_provider != "codex_cli" or not existing.model_input_policy
+                or expected_input_policy_fingerprint != content_hash(
+                    CodexConsentSnapshot.model_validate(existing.model_input_policy)
+                )
+            ):
+                raise VisionPolicyChanged("vision_policy_changed")
             return existing
         if expected_provider is not None and (expected_provider, expected_model) != (
             policy.provider, policy.model
@@ -82,10 +114,21 @@ class SubmitVisualExploration:
             raise VisionPolicyChanged("vision_policy_changed")
         if policy.provider == "gemini" and expected_provider is None:
             raise VisionStateError("expected_provider and expected_model are required for Gemini")
-        if (
-            not policy.enabled or not policy.raw_screenshot_transfer_accepted
-            or policy.raw_screenshot_transfer_provider != policy.provider
-        ):
+        if policy.provider == "codex_cli":
+            if not trace_v4_enabled:
+                raise VisionStateError("Codex requires v4 exploration")
+            if (expected_provider != "codex_cli" or not expected_input_policy_fingerprint
+                    or expected_input_policy_fingerprint != input_fingerprint(policy)):
+                raise VisionPolicyChanged("vision_policy_changed")
+            consented = policy.codex and policy.codex.dom_transfer_accepted
+            if self._readiness is None or not self._readiness.read(
+                tenant_id, datetime.now(UTC),
+            ).ready:
+                raise VisionStateError("bridge_offline")
+        else:
+            consented = (policy.raw_screenshot_transfer_accepted
+                         and policy.raw_screenshot_transfer_provider == policy.provider)
+        if not policy.enabled or not consented:
             raise VisionStateError("vision exploration is disabled by tenant policy")
         project_policy = self._generation.get_policy(tenant_id, project_id)
         try:
@@ -122,7 +165,10 @@ class SubmitVisualExploration:
             policy_version=AGENT_RUNTIME_CONFIG_KEY,
             provider=policy.provider,
             model=policy.model,
-            prompt_version=VISION_PROMPT_VERSION,
+            prompt_version=(CODEX_PROMPT_VERSION if policy.provider == "codex_cli"
+                            else VISION_PROMPT_VERSION),
+            model_input_policy=(input_snapshot(policy).model_dump(mode="json")
+                                if policy.provider == "codex_cli" else None),
             trace_version="v4" if trace_v4_enabled else "legacy",
             max_steps=policy.max_steps,
             max_hops=project_policy.vision_max_hops,

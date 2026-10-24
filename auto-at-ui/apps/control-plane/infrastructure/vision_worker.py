@@ -4,16 +4,20 @@ from hashlib import sha256
 from uuid import UUID
 
 import httpx
+from auto_at.contracts.codex_bridge import canonical_bytes
 from auto_at.contracts.vision import VisualCheckpoint, VisualOperationFrame
 from auto_at.contracts.vision_worker import (
     VisualWorkerAck,
+    VisualWorkerDomObservation,
     VisualWorkerExecute,
     VisualWorkerIdentity,
+    VisualWorkerObserveDom,
     VisualWorkerOpen,
     VisualWorkerOperationResult,
     VisualWorkerOriginObservations,
     VisualWorkerPrepare,
 )
+from pydantic import ValidationError
 
 
 class VisualWorkerUnavailable(RuntimeError):
@@ -55,6 +59,8 @@ class HttpVisualWorker:
 
         data, _ = await self._request("POST", "/visual-explorations", request, request)
         value = json.loads(data)
+        if not set(request.required_capabilities) <= set(value.get("capabilities", [])):
+            raise VisualWorkerUnavailable("worker DOM capability unavailable")
         fingerprint = value.get("state_fingerprint", "")
         if (
             value.get("session_id") != str(request.session_id)
@@ -65,6 +71,27 @@ class HttpVisualWorker:
         ):
             raise VisualWorkerUnavailable("worker capability response invalid")
         return fingerprint
+
+    async def observe_dom(self, request: VisualWorkerObserveDom) -> VisualWorkerDomObservation:
+        data, content_type = await self._request(
+            "POST", f"/visual-explorations/{request.session_id}/observations/dom", request,
+            request, cap=256_000,
+        )
+        try:
+            result = VisualWorkerDomObservation.model_validate_json(data)
+        except ValidationError:
+            raise VisualWorkerUnavailable("worker DOM observation invalid") from None
+        obs = result.data.observation
+        if (content_type != "application/json"
+                or any(getattr(result, key) != getattr(request, key) for key in (
+                    "tenant_id", "project_id", "session_id", "fencing_token", "capability",
+                ))
+                or obs.snapshot_id != request.snapshot_id
+                or obs.state_fingerprint != request.expected_state_fingerprint
+                or len(obs.elements) > request.max_elements
+                or len(canonical_bytes(obs)) > request.max_bytes):
+            raise VisualWorkerUnavailable("worker DOM observation scope or limit mismatch")
+        return result
 
     async def screen(self, identity: VisualWorkerIdentity) -> bytes:
         data, content_type = await self._request(

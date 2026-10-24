@@ -21,6 +21,7 @@ from domain.vision import VISION_MODEL_FAILURE_REASONS, VisualSessionLease, Visu
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from infrastructure.persistence.codex_bridge_repository import SqlAlchemyCodexBridgeJobRepository
 from infrastructure.persistence.models import (
     VisualActionProposalModel,
     VisualExplorationStateModel,
@@ -94,6 +95,9 @@ class SqlAlchemyVisualTraceUnitOfWork:
     def running(self, lease, prompt_version):
         with transactional_session(self._factory) as session:
             record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
+            if record.provider == "codex_cli" and (record.state == "running"
+                                                   or lease.fencing_token > 1):
+                SqlAlchemyCodexBridgeJobRepository(session).interrupt_pending(lease.scope)
             if record.state == "queued":
                 record.state, record.updated_at = "running", datetime.now(UTC)
                 # Submit owns provenance; starting historical work must not rewrite it.
@@ -104,6 +108,8 @@ class SqlAlchemyVisualTraceUnitOfWork:
         with transactional_session(self._factory) as session:
             record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
             repository = SqlAlchemyVisionRepository(session)
+            if record.provider == "codex_cli":
+                SqlAlchemyCodexBridgeJobRepository(session).interrupt_pending(lease.scope)
             for edge in repository.list_trajectory_edges(record.tenant_id, record.id):
                 if edge.status == "proposed":
                     repository.add_trajectory_edge(
@@ -196,7 +202,9 @@ class SqlAlchemyVisualTraceUnitOfWork:
                 lease.scope,
                 state_id,
             )
-            for proposal_id, sequence, safe_action, edge in candidates:
+            for candidate in candidates:
+                proposal_id, sequence, safe_action, edge, *extra = candidate
+                binding = extra[0] if extra else None
                 repository.add_action(
                     VisualActionProposalModel(
                         id=proposal_id,
@@ -211,6 +219,7 @@ class SqlAlchemyVisualTraceUnitOfWork:
                         provider=record.provider,
                         model=record.model,
                         prompt_version=record.prompt_version,
+                        target_binding=binding.model_dump(mode="json") if binding else None,
                     )
                 )
                 repository.add_trajectory_edge(edge)

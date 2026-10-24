@@ -14,7 +14,17 @@ Use the existing `httpx` dependency against Google's fixed OpenAI-compatible
 chat-completions endpoint. Send bounded PNG screenshots inline, JSON-object output
 and low reasoning effort. Gemini does not construct a Drive store or use HF
 credentials. HF retains its existing Drive/OAuth transport and retention rules.
-There is one model attempt, no fallback, no redirects and no automatic retry.
+As amended on 2026-10-23 following user authorization, Gemini retries only HTTP
+500/502/503/504, with at most three attempts per candidate request. Backoff is
+1 then 2 seconds plus up to 0.5 seconds jitter, respecting Retry-After when present.
+All attempts and waits share the existing request/session deadline (at most 120
+seconds). A retry that cannot fit its wait is skipped. Authentication, quota,
+invalid output, transport errors and timeouts are not retried. There is no provider
+fallback or redirect, and browser operations are never replayed by this retry.
+Each attempt sends the same bounded payload to the consented provider; per-attempt
+token limits remain unchanged, so worst-case provider request/token exposure can
+be up to three times one attempt. No monetary reservation is implied. Logs record
+only retry status, attempt number and delay, never provider bodies or screenshots.
 
 Official documentation rechecked on 2026-10-17 confirms the model ID, image input
 and structured output, and documents low reasoning. The stable name is not an

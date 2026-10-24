@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, VisionPolicy, resolve_agent_runtime
 from agents.shared.vision_providers import VISION_PROVIDERS, VisionProviderId
+from auto_at.contracts.codex_bridge import CodexBridgeReadiness
 from config import Settings
 from domain.authorization import Permission, Principal, actor_for_tenant, require
 from domain.ports import AuditEventRepository, ConfigurationRepository
@@ -26,10 +27,16 @@ class VisionPolicyError(ValueError):
 class VisionPolicies:
     def __init__(
         self, settings: Settings, configs: ConfigurationRepository, audit: AuditEventRepository,
+        readiness=None,
     ) -> None:
         self._settings = settings
         self._configs = configs
         self._audit = audit
+        self._readiness = readiness
+
+    def readiness(self, tenant_id):
+        return (self._readiness.read(tenant_id, datetime.now(UTC))
+                if self._readiness else CodexBridgeReadiness())
 
     def read(self, tenant_id: str, principal: Principal) -> VisionPolicy:
         actor_for_tenant(principal, tenant_id)
@@ -40,7 +47,10 @@ class VisionPolicies:
         except ValidationError as error:
             raise VisionPolicyError("invalid_vision_policy") from error
 
-    def configured(self, provider: VisionProviderId) -> bool:
+    def configured(self, provider: VisionProviderId, tenant_id: str | None = None) -> bool:
+        if provider == "codex_cli":
+            return bool(tenant_id and self._settings.vision_trace_v4_enabled
+                        and self.readiness(tenant_id).ready)
         key = (
             self._settings.gemini_api_key
             if provider == "gemini" else self._settings.huggingface_api_key
@@ -62,8 +72,10 @@ class VisionPolicies:
                 "id": provider.id,
                 "display_name": provider.display_name,
                 "models": [{"id": model, "display_name": model} for model in dict.fromkeys(models)],
-                "configured": self.configured(provider.id),
+                "configured": self.configured(provider.id, tenant_id),
                 "supports_inline_images": provider.supports_inline_images,
+                **({"bridge_readiness": self.readiness(tenant_id).model_dump(mode="json")}
+                   if provider.id == "codex_cli" else {}),
             })
         return items
 
@@ -75,7 +87,7 @@ class VisionPolicies:
             policy = VisionPolicy.model_validate(payload)
         except ValidationError as error:
             raise VisionPolicyError("invalid_vision_policy") from error
-        if policy.enabled and not self.configured(policy.provider):
+        if policy.enabled and not self.configured(policy.provider, tenant_id):
             raise VisionPolicyError("provider_not_configured")
         return policy
 

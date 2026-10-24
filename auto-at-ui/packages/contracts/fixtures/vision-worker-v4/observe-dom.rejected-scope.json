@@ -1,0 +1,16 @@
+{
+  "contract": "VisualWorkerObserveDom",
+  "accepted": false,
+  "payload": {
+    "contract_version": "v4",
+    "tenant_id": "fixture",
+    "project_id": "00000000-0000-0000-0000-000000000001",
+    "session_id": "00000000-0000-0000-0000-000000000002",
+    "fencing_token": 0,
+    "capability": "dom-observation-v1",
+    "expected_state_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "snapshot_id": "00000000-0000-0000-0000-000000000003",
+    "max_elements": 100,
+    "max_bytes": 65536
+  }
+}

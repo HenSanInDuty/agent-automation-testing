@@ -4,13 +4,14 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from application.vision import SubmitVisualExploration
+from application.vision import RequestVisualExploration, SubmitVisualExploration
 from application.vision_policy import VisionPolicies
 from application.vision_reload import ReloadVisualExploration
 from application.vision_screen import VisionScreen
 from config import Settings, get_settings
 from fastapi import Depends
 from httpx import AsyncClient
+from infrastructure.codex_bridge.doctor import FileReadiness
 from infrastructure.observability.telemetry import current_trace_context
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
@@ -27,6 +28,27 @@ from infrastructure.vision_worker import HttpVisualWorker
 from api.v1.dependencies.authorization import current_tenant
 
 
+def codex_readiness(settings: Annotated[Settings, Depends(get_settings)]):
+    return FileReadiness(settings)
+
+
+def vision_submit(
+    settings: Annotated[Settings, Depends(get_settings)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    readiness: Annotated[object, Depends(codex_readiness)],
+) -> Iterator[RequestVisualExploration]:
+    del tenant_id
+    with transactional_session(create_session_factory(settings)) as session:
+        configs = SqlAlchemyConfigurationRepository(session)
+        submit = SubmitVisualExploration(
+            SqlAlchemyVisionRepository(session), configs, SqlAlchemyCatalogRepository(session),
+            SqlAlchemyGenerationRepository(session), SqlAlchemyAuditEventRepository(session),
+            SqlAlchemyActivityEventRepository(session), SqlAlchemyOutboxEventRepository(session),
+            readiness=readiness,
+        )
+        yield RequestVisualExploration(submit, configs, settings)
+
+
 def vision_policies(
     settings: Annotated[Settings, Depends(get_settings)],
     tenant_id: Annotated[str, Depends(current_tenant)],
@@ -37,6 +59,7 @@ def vision_policies(
         yield VisionPolicies(
             settings, SqlAlchemyConfigurationRepository(session),
             SqlAlchemyAuditEventRepository(session),
+            readiness=FileReadiness(settings),
         )
 
 
@@ -63,6 +86,7 @@ async def vision_screen(
 def vision_reload(
     settings: Annotated[Settings, Depends(get_settings)],
     tenant_id: Annotated[str, Depends(current_tenant)],
+    readiness: Annotated[object, Depends(codex_readiness)],
 ) -> Iterator[ReloadVisualExploration]:
     del tenant_id
     with transactional_session(create_session_factory(settings)) as session:
@@ -72,5 +96,6 @@ def vision_reload(
             repository, configs, SqlAlchemyCatalogRepository(session),
             SqlAlchemyGenerationRepository(session), SqlAlchemyAuditEventRepository(session),
             SqlAlchemyActivityEventRepository(session), SqlAlchemyOutboxEventRepository(session),
+            readiness=readiness,
         )
         yield ReloadVisualExploration(repository, configs, submit, settings)

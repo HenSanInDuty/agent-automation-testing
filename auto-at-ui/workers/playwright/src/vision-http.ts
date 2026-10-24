@@ -36,6 +36,9 @@ export function visualHttpHandler(root: string, secret: () => string | undefined
         requireVision(uuid(sessionId), "invalid_session_id");
         if (parts.length === 4 && parts[3] === "origins" && method === "GET") {
           result = worker.origins(headerIdentity, sessionId);
+        } else if (parts.length === 5 && parts[3] === "observations" && parts[4] === "dom" && method === "POST") {
+          requireVision(payload?.session_id === sessionId, "scope_mismatch");
+          result = await worker.observeDom(payload);
         } else if (parts.length === 4 && parts[3] === "screen" && method === "GET") {
           const frame = await worker.screen(headerIdentity, sessionId);
           response.writeHead(200, { "content-type": "image/png", "cache-control": "no-store" }).end(frame); return;

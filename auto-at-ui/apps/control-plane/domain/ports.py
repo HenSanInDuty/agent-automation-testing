@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from datetime import datetime
+from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
+from auto_at.contracts.codex_bridge import (
+    CodexBridgeReadiness,
+    CodexBridgeRequest,
+    CodexBridgeResponse,
+)
 from auto_at.contracts.execution import TestExecutionRequest, TestExecutionResult
 from auto_at.contracts.vision import (
     VisualCheckpoint,
@@ -16,8 +24,10 @@ from auto_at.contracts.vision import (
 )
 from auto_at.contracts.vision_worker import (
     VisualWorkerAck,
+    VisualWorkerDomObservation,
     VisualWorkerExecute,
     VisualWorkerIdentity,
+    VisualWorkerObserveDom,
     VisualWorkerOpen,
     VisualWorkerOperationResult,
     VisualWorkerOriginObservations,
@@ -25,9 +35,11 @@ from auto_at.contracts.vision_worker import (
 )
 
 from domain.activity import ActivityEvent
+from domain.codex_bridge import BridgeProcessResult
 from domain.entities import (
     ApprovalRecord,
     ArtifactRecord,
+    CodexBridgeJob,
     Project,
     ProposalRecord,
     RunReportRecord,
@@ -38,6 +50,70 @@ from domain.entities import (
 )
 from domain.runs import AuditEvent, OutboxEvent, TestRun
 from domain.vision import VisualSessionLease, VisualSessionScope
+
+
+class CodexBridgeJobRepository(Protocol):
+    def add(self, job: CodexBridgeJob) -> None: ...
+
+    def get(self, scope: VisualSessionScope, job_id: UUID) -> CodexBridgeJob | None: ...
+
+    def transition(self, old: CodexBridgeJob, new: CodexBridgeJob) -> None: ...
+
+    def pending(self, scope: VisualSessionScope) -> list[CodexBridgeJob]: ...
+
+
+class CodexBridgeReadinessPort(Protocol):
+    def read(self, tenant_id: str, now: datetime) -> CodexBridgeReadiness: ...
+
+
+class CodexBridgeSpool(Protocol):
+    def publish(
+        self, request: CodexBridgeRequest, dom: bytes, schema: bytes,
+        screenshot: bytes | None = None,
+    ) -> None: ...
+
+    def authorize(self, request: CodexBridgeRequest, expires_at: datetime) -> None: ...
+
+    def result(self, request: CodexBridgeRequest) -> CodexBridgeResponse | None: ...
+
+    def cancel(self, request: CodexBridgeRequest) -> None: ...
+
+    def acknowledge(self, request: CodexBridgeRequest) -> None: ...
+    def stages(self, request: CodexBridgeRequest) -> tuple: ...
+    def cancellation_acknowledged(self, request: CodexBridgeRequest) -> bool: ...
+
+
+class CodexBridgeHostSpool(Protocol):
+    def lock(self, consumer: bool = False) -> AbstractContextManager: ...
+    def jobs(self) -> list[UUID]: ...
+    def path(self, job_id: UUID) -> Path: ...
+    def load(self, job_id: UUID) -> CodexBridgeRequest: ...
+    def verify_inputs(self, request: CodexBridgeRequest) -> tuple[bytes, bytes]: ...
+    def stop_reason(self, request: CodexBridgeRequest, now: datetime) -> str | None: ...
+    def claim(self, request: CodexBridgeRequest) -> UUID: ...
+    def complete(self, request: CodexBridgeRequest, response: CodexBridgeResponse) -> None: ...
+    def heartbeat(self, readiness: dict) -> None: ...
+    def has_file(self, request: CodexBridgeRequest, name: str) -> bool: ...
+    def purge_inputs(self, request: CodexBridgeRequest) -> None: ...
+    def reconcile(self, now: datetime) -> None: ...
+    def record_stage(self, request: CodexBridgeRequest, stage: str, usage=None) -> None: ...
+
+
+class CodexBridgeProcessPort(Protocol):
+    async def run(
+        self, request: CodexBridgeRequest, directory: Path, prompt: bytes,
+        stop_reason: Callable[[], str | None],
+    ) -> BridgeProcessResult: ...
+
+
+class CodexJobGateway(Protocol):
+    """Application-owned durable registration and authorization fence before transport."""
+
+    async def register(self, request: CodexBridgeRequest) -> None: ...
+    async def poll(self, request: CodexBridgeRequest, stages: tuple) -> None: ...
+    async def finish(self, request: CodexBridgeRequest, response: CodexBridgeResponse) -> None: ...
+    async def cancel(self, request: CodexBridgeRequest, reason: str) -> None: ...
+    async def cleanup_pending(self, request: CodexBridgeRequest) -> None: ...
 
 
 class ProjectRepository(Protocol):
@@ -166,6 +242,8 @@ class VisualTraceUnitOfWork(Protocol):
 
 
 class VisualWorkerTransport(Protocol):
+    async def observe_dom(self, request: VisualWorkerObserveDom) -> VisualWorkerDomObservation: ...
+
     async def origins(self, identity: VisualWorkerIdentity) -> VisualWorkerOriginObservations: ...
 
     async def screen(self, identity: VisualWorkerIdentity) -> bytes: ...

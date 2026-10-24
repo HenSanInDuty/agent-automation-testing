@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .pytest-replay-*/
+.pytest-codex-*/
 .pytest-artifacts/
 .ruff_cache/
 .mypy_cache/
@@ -21,3 +22,4 @@ artifacts/
 !apps/control-plane/infrastructure/artifacts/*.py
 auto-at-backup/
 secret/
+codex-spool/

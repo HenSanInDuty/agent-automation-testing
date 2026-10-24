@@ -17,6 +17,9 @@ class VisionModelSession:
     id: UUID
     provider: str
     model: str
+    project_id: UUID | None = None
+    correlation_id: UUID | None = None
+    fencing_token: int | None = None
 
 
 class VisionModelBatch(Protocol):

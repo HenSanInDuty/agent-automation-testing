@@ -46,13 +46,14 @@ def test_http_success_commits_policy_snapshot_and_audit_before_response(policy_d
         "X-Tenant-Id": "tenant-a", "X-Actor-Id": "fixture-admin",
     })
     assert response.status_code == 200
+    saved_policy = {k: v for k, v in response.json().items() if k != "input_policy_fingerprint"}
     with factory() as session:
         event, = session.scalars(select(AuditEventModel)).all()
         configs = SqlAlchemyConfigurationRepository(session)
-        assert configs.get("tenant-a", "agent.runtime.v1")["vision"] == response.json()
+        assert configs.get("tenant-a", "agent.runtime.v1")["vision"] == saved_policy
         snapshot = configs.get("tenant-a", VISION_POLICY_AUDIT_PREFIX + str(event.entity_id))
         assert snapshot["before"]["enabled"] is False
-        assert snapshot["after"] == response.json()
+        assert snapshot["after"] == saved_policy
         assert event.tenant_id == snapshot["tenant_id"] == "tenant-a"
         assert event.actor == snapshot["actor"] == "fixture-admin"
         assert event.correlation_id == UUID(response.headers["X-Correlation-Id"])

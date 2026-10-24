@@ -16,7 +16,7 @@
     "workers/playwright/src/vision-locators.spec.ts": "e98ee8aae6325f16190e1b34c1534ef1ab2795b47fdfae81230b11949b5ebe03",
     "tests/test_vision_provider_integration.py": "a36d7b6fac916b81261bf750ec65fa93c524e9494e750d932f584c5546ce5104",
     "tests/test_vision_live_persistence.py": "2feade327255cbf5affc5ad91cfe5098912c68f7d3e2b98a35196850923a69e0",
-    "tests/test_gemini_vision_model.py": "5b4b7cb4aca39330d0d9b12697bca647dec2f0a460b79f26ab1218536f121ae2",
+    "tests/test_gemini_vision_model.py": "7a3035ee93fa7cde7ec22d47338db2927d7951da8ebd99b23cb6664bf90b5f8d",
     "apps/control-plane/agents/prompts/vision.py": "43e9bc753fdae54a682a71f3e758c45c7ebe97fdd8b5ac85727a92f59cbd70ca"
   },
   "cases": [

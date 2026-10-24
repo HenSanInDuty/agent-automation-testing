@@ -133,9 +133,24 @@ export function validateVision<T = unknown>(name: string, input: unknown): T {
       (v[key] !== null) === (required[v.kind] ?? []).includes(key)));
   }
   if (name === "VisualWorkerPrepare") {
+    requireVision((v.dom_snapshot_id === null) === (v.dom_element_id === null));
+    if (v.dom_snapshot_id) requireVision(["click", "type"].includes(v.action.kind));
     if (["click", "type"].includes(v.action.kind)) requireVision(v.state_id && v.proposal_id);
     requireVision((v.checkpoint_id === null) === (v.checkpoint_state_id === null));
     if (v.purpose === "replay") requireVision(v.replay_operation_id);
+  }
+  if (name === "CodexDomElement") requireVision(!v.name || safeLocatorValue(v.name));
+  if (name === "CodexDomObservation") {
+    requireVision(new Set(v.elements.map((e: any) => e.element_id)).size === v.elements.length);
+    requireVision(Buffer.byteLength(canonical(v)) <= 65_536);
+  }
+  if (name === "CodexBoundObservation") {
+    const ids = v.bindings.map((e: any) => e.element_id);
+    requireVision(new Set(ids).size === ids.length && ids.length === v.observation.elements.length &&
+      v.observation.elements.every((e: any) => ids.includes(e.element_id)));
+  }
+  if (name === "VisualWorkerDomObservation") {
+    requireVision(["tenant_id", "project_id", "session_id", "fencing_token"].every(key => v[key] === v.data.observation[key]));
   }
   if (name === "VisualWorkerOperationResult") {
     const op = v.operation;

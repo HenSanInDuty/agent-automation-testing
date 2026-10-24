@@ -68,3 +68,22 @@ and deletion tombstones preserve history without exposing storage keys.
 legacy/v4 readers allow rollback without rewriting sessions or deleting evidence.
 See the [Vision runbook](vision-agent-operations.md) for ordering, limits and the
 synthetic validation boundary.
+
+## Optional Codex proposal bridge
+
+For explicitly enabled local v4 sessions, the control plane obtains a bounded,
+redacted DOM observation and stores tenant/session/fence/job metadata before
+publishing a transient file job. One isolated Linux bridge container invokes the
+pinned Codex CLI with the existing read-only credential mount. It has no application
+database, browser, repository or Docker-socket access. Model tools are disabled and
+qualified separately from CLI provider networking. Only the application/worker
+may verify and execute proposals; existing target-neutral execution v1 and human
+draft approval remain authoritative.
+
+DOM consent and optional screenshot consent are frozen per session and checked
+again during a job. Scope/hash/deadline checks reject stale results; queue and image
+escalation share the existing call/time limits. Process-group cancellation and
+acknowledgement/expiry cleanup bound transient files. Safe metadata and retained
+browser evidence use existing policies. This is one trusted local tenant per bridge,
+not a shared-account production service. See [ADR-010](adr/010-codex-local-dom-agent.md)
+and [deployment/rollback](codex-local-bridge.md).

@@ -258,3 +258,47 @@ def test_gemini_factory_is_vision_only_and_keeps_general_text_factory():
         create_language_model(settings, AgentRuntimeConfig.from_settings(settings)),
         OpenAICompatibleLanguageModel,
     )
+
+
+def test_dom_only_codex_consent_is_independent_of_image_consent():
+    policy = VisionPolicy(
+        provider="codex_cli", model="gpt-6-luna", enabled=True,
+        codex={"dom_transfer_accepted": True, "dom_transfer_provider": "codex_cli"},
+    )
+    assert policy.enabled and not policy.raw_screenshot_transfer_accepted
+    assert policy.raw_screenshot_transfer_provider is None
+    assert VisionPolicy().codex is None
+    for changes in (
+        {"codex": None}, {"codex": {"dom_transfer_accepted": True}},
+        {"codex": {"dom_transfer_accepted": True, "dom_transfer_provider": "gemini"}},
+        {"model": "other"},
+    ):
+        with pytest.raises(ValueError):
+            VisionPolicy.model_validate(policy.model_dump() | changes)
+
+
+def test_dom_consent_does_not_enable_gemini_without_image_consent():
+    with pytest.raises(ValueError, match="screenshot"):
+        VisionPolicy(
+            provider="gemini", model="gemini-3.8-flash", enabled=True,
+            codex={"dom_transfer_accepted": True, "dom_transfer_provider": "codex_cli"},
+        )
+
+
+def test_codex_provider_switch_does_not_inherit_image_or_dom_permission():
+    runtime = AgentRuntimeConfig.from_settings(Settings(
+        _env_file=None, vision_enabled=True, vision_raw_screenshot_transfer_accepted=True,
+    ))
+    codex = runtime.with_override({"vision": {
+        "provider": "codex_cli", "model": "gpt-6-luna",
+        "codex": {"dom_transfer_accepted": True, "dom_transfer_provider": "codex_cli"},
+    }})
+    assert codex.vision.enabled and not codex.vision.raw_screenshot_transfer_accepted
+    hf = codex.with_override({"vision": {
+        "provider": "huggingface", "model": "fixture", "enabled": False,
+    }})
+    assert hf.vision.codex is None
+    with pytest.raises(ValueError, match="DOM"):
+        hf.with_override({"vision": {
+            "provider": "codex_cli", "model": "gpt-6-luna", "enabled": True,
+        }})

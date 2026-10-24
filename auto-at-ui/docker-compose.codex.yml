@@ -1,0 +1,67 @@
+# Opt-in local overlay. See docs/codex-local-bridge.md before starting it.
+services:
+  control-plane:
+    environment: &codex-producer
+      CODEX_BRIDGE_ENABLED: ${CODEX_BRIDGE_ENABLED:-false}
+      CODEX_BRIDGE_ID: ${CODEX_BRIDGE_ID:?Set a dedicated bridge UUID}
+      CODEX_BRIDGE_ALLOWED_TENANT: ${CODEX_BRIDGE_ALLOWED_TENANT:?Set the trusted local tenant}
+      CODEX_BRIDGE_HOST_SPOOL: /codex-jobs
+      CODEX_BRIDGE_CONTAINER_SPOOL: /codex-jobs
+      CODEX_BRIDGE_EXECUTABLE: /usr/local/bin/codex
+      VISION_TRACE_V4_ENABLED: ${VISION_TRACE_V4_ENABLED:-false}
+    volumes:
+      - type: bind
+        source: ${CODEX_BRIDGE_HOST_SPOOL:?Set an existing private absolute spool path}
+        target: /codex-jobs
+        bind:
+          create_host_path: false
+
+  temporal-worker:
+    environment: *codex-producer
+    volumes:
+      - type: bind
+        source: ${CODEX_BRIDGE_HOST_SPOOL:?Set an existing private absolute spool path}
+        target: /codex-jobs
+        bind:
+          create_host_path: false
+
+  codex-bridge:
+    profiles: [codex]
+    image: auto-at-codex-bridge:0.164.0
+    build:
+      context: .
+      dockerfile: docker/codex-bridge/Dockerfile
+    init: true
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:docker/codex-bridge/seccomp.json
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    stop_grace_period: 10s
+    restart: "no"
+    networks: [codex-egress]
+    environment: *codex-producer
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+      - /bridge-home/.codex:rw,nosuid,nodev,uid=1000,gid=1000,mode=700,size=32m
+    volumes:
+      - type: bind
+        source: ${CODEX_BRIDGE_AUTH_FILE:?Set only the existing Codex auth.json path}
+        target: /bridge-home/.codex/auth.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${CODEX_BRIDGE_HOST_SPOOL:?Set an existing private absolute spool path}
+        target: /codex-jobs
+        bind:
+          create_host_path: false
+    entrypoint: [uv]
+    command: [run, --project, /app, --no-sync, python, /app/apps/control-plane/codex_bridge_cli.py, run]
+
+networks:
+  codex-egress: {}

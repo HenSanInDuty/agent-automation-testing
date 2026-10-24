@@ -1,7 +1,9 @@
 # file cấu hình các thông tin từ env
 from functools import lru_cache
+from pathlib import PurePosixPath, PureWindowsPath
+from uuid import UUID
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +55,17 @@ class Settings(BaseSettings):
     agent_generation_redaction_policy_version: str = "generation-redaction-v1"
     vision_enabled: bool = False
     vision_trace_v4_enabled: bool = False
+    codex_bridge_enabled: bool = False
+    codex_bridge_id: UUID | None = None
+    codex_bridge_allowed_tenant: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,200}$")
+    codex_bridge_host_spool: str | None = None
+    codex_bridge_container_spool: str = "/codex-jobs"
+    codex_bridge_executable: str | None = None
+    codex_bridge_heartbeat_seconds: float = Field(default=2, gt=0, le=2)
+    codex_bridge_stale_seconds: float = Field(default=10, ge=3, le=10)
+    codex_bridge_cancel_poll_seconds: float = Field(default=1, gt=0, le=2)
+    codex_bridge_kill_grace_seconds: float = Field(default=3, gt=0, le=3)
+    codex_bridge_max_pending: int = Field(default=10, ge=1, le=10)
     vision_provider: str = "huggingface"
     vision_model: str = "Qwen/Qwen3.8-27B:deepinfra"
     vision_raw_screenshot_transfer_accepted: bool = False
@@ -127,6 +140,31 @@ class Settings(BaseSettings):
     temporal_retry_initial_interval_seconds: int = Field(default=1, ge=1, le=300)
     temporal_retry_maximum_interval_seconds: int = Field(default=30, ge=1, le=600)
     temporal_retry_maximum_attempts: int = Field(default=3, ge=1, le=10)
+
+    @model_validator(mode="after")
+    def validate_codex_bridge(self) -> "Settings":
+        for value in (self.codex_bridge_host_spool, self.codex_bridge_container_spool,
+                      self.codex_bridge_executable):
+            if value is None:
+                continue
+            windows, posix = PureWindowsPath(value), PurePosixPath(value)
+            if (not (windows.is_absolute() or posix.is_absolute())
+                    or ".." in windows.parts or ".." in posix.parts
+                    or any(ord(c) < 32 for c in value) or '"' in value
+                    or value.startswith(("\\\\", "//"))):
+                raise ValueError("Codex paths must be absolute local paths without traversal")
+        executable = self.codex_bridge_executable
+        if executable and PureWindowsPath(executable).name.lower() not in {"codex.exe", "codex"}:
+            raise ValueError("Codex requires a fixed native executable, not a shell or shim")
+        if self.codex_bridge_enabled and (
+            self.environment != "local" or not self.codex_bridge_id
+            or not self.codex_bridge_allowed_tenant or not self.codex_bridge_host_spool
+            or not executable
+        ):
+            raise ValueError("enabled Codex bridge requires explicit local tenant, ID and paths")
+        if self.codex_bridge_stale_seconds <= self.codex_bridge_heartbeat_seconds:
+            raise ValueError("bridge stale limit must exceed heartbeat interval")
+        return self
 
 
 @lru_cache

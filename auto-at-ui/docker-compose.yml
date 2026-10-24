@@ -110,11 +110,7 @@ services:
     restart: "no"
 
   benchmark-target:
-    image: node:22-alpine
-    working_dir: /benchmark
-    command: node server.mjs
-    volumes:
-      - ./benchmarks/targets/web-ui:/benchmark:ro
+    build: ./benchmarks/targets/web-ui
     expose:
       - "7200"
     restart: unless-stopped

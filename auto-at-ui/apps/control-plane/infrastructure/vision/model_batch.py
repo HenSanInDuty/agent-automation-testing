@@ -9,6 +9,7 @@ from time import monotonic
 from agents.shared.models import LanguageModel
 from agents.shared.openrouter import create_vision_language_model
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
+from agents.shared.vision_providers import VISION_MODEL_TIMEOUT_SECONDS
 from agents.vision.executor import VisualCandidateBatchOutcome, execute_visual_candidate_batch
 from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
 from application.vision_model_batch import VisionModelSession
@@ -37,6 +38,9 @@ class VisionModelBatch:
             return _unavailable("provider_timeout")
         if (session.provider, session.model) != (policy.provider, policy.model):
             return _unavailable("policy_changed")
+        if policy.provider == "codex_cli":
+            # Codex requires the separate DOM/fencing/job gateway capability.
+            return _unavailable("bridge_offline")
         settings = self.settings
         key = (
             settings.gemini_api_key if policy.provider == "gemini"
@@ -80,7 +84,8 @@ class VisionModelBatch:
                     policy=policy,
                     model=_DeadlineModel(
                         self._model_factory(
-                            settings, policy, timeout_seconds=min(30.0, remaining_seconds),
+                            settings, policy,
+                            timeout_seconds=min(VISION_MODEL_TIMEOUT_SECONDS, remaining_seconds),
                             max_candidates=max_candidates,
                         ), deadline,
                     ),
@@ -99,7 +104,7 @@ class _DeadlineModel:
         self.model, self.deadline = model, deadline
 
     async def ainvoke(self, payload, **kwargs):
-        remaining = min(30.0, self.deadline - monotonic())
+        remaining = min(VISION_MODEL_TIMEOUT_SECONDS, self.deadline - monotonic())
         if remaining <= 0:
             raise TimeoutError
         async with asyncio.timeout(remaining):

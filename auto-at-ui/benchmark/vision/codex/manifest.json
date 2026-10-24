@@ -1,0 +1,151 @@
+{
+  "schema_version": "codex-fixture-v1",
+  "classification": "synthetic_local_only",
+  "responses": "fake_cli",
+  "provider": "codex_cli",
+  "model": "gpt-6-luna",
+  "prompt_version": "codex-dom-v6",
+  "worker_contract_version": "v4",
+  "cli_version": "0.164.0",
+  "fake_cli_version": "codex-fake-v1",
+  "playwright_version": "1.50.1",
+  "live_canary": "passed",
+  "source_hash_algorithm": "sha256_utf8_lf",
+  "sources": {
+    "apps/control-plane/agents/prompts/codex_exploration.py": "b6536da60a243948ce576858ba8a8689124a5907cce5532f82fbc690b88bbff4",
+    "benchmark/vision/codex/Dockerfile": "e5af857335744fe56b9cfcda09323c2a305e895cef2d7681b45db6f9d4d13eae",
+    "benchmark/vision/codex/offline_suite.py": "92158f3cac0601daa0bd39916452114412a2bdd6c99d160de0ec641ca08edb0d",
+    "benchmark/vision/codex/run_offline.py": "5b8df18a5bd026461c44ed3237be4df9cf39171fc86bf8cdf1b420ab9a2c99ad",
+    "packages/contracts/src/auto_at/contracts/codex_bridge.py": "9d396441ed40c253213e95bfe479f93dbbf481637c5ce70558a84c3b0c40f42d",
+    "tests/fixtures/codex_bridge_fake_cli.py": "4936de19430c3c291b8ba23cd9bace3ede1eb9086d704991339513aa5f9c3949",
+    "tests/test_codex_bridge_benchmark.py": "84d47632f5ee3a9690c3ccc9e0fb9f5aa378c0c225142ec3d341715c8067a220",
+    "tests/test_codex_bridge_end_to_end.py": "d8ea1ebda24046b314cb69a008c52086e89d0db5b962b6944264877864bb7747",
+    "tests/test_codex_bridge_process.py": "14c12ffb550aded12d2f5b230fdeb909941723bf3f8c42313d91d8a4a7e6b1b9",
+    "tests/test_codex_bridge_service.py": "96dece3c2f4ae40dca86d93bd7190c869405a4d0c568e6b9cecd29e31088c528",
+    "tests/test_codex_bridge_spool.py": "efbd304dc6ade924fc80eb197898947fce5481a07bb7d94bd496d4040cc118d1",
+    "tests/test_codex_candidate_service.py": "311fcc795233b4d2e1deb2e81f31951596f37eaac9c697f379c135762d1aa343",
+    "tests/test_codex_exploration_integration.py": "838f05eb852f9fee441d82212f338021bfe221a4b618a32a6948b79cffe56eff",
+    "tests/test_codex_model_batch.py": "d71cc9607508fb01810e81dce13c03c602fcf164422c911c14f87e62898e8b7f",
+    "tests/test_vision_locator_pipeline.py": "25c54c3ed657c189a2df3e9dc493bde7dc2099d11490c0cd34775504613ff08f",
+    "workers/playwright/src/fixtures/vision-target.ts": "648afcbb194c3562894814e880f0b976b0c3f211574a30cf207ec2d94e6479da",
+    "workers/playwright/src/vision-dashboard.spec.ts": "598ec7bff6b128746e91048654158ffa959dc56055806635f83cfff65d474234",
+    "workers/playwright/src/vision-dom.spec.ts": "cf80a612e7b8302780040804c61ca794639dfc080c6e46185984772493b09dec",
+    "workers/playwright/src/vision-operations.spec.ts": "6eb44676371243c5c36cab393c4f2b2e6f9e7bb741253c45f45cc3791ce32684",
+    "benchmark/vision/codex/live_canary.py": "45fa748a27e599a392ff2236e8f99d9088c4e987d174c7cb49fc6825fc519d7c",
+    "benchmark/vision/codex/live.Dockerfile": "72d0df36b005544b63ab613641a39eeb7a09f87e0b0e87d795645d67b419bf45",
+    "docker/codex-bridge/rollback_policy.py": "cc8e2027714bd4d846d076130536738b8b36baf2420e19abc35718d4aa3e426b",
+    "docker-compose.codex.yml": "3ea8de9058368d0770cd4dfd9391bbeb25938889f9c5e368880dc496f61d862a",
+    "benchmark/vision/codex/run_live.py": "a2aa64dc5f868eeac9db1f2098daf3b3516b26144a4e2757d970a9cfa8e28db9",
+    "apps/control-plane/infrastructure/codex_bridge/process.py": "6aef987e1d829ffb984a9bd4625304c2f542b6bfced9e8263772057e53bcb3fb",
+    "tests/fixtures/codex_bridge_tool_probe.py": "fa2ee13485b51e4eb51db2b739e432ecf74631f0b8a2cabb87a4796e5390e4c3",
+    "tests/test_codex_bridge_contracts.py": "39dfb29393d0f5300fa6a56ac11812d204b3cfd1d6d23739f6cfa082d9473ca8",
+    "tests/test_vision_provider_submission.py": "2b1ef5f4524edace0fee44e94016aee281da4aabbe902ad67f5ac6daa9ced8b6",
+    "apps/control-plane/infrastructure/codex_bridge/doctor.py": "9d7a06003f9bf85d660153079c6afe902475df90783b7689c43a448f07609d6e",
+    "tests/fixtures/codex_bridge_wire.py": "02e6911876b94b493ae07e4c19e24c152a69a9699284c10d04f10008603431f1",
+    "tests/test_codex_bridge_qualification.py": "e2b13b390fc97c294588d3b0d72ee0a438e958b0d9c84f69832b5d1434ddcd18",
+    "apps/control-plane/infrastructure/codex_bridge/catalogue.py": "3d49515ffa61487473ab50adf542178a4be0c9ad92f6a0163c2b0f0910570367",
+    "apps/control-plane/domain/codex_bridge.py": "8edb5cfc3515870f156023851798c8a473be7f775e40bea2f5354d88818e9909",
+    "apps/control-plane/application/codex_bridge.py": "1da567dc9f4ceb19c2a41194f98ec35775dcb8b4588a36b35836c0ab3f7f513d",
+    "apps/control-plane/infrastructure/codex_bridge/spool.py": "3f9f48927b1a0cdcaf4909caffba3c0451b2d45c04247eb16ac8282e197eb4c7",
+    "docker/codex-bridge/Dockerfile": "a6d8caf1de7a5edb7719c3e992903575acfc3242c16300e0d291a7c261f7ba41"
+  },
+  "cases": [
+    {
+      "id": "dom_only",
+      "evidence": "tests/test_codex_bridge_end_to_end.py",
+      "expected_cli_calls": 1,
+      "expected_image_calls": 0,
+      "expected_verified_actions": 2
+    },
+    {
+      "id": "image_escalation",
+      "evidence": "tests/test_codex_bridge_end_to_end.py",
+      "expected_cli_calls": 2,
+      "expected_image_calls": 1,
+      "expected_verified_actions": 2
+    },
+    {
+      "id": "image_denied",
+      "evidence": "tests/test_codex_exploration_integration.py",
+      "expected_verified_actions": 0
+    },
+    {
+      "id": "invalid_output",
+      "evidence": "tests/test_codex_exploration_integration.py",
+      "expected_verified_actions": 0
+    },
+    {
+      "id": "stale_dom",
+      "evidence": "tests/test_codex_exploration_integration.py",
+      "expected_verified_actions": 1
+    },
+    {
+      "id": "policy_revoked",
+      "evidence": "tests/test_codex_exploration_integration.py",
+      "expected_verified_actions": 0
+    },
+    {
+      "id": "restart",
+      "evidence": "tests/test_codex_bridge_service.py"
+    },
+    {
+      "id": "duplicate_files",
+      "evidence": "tests/test_codex_bridge_spool.py"
+    },
+    {
+      "id": "cancel",
+      "evidence": "tests/test_codex_bridge_process.py"
+    },
+    {
+      "id": "deadline",
+      "evidence": "tests/test_codex_model_batch.py"
+    },
+    {
+      "id": "prompt_injection",
+      "evidence": "tests/test_codex_candidate_service.py"
+    },
+    {
+      "id": "missing_bridge_login_model",
+      "evidence": "tests/test_codex_bridge_service.py"
+    },
+    {
+      "id": "child_network",
+      "evidence": "tests/test_codex_bridge_benchmark.py"
+    },
+    {
+      "id": "native_custom_controls_and_secret_values",
+      "evidence": "workers/playwright/src/vision-dom.spec.ts"
+    },
+    {
+      "id": "ambiguous_changed_unsupported_dom",
+      "evidence": "workers/playwright/src/vision-dom.spec.ts"
+    },
+    {
+      "id": "scrolling",
+      "evidence": "workers/playwright/src/vision-operations.spec.ts"
+    },
+    {
+      "id": "confirmed_highlight",
+      "evidence": "workers/playwright/src/vision-dashboard.spec.ts"
+    },
+    {
+      "id": "approval_execution_report",
+      "evidence": "tests/test_vision_locator_pipeline.py"
+    }
+  ],
+  "expected_end_to_end_metrics": {
+    "sessions": 2,
+    "cli_calls": 3,
+    "image_calls": 1,
+    "verified_actions": 4,
+    "escalated_sessions": {
+      "numerator": 1,
+      "denominator": 2
+    },
+    "deterministic_reruns": 2
+  },
+  "observation_version": "v1",
+  "cli_tool_qualification": "qualified_zero_tools_with_immutable_catalogue",
+  "cli_mode": "yolo_container",
+  "schema_delivery": "prompt_text_with_strict_local_validation"
+}

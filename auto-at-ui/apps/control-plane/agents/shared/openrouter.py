@@ -9,6 +9,7 @@ from huggingface_hub import AsyncInferenceClient
 from agents.shared.gemini import GeminiVisionLanguageModel
 from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentRuntimeConfig, VisionPolicy
+from agents.shared.vision_providers import VISION_MODEL_TIMEOUT_SECONDS
 
 
 class OpenAICompatibleLanguageModel:
@@ -21,17 +22,19 @@ class OpenAICompatibleLanguageModel:
         base_url: str,
         model: str,
         transport: httpx.AsyncBaseTransport | None = None,
+        timeout_seconds: float = 30.0,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._transport = transport
+        self._timeout_seconds = timeout_seconds
 
     async def ainvoke(self, payload: Any, **kwargs: Any) -> Any:
         request = {"model": self._model, **payload}
         request.update(kwargs)
         async with httpx.AsyncClient(
-            base_url=self._base_url, timeout=30.0, transport=self._transport
+            base_url=self._base_url, timeout=self._timeout_seconds, transport=self._transport
         ) as client:
             response = await client.post(
                 "/chat/completions",
@@ -45,7 +48,10 @@ class OpenAICompatibleLanguageModel:
 class HuggingFaceVisionLanguageModel:
     """Provider-aware multimodal transport that keeps raw bytes in memory."""
 
-    def __init__(self, *, api_key: str, model: str, timeout_seconds: float = 30) -> None:
+    def __init__(
+        self, *, api_key: str, model: str,
+        timeout_seconds: float = VISION_MODEL_TIMEOUT_SECONDS,
+    ) -> None:
         base_model, separator, provider = model.partition(":")
         self._client = AsyncInferenceClient(
             model=base_model,
@@ -86,11 +92,13 @@ def create_language_model(settings: Settings, runtime: AgentRuntimeConfig) -> La
 
 
 def create_vision_language_model(
-    settings: Settings, policy: VisionPolicy, *, timeout_seconds: float = 30,
+    settings: Settings, policy: VisionPolicy, *,
+    timeout_seconds: float = VISION_MODEL_TIMEOUT_SECONDS,
     transport: httpx.AsyncBaseTransport | None = None,
     max_candidates: int | None = None,
 ) -> LanguageModel:
     """Construct a vision gateway from its own policy; text selection is separate."""
+    timeout_seconds = min(timeout_seconds, VISION_MODEL_TIMEOUT_SECONDS, policy.max_session_seconds)
     if policy.provider == "gemini":
         return GeminiVisionLanguageModel(
             api_key=settings.gemini_api_key, model=policy.model,
@@ -110,9 +118,10 @@ def create_vision_language_model(
             base_url=settings.huggingface_base_url,
             model=policy.model,
             transport=transport,
+            timeout_seconds=timeout_seconds,
         )
     return HuggingFaceVisionLanguageModel(
         api_key=settings.huggingface_api_key,
         model=policy.model,
-        timeout_seconds=policy.max_session_seconds,
+        timeout_seconds=timeout_seconds,
     )

@@ -40,6 +40,12 @@ class Events:
         ("state.restore_started", {}),
         ("state.restored", {}),
         ("state.restore_failed", {}),
+        ("codex.queued", {"job_id": str(uuid4()), "call_sequence": 1, "mode": "dom"}),
+        ("codex.started", {"mode": "image", "elapsed_ms": 0}),
+        ("codex.image_requested", {"call_sequence": 2}),
+        ("codex.validating", {}),
+        ("codex.completed", {}),
+        ("codex.failed", {"reason_code": "bridge_interrupted"}),
     ],
 )
 def test_vision_progress_stages_are_session_scoped(stage: str, metadata: dict[str, object]) -> None:
@@ -108,3 +114,16 @@ def test_unavailable_progress_is_session_scoped_and_redacted() -> None:
     assert progress.visual_exploration_session_id == session.id
     assert "sentinel-secret" not in str(progress)
     assert "provider response" not in str(progress)
+
+
+@pytest.mark.parametrize("metadata", [
+    {"job_id": "private/path"}, {"mode": "raw prompt"}, {"call_sequence": 11},
+    {"elapsed_ms": "raw output"}, {"response": "raw output"}, {"reason_code": "private error"},
+])
+def test_codex_progress_rejects_unbounded_or_untrusted_metadata(metadata):
+    with pytest.raises(ValueError):
+        ActivityEvent.create_vision_progress(
+            tenant_id="tenant-a", correlation_id=uuid4(), visual_exploration_session_id=uuid4(),
+            stage="codex.failed", progress_key="synthetic", occurred_at=datetime.now(UTC),
+            metadata=metadata,
+        )

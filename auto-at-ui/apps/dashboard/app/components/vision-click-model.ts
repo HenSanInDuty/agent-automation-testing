@@ -1,4 +1,22 @@
-import type { ExecutedClick, VisualOperation } from "../generation-types";
+import type { ExecutedClick, VisualLocator, VisualOperation } from "../generation-types";
+
+export function confirmedClickTarget(operation: VisualOperation | undefined, locator: VisualLocator | undefined, frameId?: string | null): VisualLocator["bounding_box"] {
+  const click = confirmedClick(operation, frameId);
+  const box = locator?.bounding_box;
+  if (!click || !box || locator?.status !== "verified" || locator.id !== operation?.locator_id || locator.operation_id !== operation?.id ||
+    ![box.x, box.y, box.width, box.height].every(Number.isFinite) || box.width <= 0 || box.height <= 0 ||
+    box.x < 0 || box.y < 0 || box.x + box.width > 1 || box.y + box.height > 1) return null;
+  const x = click.x * (click.viewport_width - 1) / click.viewport_width;
+  const y = click.y * (click.viewport_height - 1) / click.viewport_height;
+  return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height ? box : null;
+}
+
+export function clickTargetPosition(click: ExecutedClick, box: NonNullable<VisualLocator["bounding_box"]>, image: { width: number; height: number }, container: { width: number; height: number }) {
+  const origin = clickMarkerPosition({ ...click, x: 0, y: 0 }, image, container);
+  if (!origin) return null;
+  const scale = Math.min(container.width / image.width, container.height / image.height);
+  return { left: origin.left + box.x * image.width * scale, top: origin.top + box.y * image.height * scale, width: box.width * image.width * scale, height: box.height * image.height * scale };
+}
 
 export function confirmedClick(operation: VisualOperation | undefined, frameId?: string | null): ExecutedClick | null {
   const click = operation?.executed_click;

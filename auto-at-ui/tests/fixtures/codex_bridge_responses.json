@@ -1,0 +1,8 @@
+{
+  "dom_click": {"result": {"outcome": "candidates", "candidates": [{"kind": "click", "element_id": "e_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "confidence": 0.9, "expected_outcome": "Continue opens"}]}},
+  "image_request": {"result": {"outcome": "need_screenshot", "reason": "visual_target"}},
+  "stop": {"result": {"outcome": "stop", "reason": "complete"}},
+  "unknown_element": {"result": {"outcome": "candidates", "candidates": [{"kind": "click", "element_id": "e_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "confidence": 0.9, "expected_outcome": "Continue opens"}]}},
+  "selector": {"result": {"outcome": "candidates", "candidates": [{"kind": "click", "selector": "#control", "confidence": 0.9, "expected_outcome": "Continue opens"}]}},
+  "secret": {"result": {"outcome": "candidates", "candidates": [{"kind": "type", "element_id": "e_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "text": "password=synthetic-secret", "confidence": 0.9, "expected_outcome": "Text appears"}]}}
+}

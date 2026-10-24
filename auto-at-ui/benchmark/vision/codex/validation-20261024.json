@@ -1,0 +1,797 @@
+{
+  "recorded_date": "2026-10-24",
+  "release_status": "completed_synthetic_live_dom_passed_local_opt_in",
+  "offline_full": {
+    "passed": 839,
+    "failed": 0,
+    "skipped": 2,
+    "errors": 0,
+    "duration_seconds": 392.283,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.999,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 8.659,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ]
+  },
+  "offline_followup": {
+    "passed": 38,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 48.655,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 5.882,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.572,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ]
+  },
+  "rustfs_separate": {
+    "passed": 2,
+    "skipped": 0,
+    "duration_seconds": 6.72
+  },
+  "dashboard_unit": {
+    "passed": 43
+  },
+  "dashboard_browser_mocked": {
+    "passed": 47
+  },
+  "worker_browser": {
+    "passed": 55
+  },
+  "live_attempts": [
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "requested_model": "gpt-6-luna",
+      "model_access": "unverified",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "bridge_tool_rejected",
+      "actual_model": null,
+      "usage": null,
+      "elapsed_seconds": 6.004,
+      "prompt_version": "codex-dom-v2",
+      "synthetic_task": "branch_a"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "requested_model": "gpt-6-luna",
+      "model_access": "unverified",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "bridge_tool_rejected",
+      "event_item_types": [
+        "error"
+      ],
+      "actual_model": null,
+      "usage": null,
+      "elapsed_seconds": 4.888,
+      "prompt_version": "codex-dom-v2",
+      "synthetic_task": "branch_a"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "requested_model": "gpt-6-luna",
+      "model_access": "unverified",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "bridge_provider_unavailable",
+      "event_item_types": [
+        "error"
+      ],
+      "error_category": "unclassified_provider_error",
+      "actual_model": null,
+      "usage": null,
+      "elapsed_seconds": 5.867,
+      "prompt_version": "codex-dom-v2",
+      "synthetic_task": "branch_a"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "canary_expected_target_not_proposed",
+      "event_item_types": [
+        "agent_message",
+        "error"
+      ],
+      "startup_warning": "disabled_code_mode_host",
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 10846,
+        "output_tokens": 22,
+        "cached_input_tokens": 0
+      },
+      "elapsed_seconds": 9.714,
+      "prompt_version": "codex-dom-v2",
+      "synthetic_task": "branch_a"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "canary_expected_target_not_proposed",
+      "event_item_types": [
+        "agent_message",
+        "error"
+      ],
+      "startup_warning": "disabled_code_mode_host",
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 10874,
+        "output_tokens": 24,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "stop",
+      "stop_reason": "no_safe_action",
+      "elapsed_seconds": 8.028,
+      "prompt_version": "codex-dom-v2",
+      "synthetic_task": "branch_a"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "prompt_version": "codex-dom-v3",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "canary_expected_target_not_proposed",
+      "event_item_types": [
+        "agent_message",
+        "error"
+      ],
+      "startup_warning": "disabled_code_mode_host",
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 11016,
+        "output_tokens": 24,
+        "cached_input_tokens": 7808
+      },
+      "proposal_outcome": "stop",
+      "stop_reason": "no_safe_action",
+      "elapsed_seconds": 8.022,
+      "synthetic_task": "branch_a"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "prompt_version": "codex-dom-v3",
+      "synthetic_task": "toggle_modal",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "canary_expected_target_not_proposed",
+      "event_item_types": [
+        "agent_message",
+        "error"
+      ],
+      "startup_warning": "disabled_code_mode_host",
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 11020,
+        "output_tokens": 24,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "stop",
+      "stop_reason": "no_safe_action",
+      "elapsed_seconds": 7.468
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "prompt_version": "codex-dom-v3",
+      "synthetic_task": "toggle_modal",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "canary_expected_target_not_proposed",
+      "event_item_types": [
+        "agent_message"
+      ],
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 9747,
+        "output_tokens": 22,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "stop",
+      "stop_reason": "complete",
+      "elapsed_seconds": 8.589,
+      "cli_version": "0.164.0"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "prompt_version": "codex-dom-v4",
+      "synthetic_task": "toggle_modal",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "image_consent_required",
+      "event_item_types": [
+        "agent_message"
+      ],
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 10130,
+        "output_tokens": 25,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "need_screenshot",
+      "elapsed_seconds": 7.883,
+      "cli_version": "0.164.0"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "prompt_version": "codex-dom-v5",
+      "synthetic_task": "toggle_modal",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "canary_expected_target_not_proposed",
+      "event_item_types": [
+        "agent_message"
+      ],
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 3414,
+        "output_tokens": 24,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "stop",
+      "stop_reason": "no_safe_action",
+      "elapsed_seconds": 7.833,
+      "cli_version": "0.164.0"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "blocked",
+      "cli_version": "0.164.0",
+      "cli_mode": "yolo_container",
+      "prompt_version": "codex-dom-v5",
+      "synthetic_task": "toggle_modal",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 0,
+      "failure_code": "canary_expected_target_not_proposed",
+      "event_item_types": [
+        "agent_message"
+      ],
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 3345,
+        "output_tokens": 24,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "stop",
+      "stop_reason": "no_safe_action",
+      "elapsed_seconds": 11.083
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "passed",
+      "cli_version": "0.164.0",
+      "cli_mode": "yolo_container",
+      "prompt_version": "codex-dom-v5",
+      "synthetic_task": "toggle_modal",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 1,
+      "failure_code": null,
+      "diagnostic_variant": "codex-schema-probe-v1",
+      "event_item_types": [
+        "agent_message"
+      ],
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 3560,
+        "output_tokens": 82,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "candidates",
+      "elapsed_seconds": 8.89,
+      "evidence_file": ".pytest-artifacts/codex-live-f295f6f29a25.json"
+    },
+    {
+      "classification": "synthetic_live_dom",
+      "status": "passed",
+      "cli_version": "0.164.0",
+      "cli_mode": "yolo_container",
+      "prompt_version": "codex-dom-v6",
+      "synthetic_task": "toggle_modal",
+      "requested_model": "gpt-6-luna",
+      "model_access": "available",
+      "cli_calls": 1,
+      "image_calls": 0,
+      "verified_actions": 1,
+      "failure_code": null,
+      "event_item_types": [
+        "agent_message"
+      ],
+      "actual_model": null,
+      "usage": {
+        "input_tokens": 3551,
+        "output_tokens": 82,
+        "cached_input_tokens": 0
+      },
+      "proposal_outcome": "candidates",
+      "elapsed_seconds": 9.156,
+      "evidence_file": ".pytest-artifacts/codex-live-029f1f1b80b1.json"
+    }
+  ],
+  "live_total_cli_calls": 13,
+  "live_image_calls": 0,
+  "live_verified_actions": 2,
+  "image_gate": "unverified_disabled",
+  "configured_stack_workflow": "excluded_from_shared_application_stack",
+  "startup_probe": {
+    "cli_calls": 0,
+    "failure_code": "bridge_cli_unsupported",
+    "resolution": "canary tmpfs ownership corrected to fixture UID 1001"
+  },
+  "application_deployment": "not_performed",
+  "offline_process_followup": {
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 47.401,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.118,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.457,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ]
+  },
+  "offline_v3_followup": {
+    "passed": 116,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 85.569,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.486,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.078,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ]
+  },
+  "offline_canary_followup": {
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 9.646,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "model_access": "available",
+  "reported_actual_model": null,
+  "observed_usage_totals": {
+    "input_tokens": 77503,
+    "output_tokens": 353,
+    "cached_input_tokens": 7808
+  },
+  "usage_completeness": "Ten completed calls only; three historical startup-aborted invocations did not report usage.",
+  "latest_live_failure": null,
+  "cli_protocol_qualification": {
+    "qualified": true,
+    "cli_version": "0.164.0",
+    "model": "gpt-6-luna",
+    "catalogue_override": "Only tool_mode, apply_patch_tool_type, experimental_supported_tools changed; all other bundled model metadata preserved.",
+    "prompt_version": "codex-dom-v6",
+    "prompt_delivery": "immutable centralized model_instructions_file, checked by doctor",
+    "tools": [],
+    "inspected_surfaces": [
+      "tools",
+      "input.additional_tools"
+    ],
+    "valid_schema_response_completed": true,
+    "valid_response_probe_exit_code": 0,
+    "custom_call_probe_exit_code": 0,
+    "function_call_probe_exit_code": 0,
+    "custom_call_unsupported": true,
+    "jsonl_accepted_after_custom_call": true,
+    "forbidden_marker_written": false,
+    "limitation": "JSONL still hides rejected unknown custom calls; qualification establishes absence of callable tools, not a complete attempt audit.",
+    "windows_docker_file_locking": "passed",
+    "doctor": {
+      "authenticated": true,
+      "capabilities_qualified": true,
+      "model_access": "unverified"
+    },
+    "native_host_cli_changed": false,
+    "cli_mode": "yolo_container",
+    "inner_sandbox_enabled": false,
+    "outer_container_qualified": true,
+    "yolo_permissions_sent": true,
+    "fallback_profile_filesystem_qualified": true,
+    "fallback_profile_sandbox_network_denied": true,
+    "outer_requirements": [
+      "non_root",
+      "read_only_root",
+      "no_effective_capabilities",
+      "no_new_privileges",
+      "seccomp_filter"
+    ],
+    "unhardened_container_doctor": "bridge_cli_unsupported",
+    "schema_delivery": "prompt_text_with_strict_local_validation",
+    "schema_in_prompt_only": true
+  },
+  "cli_protocol_qualification_historical": {
+    "declared_tools": 0,
+    "unsolicited_tool_executed": false,
+    "valid_schema_response_completed": true,
+    "startup_warning": "only exact disabled-Code-Mode pre-turn warning accepted"
+  },
+  "offline_qualification_followup": {
+    "passed": 121,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 7.64
+  },
+  "offline_qualification_final": {
+    "passed": 131,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 21.187,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "cli_protocol_qualification_0163_withdrawn": {
+    "qualified": false,
+    "correction": "Earlier probe counted top-level tools only; additional_tools was missed.",
+    "tools": [
+      "functions.exec",
+      "functions.wait",
+      "functions.request_user_input",
+      "functions.request_user_input_async"
+    ],
+    "collaboration_tools_removed": "agents.enabled=false",
+    "valid_schema_response_completed": true,
+    "valid_response_probe_exit_code": 1,
+    "custom_call_probe_exit_code": 1,
+    "custom_call_denied_by_disabled_host": true,
+    "custom_call_output_seen": true,
+    "jsonl_accepted_after_custom_call": true,
+    "forbidden_marker_written": false,
+    "doctor": "bridge_cli_unsupported_before_auth_or_process_access",
+    "live_calls_during_resume": 0,
+    "credentials_mounted_during_resume": false,
+    "next_decision": "Authorize revising the CLI pin; preserve account, Luna, consent and isolation."
+  },
+  "offline_cli_revision_full": {
+    "passed": 857,
+    "failed": 0,
+    "skipped": 2,
+    "errors": 0,
+    "duration_seconds": 395.213,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 7.058,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 7.212,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ],
+    "note": "Before v4/v5 prompt-delivery change; focused followup covers final prompt."
+  },
+  "current_revision_live_calls": 2,
+  "next_step": "Plan complete. Local activation remains opt-in; no application deployment performed. Live image validation remains disabled/unverified.",
+  "offline_v5_final": {
+    "passed": 152,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 88.901,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.515,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.181,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ]
+  },
+  "final_source_checks": {
+    "passed": 48,
+    "skipped": 0,
+    "duration_seconds": 0.54,
+    "ruff": "passed",
+    "git_diff_check": "passed",
+    "generated_worker_contract": "unchanged",
+    "execution_v1_diff": "none",
+    "owned_containers": "removed"
+  },
+  "cli_protocol_qualification_0164_pre_yolo": {
+    "qualified": true,
+    "cli_version": "0.164.0",
+    "model": "gpt-6-luna",
+    "catalogue_override": "Only tool_mode, apply_patch_tool_type, experimental_supported_tools changed; all other bundled model metadata preserved.",
+    "prompt_version": "codex-dom-v5",
+    "prompt_delivery": "immutable centralized model_instructions_file, checked by doctor",
+    "tools": [],
+    "inspected_surfaces": [
+      "tools",
+      "input.additional_tools"
+    ],
+    "valid_schema_response_completed": true,
+    "valid_response_probe_exit_code": 0,
+    "custom_call_probe_exit_code": 0,
+    "function_call_probe_exit_code": 0,
+    "custom_call_unsupported": true,
+    "jsonl_accepted_after_custom_call": true,
+    "forbidden_marker_written": false,
+    "limitation": "JSONL still hides rejected unknown custom calls; qualification establishes absence of callable tools, not a complete attempt audit.",
+    "filesystem_qualified": true,
+    "sandbox_network_denied": true,
+    "windows_docker_file_locking": "passed",
+    "doctor": {
+      "authenticated": true,
+      "capabilities_qualified": true,
+      "model_access": "unverified"
+    },
+    "native_host_cli_changed": false
+  },
+  "offline_yolo_followup": {
+    "passed": 61,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 46.886,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.42,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 5.985,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ]
+  },
+  "yolo_revision_live_calls": 1,
+  "offline_v6_final": {
+    "passed": 872,
+    "failed": 0,
+    "skipped": 2,
+    "errors": 0,
+    "duration_seconds": 374.064,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 6.257,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 7.493,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ],
+    "evidence_file": ".pytest-artifacts/codex-offline-897fb84c30b1.json",
+    "pytest_duration_seconds": 370.31
+  },
+  "rustfs_v6": {
+    "initial_attempt": {
+      "passed": 1,
+      "failed": 1,
+      "duration_seconds": 7.01,
+      "failure": "concurrent writer connection reset / RemoteDisconnected"
+    },
+    "fresh_container_retry": {
+      "passed": 2,
+      "failed": 0,
+      "duration_seconds": 5.6
+    },
+    "code_changed_between_attempts": false
+  },
+  "previous_live_failure": "canary_expected_target_not_proposed: stop/no_safe_action (0.164.0, v5, --yolo)",
+  "latest_live_status": "passed",
+  "schema_delivery_revision": {
+    "prompt_version": "codex-dom-v6",
+    "delivery": "prompt_text_with_strict_local_validation",
+    "cli_output_schema_flag": false,
+    "diagnostic_calls": 1,
+    "normal_bridge_calls": 1,
+    "provider_internal_root_cause": "not_established",
+    "model_account_consent_tool_and_browser_boundaries_changed": false
+  },
+  "v6_source_checks": {
+    "final_provenance_and_contract_tests": {"passed": 35, "duration_seconds": 0.44},
+    "ruff": "passed",
+    "git_diff_check": "passed",
+    "dashboard_typecheck": "passed",
+    "worker_typecheck": "passed",
+    "generated_worker_contract": "unchanged",
+    "execution_v1_diff": "none",
+    "owned_containers": "removed",
+    "ui_browser_build_evidence": "Prior phase 02/06 passing results retained; unchanged UI/browser sources not rerun in v6 revision."
+  }
+}

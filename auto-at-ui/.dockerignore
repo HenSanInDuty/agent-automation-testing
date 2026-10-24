@@ -1,8 +1,14 @@
 .git
 .venv
 __pycache__
+**/__pycache__
+**/*.py[cod]
 *.py[cod]
 .pytest_cache
+.pytest-*/
+**/.codex
+**/auth.json
+codex-spool/
 .ruff_cache
 .env
 node_modules

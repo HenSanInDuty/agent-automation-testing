@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import type { VisionPolicy, VisionProgressActivity, VisionProvider } from "../../../apps/dashboard/app/generation-types.js";
 
 const dashboard = process.env.VISION_DASHBOARD_URL;
 test.skip(!dashboard, "Set VISION_DASHBOARD_URL to the local dashboard fixture server.");
@@ -20,12 +21,14 @@ test.beforeAll(async ({ browser }) => {
 
 async function fixture(page: Page, legacy = false) {
   page.on("pageerror", (error) => { console.log("Fixture dashboard error:", error.message); });
-  const state = { highlight: false, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
-    policy: { enabled: false, provider: "huggingface", model: "custom/hf-model", raw_screenshot_transfer_accepted: true, raw_screenshot_transfer_provider: "huggingface" as string | null, max_steps: 3, max_screenshot_bytes: 1000, max_session_seconds: 120, max_cost_usd: 0, max_requests_per_minute: 5 } };
+  const state = { highlight: false, progressStage: null as string | null, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
+    codexReadiness: { configured: true, online: true, authenticated: true, capabilities_qualified: true, model_access: "unverified", failure_code: null, busy: false } as NonNullable<VisionProvider["bridge_readiness"]>,
+    progressEvents: null as VisionProgressActivity[] | null,
+    policy: { enabled: false, provider: "huggingface", model: "custom/hf-model", raw_screenshot_transfer_accepted: true, raw_screenshot_transfer_provider: "huggingface", max_steps: 3, max_screenshot_bytes: 1000, max_session_seconds: 120, max_cost_usd: 0, max_requests_per_minute: 5 } as VisionPolicy };
   const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60 });
   const frame = (id: string) => ({ id, availability: "retained", reason_code: null });
   const operation = (number: number, id: string) => ({ id: `${id}-op${number}`, sequence: number, purpose: number === 1 ? "setup" : number === 3 ? "restore" : "explore", action_kind: number === 1 ? "navigate" : number === 3 ? "back" : "click", status: "completed", started_at: "2026-09-08T12:00:00Z", outcome_code: "observed", state_id: "root", locator_id: `${id}-locator${number}`, executed_click: state.highlight && number !== 1 && number !== 3 ? { x: 320 / 1279, y: 240 / 719, viewport_width: 1280, viewport_height: 720, before_frame_id: id + "-before" + number, confirmed_at: "2026-09-08T12:00:01Z" } : null, before: frame(`${id}-before${number}`), after: state.missingCapture ? { id: null, availability: "missing", reason_code: "capture_failed" } : frame(`${id}-after${number}`) });
-  const locators = (id: string) => [2, 4].map((n) => ({ id: `${id}-locator${n}`, operation_id: `${id}-op${n}`, status: "verified", reason_code: null, verified_at: "2026-09-08T12:00:00Z", descriptor: { strategy: "role", role: "button", value: n === 2 ? "Branch A" : "Branch B", scope: [] }, bounding_box: { x: .2, y: .2, width: .2, height: .1 } }));
+  const locators = (id: string) => [2, 4].map((n) => ({ id: `${id}-locator${n}`, operation_id: `${id}-op${n}`, status: "verified", reason_code: null, verified_at: "2026-09-08T12:00:00Z", descriptor: { strategy: "role", role: "button", value: n === 2 ? "Branch A" : "Branch B", scope: [] }, bounding_box: state.highlight ? { x: 280 / 1280, y: 220 / 720, width: 180 / 1280, height: 48 / 720 } : { x: .2, y: .2, width: .2, height: .1 } }));
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -38,12 +41,14 @@ async function fixture(page: Page, legacy = false) {
     if (path.endsWith("/vision/providers")) return state.catalogueFails ? route.fulfill({ status: 503, json: {}, headers }) : json({ items: [
       { id: "huggingface", display_name: "Hugging Face", models: [{ id: "custom/hf-model", display_name: "custom/hf-model" }], configured: true, supports_inline_images: false },
       { id: "gemini", display_name: "Gehihi (Google Gemini)", models: [{ id: "gemini-3.8-flash", display_name: "gemini-3.8-flash" }], configured: state.configured, supports_inline_images: true },
+      { id: "codex_cli", display_name: "Codex (existing account)", models: [{ id: "gpt-6-luna", display_name: "gpt-6-luna" }], configured: state.codexReadiness.configured && state.codexReadiness.online && state.codexReadiness.authenticated && state.codexReadiness.capabilities_qualified && !state.codexReadiness.failure_code && state.codexReadiness.model_access !== "unavailable", supports_inline_images: true, bridge_readiness: state.codexReadiness },
     ] });
     if (path.endsWith("/vision/policy")) {
       if (route.request().method() === "PUT") {
         state.writes.push(route.request().postDataJSON());
         if (state.saveFails) return route.fulfill({ status: 409, json: { detail: { code: "provider_not_configured" } }, headers });
         state.policy = route.request().postDataJSON();
+        state.policy.input_policy_fingerprint = state.policy.provider === "codex_cli" ? "a".repeat(64) : null;
       }
       return json(state.policy);
     }
@@ -73,7 +78,8 @@ async function fixture(page: Page, legacy = false) {
       return route.fulfill({ body: state.highlight ? (path.includes("before") ? clickBefore : clickAfter) : png, contentType: "image/png", headers });
     }
     if (path.endsWith("/activities/stream")) return route.abort();
-    if (path.endsWith("/activities") || path.endsWith("/actions")) return json([]);
+    if (path.endsWith("/activities")) return json(state.progressEvents ?? (state.progressStage ? [{ id: "progress-" + state.progressStage, source: "vision", stage: state.progressStage, status: "running", safe_summary: "Visual action candidates were requested.", metadata: {}, occurred_at: "2026-09-08T12:00:05Z" }] : []));
+    if (path.endsWith("/actions")) return json([]);
     if (path.endsWith("/replay-frames")) return json({ items: legacy ? Array.from({ length: 7 }, (_, n) => ({ id: `frame${n}`, state_id: `state${n}`, sequence: n + 1, checksum: "a".repeat(64), size: png.length, content_type: "image/png", captured_at: "2026-09-08T12:00:00Z", actions: [] })) : [] });
     if (path.includes("/replay-frames/")) return route.fulfill({ body: png, contentType: "image/png", headers });
     if (legacy && path.endsWith("/trajectory")) return json({ session: session(id), trajectory_available: true, legacy_label: null, proposals: [], states: Array.from({ length: 7 }, (_, n) => ({ id: `state${n}`, parent_id: n ? "state0" : null, hop: n ? 1 : 0, sequence: n + 1, captured_at: "2026-09-08T12:00:00Z", frame_id: `frame${n}` })), edges: Array.from({ length: 6 }, (_, n) => ({ id: `edge${n}`, parent_state_id: "state0", proposal_id: `proposal${n}`, attempt: 1, action: { kind: "click", x: .5, y: .5 }, confidence: 1 - n / 10, status: "observed", outcome_code: null, child_state_id: `state${n + 1}`, observed_at: "2026-09-08T12:00:00Z", duration_ms: 100, url_change: "changed" })) });
@@ -358,6 +364,160 @@ async function prepareExploration(page: Page) {
   return form;
 }
 
+function codexPolicy(policy: VisionPolicy): VisionPolicy {
+  return { ...policy, provider: "codex_cli", model: "gpt-6-luna", enabled: true,
+    raw_screenshot_transfer_accepted: false, raw_screenshot_transfer_provider: null,
+    codex: { input_mode: "dom_first", dom_transfer_accepted: true, dom_transfer_provider: "codex_cli", max_dom_elements: 100, max_dom_bytes: 65536 },
+    input_policy_fingerprint: "a".repeat(64) };
+}
+
+function codexProgress(id: string, stage: string, second: number, metadata: VisionProgressActivity["metadata"] = {}): VisionProgressActivity {
+  return { id, stage, run_id: null, correlation_id: sessionA, source: "vision", status: "running",
+    safe_summary: "Synthetic Codex progress", occurred_at: `2026-09-08T12:00:${String(second).padStart(2, "0")}Z`,
+    metadata: { job_id: "fixture-job", call_sequence: 1, mode: "dom", ...metadata } };
+}
+
+test("Codex can be enabled with DOM-only consent and recipient changes clear both permissions", async ({ page }) => {
+  const state = await fixture(page); state.role = "tenant_admin";
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const settings = await openSettings(page);
+  await settings.getByLabel("Vision provider", { exact: true }).selectOption("codex_cli");
+  const dom = settings.getByRole("checkbox", { name: /I accept sanitized page elements/ });
+  const images = settings.getByRole("checkbox", { name: /Allow screenshots to OpenAI/ });
+  const enabled = settings.getByLabel("Enable vision exploration");
+  await expect(settings).toContainText("Bridge ready; model access unverified");
+  await expect(dom).not.toBeChecked(); await expect(images).not.toBeChecked();
+  await expect(enabled).toBeDisabled();
+  await dom.check(); await enabled.check();
+  await images.check(); await images.uncheck();
+  await expect(enabled).toBeChecked();
+  await settings.getByRole("button", { name: "Save vision settings" }).click();
+  await expect(page.getByText("Vision policy saved by the control plane.")).toBeVisible();
+  expect(state.policy).toMatchObject({ enabled: true, raw_screenshot_transfer_accepted: false, codex: { dom_transfer_accepted: true } });
+  const form = await prepareExploration(page);
+  await form.getByRole("button", { name: "Start advisory exploration" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Send page elements to OpenAI?");
+  await expect(dialog).toContainText("Screenshot transfer is disabled");
+  await expect(dialog).toContainText("does not mean offline model processing");
+  await dialog.getByRole("button", { name: "Start advisory exploration" }).click();
+  await expect(page).toHaveURL(new RegExp(sessionC));
+  expect(state.submissions[0]).toMatchObject({ expected_provider: "codex_cli", expected_model: "gpt-6-luna", expected_input_policy_fingerprint: "a".repeat(64) });
+  await images.check();
+  await dom.uncheck(); await expect(enabled).not.toBeChecked();
+  await settings.getByLabel("Vision provider", { exact: true }).selectOption("gemini");
+  await expect(settings.getByRole("checkbox", { name: /I accept raw screenshot/ })).not.toBeChecked();
+  await settings.getByLabel("Vision provider", { exact: true }).selectOption("codex_cli");
+  await expect(dom).not.toBeChecked(); await expect(images).not.toBeChecked();
+  expect(state.writes).toHaveLength(1);
+});
+
+for (const reload of [false, true]) test(`Codex stale ${reload ? "reload" : "submission"} retains the confirmed consent fingerprint`, async ({ page }) => {
+  const state = await fixture(page); state.policy = codexPolicy(state.policy); state.exploration = "unavailable";
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await expect(page.getByLabel("Saved Vision session")).toContainText("Session provider: Hugging Face");
+  const trigger = reload ? page.getByRole("button", { name: "Reload", exact: true })
+    : (await prepareExploration(page)).getByRole("button", { name: "Start advisory exploration" });
+  await trigger.click();
+  state.policy = { ...state.policy, raw_screenshot_transfer_accepted: true, raw_screenshot_transfer_provider: "codex_cli", input_policy_fingerprint: "b".repeat(64) };
+  state.stale = true;
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Screenshot transfer is disabled");
+  await dialog.getByRole("button", { name: reload ? "Start new session" : "Start advisory exploration" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Vision settings changed" })).toBeVisible();
+  const requests = () => reload ? state.reloads.map((item) => item.payload) : state.submissions;
+  expect(requests()).toHaveLength(1);
+  expect(requests()[0]).toMatchObject({ expected_input_policy_fingerprint: "a".repeat(64) });
+  await expect(page).toHaveURL(new RegExp(sessionA));
+  await expect(dialog).toHaveCount(0);
+  state.stale = false;
+  await trigger.click();
+  await expect(dialog).toContainText("Screenshots may also be sent when requested");
+  expect(requests()).toHaveLength(1);
+  await dialog.getByRole("button", { name: reload ? "Start new session" : "Start advisory exploration" }).click();
+  await expect(page).toHaveURL(new RegExp(sessionC));
+  expect(requests()[1]).toMatchObject({ expected_provider: "codex_cli", expected_model: "gpt-6-luna", expected_input_policy_fingerprint: "b".repeat(64) });
+});
+
+for (const scenario of [
+  { patch: { online: false }, label: "Codex bridge disconnected", ready: false },
+  { patch: { authenticated: false }, label: "Codex login required", ready: false },
+  { patch: { capabilities_qualified: false }, label: "Codex bridge needs a compatible CLI", ready: false },
+  { patch: { model_access: "unavailable" as const }, label: "Selected Codex model unavailable", ready: false },
+  { patch: { busy: true }, label: "Codex bridge busy; requests wait in the queue", ready: true },
+  { patch: { model_access: "available" as const }, label: "Codex bridge ready", ready: true },
+]) test(`Codex read-only settings explain ${scenario.label}`, async ({ page }) => {
+  const state = await fixture(page); state.policy = codexPolicy(state.policy); state.exploration = "unavailable";
+  Object.assign(state.codexReadiness, scenario.patch);
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const settings = await openSettings(page);
+  await expect(settings).toContainText(scenario.label);
+  await expect(settings).toContainText("Screenshot transfer is disabled");
+  await expect(settings.getByRole("checkbox")).toHaveCount(0);
+  await expect(settings.getByRole("button", { name: "Save vision settings" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reload", exact: true })).toBeEnabled({ enabled: scenario.ready });
+  expect(state.writes).toHaveLength(0);
+});
+
+test("Codex readiness polling reflects expired login without changing saved consent", async ({ page }) => {
+  const state = await fixture(page); state.policy = codexPolicy(state.policy); state.exploration = "unavailable";
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const settings = await openSettings(page);
+  await expect(settings).toContainText("Bridge ready; model access unverified");
+  state.codexReadiness.authenticated = false;
+  await expect(settings).toContainText("Codex login required", { timeout: 12_000 });
+  await expect(page.getByRole("button", { name: "Reload", exact: true })).toBeDisabled();
+  expect(state.policy.codex?.dom_transfer_accepted).toBe(true);
+  expect(state.writes).toHaveLength(0);
+});
+
+test("Codex stages survive SSE fallback, preserve selected frames and stop on terminal evidence", async ({ page }) => {
+  test.setTimeout(60_000);
+  const state = await fixture(page); state.policy = codexPolicy(state.policy); state.highlight = true;
+  const queued = codexProgress("queued", "codex.queued", 5);
+  const started = codexProgress("started", "codex.started", 6, { elapsed_ms: 1250 });
+  state.progressEvents = [queued];
+  await page.route("**/activities/stream", route => route.fulfill({ contentType: "text/event-stream",
+    headers: { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true" },
+    body: `event: activity\ndata: ${JSON.stringify(started)}\n\nevent: activity\ndata: ${JSON.stringify(queued)}\n\n` }));
+  await page.goto(`${dashboard}/agent?vision=${sessionC}`);
+  const screen = page.getByRole("region", { name: "Vision browser screen" });
+  await expect(screen).toContainText("Reading page elements");
+  await expect(screen).toContainText("Call 1");
+  await expect(screen).toContainText("1.3s elapsed at this update");
+  await screen.getByRole("button", { name: "Show action" }).click();
+  await expect(screen).toContainText("Before operation 4");
+  await expect(screen.getByTestId("vision-click-target")).toBeVisible();
+  const imageNeeded = codexProgress("image-needed", "codex.image_requested", 7);
+  const imageStarted = codexProgress("image-started", "codex.started", 8, { job_id: "image-job", mode: "image", call_sequence: 2 });
+  state.progressEvents = [imageStarted, queued, started, started, imageNeeded];
+  await page.locator("summary").filter({ hasText: /^Technical details$/ }).click();
+  await expect(page.getByRole("region", { name: "Advisory session progress" })).toContainText("polling fallback active");
+  await expect(page.getByRole("log")).toContainText("Image needed", { timeout: 12_000 });
+  await expect(page.getByRole("log").getByText("Call 1 · 1.3s elapsed at this update", { exact: true })).toHaveCount(1);
+  await expect(screen).not.toContainText("Analyzing the requested screenshot");
+  await expect(screen).toContainText("Before operation 4");
+  await screen.getByRole("button", { name: "Return to live" }).click();
+  await expect(screen).toContainText("Analyzing the requested screenshot");
+  await expect(screen.getByTestId("vision-click-target")).toHaveCount(0);
+  state.progressEvents = [...state.progressEvents, codexProgress("validating", "codex.validating", 9, { job_id: "image-job", call_sequence: 2 })];
+  await expect(screen).toContainText("Checking proposed action", { timeout: 12_000 });
+  // Result polling still says running: the terminal activity must take precedence.
+  state.progressEvents = [...state.progressEvents,
+    codexProgress("terminal", "unavailable", 10, { reason_code: "bridge_login_required" }),
+    codexProgress("late", "codex.started", 11)];
+  await expect(screen).toContainText("The Codex login is unavailable or expired", { timeout: 12_000 });
+  await expect(screen).toContainText("Session stopped · last saved screen");
+  await expect(screen.getByRole("img")).toBeVisible();
+  await expect(screen).not.toContainText("Reading page elements");
+  const calls = state.screenCalls;
+  await page.waitForTimeout(1500);
+  expect(state.screenCalls).toBe(calls);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  expect(state.submissions).toHaveLength(0);
+});
+
 test("admin saves Gehihi consent, reloads and submits the saved model; historical session keeps its provider", async ({ page }) => {
   const state = await fixture(page); state.role = "tenant_admin";
   await page.goto(`${dashboard}/agent?vision=${sessionA}`);
@@ -508,25 +668,88 @@ test("default exploration and draft deep links retain the human approval dialog"
   await expect.poll(() => decisions.length).toBe(1);
 });
 
+test("Website explains model wait and interrupted session while technical details stay closed", async ({ page }) => {
+  const state = await fixture(page);
+  state.extra = -3;
+  state.progressStage = "candidate.requested";
+  await page.goto(dashboard + "/agent?vision=" + sessionA);
+  const screen = page.getByRole("region", { name: "Vision browser screen" });
+  await expect(screen).toContainText("Waiting for model response");
+  await expect(screen).toContainText("The page stays still while the model chooses the next action.");
+  await expect(page.getByRole("heading", { name: "Advisory session progress" })).not.toBeVisible();
+  await screen.getByRole("button", { name: "Show action" }).click();
+  await expect(screen).not.toContainText("Waiting for model response");
+  await screen.getByRole("button", { name: "Return to live" }).click();
+  await expect(screen).toContainText("Waiting for model response");
+  state.exploration = "unavailable";
+  state.completionReason = "worker_state_unavailable";
+  await expect(screen).toContainText("Exploration stopped", { timeout: 12_000 });
+  await expect(screen).toContainText("The browser session was interrupted and cannot be resumed.");
+  await expect(screen).toContainText("Use Reload to start a new session");
+  await expect(screen).toContainText("Session stopped · last saved screen");
+  await expect(screen).not.toContainText("Waiting for model response");
+  const calls = state.screenCalls;
+  await page.waitForTimeout(1500);
+  expect(state.screenCalls).toBe(calls);
+  expect(state.submissions).toHaveLength(0);
+  expect(state.reloads).toHaveLength(0);
+  await screen.screenshot({ path: "../../.pytest_cache/vision-interrupted-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+for (const scenario of [
+  { action: "scroll", status: "executing", heading: "Agent is acting", label: "Scroll page", outcome: "In progress" },
+  { action: "click", status: "rejected", heading: "Latest action", label: "Click", outcome: "Not executed" },
+]) test(`Website activity explains ${scenario.status} ${scenario.action} without a click marker`, async ({ page }) => {
+  await fixture(page);
+  await page.route("**/trace*", route => route.fulfill({
+    headers: { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true" },
+    json: { session_id: sessionA, schema_version: "v1", revision: "1", trace_version: "v4", locators: [], next_sequence: 1, has_more: false,
+      items: [{ id: "activity", sequence: 1, purpose: "explore", action_kind: scenario.action, status: scenario.status, started_at: "2026-09-08T12:00:00Z", outcome_code: null, locator_id: null,
+        before: { id: null, availability: "missing", reason_code: null }, after: { id: null, availability: "missing", reason_code: null } }],
+    },
+  }));
+  await page.goto(dashboard + "/agent?vision=" + sessionA);
+  const screen = page.getByRole("region", { name: "Vision browser screen" });
+  const activity = screen.locator(".vision-screen-activity");
+  await expect(activity).toContainText(scenario.heading);
+  await expect(activity).toContainText(`Step 1: ${scenario.label}`);
+  await expect(activity).toContainText(scenario.outcome);
+  await expect(screen.getByTestId("vision-click-marker")).toHaveCount(0);
+  await expect(screen.getByTestId("vision-click-target")).toHaveCount(0);
+});
+
 test("click highlight stays on its before frame and scales on desktop and mobile", async ({ page }) => {
   const state = await fixture(page); state.highlight = true;
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(dashboard + "/agent?vision=" + sessionA);
   const screen = page.getByRole("region", { name: "Vision browser screen" });
   const marker = screen.getByTestId("vision-click-marker");
-  await page.getByRole("button", { name: "View operation 4 click", exact: true }).click();
+  await expect(screen.locator(".vision-screen-activity")).toContainText("Step 4: Click “Branch B”");
+  await expect(screen.locator(".vision-screen-activity")).toContainText("Performed");
+  await screen.getByRole("button", { name: "Show action", exact: true }).click();
   await expect(marker).toBeVisible();
+  await expect(screen.getByTestId("vision-click-target")).toBeVisible();
+  await expect(screen.locator(".vision-screen-activity")).toContainText("Selected action");
   const checkPosition = async () => {
     const error = await screen.evaluate((node) => {
       const img = node.querySelector("img")!.getBoundingClientRect();
       const point = node.querySelector('[data-testid="vision-click-marker"]')!.getBoundingClientRect();
+      const target = node.querySelector('[data-testid="vision-click-target"]')!.getBoundingClientRect();
       const scale = Math.min(img.width / 1280, img.height / 720);
       return {
         x: Math.abs(point.x + point.width / 2 - (img.x + (img.width - 1280 * scale) / 2 + 320 * scale)),
         y: Math.abs(point.y + point.height / 2 - (img.y + (img.height - 720 * scale) / 2 + 240 * scale)),
+        targetX: Math.abs(target.x - (img.x + (img.width - 1280 * scale) / 2 + 280 * scale)),
+        targetY: Math.abs(target.y - (img.y + (img.height - 720 * scale) / 2 + 220 * scale)),
+        targetWidth: Math.abs(target.width - 180 * scale),
+        targetHeight: Math.abs(target.height - 48 * scale),
       };
     });
     expect(error.x).toBeLessThan(2); expect(error.y).toBeLessThan(2);
+    expect(error.targetX).toBeLessThan(2); expect(error.targetY).toBeLessThan(2);
+    expect(error.targetWidth).toBeLessThan(2); expect(error.targetHeight).toBeLessThan(2);
   };
   await checkPosition();
   await page.screenshot({ path: "../../.pytest_cache/agent-highlight-desktop.png", fullPage: true });
@@ -539,6 +762,7 @@ test("click highlight stays on its before frame and scales on desktop and mobile
   await screen.getByRole("button", { name: "After", exact: true }).click();
   await expect(screen).toContainText("After operation 4");
   await expect(marker).toHaveCount(0);
+  await expect(screen.getByTestId("vision-click-target")).toHaveCount(0);
   await screen.getByRole("button", { name: "Return to live" }).click();
   await expect(screen).toContainText("Live browser");
   await expect(marker).toHaveCount(0);
@@ -557,6 +781,7 @@ test("new click previews once, honors reduced motion and keeps live polling", as
   state.extra = 1;
   await expect(marker).toBeVisible({ timeout: 12_000 });
   await expect(screen.getByText("Recent click · operation 5 · recorded frame")).toBeVisible();
+  await expect(screen.locator(".vision-screen-activity")).toContainText("Step 5: Click");
   expect(await marker.evaluate(el => getComputedStyle(el).animationName)).toBe("none");
   await expect(marker).toHaveCount(0, { timeout: 4000 });
   await expect(screen.getByText("Live browser · updates every second")).toBeVisible();
@@ -611,6 +836,7 @@ for (const condition of ["rejected", "unknown", "deleted", "mismatch", "denied",
   else if (condition === "temporary") await expect(screen).toContainText("Saved screen unavailable.");
   else await expect(screen.getByRole("img")).toBeVisible();
   await expect(screen.getByTestId("vision-click-marker")).toHaveCount(0);
+  await expect(screen.getByTestId("vision-click-target")).toHaveCount(0);
 });
 
 test("nonadmin reads policy and safe failures while partial trace and draft failure stay visible", async ({ page }) => {

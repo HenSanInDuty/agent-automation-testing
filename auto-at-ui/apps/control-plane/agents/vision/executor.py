@@ -7,6 +7,7 @@ from time import perf_counter
 from typing import Any
 
 import httpx
+from auto_at.contracts.codex_bridge import CodexProposalBinding
 from auto_at.contracts.vision import VisualAction
 
 from agents.prompts.vision import VISION_BATCH_IMAGE_INSTRUCTION, VISION_SINGLE_IMAGE_INSTRUCTION
@@ -43,6 +44,8 @@ class VisualCandidateBatchOutcome:
     diagnostic_code: VisualDiagnosticCode | None = None
     diagnostic_capture: VisualDiagnosticCapture | None = None
     failure_reason: str | None = None
+    target_bindings: tuple[CodexProposalBinding | None, ...] | None = None
+    calls_used: int = 1
 
 
 async def execute_visual_action(
@@ -222,7 +225,10 @@ def policy_to_step_guard(policy: VisionPolicy):
     return StepGuardPolicy(
         max_tokens=100_000,
         max_steps_per_run=policy.max_steps,
-        max_evidence_bytes_per_step=policy.max_screenshot_bytes,
+        max_evidence_bytes_per_step=max(
+            policy.max_screenshot_bytes,
+            policy.codex.max_dom_bytes if policy.provider == "codex_cli" and policy.codex else 0,
+        ),
         max_concurrency=1,
     )
 

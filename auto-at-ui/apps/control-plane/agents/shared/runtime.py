@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 
+from auto_at.contracts.codex_bridge import CodexInputPolicy
 from config import Settings
 from pydantic import BaseModel, Field, model_validator
 
@@ -43,6 +44,7 @@ class VisionPolicy(BaseModel):
     max_session_seconds: int = Field(default=120, ge=1, le=3_600)
     max_cost_usd: float = Field(default=0.25, gt=0, le=1_000)
     max_requests_per_minute: int = Field(default=5, ge=1, le=10_000)
+    codex: CodexInputPolicy | None = None
 
     @model_validator(mode="after")
     def validate_enabled_policy(self) -> "VisionPolicy":
@@ -52,7 +54,10 @@ class VisionPolicy(BaseModel):
         elif self.provider == "huggingface" and self.raw_screenshot_transfer_provider is None:
             # Only legacy HF consent may infer a recipient.
             self.raw_screenshot_transfer_provider = "huggingface"
-        if self.enabled and (
+        if self.enabled and self.provider == "codex_cli":
+            if not self.codex or not self.codex.dom_transfer_accepted:
+                raise ValueError("enabled Codex requires provider-bound DOM transfer consent")
+        elif self.enabled and (
             not self.raw_screenshot_transfer_accepted
             or self.raw_screenshot_transfer_provider != self.provider
         ):
@@ -125,6 +130,15 @@ class AgentRuntimeConfig(BaseModel):
             return self
         merged = _merge(self.model_dump(), override)
         vision_override = override.get("vision")
+        if (isinstance(vision_override, Mapping)
+                and vision_override.get("provider", self.vision.provider) != self.vision.provider
+                and "codex" not in vision_override):
+            merged["vision"]["codex"] = None
+        if (isinstance(vision_override, Mapping)
+                and vision_override.get("provider", self.vision.provider) != self.vision.provider
+                and "raw_screenshot_transfer_accepted" not in vision_override):
+            merged["vision"]["raw_screenshot_transfer_accepted"] = False
+            merged["vision"]["raw_screenshot_transfer_provider"] = None
         if isinstance(vision_override, Mapping) and (
             "raw_screenshot_transfer_provider" not in vision_override
             and (
@@ -149,6 +163,15 @@ class AgentStepGuard:
         if requested_tokens > self._policy.max_tokens:
             return False
         if evidence_bytes > self._policy.max_evidence_bytes_per_step:
+            return False
+        if self._used_steps >= self._policy.max_steps_per_run:
+            return False
+        self._used_steps += 1
+        return True
+
+    def reserve_external_call(self, *, evidence_bytes: int) -> bool:
+        """Reserve one CLI call without claiming an enforceable generation-token cap."""
+        if not 0 <= evidence_bytes <= self._policy.max_evidence_bytes_per_step:
             return False
         if self._used_steps >= self._policy.max_steps_per_run:
             return False

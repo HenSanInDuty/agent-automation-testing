@@ -55,7 +55,8 @@ def test_catalogue_preserves_custom_hf_models_and_exposes_only_readiness():
     configs = Configs()
     configs.values["tenant-a", AGENT_RUNTIME_CONFIG_KEY] = {"vision": {"model": "custom/hf"}}
     service = VisionPolicies(settings(gemini_api_key="synthetic-secret"), configs, Audit())
-    hf, gemini = service.providers("tenant-a", principal())
+    hf, gemini, codex = service.providers("tenant-a", principal())
+    assert codex["id"] == "codex_cli" and not codex["configured"]
     assert {item["id"] for item in hf["models"]} >= {"custom/hf"}
     assert not hf["configured"]
     assert gemini == {
@@ -65,6 +66,27 @@ def test_catalogue_preserves_custom_hf_models_and_exposes_only_readiness():
     }
     assert "synthetic-secret" not in str([hf, gemini])
     assert not configs.writes
+
+
+def test_codex_readiness_is_required_and_scoped_to_v4_without_image_consent():
+    from test_codex_candidate_service import codex_policy
+    from test_codex_model_batch import Readiness
+
+    ready = Readiness()
+    deployment = settings(vision_trace_v4_enabled=True)
+    service = VisionPolicies(deployment, Configs(), Audit(), readiness=ready)
+    value = codex_policy().model_dump(mode="json")
+    assert service.validate_update("tenant-a", principal(), value).enabled
+    assert service.providers("tenant-a", principal())[-1]["bridge_readiness"]["model_access"] == (
+        "unverified"
+    )
+    ready.online = False
+    with pytest.raises(VisionPolicyError, match="provider_not_configured"):
+        service.validate_update("tenant-a", principal(), value)
+    ready.online = True
+    deployment.vision_trace_v4_enabled = False
+    with pytest.raises(VisionPolicyError, match="provider_not_configured"):
+        service.validate_update("tenant-a", principal(), value)
 
 
 def test_missing_key_blocks_enablement_but_allows_disabled_configuration():
@@ -186,3 +208,12 @@ def test_hf_consent_cannot_be_carried_into_gemini_update():
     snapshot = configs.get("tenant-a", VISION_POLICY_AUDIT_PREFIX + str(audit.events[0].entity_id))
     assert snapshot["before"]["raw_screenshot_transfer_provider"] == "huggingface"
     assert snapshot["after"]["raw_screenshot_transfer_provider"] == "gemini"
+
+
+def test_codex_cannot_inherit_hf_key_readiness():
+    service = VisionPolicies(settings(huggingface_api_key="fixture"), Configs(), Audit())
+    with pytest.raises(VisionPolicyError, match="provider_not_configured"):
+        service.validate_update("tenant-a", principal(), {
+            "enabled": True, "provider": "codex_cli", "model": "gpt-6-luna",
+            "codex": {"dom_transfer_accepted": True, "dom_transfer_provider": "codex_cli"},
+        })

@@ -14,6 +14,18 @@ the adapter test alone ran a browser or persisted a trace.
 
 ## Reproduce safely
 
+2026-10-23 retry maintenance: refreshed the Gemini adapter test hash after adding
+bounded HTTP 500/502/503/504 retries. Mocked tests cover recovery, exhaustion,
+Retry-After, remaining deadlines, cancellation and safe logs. Authentication,
+quota and invalid-output cases still make one attempt. Existing response cases
+and expected metrics are unchanged; no live canary is claimed by these tests.
+
+2026-10-23 timeout maintenance: refreshed the Gemini adapter test hash for the
+120-second Vision request limit. Mocked deadline tests additionally verify a
+35-second response can complete, while requests exceeding 120 seconds or the
+remaining session time are cancelled. Response cases and expected metrics are
+unchanged; no live provider canary was run for this change.
+
 2026-10-19 click-evidence maintenance: the manifest hash for
 `workers/playwright/src/vision-operations.spec.ts` was refreshed after adding
 confirmed-click coordinate and before-frame assertions. The response cases and

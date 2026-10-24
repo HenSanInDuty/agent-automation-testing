@@ -154,6 +154,15 @@ h3 { font-size: 1rem; }
 .vision-progress-card [role="log"] { max-height: 24rem; overflow-y: auto; }
 .vision-screen-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .vision-screen-content .vision-screen-viewport { position: relative; }
+.vision-screen-activity { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid #bfcef1; border-left: 4px solid var(--color-focus); border-radius: var(--radius-sm); background: #eff4ff; font-size: .8125rem; }
+.vision-screen-activity > div { min-width: 0; overflow-wrap: anywhere; }
+.vision-screen-activity small, .vision-screen-activity strong, .vision-screen-activity span { display: block; }
+.vision-screen-activity small, .vision-screen-activity span { color: #405779; }
+.vision-screen-activity .button { flex-shrink: 0; padding: .35rem .6rem; font-size: .75rem; }
+.vision-screen-activity--busy small::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: .4rem; border-radius: 50%; background: var(--color-focus); }
+.vision-screen-activity--stopped { border-color: #e6d5ac; border-left-color: var(--color-warning); background: var(--color-warning-bg); }
+.vision-screen-activity--stopped small, .vision-screen-activity--stopped span { color: #705016; }
+.vision-click-target { position: absolute; border: 2px solid #facc15; border-radius: 4px; background: rgb(250 204 21 / .18); box-shadow: 0 0 0 1px #172033, 0 0 0 3px rgb(255 255 255 / .8); pointer-events: none; }
 .vision-click-marker { position: absolute; z-index: 1; width: 32px; height: 32px; border: 3px solid #facc15; border-radius: 50%; background: rgb(250 204 21 / .15); box-shadow: 0 0 0 2px #172033, 0 0 0 4px rgb(255 255 255 / .9); transform: translate(-50%, -50%); pointer-events: none; }
 .vision-click-marker::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: #172033; transform: translate(-50%, -50%); }
 .vision-click-marker--pulse { animation: vision-click-pulse .6s ease-out 2; }

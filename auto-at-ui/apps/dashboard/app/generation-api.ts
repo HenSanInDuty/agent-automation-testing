@@ -45,10 +45,10 @@ export function decideProposal(apiUrl: string, id: string, approved: boolean, re
 export function getVisionPolicy(apiUrl: string) { return apiRequest<VisionPolicy>(apiUrl, "/api/v1/vision/policy"); }
 export function getVisionProviders(apiUrl: string) { return apiRequest<{ items: VisionProvider[] }>(apiUrl, "/api/v1/vision/providers"); }
 export function setVisionPolicy(apiUrl: string, policy: VisionPolicy) { return apiRequest<VisionPolicy>(apiUrl, "/api/v1/vision/policy", { method: "PUT", body: JSON.stringify(policy) }); }
-export function submitVisualExploration(apiUrl: string, payload: { project_id: string; target_url: string; task_intent: string; use_vision: true; expected_provider?: string; expected_model?: string }) {
+export function submitVisualExploration(apiUrl: string, payload: { project_id: string; target_url: string; task_intent: string; use_vision: true; expected_provider?: string; expected_model?: string; expected_input_policy_fingerprint?: string }) {
   return apiRequest<VisualExploration>(apiUrl, "/api/v1/vision/explorations", { method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify(payload) });
 }
-export function reloadVisualExploration(apiUrl: string, sessionId: string, confirmation: { expected_provider: string; expected_model: string }) {
+export function reloadVisualExploration(apiUrl: string, sessionId: string, confirmation: { expected_provider: string; expected_model: string; expected_input_policy_fingerprint?: string }) {
   return apiRequest<VisualExploration>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/reload`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify(confirmation) });
 }
 export function listVisualExplorations(apiUrl: string, projectId: string) { return apiRequest<{ items: VisualExploration[]; total: number }>(apiUrl, `/api/v1/vision/explorations?project_id=${encodeURIComponent(projectId)}`); }

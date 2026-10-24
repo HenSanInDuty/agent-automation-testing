@@ -3,15 +3,18 @@
 import asyncio
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 from uuid import UUID, uuid4
 
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AgentStepGuard, resolve_agent_runtime
 from agents.vision.executor import policy_to_step_guard
 from agents.vision.intent import decrypt_visual_intent
+from auto_at.contracts.codex_bridge import CodexConsentSnapshot
 from auto_at.contracts.vision import VisualOperation
 from auto_at.contracts.vision_worker import (
     VisualWorkerAction,
+    VisualWorkerObserveDom,
     VisualWorkerOpen,
     VisualWorkerPrepare,
 )
@@ -23,6 +26,7 @@ from domain.vision import (
     vision_model_failure_reason,
 )
 
+from application.codex_candidates import CodexCallBudget, CodexImage
 from application.vision_handoff import build_vision_handoff
 from application.vision_model_batch import VisionModelBatch, VisionModelSession
 from application.vision_operations import ExecuteVisualOperation, VisualOperationStopped, evolve
@@ -40,10 +44,15 @@ class Branch:
 
 class VisionTraceEventProcessor:
     def __init__(
-        self, uow: VisualTraceUnitOfWork, worker: VisualWorkerTransport, settings,
+        self,
+        uow: VisualTraceUnitOfWork,
+        worker: VisualWorkerTransport,
+        settings,
         model_batch: VisionModelBatch,
+        codex_candidates=None,
     ):
         self.uow, self.worker, self.settings, self.model_batch = uow, worker, settings, model_batch
+        self.codex_candidates = codex_candidates
 
     async def execute(self, event):
         if event.event_type != "agent.visual_exploration.requested.v1":
@@ -74,6 +83,12 @@ class VisionTraceEventProcessor:
         max_hops = min(record.max_hops, policy.vision_max_hops) if policy else 0
         calls = 0
         model_failure = None
+        frozen_input = None
+        if record.provider == "codex_cli":
+            try:
+                frozen_input = CodexConsentSnapshot.model_validate(record.model_input_policy)
+            except ValueError:
+                return self.uow.finish(lease, "policy_disabled")
 
         def check_policy():
             current, config, latest = self.uow.context(scope)
@@ -84,13 +99,46 @@ class VisionTraceEventProcessor:
             if (
                 current.state != "running"
                 or not live.enabled
-                or not live.raw_screenshot_transfer_accepted
-                or live.raw_screenshot_transfer_provider != record.provider
+                or current.fencing_token != lease.fencing_token
+                or (
+                    record.provider != "codex_cli"
+                    and (
+                        not live.raw_screenshot_transfer_accepted
+                        or live.raw_screenshot_transfer_provider != record.provider
+                    )
+                )
                 or latest is None
                 or live.provider != record.provider
                 or live.model != record.model
             ):
                 raise VisualOperationStopped("policy_disabled")
+            if frozen_input is not None:
+                if (
+                    not frozen_input.dom_transfer_accepted
+                    or live.codex is None
+                    or not live.codex.dom_transfer_accepted
+                ):
+                    raise VisualOperationStopped("policy_disabled")
+                image_allowed = (
+                    frozen_input.raw_screenshot_transfer_accepted
+                    and live.raw_screenshot_transfer_accepted
+                )
+                live = live.model_copy(
+                    update={
+                        "codex": live.codex.model_copy(
+                            update={
+                                "max_dom_bytes": min(
+                                    frozen_input.max_dom_bytes, live.codex.max_dom_bytes
+                                ),
+                                "max_dom_elements": min(
+                                    frozen_input.max_dom_elements, live.codex.max_dom_elements
+                                ),
+                            }
+                        ),
+                        "raw_screenshot_transfer_accepted": image_allowed,
+                        "raw_screenshot_transfer_provider": "codex_cli" if image_allowed else None,
+                    }
+                )
             if datetime.now(UTC) >= record.updated_at + timedelta(
                 seconds=min(
                     live.max_session_seconds,
@@ -161,6 +209,7 @@ class VisionTraceEventProcessor:
                         max_states=max_states,
                         max_hops=max_hops,
                         max_screenshot_bytes=operations.max_frame_bytes,
+                        required_capabilities=(("dom-observation-v1",) if frozen_input else ()),
                     )
                 )
             )
@@ -179,6 +228,7 @@ class VisionTraceEventProcessor:
                 checkpoint_state_id=None,
                 restore=None,
                 replay=None,
+                binding=None,
             ):
                 nonlocal sequence, fingerprint, browser_parent
                 live, _ = check_policy()
@@ -200,7 +250,11 @@ class VisionTraceEventProcessor:
                     replay_operation_id=replay.operation.id if replay else None,
                     expected_locator=replay.locator.descriptor
                     if replay and replay.locator
+                    else binding.expected_descriptor
+                    if binding
                     else None,
+                    dom_snapshot_id=binding.snapshot_id if binding else None,
+                    dom_element_id=binding.element_id if binding else None,
                     model_confidence=edge.confidence if edge else 0,
                 )
                 operation = VisualOperation(
@@ -246,8 +300,11 @@ class VisionTraceEventProcessor:
                 checkpoint_id=root_checkpoint,
                 checkpoint_state_id=root_state,
             )
-            if (root.operation.status != "completed" or root.checkpoint is None
-                    or root.operation.actual_after_frame_id is None):
+            if (
+                root.operation.status != "completed"
+                or root.checkpoint is None
+                or root.operation.actual_after_frame_id is None
+            ):
                 raise VisualOperationStopped("initial_capture_failed")
             visited = 1
             current = Branch(root_state, root.checkpoint, 0, (root.operation.id,), root)
@@ -260,6 +317,82 @@ class VisionTraceEventProcessor:
             )
             guard = AgentStepGuard(policy_to_step_guard(effective))
             last_call = None
+            codex = self.codex_candidates(lease) if frozen_input and self.codex_candidates else None
+            codex_budget = (
+                CodexCallBudget(
+                    guard=guard,
+                    max_calls=min(record.max_steps, runtime.max_steps),
+                    max_rate=min(record.max_requests_per_minute, runtime.max_requests_per_minute),
+                    deadline=deadline,
+                    check_policy=lambda: check_policy()[0],
+                )
+                if frozen_input
+                else None
+            )
+
+            async def codex_propose(branch, remaining):
+                if codex is None:
+                    raise VisualOperationStopped("bridge_offline")
+                live, _ = check_policy()
+                observed = await operations.bounded(
+                    lambda: self.worker.observe_dom(
+                        VisualWorkerObserveDom(
+                            **operations.identity.model_dump(),
+                            snapshot_id=uuid4(),
+                            expected_state_fingerprint=fingerprint,
+                            max_elements=live.codex.max_dom_elements,
+                            max_bytes=live.codex.max_dom_bytes,
+                        ),
+                    )
+                )
+                bound = observed.data
+
+                async def check_state():
+                    checkpoint, matches = await self.worker.checkpoint(
+                        operations.identity,
+                        branch.checkpoint.id,
+                    )
+                    return (
+                        matches
+                        and checkpoint == branch.checkpoint
+                        and fingerprint == bound.observation.state_fingerprint
+                    )
+
+                async def capture_image():
+                    # Use evidence captured with this checkpoint, not the preview's time cache.
+                    frame_id = branch.result.operation.actual_after_frame_id
+                    if frame_id is None:
+                        raise VisualOperationStopped("capture_failed")
+                    data = self.uow.read_frame(scope, frame_id)
+                    return CodexImage(
+                        data,
+                        bound.observation.snapshot_id,
+                        bound.observation.state_fingerprint,
+                        sha256(data).hexdigest(),
+                    )
+
+                return await operations.bounded(
+                    lambda: codex.propose(
+                        session=VisionModelSession(
+                            record.tenant_id,
+                            record.id,
+                            record.provider,
+                            record.model,
+                            record.project_id,
+                            record.correlation_id,
+                            lease.fencing_token,
+                        ),
+                        bound=bound,
+                        task_intent=intent,
+                        observed_actions=tuple(
+                            results[item].operation.action_kind for item in branch.path[-10:]
+                        ),
+                        max_candidates=min(10, remaining),
+                        budget=codex_budget,
+                        check_state=check_state,
+                        capture_image=capture_image,
+                    )
+                )
 
             async def propose(branch):
                 nonlocal calls, last_call, proposal_sequence, model_failure
@@ -271,7 +404,7 @@ class VisionTraceEventProcessor:
                 remaining = min(max_states, latest.vision_max_states) - visited - len(queue)
                 if remaining < 1 or calls >= min(record.max_steps, live.max_steps):
                     return
-                if last_call is not None:
+                if frozen_input is None and last_call is not None:
                     interval = 60 / min(
                         record.max_requests_per_minute, live.max_requests_per_minute
                     )
@@ -282,39 +415,48 @@ class VisionTraceEventProcessor:
                 remaining = min(max_states, latest.vision_max_states) - visited - len(queue)
                 if remaining < 1 or branch.hop >= min(max_hops, latest.vision_max_hops):
                     return
-                frame_id = branch.result.operation.actual_after_frame_id
-                if frame_id is None:
-                    raise VisualOperationStopped("capture_failed")
-                image = self.uow.read_frame(scope, frame_id)
-                if len(image) > min(record.max_screenshot_bytes, live.max_screenshot_bytes):
-                    raise VisualOperationStopped("screenshot_byte_limit")
                 self.uow.progress(
                     operations.lease,
                     "candidate.requested",
                     f"candidate.requested:{branch.state_id}",
                     {"state_sequence": visited, "hop": branch.hop},
                 )
-                calls += 1
-                last_call = datetime.now(UTC)
-                outcome = await operations.bounded(
-                    lambda: self.model_batch(
-                        session=VisionModelSession(
-                            record.tenant_id, record.id, record.provider, record.model,
-                        ),
-                        screenshot=image,
-                        task_intent=intent,
-                        policy=live,
-                        max_candidates=min(20, remaining),
-                        guard=guard,
-                        sequence=calls,
-                        check_policy=check_policy,
-                        remaining_seconds=(
-                            min(deadline, record.updated_at + timedelta(
-                                seconds=live.max_session_seconds
-                            )) - datetime.now(UTC)
-                        ).total_seconds(),
+                if frozen_input is not None:
+                    outcome = await codex_propose(branch, remaining)
+                    calls = codex_budget.calls
+                else:
+                    frame_id = branch.result.operation.actual_after_frame_id
+                    if frame_id is None:
+                        raise VisualOperationStopped("capture_failed")
+                    image = self.uow.read_frame(scope, frame_id)
+                    if len(image) > min(record.max_screenshot_bytes, live.max_screenshot_bytes):
+                        raise VisualOperationStopped("screenshot_byte_limit")
+                    calls += 1
+                    last_call = datetime.now(UTC)
+                    outcome = await operations.bounded(
+                        lambda: self.model_batch(
+                            session=VisionModelSession(
+                                record.tenant_id,
+                                record.id,
+                                record.provider,
+                                record.model,
+                            ),
+                            screenshot=image,
+                            task_intent=intent,
+                            policy=live,
+                            max_candidates=min(20, remaining),
+                            guard=guard,
+                            sequence=calls,
+                            check_policy=check_policy,
+                            remaining_seconds=(
+                                min(
+                                    deadline,
+                                    record.updated_at + timedelta(seconds=live.max_session_seconds),
+                                )
+                                - datetime.now(UTC)
+                            ).total_seconds(),
+                        )
                     )
-                )
                 check_policy()
                 await origins.capture()
                 if outcome.actions is None:
@@ -326,7 +468,9 @@ class VisionTraceEventProcessor:
                     # Do not retry the model or turn partial exploration into success.
                     model_failure = reason
                     self.uow.progress(
-                        operations.lease, "candidate.unavailable", f"candidate.failed:{calls}",
+                        operations.lease,
+                        "candidate.unavailable",
+                        f"candidate.failed:{calls}",
                         {"reason_code": reason},
                     )
                     return
@@ -337,7 +481,10 @@ class VisionTraceEventProcessor:
                     {"state_sequence": visited, "candidate_count": len(outcome.actions)},
                 )
                 candidates = []
-                for action in outcome.actions:
+                bindings = outcome.target_bindings or (None,) * len(outcome.actions)
+                if len(bindings) != len(outcome.actions):
+                    raise VisualOperationStopped("model_output_invalid")
+                for action, binding in zip(outcome.actions, bindings, strict=True):
                     proposal_sequence += 1
                     safe = action.model_dump(exclude={"text", "expected_outcome"})
                     proposal_id = uuid4()
@@ -360,8 +507,8 @@ class VisionTraceEventProcessor:
                         None,
                         datetime.now(UTC),
                     )
-                    candidates.append((proposal_id, proposal_sequence, safe, edge))
-                    queue.append((branch, action, edge))
+                    candidates.append((proposal_id, proposal_sequence, safe, edge, binding))
+                    queue.append((branch, action, edge, binding))
                 self.uow.proposals(operations.lease, branch.state_id, candidates)
 
             async def restore(branch):
@@ -426,7 +573,7 @@ class VisionTraceEventProcessor:
 
             await propose(current)
             while queue:
-                branch, action, edge = queue.pop(0)
+                branch, action, edge, binding = queue.pop(0)
                 if action.kind == "stop":
                     self.uow.finish_edge(
                         operations.lease,
@@ -460,6 +607,7 @@ class VisionTraceEventProcessor:
                     state=branch.state_id,
                     proposal=edge.proposal_id,
                     edge=edge,
+                    binding=binding,
                     checkpoint_id=uuid4(),
                     checkpoint_state_id=child_id,
                 )
@@ -487,7 +635,10 @@ class VisionTraceEventProcessor:
                 )
             await origins.capture()
             return self.uow.finish(
-                operations.lease, model_failure, handoff=handoff, intent=intent,
+                operations.lease,
+                model_failure,
+                handoff=handoff,
+                intent=intent,
                 handoff_reason=handoff_reason,
             )
         except Exception as error:

@@ -59,6 +59,42 @@ Temporal is behind a dedicated workflow adapter; production may use Temporal Clo
 self-hosted Temporal, or another implementation without changing the HTTP or runner
 contracts.
 
+## Rebuild and restart the local application
+
+From this directory, with Docker Desktop running Linux containers:
+
+```powershell
+docker compose config --quiet
+docker compose build control-plane temporal-worker playwright-worker dashboard benchmark-target
+docker compose up -d --wait --wait-timeout 180
+docker compose ps
+curl.exe --noproxy "*" --fail http://127.0.0.1:7000/healthz
+```
+
+Open [the dashboard](http://127.0.0.1:3000). If `localhost` requests time out on
+Windows, use `127.0.0.1` or `curl.exe -4` to check the published IPv4 ports.
+The control-plane entrypoint applies
+pending database migrations before serving requests. Keep a database backup before
+updating an existing installation. These commands retain the named data volumes;
+`docker compose restart` alone does not load rebuilt images or changed settings.
+Finish or cancel active explorations before replacing the browser worker.
+The benchmark target is copied into its image, so startup does not depend on
+Docker Desktop mounting this checkout's drive. Rebuild it after editing its files.
+
+For an active v4 exploration, select **Follow live** to see browser screenshots.
+The dashboard requests the next image one second after the previous request
+finishes; capture and network time add to the refresh interval. Preview images
+are served through the authenticated application and do not trigger model calls.
+Live preview works with Codex image transfer unchecked; optional live screenshot
+validation remains disabled. Polling stops when the session finishes or access is
+revoked. Select a recorded operation to inspect its saved before/after evidence.
+
+The default stack does not start the opt-in Codex bridge. For its private spool,
+existing-login mount, qualification and tenant setup, follow the
+[Codex runbook](docs/codex-local-bridge.md). An installation already using that
+overlay must include both Compose files and `--profile codex` when rebuilding or
+starting it, as shown there.
+
 ## Move local run data to another machine
 
 To retain dashboard history and the evidence linked from it, export both the
@@ -257,6 +293,16 @@ docs/                     Architecture and ADRs
 ```
 
 ## Vision results and grounded drafts
+
+An optional **Codex (existing account)** provider supports DOM-first exploration
+through a local Linux bridge container using user-authorized `exec --yolo`.
+CLI 0.164.0 passes tool-isolation qualification
+with a fixed model catalogue; the synthetic live DOM canary passes with prompt v6.
+It uses the selected Luna model,
+separate OpenAI DOM/image permissions, and the same verified Playwright actions and
+human draft approval. It is disabled by default. See [local setup and rollback](docs/codex-local-bridge.md)
+and [offline evaluation](benchmark/vision/codex/README.md); offline tests do not prove
+live model access. The override never mounts Codex credentials into application services.
 
 Tenant administrators can choose **Gehihi (Google Gemini)** with
 `gemini-3.8-flash` in `/agent` → Vision settings. Configure the optional

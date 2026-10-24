@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ControlPlaneError, deleteOperationFrames, deleteVisualReplayFrames, getVisualLocators, getVisualTrace, getVisionResult } from "../generation-api";
-import type { VisualExploration, VisualLocator, VisualTrace, VisionResult } from "../generation-types";
+import type { VisualExploration, VisualLocator, VisualTrace, VisionResult, VisionProgressActivity } from "../generation-types";
 import { ConfirmDialog } from "./confirm-dialog";
 import { VisionLocatorCatalog } from "./vision-locator-catalog";
 import { selectedOperation, shouldPollVisionResult } from "./vision-operation-model";
@@ -14,6 +14,11 @@ import { VisionProgressTimeline } from "./vision-progress-timeline";
 
 export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: { apiUrl: string; session: VisualExploration; canDelete: boolean; onActivity: () => void }) {
   const [result, setResult] = useState<VisionResult | null>(null);
+  const [progress, setProgress] = useState<VisionProgressActivity | null>(null);
+  const terminalProgress = ["completed", "unavailable", "cancelled"].includes(progress?.stage ?? "");
+  const live = ["queued", "running"].includes(session.state) && (!result || ["queued", "running"].includes(result.exploration_state)) && !terminalProgress;
+  const completionReason = result?.completion_reason ?? session.safe_failure_reason
+    ?? (terminalProgress && typeof progress?.metadata.reason_code === "string" ? progress.metadata.reason_code : null);
   const [trace, setTrace] = useState<VisualTrace | null>(null);
   const [catalog, setCatalog] = useState<VisualLocator[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -76,7 +81,7 @@ export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: 
   }
   return <div className="vision-session-detail" aria-label="Saved Vision session">
     {session.trace_version === "v4" && <div className="vision-live-workspace">
-      <VisionLiveScreen apiUrl={apiUrl} sessionId={session.id} live={["queued", "running"].includes(session.state)} operations={deleting ? [] : trace?.items ?? []} selectedId={selected} follow={follow} onFollow={setFollow} />
+      <VisionLiveScreen apiUrl={apiUrl} sessionId={session.id} live={live} progress={progress} completionReason={completionReason} operations={deleting ? [] : trace?.items ?? []} locators={trace?.locators ?? []} selectedId={selected} follow={follow} onFollow={setFollow} onSelect={(id) => { setFollow(false); setSelected(id); }} />
       <VisionOperationLedger items={trace?.items ?? []} locators={trace?.locators ?? []} branches={result?.handoffs.at(-1)?.branches ?? []} selectedId={selected} onSelect={(id) => { setFollow(false); setSelected(id); }} follow={follow} onFollow={setFollow} />
     </div>}
     {error && <p role="alert">{error}</p>}
@@ -89,7 +94,7 @@ export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: 
     <p>Session: <code>{session.id}</code></p>
     <p>Session provider: {visionProviderLabel(session.provider)} · Model: <code>{session.model}</code></p>
     <p>Correlation: <code>{session.correlation_id}</code></p>
-    {session.trace_version === "v4" && <VisionProgressTimeline apiUrl={apiUrl} sessionId={session.id} live={["queued", "running"].includes(session.state)} onActivity={onActivity} />}
+    {session.trace_version === "v4" && <VisionProgressTimeline apiUrl={apiUrl} sessionId={session.id} live={live} onActivity={onActivity} onProgress={setProgress} />}
     {trace?.trace_version === "v4" && <VisionLocatorCatalog items={catalog} hasMore={more} onMore={() => void loadMore()} />}
     <div className="button-row"><button type="button" className="button button--secondary" onClick={() => setRefresh((value) => value + 1)}>Refresh saved result</button>{canDelete && trace?.items.length ? <button type="button" className="button button--danger" onClick={() => setDeletion("all")}>Delete all evidence</button> : null}</div>
     </details>

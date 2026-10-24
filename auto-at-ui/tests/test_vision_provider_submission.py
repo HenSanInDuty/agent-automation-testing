@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, VisionPolicy
+from api.v1.dependencies import vision as dependencies
 from api.v1.dependencies.authorization import current_principal, current_tenant
 from api.v1.routes import vision as routes
 from config import Settings, get_settings
@@ -50,6 +51,7 @@ def submission(trace_database, monkeypatch):
 
     policy()
     monkeypatch.setattr(routes, "create_session_factory", lambda _: factory)
+    monkeypatch.setattr(dependencies, "create_session_factory", lambda _: factory)
     previous = app.dependency_overrides.copy()
     app.dependency_overrides.update({
         current_tenant: lambda: scope.tenant_id,
@@ -233,3 +235,56 @@ def test_legacy_policy_reader_observes_commits_without_cached_orm_state(submissi
     assert old_project.allowed_origins == ["https://fixture.test"]
     assert project.allowed_origins == []
     assert reader("foreign", scope.project_id) == (None, None)
+
+
+def test_codex_dom_only_submission_freezes_consent_and_rejects_stale_confirmation(
+    submission, trace_database,
+):
+    from api.v1.dependencies.vision import codex_readiness
+    from domain.codex_bridge import input_fingerprint
+    from test_codex_model_batch import Readiness
+
+    client, payload, set_policy, settings = submission
+    factory, *_ = trace_database
+    settings.vision_trace_v4_enabled = True
+    app.dependency_overrides[codex_readiness] = lambda: Readiness()
+    policy = set_policy("codex_cli", model="gpt-6-luna",
+                        raw_screenshot_transfer_accepted=False,
+                        raw_screenshot_transfer_provider=None,
+                        codex={"dom_transfer_accepted": True,
+                               "dom_transfer_provider": "codex_cli"})
+    payload.update(expected_provider="codex_cli", expected_model="gpt-6-luna")
+    assert submit(client, payload).status_code == 409
+    payload["expected_input_policy_fingerprint"] = input_fingerprint(policy)
+    result = submit(client, payload)
+    assert result.status_code == 202, result.text
+    with factory() as db:
+        row = db.get(VisualExplorationSessionModel, UUID(result.json()["id"]))
+        assert row.model_input_policy["dom_transfer_accepted"] is True
+        assert row.model_input_policy["raw_screenshot_transfer_accepted"] is False
+    assert row.prompt_version == "codex-dom-v6"
+    # Existing keys preserve frozen consent; a newly granted image scope cannot alias it.
+    changed = set_policy("codex_cli", model="gpt-6-luna", codex=policy.codex.model_dump())
+    assert submit(client, payload).json() == result.json()
+    assert submit(client, payload | {
+        "expected_input_policy_fingerprint": input_fingerprint(changed),
+    }).status_code == 409
+    assert submit(client, payload, key="new-stale-confirmation").status_code == 409
+    with factory.begin() as db:
+        db.get(VisualExplorationSessionModel, UUID(result.json()["id"])).state = "completed"
+    reload_url = f"/api/v1/vision/explorations/{result.json()['id']}/reload"
+    confirmation = {key: value for key, value in payload.items() if key.startswith("expected_")}
+    assert client.post(reload_url, json=confirmation,
+                       headers={"Idempotency-Key": "codex-reload"}).status_code == 409
+    confirmation["expected_input_policy_fingerprint"] = input_fingerprint(changed)
+    reloaded = client.post(reload_url, json=confirmation,
+                           headers={"Idempotency-Key": "codex-reload"})
+    assert reloaded.status_code == 202, reloaded.text
+    assert reloaded.json()["id"] != result.json()["id"]
+    with factory() as db:
+        fresh = db.get(VisualExplorationSessionModel, UUID(reloaded.json()["id"]))
+        assert fresh.model_input_policy["raw_screenshot_transfer_accepted"] is True
+    settings.vision_trace_v4_enabled = False
+    assert submit(client, payload | {
+        "expected_input_policy_fingerprint": input_fingerprint(changed),
+    }, key="legacy").status_code == 422

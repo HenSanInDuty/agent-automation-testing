@@ -7,6 +7,8 @@ import { allowedOrigin, canonical, digest, requireVision, validateVision, Vision
   type VisualWorkerAck, type VisualOperation, type VisualOperationFrame, type VisualLocatorEvidence,
   type VisualCheckpoint, type VisualWorkerOperationResult, type VisualExternalOrigin, type VisualExecutedClick } from "./vision-contract.js";
 import { groundLocator, type GroundedLocator } from "./vision-locators.js";
+import { observeDom, resolveDomTarget, type DomSnapshot } from "./vision-dom.js";
+import type { VisualWorkerObserveDom, VisualWorkerDomObservation } from "./vision-contract.js";
 import { captureVisionScreen } from "./vision-screen.js";
 import { checkpointMetadata, equivalentState, inspectState, settleState, type RuntimeState } from "./vision-checkpoints.js";
 
@@ -28,6 +30,7 @@ type Session = {
   state: RuntimeState; policyFailure: string | null; activeOperation: string | null;
   preview?: { at: number; image: Promise<Buffer> };
   externalOrigins: Map<string, VisualExternalOrigin>; originsTruncated: boolean;
+  domSnapshots: Map<string, DomSnapshot>;
 };
 
 export class VisualOperationWorker {
@@ -80,12 +83,12 @@ export class VisualOperationWorker {
       runtime.prepare = null; runtime.before = null;
       await runtime.grounded?.target?.dispose().catch(() => undefined); runtime.grounded = undefined;
     }
-    session.checkpoints.clear(); session.state.privateForms = "";
+    session.checkpoints.clear(); session.domSnapshots.clear(); session.state.privateForms = "";
     await session.context.close().catch(() => undefined);
     await session.browser.close().catch(() => undefined);
   }
 
-  async open(value: unknown): Promise<{ session_id: string; contract_version: "v4"; state_fingerprint: string; operation_budget: number }> {
+  async open(value: unknown): Promise<{ session_id: string; contract_version: "v4"; state_fingerprint: string; operation_budget: number; capabilities: string[] }> {
     const request = validateVision<VisualWorkerOpen>("VisualWorkerOpen", value);
     requireVision(!this.hasSession(request.session_id), "session_already_open");
     const deadline = Date.parse(request.deadline);
@@ -130,7 +133,7 @@ export class VisualOperationWorker {
       session = { request, browser, context, page, pages: new Map(), parents: new Map(), deadline,
         timer: setTimeout(() => undefined, 0), expired: false, busy: false, operations: new Map(),
         pending: null, checkpoints: new Map(), ancestry: [], exploredStates: 0, state, policyFailure: null, activeOperation: null,
-        externalOrigins: new Map(), originsTruncated: false };
+        externalOrigins: new Map(), originsTruncated: false, domSnapshots: new Map() };
       const opened = session;
       clearTimeout(opened.timer);
       opened.timer = setTimeout(() => { void this.expire(opened); }, Math.max(1, deadline - Date.now()));
@@ -138,7 +141,7 @@ export class VisualOperationWorker {
       this.pageId(opened, page);
       this.sessions.set(request.session_id, opened);
       return { session_id: request.session_id, contract_version: "v4", state_fingerprint: state.fingerprint,
-        operation_budget: this.budget(opened) };
+        operation_budget: this.budget(opened), capabilities: ["dom-observation-v1"] };
     } catch (error) { await browser?.close(); throw error; }
     finally { this.opening.delete(request.session_id); }
   }
@@ -156,6 +159,23 @@ export class VisualOperationWorker {
     const session = this.identity(value, id);
     return validateVision("VisualWorkerOriginObservations", { ...this.scope(session.request),
       items: [...session.externalOrigins.values()], truncated: session.originsTruncated });
+  }
+  async observeDom(value: unknown): Promise<VisualWorkerDomObservation> {
+    const request = validateVision<VisualWorkerObserveDom>("VisualWorkerObserveDom", value);
+    const session = this.identity(this.scope(request), request.session_id);
+    return this.serialized(session, async () => {
+      requireVision(!session.pending, "operation_pending");
+      requireVision(!session.policyFailure, session.policyFailure ?? "policy_block");
+      requireVision(!session.domSnapshots.has(request.snapshot_id), "snapshot_already_exists");
+      requireVision(session.domSnapshots.size < session.request.max_states, "dom_snapshot_limit");
+      requireVision(equivalentState(session.state, await inspectState(session.page)), "state_mismatch");
+      const snapshot = await observeDom(session.page, request);
+      this.timeout(session);
+      session.domSnapshots.set(request.snapshot_id, snapshot);
+      return validateVision<VisualWorkerDomObservation>("VisualWorkerDomObservation", {
+        ...this.scope(request), capability: "dom-observation-v1", data: snapshot.data,
+      });
+    });
   }
   async screen(value: unknown, id: string): Promise<Buffer> {
     const session = this.identity(value, id);
@@ -251,6 +271,16 @@ export class VisualOperationWorker {
         runtime.before = await inspectState(session.page);
         requireVision(runtime.before.fingerprint === request.expected_state_fingerprint &&
           equivalentState(runtime.before, session.state), "state_mismatch");
+        if (request.dom_snapshot_id) {
+          const snapshot = session.domSnapshots.get(request.dom_snapshot_id);
+          requireVision(snapshot, "unknown_dom_snapshot");
+          requireVision(snapshot.data.observation.state_fingerprint === request.expected_state_fingerprint, "stale_dom_snapshot");
+          const target = await resolveDomTarget(snapshot, session.page, request.dom_element_id!);
+          if (request.expected_locator) requireVision(canonical(request.expected_locator) === canonical(target.binding.descriptor), "dom_descriptor_mismatch");
+          // Model coordinates are placeholders for DOM mode; only this fresh binding supplies them.
+          request.action.x = target.x; request.action.y = target.y;
+          request.expected_locator = target.binding.descriptor;
+        }
         if (request.purpose === "explore") requireVision(session.ancestry.length <= session.request.max_hops, "hop_limit");
         if (request.purpose === "explore" || request.purpose === "setup") requireVision(session.exploredStates < session.request.max_states, "state_limit");
         if (request.checkpoint_id) {

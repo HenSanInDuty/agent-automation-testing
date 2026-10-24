@@ -5,6 +5,7 @@ from uuid import UUID
 
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, resolve_agent_runtime
 from agents.vision.intent import VisualIntentUnavailableError, decrypt_visual_intent
+from auto_at.contracts.codex_bridge import CodexConsentSnapshot, content_hash
 from config import Settings
 from domain.authorization import (
     AuthorizationError,
@@ -30,6 +31,7 @@ class ReloadVisualExploration:
     def execute(
         self, *, tenant_id: str, session_id: UUID, principal: Principal,
         idempotency_key: str, expected_provider: str, expected_model: str,
+        expected_input_policy_fingerprint: str | None = None,
     ):
         original = self.repository.get(tenant_id, session_id)
         if original is None:
@@ -49,6 +51,11 @@ class ReloadVisualExploration:
             ):
                 raise VisionStateError("idempotency key belongs to a different exploration")
             if (existing.provider, existing.model) != (expected_provider, expected_model):
+                raise VisionPolicyChanged("vision_policy_changed")
+            if existing.provider == "codex_cli" and (
+                not existing.model_input_policy or expected_input_policy_fingerprint
+                != content_hash(CodexConsentSnapshot.model_validate(existing.model_input_policy))
+            ):
                 raise VisionPolicyChanged("vision_policy_changed")
             return existing
         if original.state not in {"completed", "unavailable", "cancelled"}:
@@ -71,4 +78,5 @@ class ReloadVisualExploration:
             intent_retention_days=self.settings.vision_intent_retention_days,
             trace_v4_enabled=self.settings.vision_trace_v4_enabled,
             expected_provider=expected_provider, expected_model=expected_model,
+            expected_input_policy_fingerprint=expected_input_policy_fingerprint,
         )

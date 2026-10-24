@@ -123,6 +123,7 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     provider: Mapped[str] = mapped_column(String(100))
     model: Mapped[str] = mapped_column(String(200))
     prompt_version: Mapped[str] = mapped_column(String(100))
+    model_input_policy: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     max_steps: Mapped[int] = mapped_column(Integer)
     max_hops: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     max_states: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
@@ -164,6 +165,7 @@ class VisualActionProposalModel(TenantRecord, Base):
     correlation_id: Mapped[UUID] = mapped_column(index=True)
     sequence: Mapped[int] = mapped_column(Integer)
     action: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    target_binding: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     evidence_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
     policy_version: Mapped[str] = mapped_column(String(100))
     provider: Mapped[str] = mapped_column(String(100))
@@ -172,6 +174,56 @@ class VisualActionProposalModel(TenantRecord, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
+
+
+class CodexBridgeJobModel(TenantRecord, Base):
+    """Scoped metadata only; filesystem payloads are never copied into this table."""
+
+    __tablename__ = "codex_bridge_jobs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "project_id", "session_id"],
+            ["visual_exploration_sessions.tenant_id", "visual_exploration_sessions.project_id",
+             "visual_exploration_sessions.id"], name="fk_codex_job_session",
+        ),
+        UniqueConstraint("session_id", "request_sequence", name="uq_codex_job_sequence"),
+        CheckConstraint("request_sequence BETWEEN 1 AND 10 AND fencing_token > 0",
+                        name="ck_codex_job_sequence"),
+        CheckConstraint("stage IN ('dom', 'image')", name="ck_codex_job_stage"),
+        CheckConstraint(
+            "status IN ('queued', 'claimed', 'running', 'completed',"
+            " 'failed', 'cancelled', 'expired')",
+            name="ck_codex_job_status",
+        ),
+        CheckConstraint("deadline > created_at AND updated_at >= created_at",
+                        name="ck_codex_job_times"),
+        Index("ix_codex_job_scope", "tenant_id", "project_id", "session_id"),
+        CheckConstraint("dom_element_count IS NULL OR dom_element_count BETWEEN 0 AND 100",
+                        name="ck_codex_dom_count"),
+    )
+    job_id: Mapped[UUID] = mapped_column(primary_key=True)
+    bridge_id: Mapped[UUID] = mapped_column(index=True)
+    project_id: Mapped[UUID] = mapped_column()
+    session_id: Mapped[UUID] = mapped_column()
+    correlation_id: Mapped[UUID] = mapped_column(index=True)
+    fencing_token: Mapped[int] = mapped_column(Integer)
+    request_sequence: Mapped[int] = mapped_column(Integer)
+    observation_id: Mapped[UUID] = mapped_column()
+    snapshot_id: Mapped[UUID] = mapped_column()
+    state_fingerprint: Mapped[str] = mapped_column(String(64))
+    stage: Mapped[str] = mapped_column(String(10))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(20), default="queued")
+    response_hash: Mapped[str | None] = mapped_column(String(64))
+    safe_reason: Mapped[str | None] = mapped_column(String(64))
+    usage: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    cli_version: Mapped[str | None] = mapped_column(String(32))
+    actual_model: Mapped[str | None] = mapped_column(String(200))
+    dom_sha256: Mapped[str | None] = mapped_column(String(64))
+    dom_element_count: Mapped[int | None] = mapped_column(Integer)
 
 
 class VisualExplorationStateModel(TenantRecord, Base):

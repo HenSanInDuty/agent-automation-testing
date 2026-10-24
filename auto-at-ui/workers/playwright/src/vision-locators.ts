@@ -116,7 +116,8 @@ export async function groundLocator(page: Page, x: number, y: number, editable =
       const labelled = (el.getAttribute("aria-labelledby") ?? "").split(/\s+/).map((id) => el.ownerDocument.getElementById(id)?.textContent ?? "").join(" ").trim();
       // Candidate strings only: Playwright's accessibility engine must independently
       // resolve exactly this DOM element before a role/name can be verified.
-      const names = [el.getAttribute("aria-label"), labelled, ...labels, el.textContent?.trim(), el.getAttribute("title")]
+      const formControl = el.matches("input,textarea,select,[contenteditable]");
+      const names = [el.getAttribute("aria-label"), labelled, ...labels, formControl ? null : el.textContent?.trim(), el.getAttribute("title")]
         .filter((value): value is string => !!value && value.length <= 240);
       const attributes = ["id", "data-testid", "name", "aria-label", "title"].map((key) => [key, el.getAttribute(key)]);
       return { role, names, labels, attributes, tag, password: type === "password", testId: el.getAttribute("data-testid") };

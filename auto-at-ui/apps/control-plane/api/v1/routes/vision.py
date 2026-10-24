@@ -10,8 +10,8 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
-from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
-from application.vision import SubmitVisualExploration, VisionPolicyChanged, VisionStateError
+from agents.shared.vision_providers import VisionProviderId
+from application.vision import RequestVisualExploration, VisionPolicyChanged, VisionStateError
 from application.vision_debug_evidence import DebugEvidenceNotFoundError, ReadVisionDebugEvidence
 from application.vision_policy import VisionPolicies, VisionPolicyError
 from application.vision_reload import ReloadVisualExploration, VisionReloadUnavailable
@@ -23,6 +23,7 @@ from application.vision_replay import (
 from application.vision_results import VisionResults, VisionRevisionChanged
 from application.vision_screen import VisionScreen, VisionScreenUnavailable
 from application.vision_trajectory import VisionTrajectory, VisionTrajectoryNotFoundError
+from auto_at.contracts.codex_bridge import CodexBridgeReadiness, CodexInputPolicy
 from config import Settings, get_settings
 from domain.authorization import (
     AuthorizationError,
@@ -31,16 +32,13 @@ from domain.authorization import (
     actor_for_tenant,
     require,
 )
+from domain.codex_bridge import input_fingerprint
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from infrastructure.artifacts.rustfs import RustFSArtifactStore
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyAuditEventRepository,
-    SqlAlchemyCatalogRepository,
-    SqlAlchemyConfigurationRepository,
-    SqlAlchemyGenerationRepository,
-    SqlAlchemyOutboxEventRepository,
     SqlAlchemyVisionRepository,
     SqlAlchemyVisualTraceRepository,
 )
@@ -53,6 +51,7 @@ from api.v1.dependencies.vision import (
     vision_policy_correlation_id,
     vision_reload,
     vision_screen,
+    vision_submit,
 )
 from api.v1.routes.activities import ActivityResponse, _sse_event
 
@@ -82,12 +81,19 @@ class VisionPolicyResponse(BaseModel):
     provider: str
     model: str
     raw_screenshot_transfer_accepted: bool
-    raw_screenshot_transfer_provider: Literal["huggingface", "gemini"] | None = None
+    raw_screenshot_transfer_provider: VisionProviderId | None = None
+    codex: CodexInputPolicy | None = None
     max_steps: int
     max_screenshot_bytes: int
     max_session_seconds: int
     max_cost_usd: float
     max_requests_per_minute: int
+    # Read projection may be echoed by older clients; it never authorizes a policy write.
+    input_policy_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
+class VisionPolicyReadResponse(VisionPolicyResponse):
+    input_policy_fingerprint: str | None = None
 
 
 class SubmitExplorationRequest(BaseModel):
@@ -97,8 +103,9 @@ class SubmitExplorationRequest(BaseModel):
     target_url: str = Field(min_length=1, max_length=2_000)
     task_intent: str = Field(min_length=1, max_length=4_000)
     use_vision: bool
-    expected_provider: Literal["huggingface", "gemini"] | None = None
+    expected_provider: VisionProviderId | None = None
     expected_model: str | None = Field(default=None, min_length=1, max_length=200)
+    expected_input_policy_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
     @model_validator(mode="after")
     def expected_pair(self):
@@ -114,16 +121,18 @@ class VisionProviderModelResponse(BaseModel):
 
 class ReloadExplorationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    expected_provider: Literal["huggingface", "gemini"]
+    expected_provider: VisionProviderId
     expected_model: str = Field(min_length=1, max_length=200)
+    expected_input_policy_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 class VisionProviderResponse(BaseModel):
-    id: Literal["huggingface", "gemini"]
+    id: VisionProviderId
     display_name: str
     models: list[VisionProviderModelResponse]
     configured: bool
     supports_inline_images: bool
+    bridge_readiness: CodexBridgeReadiness | None = None
 
 
 class VisionProvidersResponse(BaseModel):
@@ -243,14 +252,6 @@ class DebugEvidencePayloadResponse(DebugEvidenceMetadataResponse):
     payload: str
 
 
-def _runtime(
-    settings: Settings, configs: SqlAlchemyConfigurationRepository, tenant_id: str
-) -> AgentRuntimeConfig:
-    return AgentRuntimeConfig.from_settings(settings).with_override(
-        configs.get(tenant_id, AGENT_RUNTIME_CONFIG_KEY)
-    )
-
-
 def _response(record: object) -> ExplorationResponse:
     return ExplorationResponse(
         id=record.id,
@@ -270,14 +271,16 @@ def _response(record: object) -> ExplorationResponse:
     )
 
 
-@router.get("/policy", response_model=VisionPolicyResponse)
+@router.get("/policy", response_model=VisionPolicyReadResponse)
 def get_policy(
     tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     policies: Annotated[VisionPolicies, Depends(vision_policies)],
 ) -> VisionPolicyResponse:
     try:
-        return VisionPolicyResponse.model_validate(policies.read(tenant_id, principal).model_dump())
+        policy = policies.read(tenant_id, principal)
+        return VisionPolicyReadResponse(**policy.model_dump(),
+                                        input_policy_fingerprint=input_fingerprint(policy))
     except AuthorizationError as error:
         raise HTTPException(status_code=403, detail="Tenant access denied.") from error
     except VisionPolicyError as error:
@@ -299,7 +302,7 @@ def get_providers(
 
 
 @router.put(
-    "/policy", response_model=VisionPolicyResponse, dependencies=[Depends(require_csrf)],
+    "/policy", response_model=VisionPolicyReadResponse, dependencies=[Depends(require_csrf)],
 )
 def set_policy(
     payload: VisionPolicyResponse,
@@ -309,8 +312,12 @@ def set_policy(
     correlation_id: Annotated[UUID, Depends(vision_policy_correlation_id)],
 ) -> VisionPolicyResponse:
     try:
-        updated = policies.update(tenant_id, principal, payload.model_dump(), correlation_id)
-        return VisionPolicyResponse.model_validate(updated.model_dump())
+        updated = policies.update(
+            tenant_id, principal, payload.model_dump(exclude={"input_policy_fingerprint"}),
+            correlation_id,
+        )
+        return VisionPolicyReadResponse(**updated.model_dump(),
+                                        input_policy_fingerprint=input_fingerprint(updated))
     except AuthorizationError as error:
         raise HTTPException(status_code=403, detail="Tenant access denied.") from error
     except VisionPolicyError as error:
@@ -327,43 +334,21 @@ def submit_exploration(
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
     tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
-    settings: Annotated[Settings, Depends(get_settings)],
+    service: Annotated[RequestVisualExploration, Depends(vision_submit, scope="function")],
 ) -> ExplorationResponse:
     if not payload.use_vision:
         raise HTTPException(status_code=422, detail="use_vision must be true for this endpoint")
     try:
-        require(
-            actor_for_tenant(principal, tenant_id, payload.project_id),
-            Permission.SUBMIT_GENERATION,
+        record = service.execute(
+            tenant_id=tenant_id, principal=principal, project_id=payload.project_id,
+            correlation_id=(payload.correlation_id
+                            if "correlation_id" in payload.model_fields_set else None),
+            target_url=payload.target_url, task_intent=payload.task_intent,
+            idempotency_key=idempotency_key, expected_provider=payload.expected_provider,
+            expected_model=payload.expected_model,
+            expected_input_policy_fingerprint=payload.expected_input_policy_fingerprint,
         )
-        with transactional_session(create_session_factory(settings)) as session:
-            configs = SqlAlchemyConfigurationRepository(session)
-            record = SubmitVisualExploration(
-                SqlAlchemyVisionRepository(session),
-                configs,
-                SqlAlchemyCatalogRepository(session),
-                SqlAlchemyGenerationRepository(session),
-                SqlAlchemyAuditEventRepository(session),
-                SqlAlchemyActivityEventRepository(session),
-                SqlAlchemyOutboxEventRepository(session),
-            ).execute(
-                tenant_id=tenant_id,
-                project_id=payload.project_id,
-                correlation_id=(
-                    payload.correlation_id if "correlation_id" in payload.model_fields_set else None
-                ),
-                target_url=payload.target_url,
-                task_intent=payload.task_intent,
-                idempotency_key=idempotency_key,
-                runtime=_runtime(settings, configs, tenant_id),
-                actor=principal.subject,
-                intent_encryption_key=settings.vision_intent_encryption_key,
-                intent_retention_days=settings.vision_intent_retention_days,
-                trace_v4_enabled=settings.vision_trace_v4_enabled,
-                expected_provider=payload.expected_provider,
-                expected_model=payload.expected_model,
-            )
-            return _response(record)
+        return _response(record)
     except AuthorizationError as error:
         raise HTTPException(status_code=404, detail="Project not found.") from error
     except VisionPolicyChanged as error:

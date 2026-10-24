@@ -5,12 +5,43 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from auto_at.contracts.agent import ProposalKind, RunReport, RunReportStatus
+from auto_at.contracts.codex_bridge import CodexUsage, FailureCode, JobStatus, Stage
 from auto_at.contracts.execution import RunStatus, TargetType
 from auto_at.contracts.vision import VisualOperationFrame
 
 
 class ApprovalStateError(ValueError):
     """Raised when an approval would replace a recorded final decision."""
+
+
+@dataclass(frozen=True)
+class CodexBridgeJob:
+    """Durable safe metadata only; raw model inputs and outputs are transient."""
+
+    job_id: UUID
+    bridge_id: UUID
+    tenant_id: str
+    project_id: UUID
+    session_id: UUID
+    correlation_id: UUID
+    fencing_token: int
+    request_sequence: int
+    observation_id: UUID
+    snapshot_id: UUID
+    state_fingerprint: str
+    stage: Stage
+    request_hash: str
+    deadline: datetime
+    created_at: datetime
+    updated_at: datetime
+    status: JobStatus = "queued"
+    response_hash: str | None = None
+    safe_reason: FailureCode | None = None
+    usage: CodexUsage | None = None
+    cli_version: str | None = None
+    actual_model: str | None = None
+    dom_sha256: str | None = None
+    dom_element_count: int | None = None
 
 
 @dataclass(frozen=True)

@@ -232,6 +232,7 @@ def test_hf_keeps_drive_delivery_cleanup_and_auth_failure(failure):
                 return httpx.Response(400, json={"error": "invalid_grant"})
             return httpx.Response(200, json={"access_token": "fixture-oauth"})
         if request.url.host == "hf.invalid":
+            assert 0 < request.extensions["timeout"]["read"] <= 5
             assert request.headers["authorization"] == "Bearer fixture-hf-key"
             uri = json.loads(request.content)["messages"][1]["content"][1]["image_url"]["url"]
             assert uri == "https://drive.usercontent.google.com/fixture.png"
@@ -286,3 +287,66 @@ def test_dispatch_cancels_on_remaining_deadline():
     )
     outcome = asyncio.run(dispatch(**options(remaining_seconds=0.03)))
     assert outcome.failure_reason == "provider_timeout" and cancelled == [True]
+
+
+def test_codex_cannot_fall_through_to_http_or_drive_without_dom_capability():
+    from test_codex_candidate_service import codex_policy
+    args = options()
+    args["policy"] = codex_policy(
+        raw_screenshot_transfer_accepted=True, raw_screenshot_transfer_provider="codex_cli",
+    )
+    args["session"] = VisionModelSession("tenant-fixture", uuid4(), "codex_cli", "gpt-6-luna")
+    def forbidden(**_kwargs):
+        pytest.fail("Codex must not construct a remote HTTP model or Drive store")
+    result = asyncio.run(VisionModelBatch(
+        settings(), model_factory=forbidden, image_store_factory=forbidden,
+    )(**args))
+    assert result.failure_reason == "bridge_offline"
+
+
+@pytest.mark.parametrize(("remaining", "elapsed", "expected"), [
+    (180, 35, "completed"),
+    (60, 35, "completed"),
+    (20, 35, "unavailable"),
+    (180, 125, "unavailable"),
+])
+def test_slow_model_can_exceed_30_seconds_but_not_request_or_session_limit(
+    remaining, elapsed, expected,
+):
+    """Advance the event-loop clock instead of waiting for real provider responses."""
+    calls = []
+
+    async def run():
+        loop = asyncio.get_running_loop()
+        original_time = loop.time
+        offset = 0
+        loop.time = lambda: original_time() + offset
+
+        async def handler(request):
+            nonlocal offset
+            calls.append(request)
+            budget = request.extensions["timeout"]["read"]
+            assert min(120, remaining) - 1 < budget <= min(120, remaining)
+            offset = elapsed
+            # Let the loop process expired timers and deliver cancellation.
+            for _ in range(3):
+                await asyncio.sleep(0)
+            return httpx.Response(200, json=REPLY)
+
+        try:
+            dispatch = VisionModelBatch(
+                settings(), image_store_factory=no_drive,
+                model_factory=partial(
+                    create_vision_language_model, transport=httpx.MockTransport(handler),
+                ),
+            )
+            return await dispatch(**options(remaining_seconds=remaining))
+        finally:
+            loop.time = original_time
+
+    result = asyncio.run(run())
+    assert result.status == expected
+    assert len(calls) == 1
+    if expected == "unavailable":
+        assert result.failure_reason == "provider_timeout"
+        assert result.actions is None

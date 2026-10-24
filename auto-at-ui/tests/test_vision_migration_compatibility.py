@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 
+from api.v1.dependencies import vision as dependencies
 from api.v1.dependencies.authorization import current_principal, current_tenant
 from api.v1.routes import vision
 from config import Settings, get_settings
@@ -56,6 +57,7 @@ def test_api_writer_gate_and_rollback_leave_existing_versions_and_tombstones(
     assert settings.vision_trace_v4_enabled is False
     principal = Principal("admin", {scope.tenant_id: frozenset({Role.TENANT_ADMIN})}, {})
     monkeypatch.setattr(vision, "create_session_factory", lambda _: factory)
+    monkeypatch.setattr(dependencies, "create_session_factory", lambda _: factory)
     previous = app.dependency_overrides.copy()
     app.dependency_overrides.update({
         current_tenant: lambda: scope.tenant_id, current_principal: lambda: principal,

@@ -43,13 +43,17 @@ export type VisionProvider = {
   models: { id: string; display_name: string }[];
   configured: boolean;
   supports_inline_images: boolean;
+  bridge_readiness?: { configured: boolean; online: boolean; authenticated: boolean; capabilities_qualified: boolean; model_access: "unverified" | "available" | "unavailable"; failure_code: string | null; busy?: boolean } | null;
 };
+export type CodexInputPolicy = { input_mode: "dom_first"; dom_transfer_accepted: boolean; dom_transfer_provider: "codex_cli" | null; max_dom_elements: number; max_dom_bytes: number };
 export type VisionPolicy = {
   enabled: boolean;
   provider: string;
   model: string;
   raw_screenshot_transfer_accepted: boolean;
   raw_screenshot_transfer_provider?: string | null;
+  codex?: CodexInputPolicy | null;
+  input_policy_fingerprint?: string | null;
   max_steps: number;
   max_screenshot_bytes: number;
   max_session_seconds: number;
