@@ -1,0 +1,122 @@
+{
+  "playwright-worker": [
+    {
+      "timestamp": "2026-11-18T10:29:16.662Z",
+      "event": "vision.request_completed",
+      "level": "info",
+      "operation_id": "a1dc5255-ee88-4f9d-9cca-ccfaecd14d07",
+      "operation_status": "prepared",
+      "stage": "operation_prepare",
+      "duration_ms": 871,
+      "outcome_code": null,
+      "status_code": 200,
+      "action_kind": "click"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:16.667Z",
+      "event": "vision.request_completed",
+      "level": "info",
+      "operation_id": "a1dc5255-ee88-4f9d-9cca-ccfaecd14d07",
+      "stage": "operation_frame",
+      "duration_ms": 2,
+      "status_code": 200
+    },
+    {
+      "timestamp": "2026-11-18T10:29:20.771Z",
+      "event": "vision.request_completed",
+      "level": "info",
+      "operation_id": "a1dc5255-ee88-4f9d-9cca-ccfaecd14d07",
+      "operation_status": "completed",
+      "stage": "operation_execute",
+      "duration_ms": 3996,
+      "outcome_code": "observed",
+      "status_code": 200,
+      "action_kind": "click"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:20.776Z",
+      "event": "vision.request_completed",
+      "level": "info",
+      "operation_id": "a1dc5255-ee88-4f9d-9cca-ccfaecd14d07",
+      "stage": "operation_frame",
+      "duration_ms": 3,
+      "status_code": 200
+    },
+    {
+      "timestamp": "2026-11-18T10:25:44.191Z",
+      "event": "vision.state.settle_timeout",
+      "level": "error",
+      "operation_id": "932267f4-5fc5-491c-b51a-c204dfdce7f4",
+      "stage": "operation_execute",
+      "failure_stage": "page_settle",
+      "code": "settle_timeout",
+      "duration_ms": 438
+    },
+    {
+      "timestamp": "2026-11-18T10:27:27.295Z",
+      "event": "vision.capture.failed",
+      "level": "warn",
+      "operation_id": "e0eacac6-dc57-4ad1-b789-84a3875778c0",
+      "stage": "operation_execute",
+      "error_type": "timeout",
+      "duration_ms": 310,
+      "capture_stage": "screenshot"
+    },
+    {
+      "timestamp": "2026-11-18T10:27:29.715Z",
+      "event": "vision.checkpoint.mismatch",
+      "level": "warn",
+      "stage": "checkpoint_read",
+      "code": "checkpoint_mismatch"
+    },
+    {
+      "timestamp": "2026-11-18T10:27:41.771Z",
+      "event": "vision.state.settle_timeout",
+      "level": "error",
+      "operation_id": "bef1190f-982e-4ada-9340-477e2850e04d",
+      "stage": "operation_execute",
+      "failure_stage": "page_settle",
+      "code": "settle_timeout",
+      "duration_ms": 603
+    },
+    {
+      "timestamp": "2026-11-18T10:27:43.838Z",
+      "event": "vision.checkpoint.mismatch",
+      "level": "warn",
+      "stage": "checkpoint_read",
+      "code": "checkpoint_mismatch"
+    },
+    {
+      "timestamp": "2026-11-18T10:28:59.724Z",
+      "event": "vision.capture.failed",
+      "level": "warn",
+      "operation_id": "7047dbcf-1d85-4a5b-9881-f8b7703a9997",
+      "stage": "operation_execute",
+      "error_type": "timeout",
+      "duration_ms": 50,
+      "capture_stage": "screenshot"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:01.577Z",
+      "event": "vision.checkpoint.mismatch",
+      "level": "warn",
+      "stage": "checkpoint_read",
+      "code": "checkpoint_mismatch"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:04.963Z",
+      "event": "vision.checkpoint.mismatch",
+      "level": "warn",
+      "stage": "checkpoint_read",
+      "code": "checkpoint_mismatch"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:07.897Z",
+      "event": "vision.checkpoint.mismatch",
+      "level": "warn",
+      "stage": "checkpoint_read",
+      "code": "checkpoint_mismatch"
+    }
+  ],
+  "temporal-worker": []
+}

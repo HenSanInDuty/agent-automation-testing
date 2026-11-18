@@ -1,0 +1,51 @@
+{
+  "iteration_id": "9f84261c-0d0f-47c6-894c-d476f72d9bf1",
+  "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+  "source_hash": "2337ebf96b2ff59e1c34d5c3cae4404590850597362b384534e99e93be4ebce4",
+  "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "state": "unavailable",
+  "reason": "unsafe_replay",
+  "passed": false,
+  "qualification_streak": 0,
+  "operations": 146,
+  "attempts": 49,
+  "completed_clicks": 47,
+  "rejected_clicks": 2,
+  "accuracy_upper_bound": {
+    "numerator": 46,
+    "denominator": 49,
+    "percent": 93.87755102040816
+  },
+  "outcomes_reviewed": 0,
+  "score_interpretation": "Conservative zero-credit lower bound; outcome accuracy and coverage not established.",
+  "detection_precision": {
+    "numerator": 47,
+    "denominator": 49
+  },
+  "detection_recall": {
+    "numerator": 47,
+    "denominator": 47
+  },
+  "timing": {
+    "measurement": "first operation start to last operation end",
+    "operation_window_seconds": 725.713947,
+    "frames_verified": 287,
+    "frames_unavailable": 5
+  },
+  "sampling": {
+    "attempted": 23,
+    "settle_deadline": 5,
+    "capture_timeout": 16,
+    "verify_deadline": 2,
+    "reused": 0
+  },
+  "popup_recovery": {
+    "completed_closes": 21,
+    "live_prepare_rejections": 0,
+    "new_branch_exercised_live": false
+  },
+  "active_sessions": 0,
+  "report": "ROUND19-20261118.md",
+  "validation": "popup-prepare-validation-20261118.json"
+}

@@ -2,7 +2,7 @@
 
 import asyncio
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 
 from auto_at.contracts.vision import VisualOperation
@@ -35,6 +35,7 @@ class ExecuteVisualOperation:
         max_operations: int,
         max_frame_bytes: int,
         check_policy: Callable[[], None],
+        step_timeout_seconds: float | None = None,
     ) -> None:
         self.uow, self.worker, self.lease = uow, worker, lease
         self.deadline, self.max_operations, self.max_frame_bytes = (
@@ -43,6 +44,9 @@ class ExecuteVisualOperation:
             max_frame_bytes,
         )
         self.check_policy = check_policy
+        self.step_timeout_seconds = step_timeout_seconds
+        self.operation_deadline = None
+        self.deadline_ceiling = None
         self.identity = VisualWorkerIdentity(
             tenant_id=lease.scope.tenant_id,
             project_id=lease.scope.project_id,
@@ -51,15 +55,29 @@ class ExecuteVisualOperation:
         )
 
     def guard(self):
-        if datetime.now(UTC) >= self.deadline:
-            raise VisualOperationStopped("session_timeout")
+        limit = self.operation_deadline or (self.deadline if self.step_timeout_seconds is None
+                                            else None)
+        if self.deadline_ceiling is not None:
+            limit = min(limit, self.deadline_ceiling) if limit else self.deadline_ceiling
+        if limit is not None and datetime.now(UTC) >= limit:
+            raise VisualOperationStopped(
+                "step_timeout" if self.step_timeout_seconds is not None else "session_timeout",
+            )
         self.check_policy()
         self.lease = self.uow.renew(self.lease)
 
     async def bounded(self, call):
-        remaining = (self.deadline - datetime.now(UTC)).total_seconds()
+        deadline = self.operation_deadline or (
+            datetime.now(UTC) + timedelta(seconds=self.step_timeout_seconds)
+            if self.step_timeout_seconds is not None else self.deadline
+        )
+        if self.deadline_ceiling is not None:
+            deadline = min(deadline, self.deadline_ceiling)
+        remaining = (deadline - datetime.now(UTC)).total_seconds()
         if remaining <= 0:
-            raise VisualOperationStopped("session_timeout")
+            raise VisualOperationStopped(
+                "step_timeout" if self.step_timeout_seconds is not None else "session_timeout",
+            )
         task = asyncio.create_task(call())
         try:
             async with asyncio.timeout(remaining):
@@ -67,7 +85,12 @@ class ExecuteVisualOperation:
                     done, _ = await asyncio.wait({task}, timeout=10)
                     if done:
                         return task.result()
+                    self.check_policy()
                     self.lease = self.uow.renew(self.lease)
+        except TimeoutError:
+            raise VisualOperationStopped(
+                "step_timeout" if self.step_timeout_seconds is not None else "session_timeout",
+            ) from None
         finally:
             if not task.done():
                 task.cancel()
@@ -173,6 +196,13 @@ class ExecuteVisualOperation:
             raise VisualOperationStopped("previous_operation_unresolved")
         current = self.uow.commit_prepared(self.lease, intent)
         dispatched = False
+        if self.step_timeout_seconds is not None:
+            self.operation_deadline = datetime.now(UTC) + timedelta(
+                seconds=self.step_timeout_seconds,
+            )
+            if self.deadline_ceiling is not None:
+                self.operation_deadline = min(self.operation_deadline, self.deadline_ceiling)
+            request = evolve(request, step_deadline=self.operation_deadline)
         try:
             try:
                 result = await self.bounded(lambda: self.worker.prepare(request))
@@ -210,12 +240,16 @@ class ExecuteVisualOperation:
             if current.status not in FINAL_OPERATION_STATUSES:
                 self._stop(
                     current,
-                    "worker_response_lost" if dispatched else "prepare_unavailable",
+                    "step_timeout" if isinstance(error, VisualOperationStopped)
+                    and str(error) == "step_timeout"
+                    else "worker_response_lost" if dispatched else "prepare_unavailable",
                     unknown=dispatched,
                 )
             if isinstance(error, VisualOperationStopped):
                 raise
             raise VisualOperationStopped("operation_unavailable") from None
+        finally:
+            self.operation_deadline = None
 
     async def reconcile(self, operation: VisualOperation):
         """Read-only reconciliation; RAM loss never reconstructs input or repeats a side effect."""

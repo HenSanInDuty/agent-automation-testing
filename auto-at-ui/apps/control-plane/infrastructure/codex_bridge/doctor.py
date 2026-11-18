@@ -1,11 +1,13 @@
 """Offline container, version, authentication and fallback sandbox checks; no inference."""
 
 import json
+import logging
 import os
 import socket
 import subprocess
 import tempfile
 from pathlib import Path
+from time import monotonic, sleep
 
 from auto_at.contracts.codex_bridge import CodexBridgeReadiness
 from config import Settings
@@ -128,26 +130,53 @@ class FileReadiness:
         self.settings = settings
 
     def read(self, tenant_id, now):
-        from datetime import datetime
+        from datetime import datetime, timedelta
+
+        started = monotonic()
 
         settings = self.settings
         if not settings.codex_bridge_enabled or tenant_id != settings.codex_bridge_allowed_tenant:
             return CodexBridgeReadiness()
+        phase, age = "file_read", None
         try:
             root = Path(settings.codex_bridge_container_spool)
             from infrastructure.codex_bridge.spool import _plain
             _plain(root, directory=True)
             file = root / ".heartbeat.json"
-            _plain(file)
-            with file.open("rb") as source:
-                data = json.loads(source.read(4097))
-            age = (now - datetime.fromisoformat(data["recorded_at"])).total_seconds()
-            if (not 0 <= age < settings.codex_bridge_stale_seconds
-                    or data["tenant_id"] != tenant_id
+            for attempt in range(3):
+                try:
+                    _plain(file)
+                    with file.open("rb") as source:
+                        data = json.loads(source.read(4097))
+                    break
+                except FileNotFoundError:
+                    # Some shared mounts briefly hide the old name during
+                    # atomic replacement. Retry only this read race; never use
+                    # cached readiness or relax freshness/identity validation.
+                    if attempt == 2:
+                        raise
+                    sleep(.01)
+            # An atomic heartbeat replacement may occur during filesystem I/O.
+            # Compare against the end of this read, retaining the caller's clock
+            # and the same stale/future limits; do not mistake that race for revocation.
+            checked_at = now + timedelta(seconds=monotonic() - started)
+            age = (checked_at - datetime.fromisoformat(data["recorded_at"])).total_seconds()
+            phase = "freshness"
+            if not 0 <= age < settings.codex_bridge_stale_seconds:
+                raise ValueError("stale heartbeat")
+            phase = "identity"
+            if (data["tenant_id"] != tenant_id
                     or data["bridge_id"] != str(settings.codex_bridge_id)
                     or data["model"] != "gpt-6-luna" or data["protocol"] != "v1"
                     or data["cli_version"] != CLI_VERSION):
                 raise ValueError("stale heartbeat")
+            phase = "readiness"
             return CodexBridgeReadiness.model_validate(data["readiness"])
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            logging.getLogger(__name__).warning("Bridge heartbeat validation failed.", extra={
+                "event": "codex.heartbeat.rejected", "phase": phase,
+                "age_seconds": round(age, 6) if age is not None else None,
+                "read_duration_ms": round((monotonic() - started) * 1000),
+                "error_type": type(error).__name__, "errno": getattr(error, "errno", None),
+            })
             return CodexBridgeReadiness(configured=True, failure_code="bridge_offline")

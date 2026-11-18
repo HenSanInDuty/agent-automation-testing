@@ -1,5 +1,21 @@
 # Vision agent operational runbook
 
+## User-facing exploration conclusion
+
+The session page shows **Kết luận** above the browser workspace and inside the
+expanded report. The same structured conclusion is included in the authorized
+result JSON/export. It is computed from persisted evidence without a model call.
+Distinct controls are deduplicated by URL fingerprint and control key, and count
+as completed only with a matching completed exploration click/type operation.
+Failures, rejections, unknown and pending outcomes include setup and restoration
+operations as well as exploration. Missing historical inventories remain unknown.
+
+`observed_controls_completed` means the completed session has finished all
+recorded controls with no limited inventory or outstanding proposals/operations.
+It does not claim exhaustive site coverage or functional correctness. Functional
+outcome remains `unverified`; generated test approval and execution are separate.
+Cancelled, running and incomplete sessions receive distinct conclusions.
+
 ## Codex DOM-first sessions
 
 Use the [local bridge runbook](codex-local-bridge.md) for container qualification,
@@ -222,6 +238,88 @@ future exploration immediately, disable the tenant's Vision policy in
 result. Do not delete artifacts to enact a kill switch.
 
 ## Guardrails and incident response
+
+## Investigate worker failures in Grafana
+
+Readiness uses the `interaction-v1` policy: passive text/image animation and
+framework render counters do not block an otherwise stable interaction state.
+Control identities, geometry, occlusion, URL, scroll and form state still protect
+actions and checkpoint restoration; visible `aria-busy=true` blocks readiness.
+Full visual semantics are retained separately for change reporting. A moving or
+changing interactive carousel can still invalidate a candidate. See
+[ADR-014](adr/014-vision-interaction-readiness.md). After upgrading the worker,
+create a new exploration; an existing failed session keeps its original result.
+V4 explorations request reduced motion (`prefers-reduced-motion: reduce`) so sites
+can disable decorative control animations using their own accessibility styles.
+The deterministic test runner keeps its configured motion behavior. A site that
+ignores this preference can still fail readiness if its controls keep moving.
+Exploration also preserves popup ancestry across read-only refreshes and scans
+lower viewports before planning child pages. Existing call/state/hop limits still
+apply. `exploration_call_limit` and `exploration_coverage_incomplete` retain partial
+evidence and display **Partial exploration**; they do not auto-submit generation.
+See [ADR-015](adr/015-vision-tab-restoration-and-viewport-coverage.md).
+Vision policies support up to 20 model calls per new session, including image
+escalation and retry calls. The local `demo-tenant` policy was raised to 20 at the
+user's request on 2026-11-01; the default for unconfigured tenants remains 3.
+Migration `a4c6e8f01234` expands the Codex job constraint. Deploy compatible API,
+Temporal worker and Codex bridge before saving a policy above 10. Existing session
+budgets stay immutable; model/provider, rate, cost, state and hop limits are unchanged.
+
+Open Grafana's **Auto-AT Run Investigation** dashboard and enter a session,
+operation, correlation, trace or run ID. The top failure panel shows Vision warnings
+and errors, including browser operations rejected inside an HTTP 200 response.
+Lines show operation status, stage, outcome code and elapsed time directly, including
+for historical `vision.request_completed` records. ACK/result reads are excluded
+from this panel because they repeat an already recorded result.
+Expand a row to inspect `stage`, `status_code`, `code`, `operation_status`,
+`outcome_code`, and `duration_ms`. IDs remain JSON fields, not Loki labels.
+
+The API forwards its current `X-Correlation-Id` and W3C `traceparent` on private
+Vision worker requests. Request correlation IDs can differ from the exploration's
+original correlation ID; `session_id` joins the preview and operation requests.
+Worker events use the standard first-party JSON envelope so Fluent Bit accepts
+them without weakening its filter. Raw third-party stdout is still excluded.
+Fluent Bit discovers new container files every five seconds, reads them from the
+beginning, and persists read offsets in the existing buffer volume. This captures
+startup failures and avoids replaying entire files on ordinary collector restarts.
+The first deployment of the offsets database can ingest retained historical lines.
+
+For a failed preview, search Loki with:
+
+```logql
+{service=~"auto-at-.+"} | json | session_id="<session UUID>"
+```
+
+`vision.worker.rejected` records the safe worker rejection code at the API;
+`vision.request_rejected` records the worker stage and HTTP status.
+`vision.capture.failed` adds `capture_stage` (`cdp_session` or `screenshot`),
+`error_type`, `timeout_ms`, `page_closed`, and `browser_connected`. Categories
+include `timeout`, `target_closed`, and `browser_protocol_error`; unexpected
+exceptions remain `unexpected_error`. A successful HTTP response alone does not
+mean that the browser operation succeeded: inspect `operation_status` and
+`outcome_code` too.
+
+New failed prepare/execute attempts emit `vision.operation.failed` at error level;
+ACK and GET requests carrying a failed result emit `vision.operation.result_read`
+at info level. `vision.state.settle_timeout` explains why the stability check
+expired: required quiet interval, observed stable interval, sample count, context
+resets, document readiness (null when not checked), and counts of visible-state,
+URL, form-value, form-presence and scroll changes. These are aggregate comparisons
+only: page content, attributes, form values and fingerprints never enter logs.
+`document_loading` means the document has not finished its initial loading phase;
+`document_busy` means a visible element still declares `aria-busy=true`.
+Diagnostics do not change timeouts or verdicts. Readiness semantics are specified
+separately in ADR-014.
+
+Logs never include screenshot bytes, page content, locator text, request bodies,
+credentials, raw exception messages, or stacks. More detailed capture categories
+are operational diagnostics only and do not change response contracts, retries,
+approval boundaries or execution verdicts. Existing historical log lines cannot
+be enriched retroactively. Deploy API, Temporal worker and Playwright worker with
+these changes, plus Fluent Bit and the provisioned Grafana dashboard; let active explorations
+finish before replacing workers. No provider call is needed to check ingestion:
+an authenticated screen read for a nonexistent synthetic session produces a safe
+`session_unavailable` diagnostic without opening a browser or submitting a job.
 
 ## Advisory session progress
 
@@ -482,6 +580,23 @@ Open `/agent?vision=<session_id>` for saved progress, partial trace, replay and
 metadata export. Use correlation IDs and safe audit codes when investigating.
 Never log provider request bodies, image data, key values or raw error bodies.
 
+For an exploration that returns HTTP 200 but stops or omits controls, query Loki:
+
+```logql
+{service="auto-at-playwright-worker"}
+| json
+| session_id="REPLACE_WITH_SESSION_UUID"
+| event=~"vision.operation.failed|vision.state.mismatch|vision.dom.coverage_limited"
+```
+
+`vision.dom.coverage_limited` includes `interaction_scope`, `observed_count`,
+`skipped_count` and `skip_reasons`. `no_grounded_locator` means that the hit target
+has no usable unique locator under the current contract; `multiple_matches`
+means ambiguity. Disabled and sensitive controls have separate fixed categories.
+These omitted targets remain incomplete coverage. `vision.state.mismatch`
+identifies URL, interaction, form-presence, form-value and scroll changes using
+booleans only, with `failure_stage` identifying the comparison before dispatch.
+
 | Code | Meaning / response |
 | --- | --- |
 | `provider_not_configured` | Server key absent; configure the intended services before enabling. |
@@ -530,3 +645,10 @@ Before deploying an old API/worker binary with `extra=forbid`:
 
 Reproducible fixture commands and measured results are in the
 [Gehihi evaluation record](../benchmark/vision/gehihi/README.md).
+
+Codex viewport discovery uses controller-owned scrolling after fresh private
+context verification; see [ADR-020](adr/020-deterministic-viewport-discovery.md).
+Roll out the API, workflow worker, Playwright worker (`viewport-context-v1`) and
+Codex bridge (prompt v11) together after draining active sessions. A
+`viewport.scan_ready` event records successful context verification, not a click
+or complete coverage. Context changes and budget exhaustion retain partial results.

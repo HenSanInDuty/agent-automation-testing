@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "2a6bf150-0de5-4d10-9e44-8ccac9334613",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_character",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "d30b09f77dfd21c68d320858c79fd8d5f3752dfca2cbcf37212c46cc241d0573",
+  "after_checksum": "9f72e57efd2ed6b1fe7819acfff54abc43424141dec4c28eb400866826cb1e09",
+  "finding": "First character control is visibly active after click and matching Thieu Lam character panel is displayed; before frame showed Co Mo/fourth selection."
+}

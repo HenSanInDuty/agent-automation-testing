@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "a2d99760-78d2-4a32-89ce-6f7bf683be39",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_step",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "c76790dee6b32dcf1b1d384a8f2d6ce3b4635f1c5d284d384d694260e51050fd",
+  "after_checksum": "da15a7b1e0f19def248b938f2aaa706efd22ab98e6388cd27590e4b092dcc068",
+  "finding": "Before frame has sixth indicator/slide Hoi Sinh Tinh Hoa; after frame has fifth indicator/slide Vo Lam Chan Menh. Verified previous-arrow click and paired frames establish one previous step."
+}

@@ -38,6 +38,14 @@ def main():
             if mode == "consume":
                 assert spool.result(req).output.reason == "complete"
                 spool.acknowledge(req)
+        # Match Compose: a root Linux application publishes, then UID 1000
+        # consumes. Host-created files alone do not exercise Linux ownership.
+        producer = [*base, "--user", "0:0", "--cap-add", "CHOWN",
+                    "--cap-add", "DAC_OVERRIDE", "--cap-add", "FOWNER"]
+        for mode in ("publish", "consume", "acknowledge", "reconcile"):
+            command = producer if mode in {"publish", "acknowledge"} else base
+            subprocess.run([*command, *invoke, mode, str(req.bridge_id)],
+                           check=True, timeout=20)
         name = "auto-at-codex-lock-" + uuid4().hex[:12]
         subprocess.run(
             [*base, "--detach", "--name", name, *invoke, "lock", str(req.bridge_id)],
@@ -55,7 +63,7 @@ def main():
         finally:
             subprocess.run(["docker", "stop", "--time", "1", name],
                            check=True, capture_output=True, timeout=15)
-        print("publication, response, acknowledgement, cleanup and cross-container lock: passed")
+        print("host/root publication, non-root response/cleanup, acknowledgement and lock: passed")
 
 
 if __name__ == "__main__":

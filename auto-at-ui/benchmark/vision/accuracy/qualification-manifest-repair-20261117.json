@@ -1,0 +1,17 @@
+{
+  "changes": [
+    {
+      "source": "workers/playwright/src/fixtures/vision-target.ts",
+      "prior_hash": "d3acc9c4dc44d27a98b2e79c8e7db51b432ebc7108f9541ef619ce024ca5f7b2",
+      "actual_hash": "1ed6f4b84b02c347281ae618c21bc16262336d1368454541319d1a02b7729591"
+    },
+    {
+      "source": "workers/playwright/src/vision-operations.spec.ts",
+      "prior_hash": "49466aa8889420317810f4e428a751bef6ead06127307dab79d373132b609999",
+      "actual_hash": "38fd82edfec127a88d1f3f13a070d1bb7c97baed975788581019de52fb273920"
+    }
+  ],
+  "candidate_source_unchanged": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3",
+  "scope": "Refresh stale synthetic fixture/test provenance only; response cases, expected metrics, models/prompts and runtime code unchanged.",
+  "validation": "focused check pending; full run retained separately"
+}

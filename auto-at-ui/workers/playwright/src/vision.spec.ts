@@ -20,6 +20,13 @@ test("rejects raw parent URLs and the retired v2 tree contract", () => {
   expect(() => visualTreeRequestOf({ ...request, parent_url_fingerprint: "https://secret.test" })).toThrow();
 });
 
+test("tree capacity accepts 20 hops but enforces requested path and maximum bounds", () => {
+  expect(visualTreeRequestOf({ ...request, max_hops: 20, max_states: 100 }).max_hops).toBe(20);
+  expect(() => visualTreeRequestOf({ ...request, max_hops: 21 })).toThrow();
+  expect(() => visualTreeRequestOf({ ...request, max_hops: 20,
+    replay_path: Array.from({ length: 21 }, () => ({ kind: "wait", duration_ms: 100 })) })).toThrow();
+});
+
 test("worker validates every shared Python locator/operation/handoff/v4 fixture", async () => {
   const directory = new URL("../../../packages/contracts/fixtures/vision-locator-v1/", import.meta.url);
   const files = (await readdir(directory)).filter((name) => name.endsWith(".json"));

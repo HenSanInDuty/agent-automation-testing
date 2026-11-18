@@ -195,3 +195,5 @@ routes/authorization, executor, benchmark manifest, model batch and Gemini adapt
 suites. Twenty dashboard browser tests passed, including report discovery,
 download links, interrupted-session findings and mobile layout. TypeScript,
 Ruff and production dashboard build checks passed. Fixture providers remain mocked.
+
+2026-11-17 provenance maintenance: refreshed vision-target.ts and vision-operations.spec.ts checksums after checkpoint diagnostics, post-Back viewport fixtures and retained-target stability regressions. Response cases, expected metrics, model and prompt are unchanged. Final-source validation is recorded in the Vision accuracy plan; historical benchmark results above are not rewritten.

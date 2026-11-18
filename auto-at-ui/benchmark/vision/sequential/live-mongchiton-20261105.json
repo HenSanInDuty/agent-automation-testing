@@ -1,0 +1,545 @@
+{
+  "policy": {
+    "enabled": true,
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "raw_screenshot_transfer_accepted": true,
+    "raw_screenshot_transfer_provider": "codex_cli",
+    "codex": {
+      "input_mode": "dom_first",
+      "dom_transfer_accepted": true,
+      "dom_transfer_provider": "codex_cli",
+      "max_dom_elements": 100,
+      "max_dom_bytes": 65536
+    },
+    "max_steps": 20,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": 0.25,
+    "max_requests_per_minute": 5,
+    "input_policy_fingerprint": "4ce9f8ca6cd98a3b24c760f18f55dd28cc21f9f191f384201e851b456a65b6b6"
+  },
+  "requested_at": "2026-11-05T15:18:00.4855329Z",
+  "prototype_integrated": false,
+  "target": "https://mongchiton.vn",
+  "idempotency_key": "mongchiton-live-8091a209-ca44-4723-a4e9-94269ba7f16f",
+  "path": "deployed_application_reload",
+  "source_session": "13210987-86bc-4328-8a8e-b7f7a0a4a32c",
+  "classification": "public_web_live_codex",
+  "session": {
+    "step_timeout_seconds": 120,
+    "id": "95c8129e-f321-4f4f-9c28-378c34806b83",
+    "project_id": "8f2d5531-f00d-4ce9-981e-f4b626657818",
+    "correlation_id": "9207028b-a39f-4aa3-aa92-6114ee860c36",
+    "state": "unavailable",
+    "policy_version": "agent.runtime.v1",
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "max_steps": 20,
+    "max_hops": 10,
+    "max_states": 50,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "safe_failure_reason": "bridge_stale_result",
+    "trace_version": "v4"
+  },
+  "result": {
+    "completion_reason": "bridge_stale_result",
+    "counts": {
+      "proposed": 5,
+      "operations": 16,
+      "completed": 16,
+      "failed": 0,
+      "unknown": 0,
+      "executing": 0,
+      "verified_locators": 4,
+      "unresolved_locators": 0,
+      "frames_retained": 32,
+      "frames_deleted": 0,
+      "frames_missing": 0,
+      "branches_explored": 5,
+      "branches_failed": 0,
+      "branches_skipped": 0
+    },
+    "links": {
+      "handoff": {
+        "id": "b7a10f7e-9cb0-4a29-9e7f-99c18cefb840",
+        "href": null,
+        "state": "ready",
+        "reason_code": "generation_request_unavailable"
+      },
+      "generation": {
+        "state": "unavailable",
+        "id": null,
+        "href": null
+      },
+      "draft": {
+        "state": "not_started",
+        "id": null,
+        "href": null
+      },
+      "run": {
+        "state": "not_started",
+        "id": null,
+        "href": null
+      },
+      "report": {
+        "state": "not_started",
+        "id": null,
+        "href": null
+      }
+    }
+  },
+  "exploration_report": {
+    "status": "partial",
+    "coverage": "not_established",
+    "summary": {
+      "controls_acted_on": 4,
+      "actions_rejected": 0,
+      "actions_failed": 0,
+      "actions_unknown": 0,
+      "scrolls_completed": 2,
+      "candidates_not_attempted": 0
+    },
+    "conclusion": {
+      "status": "partial",
+      "coverage": "not_established",
+      "interaction_scope": "all",
+      "observed_controls": 35,
+      "completed_controls": 4,
+      "remaining_controls": 31,
+      "inventory_limited": true,
+      "operations_completed": 16,
+      "operations_failed": 0,
+      "operations_rejected": 0,
+      "operations_unknown": 0,
+      "operations_pending": 0,
+      "candidates_not_attempted": 0,
+      "business_outcome": "unverified"
+    },
+    "limits": {
+      "max_steps": 20,
+      "max_hops": 10,
+      "max_states": 50,
+      "max_session_seconds": 120,
+      "step_timeout_seconds": 120
+    }
+  },
+  "jobs": [
+    {
+      "request_sequence": 1,
+      "job_id": "7d7fa4f8-ce74-49a4-9582-e7fd1d513b5b",
+      "stage": "dom",
+      "status": "completed",
+      "safe_reason": null,
+      "created_at": "2026-11-05T15:18:18.754248+00:00",
+      "updated_at": "2026-11-05T15:18:27.26478+00:00",
+      "round_trip_seconds": 8.511,
+      "usage": {
+        "input_tokens": 5516,
+        "output_tokens": 77,
+        "cached_input_tokens": 0
+      },
+      "actual_model": null,
+      "cli_version": "0.164.0"
+    },
+    {
+      "request_sequence": 2,
+      "job_id": "0c5902c0-c9ae-4aa0-b73b-a0ed6856e11b",
+      "stage": "dom",
+      "status": "completed",
+      "safe_reason": null,
+      "created_at": "2026-11-05T15:18:33.864079+00:00",
+      "updated_at": "2026-11-05T15:18:47.102571+00:00",
+      "round_trip_seconds": 13.238,
+      "usage": {
+        "input_tokens": 5949,
+        "output_tokens": 297,
+        "cached_input_tokens": 0
+      },
+      "actual_model": null,
+      "cli_version": "0.164.0"
+    },
+    {
+      "request_sequence": 3,
+      "job_id": "bdd74294-e195-46dc-a8de-352025f697bd",
+      "stage": "dom",
+      "status": "completed",
+      "safe_reason": null,
+      "created_at": "2026-11-05T15:19:51.46461+00:00",
+      "updated_at": "2026-11-05T15:20:01.455649+00:00",
+      "round_trip_seconds": 9.991,
+      "usage": {
+        "input_tokens": 5297,
+        "output_tokens": 170,
+        "cached_input_tokens": 0
+      },
+      "actual_model": null,
+      "cli_version": "0.164.0"
+    }
+  ],
+  "operations": [
+    {
+      "sequence": 1,
+      "status": "completed",
+      "purpose": "setup",
+      "action": "navigate",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:18:03.844289Z",
+      "ended_at": "2026-11-05T15:18:13.444000Z"
+    },
+    {
+      "sequence": 2,
+      "status": "completed",
+      "purpose": "explore",
+      "action": "scroll",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:18:27.532614Z",
+      "ended_at": "2026-11-05T15:18:30.575000Z"
+    },
+    {
+      "sequence": 3,
+      "status": "completed",
+      "purpose": "explore",
+      "action": "click",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:18:47.462036Z",
+      "ended_at": "2026-11-05T15:18:50.228000Z"
+    },
+    {
+      "sequence": 4,
+      "status": "completed",
+      "purpose": "restore",
+      "action": "wait",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:18:52.435982Z",
+      "ended_at": "2026-11-05T15:18:54.527000Z"
+    },
+    {
+      "sequence": 5,
+      "status": "completed",
+      "purpose": "explore",
+      "action": "click",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:18:54.881294Z",
+      "ended_at": "2026-11-05T15:18:57.535000Z"
+    },
+    {
+      "sequence": 6,
+      "status": "completed",
+      "purpose": "restore",
+      "action": "back",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:18:59.556030Z",
+      "ended_at": "2026-11-05T15:19:01.250000Z"
+    },
+    {
+      "sequence": 7,
+      "status": "completed",
+      "purpose": "replay",
+      "action": "navigate",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:01.313990Z",
+      "ended_at": "2026-11-05T15:19:09.318000Z"
+    },
+    {
+      "sequence": 8,
+      "status": "completed",
+      "purpose": "replay",
+      "action": "scroll",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:09.534801Z",
+      "ended_at": "2026-11-05T15:19:14.858000Z"
+    },
+    {
+      "sequence": 9,
+      "status": "completed",
+      "purpose": "explore",
+      "action": "click",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:15.063210Z",
+      "ended_at": "2026-11-05T15:19:17.920000Z"
+    },
+    {
+      "sequence": 10,
+      "status": "completed",
+      "purpose": "restore",
+      "action": "back",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:19.957904Z",
+      "ended_at": "2026-11-05T15:19:21.645000Z"
+    },
+    {
+      "sequence": 11,
+      "status": "completed",
+      "purpose": "replay",
+      "action": "navigate",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:21.712160Z",
+      "ended_at": "2026-11-05T15:19:29.738000Z"
+    },
+    {
+      "sequence": 12,
+      "status": "completed",
+      "purpose": "replay",
+      "action": "scroll",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:29.837035Z",
+      "ended_at": "2026-11-05T15:19:34.251000Z"
+    },
+    {
+      "sequence": 13,
+      "status": "completed",
+      "purpose": "explore",
+      "action": "click",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:34.444448Z",
+      "ended_at": "2026-11-05T15:19:38.053000Z"
+    },
+    {
+      "sequence": 14,
+      "status": "completed",
+      "purpose": "restore",
+      "action": "scroll",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:39.543084Z",
+      "ended_at": "2026-11-05T15:19:41.931000Z"
+    },
+    {
+      "sequence": 15,
+      "status": "completed",
+      "purpose": "restore",
+      "action": "wait",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:42.088079Z",
+      "ended_at": "2026-11-05T15:19:44.218000Z"
+    },
+    {
+      "sequence": 16,
+      "status": "completed",
+      "purpose": "explore",
+      "action": "scroll",
+      "outcome": "observed",
+      "started_at": "2026-11-05T15:19:44.424390Z",
+      "ended_at": "2026-11-05T15:19:50.350000Z"
+    }
+  ],
+  "timeline": {
+    "started_at": "2026-11-05T15:18:00.699571+00:00",
+    "terminal_at": "2026-11-05T15:20:01.735175+00:00",
+    "duration_seconds": 121.035604
+  },
+  "model_events": [
+    {
+      "stage": "candidate.requested",
+      "status": "running",
+      "metadata": {
+        "hop": 0,
+        "state_sequence": 1
+      },
+      "occurred_at": "2026-11-05T15:18:13.81039+00:00"
+    },
+    {
+      "stage": "codex.queued",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "7d7fa4f8-ce74-49a4-9582-e7fd1d513b5b",
+        "elapsed_ms": 22,
+        "call_sequence": 1
+      },
+      "occurred_at": "2026-11-05T15:18:18.776927+00:00"
+    },
+    {
+      "stage": "codex.started",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "7d7fa4f8-ce74-49a4-9582-e7fd1d513b5b",
+        "elapsed_ms": 665,
+        "call_sequence": 1
+      },
+      "occurred_at": "2026-11-05T15:18:19.419905+00:00"
+    },
+    {
+      "stage": "codex.validating",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "7d7fa4f8-ce74-49a4-9582-e7fd1d513b5b",
+        "elapsed_ms": 8507,
+        "call_sequence": 1
+      },
+      "occurred_at": "2026-11-05T15:18:27.262111+00:00"
+    },
+    {
+      "stage": "codex.completed",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "7d7fa4f8-ce74-49a4-9582-e7fd1d513b5b",
+        "elapsed_ms": 8514,
+        "call_sequence": 1
+      },
+      "occurred_at": "2026-11-05T15:18:27.268572+00:00"
+    },
+    {
+      "stage": "candidate.received",
+      "status": "running",
+      "metadata": {
+        "state_sequence": 1,
+        "candidate_count": 1
+      },
+      "occurred_at": "2026-11-05T15:18:27.418909+00:00"
+    },
+    {
+      "stage": "candidate.requested",
+      "status": "running",
+      "metadata": {
+        "hop": 1,
+        "state_sequence": 2
+      },
+      "occurred_at": "2026-11-05T15:18:33.588887+00:00"
+    },
+    {
+      "stage": "codex.queued",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "0c5902c0-c9ae-4aa0-b73b-a0ed6856e11b",
+        "elapsed_ms": 16,
+        "call_sequence": 2
+      },
+      "occurred_at": "2026-11-05T15:18:33.880373+00:00"
+    },
+    {
+      "stage": "codex.started",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "0c5902c0-c9ae-4aa0-b73b-a0ed6856e11b",
+        "elapsed_ms": 1071,
+        "call_sequence": 2
+      },
+      "occurred_at": "2026-11-05T15:18:34.93544+00:00"
+    },
+    {
+      "stage": "codex.validating",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "0c5902c0-c9ae-4aa0-b73b-a0ed6856e11b",
+        "elapsed_ms": 13233,
+        "call_sequence": 2
+      },
+      "occurred_at": "2026-11-05T15:18:47.097565+00:00"
+    },
+    {
+      "stage": "codex.completed",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "0c5902c0-c9ae-4aa0-b73b-a0ed6856e11b",
+        "elapsed_ms": 13242,
+        "call_sequence": 2
+      },
+      "occurred_at": "2026-11-05T15:18:47.106316+00:00"
+    },
+    {
+      "stage": "candidate.received",
+      "status": "running",
+      "metadata": {
+        "state_sequence": 2,
+        "candidate_count": 4
+      },
+      "occurred_at": "2026-11-05T15:18:47.278656+00:00"
+    },
+    {
+      "stage": "candidate.requested",
+      "status": "running",
+      "metadata": {
+        "hop": 2,
+        "state_sequence": 7
+      },
+      "occurred_at": "2026-11-05T15:19:51.340388+00:00"
+    },
+    {
+      "stage": "codex.queued",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "bdd74294-e195-46dc-a8de-352025f697bd",
+        "elapsed_ms": 28,
+        "call_sequence": 3
+      },
+      "occurred_at": "2026-11-05T15:19:51.493425+00:00"
+    },
+    {
+      "stage": "codex.started",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "bdd74294-e195-46dc-a8de-352025f697bd",
+        "elapsed_ms": 1404,
+        "call_sequence": 3
+      },
+      "occurred_at": "2026-11-05T15:19:52.869608+00:00"
+    },
+    {
+      "stage": "codex.validating",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "bdd74294-e195-46dc-a8de-352025f697bd",
+        "elapsed_ms": 9987,
+        "call_sequence": 3
+      },
+      "occurred_at": "2026-11-05T15:20:01.45233+00:00"
+    },
+    {
+      "stage": "codex.completed",
+      "status": "running",
+      "metadata": {
+        "mode": "dom",
+        "job_id": "bdd74294-e195-46dc-a8de-352025f697bd",
+        "elapsed_ms": 9995,
+        "call_sequence": 3
+      },
+      "occurred_at": "2026-11-05T15:20:01.45975+00:00"
+    },
+    {
+      "stage": "handoff.unavailable",
+      "status": "unavailable",
+      "metadata": {
+        "reason_code": "generation_request_unavailable"
+      },
+      "occurred_at": "2026-11-05T15:20:01.73083+00:00"
+    },
+    {
+      "stage": "unavailable",
+      "status": "unavailable",
+      "metadata": {
+        "reason_code": "bridge_stale_result"
+      },
+      "occurred_at": "2026-11-05T15:20:01.735175+00:00"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 16762,
+    "output_tokens": 544,
+    "cached_input_tokens": 0
+  },
+  "deployed_images": [
+    "/auto-at-ui-control-plane-1 sha256:8f8884c0eaf88fec7518317df6ec1423e7f287449d3f2e54f9464411b9c98661",
+    "/auto-at-ui-temporal-worker-1 sha256:658161721383d7fd25409d6d5a889c0efc27dddbb5221fefef7c3973ab842ea7",
+    "/auto-at-ui-playwright-worker-1 sha256:e0ba86e8b16127050996f179563094fac0d633dce3385cc5c2ddaba0f5d8bab7",
+    "/auto-at-ui-codex-bridge-1 sha256:edd59f8bfa30064c521506075908cb09108f70e77bcc5716cc514854a9a923a8"
+  ],
+  "collected_at": "2026-11-05T15:21:08.488113+00:00",
+  "limitations": [
+    "One live run of the deployed application; not a stability-rate estimate",
+    "Sequential target-scoped prototype not integrated or exercised",
+    "Token metadata does not establish billed cost",
+    "No generated draft approved and no deterministic test dispatched by this benchmark"
+  ]
+}

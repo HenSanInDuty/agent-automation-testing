@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "49f7cfb8-ae98-4008-a7db-6b3dfc0714eb",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_selection",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "after_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "finding": "After-frame shows carousel indicator 2 active and Bang Chien Nay Lua, matching mct-52."
+}

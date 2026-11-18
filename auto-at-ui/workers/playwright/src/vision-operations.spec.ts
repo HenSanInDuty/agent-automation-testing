@@ -57,6 +57,283 @@ async function setup(checkpoint = randomUUID()) {
 }
 const click = (y: number) => ({ kind: "click", x: 100 / 1279, y: y / 719 });
 
+for (const mutation of ["form", "presence", "control", "scroll", "url", "visual"] as const) {
+  test(`checkpoint diagnostic identifies ${mutation} drift without changing restoration`, async () => {
+    await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html',
+      body: '<body style="height:2000px"><button>Original</button><input type="hidden" value="private-original"><span id="passive">Before</span>' }));
+    const initial = await setup();
+    const lines: string[] = [], original = console.warn;
+    console.warn = (line: string) => lines.push(line);
+    try {
+      expect((await worker.checkpoint(identity, identity.session_id, initial.checkpoint!.id)).matches_current).toBe(true);
+      expect(lines).toEqual([]);
+      await page.evaluate(kind => {
+        if (kind === 'form') document.querySelector('input')!.value = 'private-new-value';
+        if (kind === 'presence') document.querySelector('input')!.remove();
+        if (kind === 'control') document.querySelector('button')!.textContent = 'private-new-label';
+        if (kind === 'scroll') window.scrollTo(0, 200);
+        if (kind === 'url') history.pushState({}, '', '/private-path?token=private-value');
+        if (kind === 'visual') document.querySelector('#passive')!.textContent = 'private-passive-content';
+      }, mutation);
+      const result = await worker.checkpoint(identity, identity.session_id, initial.checkpoint!.id);
+      expect(result.checkpoint).toEqual(initial.checkpoint);
+      expect(result.matches_current).toBe(mutation === 'visual');
+      if (mutation === 'visual') expect(lines).toEqual([]);
+      else {
+        expect(lines).toHaveLength(1);
+        expect(JSON.parse(lines[0])).toMatchObject({event:'vision.checkpoint.mismatch',
+          checkpoint_id:initial.checkpoint!.id, state_id:initial.checkpoint!.state_id,
+          session_id:identity.session_id, code:'checkpoint_mismatch',
+          form_values_changed:mutation === 'form' || mutation === 'presence',
+          form_presence_changed:mutation === 'presence', url_changed:mutation === 'url',
+          scroll_changed:mutation === 'scroll', interaction_changed:mutation === 'control' || mutation === 'scroll'});
+        expect(lines.join('\n')).not.toMatch(/private-|Original|Before/);
+        console.warn = () => { throw new Error('logger unavailable'); };
+        expect((await worker.checkpoint(identity, identity.session_id, initial.checkpoint!.id)).matches_current).toBe(false);
+      }
+    } finally { console.warn = original; }
+  });
+}
+
+for (let schedule = 0; schedule < 20; schedule++) {
+  test(`restore dispatch barrier retains rejection and immutable checkpoint ${schedule}`, async () => {
+    await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html',
+      body: '<button>Original</button><input type="hidden" value="original">' }));
+    const initial = await setup();
+    const prepared = await worker.prepare(command({ kind: 'wait', duration_ms: 100 }, {
+      purpose: 'restore', restore_checkpoint_id: initial.checkpoint!.id,
+    }));
+    expect(prepared.operation.status).toBe('prepared');
+    await page.evaluate(form => {
+      if (form) document.querySelector('input')!.value = 'changed';
+      else document.querySelector('button')!.textContent = 'Changed';
+    }, schedule % 2 === 1);
+    const rejected = await worker.execute(executeCommand(prepared));
+    current = rejected.state_fingerprint!;
+    expect(rejected.operation).toMatchObject({ status: 'rejected', outcome_code: 'state_mismatch', executed_click: null });
+    expect(rejected).toMatchObject({ dispatch_started: false, failure_stage: 'before_dispatch' });
+    expect(rejected.frames.map(frame => frame.role)).toEqual(['before', 'after']);
+    expect((await worker.checkpoint(identity, identity.session_id, initial.checkpoint!.id)).matches_current).toBe(false);
+    await page.evaluate(() => {
+      document.querySelector('input')!.value = 'original';
+      document.querySelector('button')!.textContent = 'Original';
+    });
+    const refreshed = await run({ kind: 'wait', duration_ms: 100 }, {
+      purpose: 'setup', state_id: null, proposal_id: null, refresh_observation: true,
+      checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+    });
+    expect(refreshed.operation.status).toBe('completed');
+    const check = await worker.checkpoint(identity, identity.session_id, initial.checkpoint!.id);
+    expect(check.checkpoint).toEqual(initial.checkpoint);
+    expect(check.matches_current).toBe(true);
+    const verified = await run({ kind: 'wait', duration_ms: 100 }, {
+      purpose: 'restore', restore_checkpoint_id: initial.checkpoint!.id,
+    });
+    expect(verified.operation.status).toBe('completed');
+    expect(verified.dispatch_started).toBe(true);
+    expect(worker.read(identity, identity.session_id, rejected.operation.id).operation.status).toBe('rejected');
+  });
+}
+
+test("button scope filters observations and rejects a link click before dispatch", async () => {
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const opened = await worker.open({ ...identity, target_url: target.origin, allowed_origins: [target.origin],
+    interaction_scope: 'buttons', required_capabilities: ['button-scope-v1', 'anonymous-button-v1'],
+    deadline: new Date(Date.now() + 60000).toISOString(), max_session_seconds: 60,
+    max_states: 20, max_hops: 10, max_screenshot_bytes: 1000000 });
+  current = opened.state_fingerprint; page = browser.contexts()[0].pages()[0];
+  expect(opened.capabilities).toContain('button-scope-v1');
+  expect(opened.capabilities).toContain('anonymous-button-v1');
+  await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html', body: `
+    <button style="position:absolute;left:20px;top:20px;width:180px;height:40px">Save</button>
+    <a href="/a" style="position:absolute;left:20px;top:80px;width:180px;height:40px">Article</a>
+    <button style="position:absolute;left:20px;top:140px;width:180px;height:40px" onclick="this.dataset.clicked='yes'"></button>` }));
+  await setup();
+  const observed = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current });
+  expect(observed.data.observation.elements.map(e => [e.role, e.name])).toEqual([['button', 'Save'], ['button', '']]);
+  const rejected = await worker.prepare(command(click(100)));
+  expect(rejected.operation).toMatchObject({ status: 'rejected', outcome_code: 'out_of_scope_target', executed_click: null });
+  expect(page.url()).toBe(target.origin + '/');
+  expect((await run(click(40))).operation.status).toBe('completed');
+  const anonymous = observed.data.observation.elements.find(e => !e.name)!;
+  const anonymousCommand = { dom_snapshot_id: observed.data.observation.snapshot_id,
+    dom_element_id: anonymous.element_id };
+  const capture = worker['capture'].bind(worker);
+  worker['capture'] = async (...args: Parameters<typeof capture>) => {
+    const result = await capture(...args);
+    if (args[2] === 'before') await page.locator('button').nth(1).evaluate(el => (el as HTMLElement).style.left = '300px');
+    return result;
+  };
+  const prepared = await worker.prepare(command(click(40), anonymousCommand));
+  worker['capture'] = capture;
+  expect(prepared.operation.status).toBe('prepared');
+  await page.locator('button').nth(1).evaluate(el => (el as HTMLElement).style.left = '600px');
+  const clicked = await worker.execute(executeCommand(prepared));
+  current = clicked.state_fingerprint!;
+  expect(clicked.operation.status).toBe('completed');
+  expect(clicked.locator?.descriptor).toMatchObject({ schema_version: 'v2', strategy: 'dom_path' });
+  expect(await page.locator('button').nth(1).getAttribute('data-clicked')).toBe('yes');
+  const pending = await worker.prepare(command(click(40), anonymousCommand));
+  expect(pending.operation.status).toBe('prepared');
+  await page.locator('button').nth(1).evaluate(el => el.replaceWith(el.cloneNode(true)));
+  const replaced = await worker.execute(executeCommand(pending));
+  expect(replaced.operation).toMatchObject({ status: 'rejected', outcome_code: 'stale_dom_target', executed_click: null });
+});
+
+test("visual button scope executes styled links and custom buttons but rejects content links and replacements", async () => {
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const opened = await worker.open({ ...identity, target_url: target.origin, allowed_origins: [target.origin],
+    interaction_scope: 'visual_buttons', required_capabilities: ['visual-button-scope-v1'],
+    deadline: new Date(Date.now()+60000).toISOString(), max_session_seconds: 60,
+    max_states: 20, max_hops: 10, max_screenshot_bytes: 1000000 });
+  current=opened.state_fingerprint;page=browser.contexts()[0].pages()[0];
+  await page.route(target.origin+'/', route=>route.fulfill({contentType:'text/html',body:`
+    <a href="/a" onclick="event.preventDefault();this.dataset.clicked='yes'" style="display:block;width:180px;height:40px;background:gold;border-radius:5px">Open</a>
+    <div onclick="this.dataset.clicked='yes'" style="width:80px;height:40px;background:linear-gradient(red,blue);cursor:pointer"></div>
+    <a href="/a" aria-label="Article" style="display:block;width:180px;height:40px">Article</a>`}));
+  await setup();
+  const dom=await worker.observeDom({...identity,snapshot_id:randomUUID(),expected_state_fingerprint:current});
+  expect(dom.data.observation.elements.map(e=>e.button_kind)).toEqual(['styled_link','custom']);
+  for(const element of dom.data.observation.elements) {
+    const result=await run(click(20),{dom_snapshot_id:dom.data.observation.snapshot_id,dom_element_id:element.element_id});
+    expect(result.operation.status,result.operation.outcome_code??'').toBe('completed');
+    expect(result.operation.executed_click).not.toBeNull();
+  }
+  expect(await page.locator('[data-clicked=yes]').count()).toBe(2);
+  const outside=await worker.prepare(command(click(100)));
+  expect(outside.operation.outcome_code).toBe('out_of_scope_target');
+  const pending=await worker.prepare(command(click(20),{dom_snapshot_id:dom.data.observation.snapshot_id,dom_element_id:dom.data.observation.elements[0].element_id}));
+  expect(pending.operation.status).toBe('prepared');
+  await page.locator('a').first().evaluate(el=>el.replaceWith(el.cloneNode(true)));
+  const replaced=await worker.execute(executeCommand(pending));
+  expect(replaced.operation.status).toBe('rejected');
+  expect(replaced.operation.executed_click).toBeNull();
+});
+
+for (const mutation of ['none', 'form', 'replacement', 'persistent'] as const) {
+  test(`visual target settles after capture while preserving ${mutation} guard`, async () => {
+    await worker.close(identity, identity.session_id);
+    identity = { ...identity, session_id: randomUUID() };
+    const opened = await worker.open({ ...identity, target_url: target.origin, allowed_origins: [target.origin],
+      interaction_scope: 'visual_buttons', required_capabilities: ['visual-button-scope-v1'],
+      deadline: new Date(Date.now() + 60000).toISOString(), max_session_seconds: 60,
+      max_states: 20, max_hops: 10, max_screenshot_bytes: 1000000 });
+    current = opened.state_fingerprint; page = browser.contexts()[0].pages()[0];
+    await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html', body: `
+      <input type="hidden" value="original-private-value">
+      <button style="position:absolute;left:20px;top:30px;width:8px;height:40px;padding:0;border:0"
+        onclick="window.clickCount=(window.clickCount||0)+1" aria-label="Moving action"></button>` }));
+    await setup();
+    const observed = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current });
+    const capture = worker['capture'].bind(worker);
+    worker['capture'] = async (...args: Parameters<typeof capture>) => {
+      const result = await capture(...args);
+      if (args[2] === 'before') await page.locator('button').evaluate((el, mutation) => {
+        const animation = el.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(600px)' }],
+          { duration: 700, fill: 'forwards', iterations: mutation === 'persistent' ? Infinity : 1 });
+        animation.onfinish = () => {
+          if (mutation === 'form') document.querySelector('input')!.value = 'changed-private-value';
+          if (mutation === 'replacement') el.replaceWith(el.cloneNode(true));
+        };
+      }, mutation);
+      return result;
+    };
+    const prepared = await worker.prepare(command(click(40), {
+      dom_snapshot_id: observed.data.observation.snapshot_id,
+      dom_element_id: observed.data.observation.elements[0].element_id,
+    }));
+    worker['capture'] = capture;
+    if (mutation === 'none') {
+      expect(prepared.operation.status, prepared.operation.outcome_code ?? '').toBe('prepared');
+      expect(await page.evaluate(() => document.getAnimations().some(a => a.playState === 'running'))).toBe(false);
+      const result = await worker.execute(executeCommand(prepared));
+      expect(result.operation.status, result.operation.outcome_code ?? '').toBe('completed');
+      expect(await page.evaluate(() => (window as unknown as { clickCount: number }).clickCount)).toBe(1);
+    } else {
+      expect(prepared.operation.status).toBe('rejected');
+      expect(prepared.dispatch_started).toBe(false);
+      expect(prepared.operation.executed_click).toBeNull();
+      expect(await page.evaluate(() => (window as unknown as { clickCount?: number }).clickCount ?? 0)).toBe(0);
+    }
+  });
+}
+
+test("download button records initiation without requiring a persistent popup or retaining a file", async () => {
+  await page.route(target.origin+'/', route=>route.fulfill({contentType:'text/html',body:
+    '<a href="/download" target="_blank" style="display:block;width:180px;height:40px">Download</a>'}));
+  await setup();
+  const result=await run(click(20), { checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID() });
+  expect(result.operation.status,result.operation.outcome_code??'').toBe('completed');
+  expect(result.operation.outcome_code).toBe('download_started');
+  expect(result.operation.executed_click).not.toBeNull();
+  expect(result.operation.after_page_id).toBe(result.operation.before_page_id);
+  expect(result.frames.map(frame => frame.role)).toEqual(['before', 'after']);
+  expect(result.checkpoint).not.toBeNull();
+  expect(result.replayable).toBe(false);
+  expect(browser.contexts()[0].pages().map(p => p.url())).toEqual([target.origin + '/']);
+});
+
+test("per-step deadlines permit a session longer than its initial and step budgets", async () => {
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const began = Date.now();
+  const opened = await worker.open({ ...identity, target_url: target.origin, allowed_origins: [target.origin],
+    deadline: new Date(began + 2000).toISOString(), max_session_seconds: 5, step_timeout_seconds: 5,
+    max_states: 20, max_hops: 10, max_screenshot_bytes: 1_000_000, required_capabilities: ["step-timeout-v1"] });
+  expect(opened.capabilities).toContain("step-timeout-v1");
+  current = opened.state_fingerprint; page = browser.contexts()[0].pages()[0];
+  const rootState = await run({ kind: "navigate" }, { purpose: "setup", step_deadline: new Date(Date.now() + 5000).toISOString() });
+  expect(rootState.operation.status).toBe("completed");
+  await page.waitForTimeout(Math.max(1, began + 5200 - Date.now()));
+  const next = await run(click(40), { step_deadline: new Date(Date.now() + 5000).toISOString() });
+  expect(next.operation.status).toBe("completed");
+  expect(next.operation.executed_click).not.toBeNull();
+  expect(Date.now() - began).toBeGreaterThan(5000);
+});
+
+test("per-step prepared action expires without allowing duplicate execute to restart its timer", async () => {
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const opened = await worker.open({ ...identity, target_url: target.origin, allowed_origins: [target.origin],
+    deadline: new Date(Date.now() + 5000).toISOString(), max_session_seconds: 5, step_timeout_seconds: 5,
+    max_states: 20, max_hops: 10, max_screenshot_bytes: 1_000_000 });
+  current = opened.state_fingerprint; page = browser.contexts()[0].pages()[0];
+  await run({ kind: "navigate" }, { purpose: "setup", step_deadline: new Date(Date.now() + 5000).toISOString() });
+  const missing = await worker.prepare(command(click(40)));
+  expect(missing.operation.outcome_code).toBe("invalid_step_deadline");
+  const prepared = await worker.prepare(command(click(40), { step_deadline: new Date(Date.now() + 1500).toISOString() }));
+  expect(prepared.operation.status).toBe("prepared");
+  await new Promise(resolve => setTimeout(resolve, 1700));
+  const result = await worker.execute(executeCommand(prepared));
+  expect(result.operation).toMatchObject({ status: "rejected", outcome_code: "step_timeout", executed_click: null });
+  expect((await worker.execute(executeCommand(prepared))).operation).toEqual(result.operation);
+});
+
+test("DOM replay matches the submitted action and reuses verified coordinates", async () => {
+  const rootState = await setup();
+  const snapshotId = randomUUID();
+  const observation = await worker.observeDom({ ...identity, snapshot_id: snapshotId, expected_state_fingerprint: current });
+  const element = observation.data.observation.elements.find(e => e.name === "Branch A")!;
+  const proposed = { kind: "click", x: 0.99, y: 0.01 };
+  const first = await run(proposed, { dom_snapshot_id: snapshotId, dom_element_id: element.element_id });
+  expect(first.operation.status).toBe("completed");
+  expect(first.replayable).toBe(true);
+  const home = await run({ kind: "navigate" }, { purpose: "replay", replay_operation_id: rootState.operation.id });
+  expect(home.operation.status).toBe("completed");
+  const bad = await worker.prepare(command({ ...proposed, x: 0.8 }, {
+    purpose: "replay", replay_operation_id: first.operation.id, expected_locator: first.locator!.descriptor,
+  }));
+  expect(bad.operation.outcome_code).toBe("replay_mismatch");
+  const replay = await run(proposed, {
+    purpose: "replay", replay_operation_id: first.operation.id, expected_locator: first.locator!.descriptor,
+  });
+  expect(replay.operation.status).toBe("completed");
+  expect(page.url()).toBe(target.origin + "/a");
+  expect(replay.operation.executed_click).not.toBeNull();
+});
+
 test("live screen works during an operation, respects scope and does not create actions", async () => {
   await setup();
   await expect(worker.screen({ ...identity, tenant_id: "other" }, identity.session_id)).rejects.toThrow("scope_mismatch");
@@ -74,6 +351,77 @@ test("live screen works during an operation, respects scope and does not create 
   await expect(worker.screen(identity, identity.session_id)).rejects.toThrow("session_unavailable");
 });
 
+test("read-only refresh retains old evidence and cannot authorize a stale click", async () => {
+  const first = await setup();
+  await page.getByRole('button', { name: 'Toggle modal', exact: true }).evaluate(el => { el.textContent = 'Updated modal'; });
+  await expect(worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current })).rejects.toThrow('state_mismatch');
+  const invalid = await worker.prepare(command(click(340), { refresh_observation: true }));
+  expect(invalid.operation.status).toBe('rejected');
+  const refreshed = await run({ kind: 'wait', duration_ms: 100 }, {
+    purpose: 'setup', state_id: first.checkpoint!.state_id, proposal_id: null,
+    refresh_observation: true, checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+  });
+  expect(refreshed.operation.status).toBe('completed');
+  expect(refreshed.operation.executed_click).toBeNull();
+  expect(refreshed.checkpoint!.id).not.toBe(first.checkpoint!.id);
+  expect((await worker.checkpoint(identity, identity.session_id, first.checkpoint!.id)).matches_current).toBe(false);
+  const observed = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current });
+  expect(observed.data.observation.elements.some(e => e.name === 'Updated modal')).toBe(true);
+});
+
+test("read-only refresh waits for delayed controls beyond three seconds", async () => {
+  const first = await setup();
+  await page.evaluate(() => {
+    const button = document.querySelector('button')!;
+    const timer = setInterval(() => { button.disabled = !button.disabled; }, 100);
+    setTimeout(() => { clearInterval(timer); button.disabled = false; }, 3300);
+  });
+  const refreshed = await run({ kind: 'wait', duration_ms: 100 }, {
+    purpose: 'setup', proposal_id: null, refresh_observation: true,
+    checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+  });
+  expect(refreshed.operation.status).toBe('completed');
+  expect(refreshed.operation.executed_click).toBeNull();
+  expect(refreshed.checkpoint!.id).not.toBe(first.checkpoint!.id);
+  expect((await worker.checkpoint(identity, identity.session_id, refreshed.checkpoint!.id)).matches_current).toBe(true);
+});
+
+test("read-only refresh never accepts continuously changing controls", async () => {
+  await setup();
+  await page.evaluate(() => {
+    const button = document.querySelector('button')!;
+    setInterval(() => { button.disabled = !button.disabled; }, 100);
+  });
+  const refreshed = await worker.prepare(command({ kind: 'wait', duration_ms: 100 }, {
+    purpose: 'setup', proposal_id: null, refresh_observation: true,
+    checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+  }));
+  expect(refreshed.operation.status).toBe('rejected');
+  expect(refreshed.operation.outcome_code).toBe('settle_timeout');
+  expect(refreshed.operation.executed_click).toBeNull();
+  expect(refreshed.checkpoint).toBeNull();
+});
+
+test("a delayed DOM reply gets new checkpoint evidence and cannot adopt a replacement target", async () => {
+  await setup();
+  const initial = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current });
+  const element = initial.data.observation.elements.find(e => e.name === 'Branch A')!;
+  await page.evaluate(() => document.body.insertAdjacentHTML('beforeend',
+    '<div style="position:fixed;left:1000px;top:50px;width:30px;height:30px;cursor:pointer">Slide</div>'));
+  await run({ kind: 'wait', duration_ms: 100 }, { purpose: 'setup', proposal_id: null, refresh_observation: true,
+    checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID() });
+  const fresh = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current,
+    revalidate_snapshot_id: initial.data.observation.snapshot_id, revalidate_element_ids: [element.element_id] });
+  expect(fresh.data.observation.snapshot_id).not.toBe(initial.data.observation.snapshot_id);
+  expect(fresh.data.observation.elements.some(e => e.element_id === element.element_id)).toBe(true);
+  await page.getByRole('link', { name: 'Branch A', exact: true }).evaluate(el => el.replaceWith(el.cloneNode(true)));
+  const rejected = await worker.prepare(command(click(20), { dom_snapshot_id: fresh.data.observation.snapshot_id,
+    dom_element_id: element.element_id }));
+  expect(rejected.operation.status).toBe('rejected');
+  expect(rejected.operation.outcome_code).toBe('stale_dom_target');
+  expect(rejected.operation.executed_click).toBeNull();
+});
+
 test("screen capture does not wait for an unresolved font load", async () => {
   await setup();
   await page.evaluate(() => {
@@ -82,6 +430,38 @@ test("screen capture does not wait for an unresolved font load", async () => {
   const prepared = await worker.prepare(command(click(340)));
   expect(prepared.operation.status).toBe("prepared");
   expect((await worker.screen(identity, identity.session_id)).length).toBeGreaterThan(100);
+});
+
+test("read-only refresh capture race retains before evidence and proves no dispatch", async () => {
+  const initial = await setup();
+  const context = page.context(), original = context.newCDPSession.bind(context);
+  let injected = false;
+  context.newCDPSession = async (target) => {
+    const client = await original(target), send = client.send.bind(client);
+    client.send = async (method, params) => {
+      const result = await send(method, params);
+      if (method === "Page.captureScreenshot" && !injected) {
+        injected = true;
+        await page.evaluate(() => {
+          const input = document.createElement("input"); input.type = "hidden";
+          input.value = "synthetic-refresh-private"; document.body.append(input);
+        });
+      }
+      return result;
+    };
+    return client;
+  };
+  const rejected = await worker.prepare(command({ kind: "wait", duration_ms: 100 }, {
+    purpose: "setup", proposal_id: null, refresh_observation: true,
+    checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+  }));
+  expect(rejected.operation).toMatchObject({ status: "rejected", outcome_code: "state_changed_during_prepare",
+    before_page_id: initial.operation.after_page_id, after_unavailable_reason: "action_not_executed" });
+  expect(rejected.dispatch_started).toBe(false);
+  expect(rejected.failure_stage).toBe("prepare");
+  expect(rejected.frames.map(frame => frame.role)).toEqual(["before"]);
+  expect(rejected.checkpoint).toBeNull();
+  expect(JSON.stringify(rejected)).not.toContain("synthetic-refresh-private");
 });
 
 test("checkpoint and final image include hydration that finishes during capture", async () => {
@@ -110,6 +490,41 @@ test("checkpoint and final image include hydration that finishes during capture"
   expect((await worker.checkpoint(identity, identity.session_id, result.checkpoint!.id)).matches_current).toBe(true);
   expect(JSON.stringify(result)).not.toContain("synthetic-capture-value");
   expect((await run(click(100))).operation.status).toBe("completed");
+});
+
+for (const navigationReset of [true, false]) test(`after capture read recovery is navigation-only: ${navigationReset}`, async () => {
+  await setup();
+  const context = page.context(), original = context.newCDPSession.bind(context);
+  const evaluate = page.evaluate.bind(page);
+  let captures = 0, interruptRead = false;
+  page.evaluate = (async (...args: Parameters<typeof page.evaluate>) => {
+    if (interruptRead) {
+      interruptRead = false;
+      throw new Error(navigationReset ? 'Execution context was destroyed, most likely because of a navigation' : 'synthetic read failure');
+    }
+    return evaluate(...args);
+  }) as typeof page.evaluate;
+  context.newCDPSession = async (target) => {
+    const client = await original(target), send = client.send.bind(client);
+    client.send = async (method, params) => {
+      const result = await send(method, params);
+      if (method === 'Page.captureScreenshot' && ++captures === 2) interruptRead = true;
+      return result;
+    };
+    return client;
+  };
+  const result = await run(click(340), { checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID() });
+  expect(result.operation.status).toBe('completed');
+  expect(await page.getByRole('button', { name: 'Icon action', exact: true }).getAttribute('data-count')).toBe('1');
+  expect(captures).toBe(navigationReset ? 3 : 2);
+  expect(result.frames.map(frame => frame.role)).toEqual(navigationReset ? ['before', 'after'] : ['before']);
+  if (navigationReset) {
+    expect(result.checkpoint).not.toBeNull();
+    expect((await worker.checkpoint(identity, identity.session_id, result.checkpoint!.id)).matches_current).toBe(true);
+  } else {
+    expect(result.checkpoint).toBeNull();
+    expect(result.operation.after_unavailable_reason).toBe('capture_failed');
+  }
 });
 
 test("restoration rechecks form state against the final image", async () => {
@@ -225,6 +640,22 @@ test("same URL modal has semantic/visual change; no-op remains an observation", 
   expect(noop.operation).toMatchObject({ status: "completed", url_change: "unchanged", outcome_code: "observed" });
   expect(noop.semantic_change).toBe("unchanged");
 });
+test("declared new-tab link waits for a delayed response before finalizing its click", async () => {
+  await page.context().route(target.origin + '/', route => route.fulfill({ contentType: 'text/html',
+    body: '<a href="/slow-popup" target="_blank" style="position:absolute;left:20px;top:80px;width:200px;height:40px">Delayed tab</a>' }));
+  await page.context().route(target.origin + '/slow-popup', async route => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    await route.fulfill({ contentType: 'text/html', body: '<button>Popup control</button>' });
+  });
+  await setup();
+  const result = await run(click(100), { checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID() });
+  expect(result.operation.status).toBe('completed');
+  expect(result.operation.after_page_id).not.toBe(result.operation.before_page_id);
+  const observed = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current });
+  expect(observed.data.observation.elements.map(e => e.name)).toEqual(['Popup control']);
+  expect((await run({ kind: 'close_popup' }, { purpose: 'restore' })).operation.status).toBe('completed');
+});
+
 test("popup close records popup before and original parent after with invariant check", async () => {
   const rootState = await setup(); const popup = await run(click(220)); ledger(popup, "click", 2);
   expect(popup.operation.before_page_id).not.toBe(popup.operation.after_page_id);
@@ -354,26 +785,94 @@ test("session scope, fencing and serialization are enforced", async () => {
   await expect(worker.prepare(command({ kind: "stop" }))).rejects.toThrow();
 });
 
-for (const [name, selector, code] of [
-  ["dialog", "button", "dialog_unsupported"], ["download", "a", "download_unsupported"],
-] as const) test(`unsupported ${name} has an explicit recorded outcome`, async () => {
+test("unsupported dialog has an explicit recorded outcome", async () => {
   await setup();
-  const control = selector === "button" ? page.getByRole("button", { name: "Dialog", exact: true }) : page.getByRole("link", { name: "Download fixture" });
+  const control = page.getByRole("button", { name: "Dialog", exact: true });
   const box = (await control.boundingBox())!;
   const result = await run({ kind: "click", x: (box.x + box.width / 2) / 1279, y: (box.y + box.height / 2) / 719 });
-  expect(result.operation).toMatchObject({ status: "failed", outcome_code: code });
+  expect(result.operation).toMatchObject({ status: "failed", outcome_code: "dialog_unsupported" });
   expect(result.frames.map((f) => f.role)).toEqual(["before", "after"]);
 });
 
-test("setup waits for delayed hydration and records the settled checkpoint", async () => {
+test("same-page download is attributed to its click and cannot be replayed", async () => {
+  await setup();
+  const control = page.getByRole('link', { name: 'Download fixture' });
+  const box = (await control.boundingBox())!;
+  const download = page.waitForEvent('download');
+  const result = await run({ kind: 'click', x: (box.x + box.width / 2) / 1279, y: (box.y + box.height / 2) / 719 });
+  expect(result.operation).toMatchObject({ status: 'completed', outcome_code: 'download_started' });
+  expect(result.operation.executed_click).not.toBeNull();
+  expect(result.replayable).toBe(false);
+  expect(await (await download).failure()).not.toBeNull();
+});
+
+test("download outside a dispatched click remains unsupported", async () => {
+  await setup();
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Download fixture' }).click();
+  expect(await (await download).failure()).not.toBeNull();
+  const next = await worker.prepare(command(click(20)));
+  expect(next.operation).toMatchObject({ status: 'rejected', outcome_code: 'download_unsupported' });
+  expect(next.operation.executed_click).toBeNull();
+});
+
+for (const popup of [false, true]) for (const redirect of [false, true]) test(`download destination audit binds hashes to the actual click (popup=${popup}, redirect=${redirect})`, async () => {
+  const destination = target.origin + '/download?private_fixture=do-not-export';
+  const source = redirect ? target.origin + '/download-redirect' : destination;
+  await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html', body:
+    `<a href="${source}" ${popup ? 'target="_blank"' : ''} style="display:block;width:180px;height:40px">Download</a>` }));
+  await setup();
+  const lines: string[] = [], original = console.log;
+  console.log = (...args) => { lines.push(String(args[0])); };
+  let result: OperationResult;
+  try { result = await run(click(20)); } finally { console.log = original; }
+  expect(result.operation).toMatchObject({ status: 'completed', outcome_code: 'download_started' });
+  const records = lines.map(line => JSON.parse(line)).filter(row => row.event === 'vision.download.destinations');
+  expect(records).toHaveLength(1);
+  expect(records[0]).toMatchObject({ session_id: identity.session_id, operation_id: result.operation.id,
+    destination_hashes: [digest(destination)], truncated: false, status: 'completed' });
+  expect(records[0].navigation_chain).toEqual(redirect ? [
+    { url_sha256: digest(source), redirected_from_sha256: null },
+    { url_sha256: digest(destination), redirected_from_sha256: digest(source) },
+  ] : [{ url_sha256: digest(destination), redirected_from_sha256: null }]);
+  expect(JSON.stringify(records)).not.toContain('do-not-export');
+  expect(JSON.stringify(records)).not.toContain(target.origin);
+  expect(result.replayable).toBe(false);
+});
+
+test("download audit logging failure cannot change its execution verdict", async () => {
+  await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html', body:
+    '<a href="/download" style="display:block;width:180px;height:40px">Download</a>' }));
+  await setup();
+  const original = console.log;
+  console.log = () => { throw new Error('fixture logging failure'); };
+  try {
+    const result = await run(click(20));
+    expect(result.operation).toMatchObject({ status: 'completed', outcome_code: 'download_started' });
+  } finally { console.log = original; }
+});
+
+test("a background download during a wait cannot inherit click attribution", async () => {
+  await setup();
+  const download = page.waitForEvent('download');
+  await page.evaluate(() => setTimeout(() => {
+    document.querySelector<HTMLAnchorElement>('a[href="/download"]')!.click();
+  }, 700));
+  const result = await run({ kind: 'wait', duration_ms: 1200 });
+  expect(await (await download).failure()).not.toBeNull();
+  expect(result.operation).toMatchObject({ status: 'failed', outcome_code: 'download_unsupported' });
+  expect(result.operation.executed_click).toBeNull();
+});
+
+test("setup waits for explicitly busy hydration and records the settled checkpoint", async () => {
   await page.route(target.origin + "/", (route) => route.fulfill({ contentType: "text/html", body: `
-    <button aria-label="Loading">Loading</button><script>
+    <button aria-label="Loading" aria-busy="true">Loading</button><script>
       const button = document.querySelector('button');
       let count = 0;
       const timer = setInterval(() => button.setAttribute('data-changing', String(++count)), 20);
       setTimeout(() => {
         clearInterval(timer);
-        button.textContent = 'Ready'; button.setAttribute('aria-label', 'Ready');
+        button.textContent = 'Ready'; button.setAttribute('aria-label', 'Ready'); button.removeAttribute('aria-busy');
       }, 2500);
     </script>` }));
   const result = await setup();
@@ -388,7 +887,7 @@ test("setup still fails when navigation never settles and retains both frames", 
   await page.route(target.origin + "/", (route) => route.fulfill({ contentType: "text/html", body: `
     <button>Loading</button><script>
       let count = 0;
-      setInterval(() => document.querySelector('button').setAttribute('data-changing', String(++count)), 20);
+      setInterval(() => document.querySelector('button').setAttribute('aria-label', 'Loading ' + ++count), 20);
     </script>` }));
   const result = await run({ kind: "navigate" }, {
     purpose: "setup", checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
@@ -402,12 +901,12 @@ test("setup still fails when navigation never settles and retains both frames", 
 
 test("a link navigation gets time to hydrate its destination before the next checkpoint", async () => {
   await page.route(target.origin + "/a", route => route.fulfill({ contentType: "text/html", body: `
-    <button aria-label="Loading">Loading</button><script>
+    <button aria-label="Loading" aria-busy="true">Loading</button><script>
       const button = document.querySelector('button');
       let count = 0;
       const timer = setInterval(() => button.setAttribute('data-changing', String(++count)), 20);
       setTimeout(() => {
-        clearInterval(timer); button.textContent = 'Ready'; button.setAttribute('aria-label', 'Ready');
+        clearInterval(timer); button.textContent = 'Ready'; button.setAttribute('aria-label', 'Ready'); button.removeAttribute('aria-busy');
       }, 2500);
     </script>` }));
   await setup();
@@ -419,10 +918,96 @@ test("a link navigation gets time to hydrate its destination before the next che
   expect((await worker.checkpoint(identity, identity.session_id, result.checkpoint!.id)).matches_current).toBe(true);
 });
 
+test("scroll replay waits for lazy content and slow DOM reads before verifying its checkpoint", async () => {
+  await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html', body: `
+    <style>body{margin:0;height:1500px}main{height:1500px}</style>
+    <main><button style="position:absolute;left:40px;top:900px" onclick="this.dataset.clicked='yes'">Lower content</button></main>
+    <script>let timer; addEventListener('scroll', () => {
+      if (!scrollY) return; const main=document.querySelector('main');main.setAttribute('aria-busy','true');
+      clearTimeout(timer);timer=setTimeout(()=>main.removeAttribute('aria-busy'),2200);
+    });</script>` }));
+  const rootState = await setup();
+  const evaluate = page.evaluate.bind(page), wheel = page.mouse.wheel.bind(page.mouse);
+  let slow = false, wheelCalls = 0;
+  page.mouse.wheel = async (...args) => { slow = true; wheelCalls++; return wheel(...args); };
+  page.evaluate = (async (...args: Parameters<Page['evaluate']>) => {
+    if (slow) await new Promise(resolve => setTimeout(resolve, 600));
+    return evaluate(...args);
+  }) as Page['evaluate'];
+  const action = { kind: 'scroll', delta_y: 576 };
+  try {
+    const first = await run(action, { checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID() });
+    expect(first.operation.status).toBe('completed');
+    expect(first.duration_ms).toBeGreaterThan(1500);
+    expect(first.checkpoint?.scroll_y).toBe(576);
+    slow = false;
+    expect((await run({ kind: 'navigate' }, { purpose: 'restore', restore_checkpoint_id: rootState.checkpoint!.id })).operation.status).toBe('completed');
+    const replay = await run(action, { purpose: 'replay', replay_operation_id: first.operation.id,
+      restore_checkpoint_id: first.checkpoint!.id });
+    expect(replay.operation.status).toBe('completed');
+    expect(replay.frames.map(frame => frame.role)).toEqual(['before', 'after']);
+    expect((await worker.checkpoint(identity, identity.session_id, first.checkpoint!.id)).matches_current).toBe(true);
+    expect(wheelCalls).toBe(2);
+    slow = false;
+    const observation = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current });
+    const lower = observation.data.observation.elements.find(element => element.name === 'Lower content')!;
+    const clicked = await run({ kind: 'click', x: 0.5, y: 0.5 }, {
+      dom_snapshot_id: observation.data.observation.snapshot_id, dom_element_id: lower.element_id,
+    });
+    expect(clicked.operation.status).toBe('completed');
+    expect(await page.getByRole('button').getAttribute('data-clicked')).toBe('yes');
+  } finally { page.evaluate = evaluate; page.mouse.wheel = wheel; }
+});
+
+test("scroll still fails on continuously changing controls and retains diagnostic frames", async () => {
+  await setup();
+  await page.evaluate(() => addEventListener('scroll', () => {
+    let tick = 0; const button = document.querySelector('#hydrate')!;
+    button.setAttribute('style', 'position:fixed;top:20px;left:600px');
+    setInterval(() => button.setAttribute('aria-label', 'Changing ' + ++tick), 20);
+  }, { once: true }));
+  const result = await run({ kind: 'scroll', delta_y: 576 }, {
+    checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+  });
+  expect(result.operation).toMatchObject({ status: 'failed', outcome_code: 'settle_timeout' });
+  expect(result.checkpoint).toBeNull();
+  expect(result.replayable).toBe(false);
+  expect(result.frames.map(frame => frame.role)).toEqual(['before', 'after']);
+  expect(result.duration_ms).toBeLessThan(13_000);
+});
+
+test("scroll readiness respects a shorter step deadline and duplicate execution cannot scroll again", async () => {
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const opened = await worker.open({ ...identity, target_url: target.origin, allowed_origins: [target.origin],
+    deadline: new Date(Date.now() + 5000).toISOString(), max_session_seconds: 5, step_timeout_seconds: 5,
+    max_states: 20, max_hops: 10, max_screenshot_bytes: 1_000_000 });
+  current = opened.state_fingerprint; page = browser.contexts()[0].pages()[0];
+  await run({ kind: 'navigate' }, { purpose: 'setup', step_deadline: new Date(Date.now() + 5000).toISOString() });
+  await page.evaluate(() => addEventListener('scroll', () => {
+    document.body.setAttribute('aria-busy', 'true');
+  }, { once: true }));
+  const wheel = page.mouse.wheel.bind(page.mouse);
+  let wheelCalls = 0;
+  page.mouse.wheel = async (...args) => { wheelCalls++; return wheel(...args); };
+  const started = Date.now();
+  const prepared = await worker.prepare(command({ kind: 'scroll', delta_y: 576 }, {
+    step_deadline: new Date(started + 2000).toISOString(), checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID(),
+  }));
+  expect(prepared.operation.status).toBe('prepared');
+  const result = await worker.execute(executeCommand(prepared));
+  expect(result.operation.status).not.toBe('completed');
+  expect(result.checkpoint).toBeNull();
+  expect(result.replayable).toBe(false);
+  expect(Date.now() - started).toBeLessThan(5000);
+  expect((await worker.execute(executeCommand(prepared))).operation).toEqual(result.operation);
+  expect(wheelCalls).toBe(1);
+});
+
 test("settle timeout is bounded and retains after evidence", async () => {
   await setup();
   await page.getByRole("button", { name: "No operation" }).evaluate((el) => {
-    el.addEventListener("click", () => { let count = 0; setInterval(() => el.setAttribute("data-changing", String(++count)), 20); });
+    el.addEventListener("click", () => { let count = 0; setInterval(() => el.setAttribute("aria-label", 'Changing ' + ++count), 20); });
   });
   const result = await run(click(400));
   expect(result.operation).toMatchObject({ status: "failed", outcome_code: "settle_timeout" });
@@ -496,6 +1081,88 @@ test("offscreen animation survives model latency and restores for another button
   expect(next.locator?.descriptor?.value).toBe("Branch B");
 });
 
+test("reduced-motion exploration settles pulsing link ancestors and keeps DOM bindings through model latency", async () => {
+  await page.route(target.origin + "/", async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace("</body>", `
+      <style>@keyframes pulse { from { transform: scale(0.8) } to { transform: scale(1.2) } }
+      #pulse { position:absolute;left:800px;top:50px;width:150px;height:50px;animation:pulse 0.2s infinite alternate }
+      @media (prefers-reduced-motion: reduce) { #pulse { animation:none } }</style>
+      <div id="pulse"><a href="/b" style="display:block;width:150px;height:50px">Pulsing link</a></div></body>`) });
+  });
+  const rootState = await setup();
+  ledger(rootState, "navigate", 1);
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
+  expect(await page.locator('#pulse').evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+  const observed = await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current });
+  const link = observed.data.observation.elements.find(el => el.name === 'Pulsing link')!;
+  expect(link).toBeDefined();
+  await page.waitForTimeout(600);
+  ledger(await run({ kind: 'click', x: 0.5, y: 0.5 }, {
+    dom_snapshot_id: observed.data.observation.snapshot_id, dom_element_id: link.element_id,
+  }), 'click', 2);
+  expect(page.url()).toBe(target.origin + '/b');
+});
+
+test("visible passive animation survives capture, DOM model latency, click and checkpoint restoration", async () => {
+  await page.route(target.origin + "/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace("</body>", `
+      <div id="clock" style="position:absolute;left:800px;top:20px;width:200px">Tick</div>
+      <div id="passive-banner" style="position:absolute;left:800px;top:100px;width:150px;height:80px;background:red">Slide</div>
+      <script>let tick = 0; setInterval(() => {
+        document.querySelector('#clock').textContent = 'Tick ' + ++tick;
+        document.querySelector('#passive-banner').style.transform = 'translateX(' + tick % 30 + 'px)';
+        document.querySelector('#hydrate').setAttribute('data-render-counter', String(tick));
+      }, 20);</script></body>`) });
+  });
+  const rootState = await setup();
+  ledger(rootState, "navigate", 1);
+  const observed = await worker.observeDom({ ...identity, snapshot_id: randomUUID(),
+    expected_state_fingerprint: current, max_elements: 100, max_bytes: 48_000 });
+  const branch = observed.data.observation.elements.find(el => el.name === "Branch A")!;
+  const clock = await page.locator('#clock').textContent();
+  await page.waitForTimeout(350);
+  expect(await page.locator('#clock').textContent()).not.toBe(clock);
+  expect((await worker.checkpoint(identity, identity.session_id, rootState.checkpoint!.id)).matches_current).toBe(true);
+  ledger(await run({ kind: "click", x: 0.5, y: 0.5 }, {
+    dom_snapshot_id: observed.data.observation.snapshot_id, dom_element_id: branch.element_id,
+  }), "click", 2);
+  expect(page.url()).toBe(target.origin + '/a');
+  ledger(await run({ kind: "back" }, { purpose: "restore", restore_checkpoint_id: rootState.checkpoint!.id }), "back", 3);
+  await page.waitForTimeout(250);
+  // Candidate batches reuse bindings after a verified restore to their checkpoint.
+  const nextBranch = observed.data.observation.elements.find(el => el.name === "Branch B")!;
+  ledger(await run({ kind: "click", x: 0.5, y: 0.5 }, {
+    dom_snapshot_id: observed.data.observation.snapshot_id, dom_element_id: nextBranch.element_id,
+  }), "click", 4);
+  expect(page.url()).toBe(target.origin + '/b');
+});
+
+for (const drift of ["move", "cover", "disable"] as const) {
+  test(`target ${drift} after prepare prevents every physical click`, async () => {
+    await setup();
+    await page.getByRole('button', { name: 'No operation', exact: true }).evaluate(el => {
+      el.addEventListener('click', () => { el.setAttribute('data-physical-click', 'yes'); });
+    });
+    const prepared = await worker.prepare(command(click(400)));
+    expect(prepared.operation.status).toBe('prepared');
+    await page.getByRole('button', { name: 'No operation', exact: true }).evaluate((el, change) => {
+      if (change === 'move') (el as HTMLElement).style.transform = 'translateX(100px)';
+      if (change === 'disable') (el as HTMLButtonElement).disabled = true;
+      if (change === 'cover') {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:white';
+        document.body.append(overlay);
+      }
+    }, drift);
+    const result = await worker.execute(executeCommand(prepared));
+    expect(result.operation).toMatchObject({ status: 'rejected', outcome_code: 'state_mismatch', executed_click: null });
+    expect(await page.getByRole('button', { name: 'No operation', exact: true }).getAttribute('data-physical-click')).toBeNull();
+    expect(await worker.execute(executeCommand(prepared))).toEqual(result);
+  });
+}
+
 for (const change of ["move", "overlay", "offscreen_form", "iframe", "accessible_name"] as const) {
   test(`checkpoint still rejects ${change} drift before clicking`, async () => {
     const visitsBefore = target.visits.get("/b") ?? 0;
@@ -530,6 +1197,28 @@ for (const change of ["move", "overlay", "offscreen_form", "iframe", "accessible
     expect(JSON.stringify(result)).not.toContain("private-offscreen-value");
   });
 }
+
+test("explicit twenty-hop session dispatches twenty actions and blocks the next", async () => {
+  test.setTimeout(90_000);
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const opened = await worker.open({ ...identity, target_url: target.origin, allowed_origins: [target.origin],
+    deadline: new Date(Date.now() + 60_000).toISOString(), max_session_seconds: 60,
+    max_states: 100, max_hops: 20, max_screenshot_bytes: 1_000_000 });
+  current = opened.state_fingerprint;
+  page = browser.contexts()[0].pages()[0];
+  await page.route(target.origin + '/', route => route.fulfill({ contentType: 'text/html',
+    body: '<button style="position:absolute;left:20px;top:20px;width:200px;height:60px" onclick="this.dataset.count=String(Number(this.dataset.count||0)+1)">Count</button>' }));
+  await setup();
+  for (let i = 0; i < 20; i++) {
+    const action = await run(click(40));
+    expect(action.operation.status).toBe("completed");
+  }
+  const rejected = await worker.prepare(command(click(40)));
+  expect(rejected.operation).toMatchObject({ status: "rejected", outcome_code: "hop_limit" });
+  expect(rejected.dispatch_started).toBe(false);
+  expect(await page.locator('button').getAttribute('data-count')).toBe('20');
+});
 
 test("state/hop and derived operation caps reject before another browser action", async () => {
   await worker.close(identity, identity.session_id);

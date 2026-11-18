@@ -1,0 +1,14 @@
+[
+  {
+    "session_id": "3d30c88c-9d4d-499a-b4d8-11e8e6739b81",
+    "operation_id": "a750cbd5-4882-4dfb-a823-4a6a8d4ba3f3",
+    "failure_stage": "prepare_end",
+    "code": "state_mismatch",
+    "url_changed": false,
+    "interaction_changed": false,
+    "visual_semantics_changed": false,
+    "form_presence_changed": true,
+    "form_values_changed": true,
+    "scroll_changed": false
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "purpose": "Checkpoint mismatch diagnostics only; restoration decisions unchanged",
+  "red": {
+    "passed": 1,
+    "failed": 4
+  },
+  "final": {
+    "passed": 51,
+    "failed": 0
+  },
+  "checks": {
+    "worker_typecheck": "passed",
+    "ruff": "passed",
+    "changed_file_diff_check": "passed"
+  },
+  "command": "npm.cmd test -- src/vision-operations.spec.ts src/vision-observability.spec.ts src/vision-history.spec.ts --grep 'checkpoint|history|HTTP rejections|logging' --workers=1"
+}

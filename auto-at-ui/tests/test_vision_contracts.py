@@ -95,6 +95,11 @@ def test_locator_rejects_sensitive_identity_instead_of_redacting_verified_value(
     {"strategy": "role", "value": "Explore"},
     {"strategy": "label", "value": "Explore", "role": "button"},
     {"strategy": "test_id", "value": "explore", "exact": False},
+    {"strategy": "dom_path", "value": "html > body:nth-of-type(1) > button:nth-of-type(1)"},
+    {"schema_version": "v2", "strategy": "dom_path", "value": "button >> nth=0"},
+    {"schema_version": "v2", "strategy": "dom_path",
+     "value": "html > body:nth-of-type(1) > a:nth-of-type(1)"},
+    {"schema_version": "v2", "strategy": "role", "role": "button", "value": "Explore"},
     {"strategy": "label", "value": "Explore", "scope": [
         {"kind": "iframe", "selector": "iframe:nth-child(2)"},
     ]},
@@ -197,3 +202,60 @@ def test_input_reference_blocks_executable_branch_and_never_contains_typed_value
     assert "text" not in branch.model_dump_json()
     with pytest.raises(ValidationError):
         VisualHandoffStep(operation_id=uuid4(), text="sensitive")
+@pytest.mark.parametrize("tag", ["a", "div", "span", "button", "input"])
+def test_v3_visual_button_path_is_bounded_and_versioned(tag):
+    from auto_at.contracts.vision import VisualLocatorDescriptor
+
+    path = f"html > body:nth-of-type(1) > {tag}:nth-of-type(2)"
+    descriptor = VisualLocatorDescriptor(schema_version="v3", strategy="dom_path", value=path)
+    assert descriptor.schema_version == "v3"
+    for invalid in (path + ";alert(1)", path.replace(tag + ":", "script:")):
+        with pytest.raises(ValueError):
+            VisualLocatorDescriptor(schema_version="v3", strategy="dom_path", value=invalid)
+    if tag != "button":
+        with pytest.raises(ValueError):
+            VisualLocatorDescriptor(schema_version="v2", strategy="dom_path", value=path)
+
+
+def test_worker_dispatch_proof_defaults_unknown_and_cannot_contradict_status():
+    from auto_at.contracts.vision import VisualOperation
+    from auto_at.contracts.vision_worker import VisualWorkerOperationResult
+
+    operation = VisualOperation(
+        id=uuid4(), tenant_id="fixture", project_id=uuid4(), session_id=uuid4(),
+        sequence=1, purpose="restore", action_kind="wait", started_at=datetime.now(UTC),
+        ended_at=datetime.now(UTC), status="rejected", outcome_code="state_mismatch",
+        before_unavailable_reason="fixture", after_unavailable_reason="fixture",
+    )
+    value = dict(operation=operation, frames=(), locator=None, prepared_handle=uuid4(),
+                 state_fingerprint=None, checkpoint=None, semantic_change="unavailable",
+                 duration_ms=1, acknowledged=False, replayable=False)
+    assert VisualWorkerOperationResult(**value).dispatch_started is None
+    assert VisualWorkerOperationResult(**value).failure_stage is None
+    assert VisualWorkerOperationResult(**value).history_restore_available is False
+    proof = VisualWorkerOperationResult(**value, dispatch_started=False,
+                                        failure_stage="before_dispatch")
+    assert proof.operation.status == "rejected"
+    for changes in ({"dispatch_started": True}, {"dispatch_started": None},
+                    {"failure_stage": "untrusted_text"},
+                    {"operation": operation.model_copy(update={"status": "completed"})}):
+        with pytest.raises(ValidationError):
+            VisualWorkerOperationResult.model_validate(proof.model_dump() | changes)
+
+
+def test_history_selection_is_private_restore_back_only():
+    from auto_at.contracts.vision_worker import VisualWorkerPrepare
+
+    value = dict(tenant_id="fixture", project_id=uuid4(), session_id=uuid4(),
+                 fencing_token=1, operation_id=uuid4(), purpose="restore",
+                 action={"kind": "back"}, expected_state_fingerprint="a" * 64,
+                 history_checkpoint_id=uuid4())
+    request = VisualWorkerPrepare(**value)
+    assert request.history_checkpoint_id == value["history_checkpoint_id"]
+    assert "entryId" not in request.model_dump_json()
+    for changes in ({"purpose": "setup"}, {"purpose": "replay"},
+                    {"action": {"kind": "click", "x": 0.5, "y": 0.5}},
+                    {"checkpoint_id": uuid4()}, {"restore_checkpoint_id": uuid4()},
+                    {"replay_operation_id": uuid4()}):
+        with pytest.raises(ValidationError):
+            VisualWorkerPrepare.model_validate(value | changes)

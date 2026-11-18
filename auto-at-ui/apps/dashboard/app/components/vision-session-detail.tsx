@@ -11,6 +11,7 @@ import { VisionResultSummary } from "./vision-result-summary";
 import { visionProviderLabel } from "./vision-provider-model";
 import { VisionLiveScreen } from "./vision-live-screen";
 import { VisionProgressTimeline } from "./vision-progress-timeline";
+import { VisionPageInventoryList } from "./vision-page-inventory";
 
 export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: { apiUrl: string; session: VisualExploration; canDelete: boolean; onActivity: () => void }) {
   const [result, setResult] = useState<VisionResult | null>(null);
@@ -80,12 +81,13 @@ export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: 
     finally { setDeletion(null); setDeleting(false); }
   }
   return <div className="vision-session-detail" aria-label="Saved Vision session">
+    {result ? <VisionResultSummary result={result} apiUrl={apiUrl} compact /> : !error && <p role="status">Loading exploration result…</p>}
     {session.trace_version === "v4" && <div className="vision-live-workspace">
       <VisionLiveScreen apiUrl={apiUrl} sessionId={session.id} live={live} progress={progress} completionReason={completionReason} operations={deleting ? [] : trace?.items ?? []} locators={trace?.locators ?? []} selectedId={selected} follow={follow} onFollow={setFollow} onSelect={(id) => { setFollow(false); setSelected(id); }} />
       <VisionOperationLedger items={trace?.items ?? []} locators={trace?.locators ?? []} branches={result?.handoffs.at(-1)?.branches ?? []} selectedId={selected} onSelect={(id) => { setFollow(false); setSelected(id); }} follow={follow} onFollow={setFollow} />
     </div>}
     {error && <p role="alert">{error}</p>}
-    {result ? <VisionResultSummary result={result} apiUrl={apiUrl} compact /> : !error && <p role="status">Loading exploration result…</p>}
+    <VisionPageInventoryList pages={trace?.pages ?? []} live={live} onSelect={(id) => { setFollow(false); setSelected(id); }} />
     <a className="vision-report-link" href={`#vision-report-${session.id}`} onClick={() => { if (reportRef.current) reportRef.current.open = true; }}>View exploration report</a>
     <details ref={reportRef} className="workspace-section"><summary>Exploration report</summary>
       {result && <VisionResultSummary result={result} apiUrl={apiUrl} />}

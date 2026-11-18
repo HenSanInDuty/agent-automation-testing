@@ -140,6 +140,7 @@ class VisionProvidersResponse(BaseModel):
 
 
 class ExplorationResponse(BaseModel):
+    step_timeout_seconds: int | None = None
     id: UUID
     project_id: UUID
     correlation_id: UUID
@@ -266,6 +267,7 @@ def _response(record: object) -> ExplorationResponse:
         max_states=record.max_states,
         max_screenshot_bytes=record.max_screenshot_bytes,
         max_session_seconds=record.max_session_seconds,
+        step_timeout_seconds=getattr(record, "step_timeout_seconds", None),
         safe_failure_reason=record.safe_failure_reason,
         trace_version=getattr(record, "trace_version", "legacy"),
     )

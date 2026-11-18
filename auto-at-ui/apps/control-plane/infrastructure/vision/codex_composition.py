@@ -25,6 +25,7 @@ def codex_candidate_factory(settings, factory):
                     settings.codex_bridge_id,
                     settings.codex_bridge_allowed_tenant,
                     settings.codex_bridge_max_pending,
+                    owner_uid=settings.codex_bridge_spool_owner_uid,
                 ),
                 readiness=FileReadiness(settings),
                 gateway=SqlAlchemyCodexJobGateway(factory, lease),

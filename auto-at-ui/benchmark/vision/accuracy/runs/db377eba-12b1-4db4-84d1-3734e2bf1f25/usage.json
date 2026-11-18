@@ -1,0 +1,23 @@
+{
+  "jobs": [
+    {
+      "request_sequence": 1,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5854,
+      "output_tokens": 762,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 2,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5293,
+      "output_tokens": 548,
+      "safe_reason": null
+    }
+  ],
+  "model_jobs": 2,
+  "monetary_cost_usd": null,
+  "cost_status": "not_reported"
+}

@@ -8,6 +8,7 @@ from uuid import UUID
 
 from agents.generation.planner import PlannerOutputError, plan_test
 from agents.generation.vision_plan import plan_vision_test
+from agents.prompts.codex_generation import PROMPT_VERSION as CODEX_GENERATION_PROMPT_VERSION
 from agents.prompts.vision_generation import PROMPT_VERSION as VISION_GENERATION_PROMPT_VERSION
 from agents.shared.openrouter import create_language_model
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentStepGuard, resolve_agent_runtime
@@ -45,12 +46,14 @@ class GenerationEventProcessor:
         audits: SqlAlchemyAuditEventRepository,
         settings: Settings,
         activities: ActivityEventRepository | None = None,
+        codex_model_factory=None,
     ) -> None:
         self._repository = repository
         self._configurations = configurations
         self._audits = audits
         self._settings = settings
         self._activities = activities
+        self._codex_model_factory = codex_model_factory
 
     async def execute(self, event: OutboxEvent) -> str:
         if event.event_type != "agent.test_generation.requested.v1":
@@ -112,7 +115,24 @@ class GenerationEventProcessor:
                 requested_tokens=self._settings.agent_generation_max_tokens, evidence_bytes=0
             ):
                 raise ValueError("generation token budget is exhausted")
-            model = create_language_model(self._settings, runtime)
+            generation_policy = runtime.generation_policy()
+            if not generation_policy.text_transfer_accepted:
+                raise ValueError("generation_transfer_required")
+            if generation_policy.provider == "codex_cli":
+                if self._codex_model_factory is None:
+                    raise ValueError("generation_codex_unavailable")
+                model = self._codex_model_factory(
+                    request, generation_policy,
+                    lambda stage, metadata: self._record(
+                        request, f"codex.{stage}", "running",
+                        "Codex draft generation " + stage + ".",
+                        metadata,
+                    ),
+                )
+            else:
+                model = create_language_model(self._settings, runtime.model_copy(update={
+                    "provider": generation_policy.provider, "model": generation_policy.model,
+                }))
             self._record(request, "model", "running", "Generation model is producing a draft.")
             try:
                 selected_branch_ids, operation_ids = [], []
@@ -161,11 +181,12 @@ class GenerationEventProcessor:
                     assumptions=output.assumptions,
                     stop_conditions=output.stop_conditions,
                     provenance=PlanningProvenance(
-                        provider=runtime.provider,
-                        model=runtime.model,
-                        prompt_version=VISION_GENERATION_PROMPT_VERSION
-                        if handoff
-                        else self._settings.agent_generation_prompt_version,
+                        provider=generation_policy.provider,
+                        model=generation_policy.model,
+                        prompt_version=(CODEX_GENERATION_PROMPT_VERSION
+                                        if generation_policy.provider == "codex_cli" else
+                                        VISION_GENERATION_PROMPT_VERSION if handoff else
+                                        self._settings.agent_generation_prompt_version),
                         redaction_policy_version=self._settings.agent_generation_redaction_policy_version,
                         vision_source=vision_source,
                         selected_branch_ids=selected_branch_ids,
@@ -192,6 +213,9 @@ class GenerationEventProcessor:
                 detail = "generation output failed source safety validation"
             elif isinstance(error, ValueError) and str(error) in {
                 "handoff_evidence_budget", "rendered_source_limit", "input_binding_required",
+                "generation_transfer_required", "generation_codex_unavailable",
+                "bridge_policy_revoked", "bridge_offline", "bridge_deadline_exceeded",
+                "bridge_interrupted", "bridge_malformed_output", "bridge_provider_unavailable",
             }:
                 detail = str(error)
             else:
@@ -212,7 +236,7 @@ class GenerationEventProcessor:
             self._record(request, "failed", "failed", "Generation failed safely.")
             return "failed"
 
-    def _record(self, request, stage: str, status: str, summary: str) -> None:
+    def _record(self, request, stage: str, status: str, summary: str, metadata=None) -> None:
         if self._activities is not None:
             self._activities.append(
                 ActivityEvent.create(
@@ -223,7 +247,7 @@ class GenerationEventProcessor:
                     status=status,
                     safe_summary=summary,
                     occurred_at=datetime.now(UTC),
-                    metadata={"request_id": str(request.id)},
+                    metadata={"request_id": str(request.id), **(metadata or {})},
                 )
             )
 

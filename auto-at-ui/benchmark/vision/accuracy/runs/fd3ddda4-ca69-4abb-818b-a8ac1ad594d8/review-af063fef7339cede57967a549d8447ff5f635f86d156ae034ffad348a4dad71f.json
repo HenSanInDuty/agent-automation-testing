@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "76322745-3c15-46c7-ab0f-ba402c1a3d3f",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+  "after_checksum": "bf52e88cf1e37d8890052e363f1ad945533e33d33b34a56c029ee0564c999929",
+  "finding": "After URL hash exactly matches declared Facebook page; rendered VLCM Origin page identity is visible behind login gate. No login or social action performed."
+}

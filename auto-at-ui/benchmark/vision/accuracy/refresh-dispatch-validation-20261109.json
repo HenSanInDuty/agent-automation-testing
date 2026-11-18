@@ -1,0 +1,35 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 10.116,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "final": {
+    "passed": 24,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 217.683,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "download_chain_browser": {
+    "passed": 9,
+    "failed": 0,
+    "seconds": 23.2
+  },
+  "harness_metrics": {
+    "passed": 36,
+    "failed": 0,
+    "seconds": 0.95
+  },
+  "checks": {
+    "ruff": "passed",
+    "worker_typecheck": "passed",
+    "generated_contract": "passed"
+  }
+}

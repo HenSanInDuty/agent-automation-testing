@@ -1,0 +1,162 @@
+[
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "ec1997af-1b3a-47d4-84a1-63c978b108b7",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 277,
+    "duration_ms": 278,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "7750df93-05fb-4c49-993c-c76c1c5eeb21",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 207,
+    "duration_ms": 208,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "8366b578-a97a-4eff-b748-13501cb0d510",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 200,
+    "duration_ms": 201,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "074bee23-3fd0-466e-b5d2-7ff3bbcbb73d",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 175,
+    "duration_ms": 176,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "2ca4f7dd-e0b8-4a94-8a5e-df01ffeaa985",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 207,
+    "duration_ms": 209,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "a753620d-affa-4e5a-af51-029af36feb7a",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 180,
+    "duration_ms": 181,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "59c3cd03-e331-41e1-b1b5-2a48e3cf1f5d",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 148,
+    "duration_ms": 149,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "33b46b01-d28b-4727-950f-5a2427e46508",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 109,
+    "duration_ms": 110,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "0a4d767b-921a-48a3-a455-6cfcbe5f60ab",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 212,
+    "duration_ms": 212,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "92c6dcfa-0cd2-4733-ba8b-68034c57bb8b",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 197,
+    "duration_ms": 199,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "0677e41d-0059-4a1d-a4f5-362f683691e5",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 113,
+    "duration_ms": 113,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "39d603fb-59f5-4ac0-921b-dff3cf5281c1",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 178,
+    "duration_ms": 179,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "de94873a-5253-45f8-9119-759f16bae5c3",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 190,
+    "duration_ms": 191,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "59165ff3-b895-48bd-9709-016059a3468c",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 196,
+    "duration_ms": 197,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "bd32367f-ea0d-41a8-829c-639c168beaf9",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 274,
+    "duration_ms": 275,
+    "page_closed": false,
+    "browser_connected": true
+  },
+  {
+    "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+    "operation_id": "37bf7979-a38b-460d-a5c9-48931f26b931",
+    "capture_stage": "screenshot",
+    "error_type": "timeout",
+    "timeout_ms": 213,
+    "duration_ms": 214,
+    "page_closed": false,
+    "browser_connected": true
+  }
+]

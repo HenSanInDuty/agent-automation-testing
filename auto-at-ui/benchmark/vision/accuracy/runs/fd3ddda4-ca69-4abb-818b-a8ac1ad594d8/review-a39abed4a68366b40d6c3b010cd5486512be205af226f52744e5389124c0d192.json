@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "1e5ad478-8a71-4032-91a3-a6c7e830e84b",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_selection",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "after_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "finding": "After frame explicitly shows carousel indicator 4 selected and matching slide Thu Cuoi Kinh Dien, following the verified bound selector click. Credit uses selection identity, not generic animation."
+}

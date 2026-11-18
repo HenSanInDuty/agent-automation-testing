@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "b1f8f885-502d-429f-b48f-6c50ce8aaa24",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_tab",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "ec27d457689cb2cc2fc44953eab2bc5a1916a58d51964e76f55dbccaef1de355",
+  "after_checksum": "d1b813b69253ded1ab3a47c02238278b72885fde062a14f8d87b95fcab43ab4c",
+  "finding": "THU CUOI tab is visibly selected; mount controls and Dich Lo mount panel are visible."
+}

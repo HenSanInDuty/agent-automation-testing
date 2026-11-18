@@ -20,9 +20,11 @@ class BridgeService:
     def __init__(
         self, settings: Settings, spool: CodexBridgeHostSpool, process: CodexBridgeProcessPort,
         prompt: Callable[[CodexBridgeRequest, bytes], bytes], readiness: CodexBridgeReadiness,
+        generation=None,
     ):
         self.settings, self.spool, self.process = settings, spool, process
         self.prompt, self.readiness = prompt, readiness
+        self.generation = generation
 
     async def run_once(self) -> int:
         if not self.settings.codex_bridge_enabled or not self.readiness.ready:
@@ -31,7 +33,12 @@ class BridgeService:
             return await self._run_locked()
 
     async def _run_locked(self) -> int:
-        self.spool.reconcile(datetime.now(UTC))
+        try:
+            self.spool.reconcile(datetime.now(UTC))
+        except BlockingIOError:
+            # Publication owns the producer lock briefly. Poll again without
+            # interrupting the heartbeat or launching any job from this scan.
+            return 0
         processed = 0
         for job_id in self.spool.jobs():
             request = self.spool.load(job_id)
@@ -102,6 +109,12 @@ class BridgeService:
         async def jobs():
             while not stopped.is_set():
                 await self._run_locked()
+                if self.generation is not None:
+                    self.readiness = self.readiness.model_copy(update={"busy": True})
+                    try:
+                        await self.generation.run_once()
+                    finally:
+                        self.readiness = self.readiness.model_copy(update={"busy": False})
                 await asyncio.sleep(self.settings.codex_bridge_cancel_poll_seconds)
 
         if not self.settings.codex_bridge_enabled or not self.readiness.ready:

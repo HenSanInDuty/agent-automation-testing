@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "e4c01918-73ec-4b5f-abd3-116fdbf87146",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "after_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "finding": "Click-bound download-evidence.json starts with the exact declared APK URL hash and records its redirected download destination. Independent redirect review confirms APK delivery; no installation/execution is claimed."
+}

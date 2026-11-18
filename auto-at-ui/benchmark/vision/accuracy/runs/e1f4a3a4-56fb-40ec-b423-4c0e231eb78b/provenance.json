@@ -1,0 +1,50 @@
+{
+  "session_id": "3957038a-9c7e-490c-90e8-7a8661e5c260",
+  "source_hash": "6f68c4d1ecfc3eb525c9437d4a4a9f6083f1446efa98407c2dd21bb13f9b49ed",
+  "images": {
+    "control-plane": "sha256:007f6bb128e0e00ad527681dae340bf5874475967579c390d69dbf37a867256a",
+    "temporal-worker": "sha256:3ac5d7e305f63f9de9a5ea23b03fd42ced6d3bbc679bc805bad0abb2864d1df9",
+    "playwright-worker": "sha256:593768773ba21a8ad0cd2f4a4d2f80f3f0e311f1473812e78c17258db045ff26",
+    "codex-bridge": "sha256:d5cbc0aec49efcaf4157d726b206c201024f47810c1610d1569cce52d23693bd",
+    "dashboard": "sha256:8de1616616aa83002555b133ce2c4b46c2da644daa6ff09d92f6c5d4c7aa2212"
+  },
+  "deployed_source_checks": {
+    "control-plane:apps/control-plane/application/vision_trace_events.py": "f0b005854b8e01310ae92a39b84e6245cc116486888b903c1c9967c386aef929",
+    "control-plane:apps/control-plane/api/v1/routes/generation.py": "692e8a1a02cbfba299d170c885fed6e41688bb73350241ac43801b4b0fef0331",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "temporal-worker:apps/control-plane/application/vision_trace_events.py": "f0b005854b8e01310ae92a39b84e6245cc116486888b903c1c9967c386aef929",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "playwright-worker:workers/playwright/src/vision-operations.ts": "8892a93643d938e0c79e013b6023bb9b72d8e7926b4aa4dcb4998022d50f8824",
+    "playwright-worker:workers/playwright/src/vision.ts": "870a7117b89aacad5459d05c7c4edf124d28c87daeadd1e52938cebcf8af1380",
+    "playwright-worker:workers/playwright/src/vision-dom.ts": "4b2d28180ba863baac31e2971e4f602657bb7eb8b54d0c37717490bef31aec16",
+    "playwright-worker:workers/playwright/src/vision-history.ts": "d7021992377589c2a3e51137426e3ad3cdabc9c499b6d0349c24703d194962b3",
+    "playwright-worker:workers/playwright/src/vision-contract.generated.ts": "d13ed057a1d6126b3af22143821dc67ed0faacb75e64a745d9369f8beb2fe32f"
+  },
+  "prompt_version": "codex-dom-v11",
+  "playwright_version": "1.50.1",
+  "chromium_version": "133.0.6943.16",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "runtime_policy": {
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "prompt_version": "codex-dom-v11",
+    "max_steps": 20,
+    "max_requests_per_minute": 5,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": "0.25"
+  },
+  "hypothesis": "ADR-027: replan undispatched siblings after same-Page same-URL same-scroll UI mutation; preserve popup scroll restoration guards, history guards and all existing limits."
+}

@@ -19,7 +19,7 @@ export function VisionProviderSettings({ policy, providers, canManage, saving, d
         : <select aria-label="Vision model" value={policy.model} disabled={saving} onChange={(event) => onChange({ ...policy, model: event.target.value })}>{provider?.models.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select>}</label>
     </> : <p>Provider: {label}<br />Model: <code>{policy.model}</code></p>}
     {policy.provider === "codex_cli" ? <p role="status">{codexReadinessLabel(provider)}</p> : !provider?.configured && <p role="status">{label} is not configured on the server.</p>}
-    <p>Limits: {policy.max_session_seconds}s, {policy.max_screenshot_bytes} bytes. Project policy sets BFS depth and total states.</p>
+    <p>Limits: {policy.max_session_seconds}s per step; no session time limit for new explorations, {policy.max_screenshot_bytes} bytes. Project policy sets BFS depth and total states.</p>
     <p>{visionDisclosure(policy)}</p>
     {policy.provider === "codex_cli" && <p>{screenshotDisclosure(policy.provider)} Existing account usage and quota limits apply.</p>}
     {canManage && <>

@@ -1,0 +1,38 @@
+[
+  {
+    "sequence": 18,
+    "confirmed_at": "2026-11-17T15:31:29.324000Z",
+    "after_captured_at": "2026-11-17T15:31:30.815+00:00",
+    "milliseconds": 1491.0
+  },
+  {
+    "sequence": 22,
+    "confirmed_at": "2026-11-17T15:32:02.829000Z",
+    "after_captured_at": "2026-11-17T15:32:04.381+00:00",
+    "milliseconds": 1552.0
+  },
+  {
+    "sequence": 24,
+    "confirmed_at": "2026-11-17T15:32:08.863000Z",
+    "after_captured_at": "2026-11-17T15:32:10.388+00:00",
+    "milliseconds": 1525.0
+  },
+  {
+    "sequence": 26,
+    "confirmed_at": "2026-11-17T15:32:16.058000Z",
+    "after_captured_at": "2026-11-17T15:32:17.257+00:00",
+    "milliseconds": 1199.0
+  },
+  {
+    "sequence": 28,
+    "confirmed_at": "2026-11-17T15:32:24.417000Z",
+    "after_captured_at": "2026-11-17T15:32:25.528+00:00",
+    "milliseconds": 1111.0
+  },
+  {
+    "sequence": 30,
+    "confirmed_at": "2026-11-17T15:32:30.125000Z",
+    "after_captured_at": "2026-11-17T15:32:31.365+00:00",
+    "milliseconds": 1240.0
+  }
+]

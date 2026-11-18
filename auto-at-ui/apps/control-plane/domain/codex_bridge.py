@@ -14,6 +14,7 @@ from auto_at.contracts.codex_bridge import (
     canonical_bytes,
     content_hash,
 )
+from auto_at.contracts.generation import GeneratedTestPlannerOutput, VisionGroundedPlannerOutput
 
 CLI_VERSION = "0.164.0"
 
@@ -34,7 +35,7 @@ def input_fingerprint(policy) -> str | None:
 
 @dataclass(frozen=True)
 class BridgeProcessResult:
-    output: CodexOutput | None = None
+    output: CodexOutput | GeneratedTestPlannerOutput | VisionGroundedPlannerOutput | None = None
     failure_code: FailureCode | None = None
     actual_model: str | None = None
     usage: CodexUsage | None = None

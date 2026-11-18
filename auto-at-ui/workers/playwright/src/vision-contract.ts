@@ -19,8 +19,9 @@ export const canonical = (value: unknown): string => {
   return JSON.stringify(value);
 };
 export const stableCss = /^(?:[a-z][a-z0-9-]*)?\[(?:id|data-testid|name|aria-label|title)="[^"\\\r\n]+"\]$/;
-export function safeLocatorValue(value: string): boolean {
-  return value.length > 0 && value.length <= 240 && value === value.trim() && !/[\x00-\x1f]/.test(value) &&
+export const domButtonPath = /^html(?: > [a-z][a-z0-9-]*:nth-of-type\([1-9][0-9]{0,3}\)){1,23} > button:nth-of-type\([1-9][0-9]{0,3}\)$/;
+export function safeLocatorValue(value: string, maxLength = 240): boolean {
+  return value.length > 0 && value.length <= maxLength && value === value.trim() && !/[\x00-\x1f]/.test(value) &&
     !/(\b(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{7,}\b|https?:\/\/|\[redacted\])/i.test(value);
 }
 
@@ -87,7 +88,10 @@ export function validateVision<T = unknown>(name: string, input: unknown): T {
   const v = parseSchema(visionSchemas[name] as Schema, input) as Record<string, any>;
   if (name === "VisualLocatorScope") requireVision(safeLocatorValue(v.selector) && stableCss.test(v.selector));
   if (name === "VisualLocatorDescriptor") {
-    requireVision(safeLocatorValue(v.value));
+    if (v.strategy === "dom_path") requireVision(["v2", "v3"].includes(v.schema_version) && v.scope.length === 0 &&
+      (v.schema_version === "v2" ? domButtonPath : /^html(?: > [a-z][a-z0-9-]*:nth-of-type\([1-9][0-9]{0,3}\)){1,23} > (?:button|a|div|span|input):nth-of-type\([1-9][0-9]{0,3}\)$/).test(v.value));
+    else requireVision(v.schema_version === "v1" && v.value.length <= 240);
+    requireVision(safeLocatorValue(v.value, v.strategy === "dom_path" ? 1024 : 240));
     requireVision((v.strategy === "role") === (v.role !== null));
     if (v.strategy === "css") requireVision(stableCss.test(v.value));
   }
@@ -135,6 +139,7 @@ export function validateVision<T = unknown>(name: string, input: unknown): T {
   if (name === "VisualWorkerPrepare") {
     requireVision((v.dom_snapshot_id === null) === (v.dom_element_id === null));
     if (v.dom_snapshot_id) requireVision(["click", "type"].includes(v.action.kind));
+    if (v.expected_locator?.strategy === "dom_path") requireVision(v.dom_snapshot_id);
     if (["click", "type"].includes(v.action.kind)) requireVision(v.state_id && v.proposal_id);
     requireVision((v.checkpoint_id === null) === (v.checkpoint_state_id === null));
     if (v.purpose === "replay") requireVision(v.replay_operation_id);
@@ -151,6 +156,12 @@ export function validateVision<T = unknown>(name: string, input: unknown): T {
   }
   if (name === "VisualWorkerDomObservation") {
     requireVision(["tenant_id", "project_id", "session_id", "fencing_token"].every(key => v[key] === v.data.observation[key]));
+  }
+  if (name === "VisualWorkerObserveDom") {
+    requireVision(v.revalidate_context_only
+      ? Boolean(v.revalidate_snapshot_id) && v.revalidate_element_ids.length === 0
+      : Boolean(v.revalidate_snapshot_id) === Boolean(v.revalidate_element_ids.length));
+    requireVision(new Set(v.revalidate_element_ids).size === v.revalidate_element_ids.length);
   }
   if (name === "VisualWorkerOperationResult") {
     const op = v.operation;

@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-17",
+  "adr": "033",
+  "red": {
+    "tests": 3,
+    "failed": 3,
+    "positive_failure": "unsupported_target"
+  },
+  "focused_green": {
+    "passed": 3,
+    "seconds": 11.3
+  },
+  "regression": {
+    "command": "npm.cmd test -- src/vision-operations.spec.ts src/vision-visual-buttons.spec.ts --workers=1",
+    "passed": 102,
+    "reported_duration": "6.2m"
+  },
+  "checks": [
+    "worker typecheck",
+    "ruff",
+    "generated worker contract",
+    "scoped diff check"
+  ],
+  "sources": {
+    "workers/playwright/src/vision-dom.ts": "b6b4f4f03697160841b50583c58aa959d54fea43eb0acfc75768a4fe3156d1a6",
+    "workers/playwright/src/vision-operations.ts": "353505369efd2633a1beac5cc4906261f4d79dd8839af8baf741d850c9905417",
+    "workers/playwright/src/vision-operations.spec.ts": "38fd82edfec127a88d1f3f13a070d1bb7c97baed975788581019de52fb273920"
+  }
+}

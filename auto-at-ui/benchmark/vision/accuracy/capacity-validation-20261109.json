@@ -1,0 +1,26 @@
+{
+  "contract_api_red": {
+    "passed": 1,
+    "failed": 2,
+    "reason": "20 rejected by old <=10 worker/API schema"
+  },
+  "contract_api_final": {
+    "passed": 45,
+    "failed": 0
+  },
+  "isolated_integration": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 45.687,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "worker_passed": 5,
+  "dashboard_tests_passed": 43,
+  "worker_typecheck": "passed",
+  "dashboard_typecheck": "passed",
+  "ruff": "passed",
+  "generated_contract_check": "passed"
+}

@@ -1,0 +1,35 @@
+{
+  "red": {
+    "passed": 1,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 31.703,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "history_matrix": {
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 147.375,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "final": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 116.506,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "checks": {
+    "ruff": "passed",
+    "worker_typecheck": "passed",
+    "generated_contract_check": "passed",
+    "changed_file_diff_check": "passed"
+  }
+}

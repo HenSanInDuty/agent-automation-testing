@@ -46,6 +46,9 @@ class VisualCandidateBatchOutcome:
     failure_reason: str | None = None
     target_bindings: tuple[CodexProposalBinding | None, ...] | None = None
     calls_used: int = 1
+    # Advisory abstention only; the controller must verify fresh context and
+    # independently authorize a bounded viewport scan. Contains no model delta.
+    viewport_scan_requested: bool = False
 
 
 async def execute_visual_action(

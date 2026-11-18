@@ -114,6 +114,39 @@ async def running(gateway, req):
 
 
 @pytest.mark.asyncio
+async def test_migrated_database_accepts_twentieth_call_and_keeps_upper_bound(codex_database):
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+
+    factory, scope, _, _, req, gateway = prepared(codex_database)
+    with factory.begin() as db:
+        db.get(VisualExplorationSessionModel, scope.session_id).max_steps = 20
+    req = type(req).model_validate(req.model_dump() | {"request_sequence": 20})
+    await gateway.register(req)
+    with factory() as db:
+        stored = db.scalar(select(CodexBridgeJobModel))
+        assert stored.request_sequence == 20
+        values = {column.name: getattr(stored, column.name)
+                  for column in CodexBridgeJobModel.__table__.columns}
+    with pytest.raises(IntegrityError), factory.begin() as db:
+        db.add(CodexBridgeJobModel(**(values | {"job_id": uuid4(), "request_sequence": 21})))
+
+
+@pytest.mark.asyncio
+async def test_step_deadline_fence_allows_old_session_but_rejects_oversized_job(codex_database):
+    factory, scope, _, _, req, gateway = prepared(codex_database)
+    with factory.begin() as db:
+        row = db.get(VisualExplorationSessionModel, scope.session_id)
+        row.step_timeout_seconds = 30
+        row.updated_at = datetime.now(UTC) - timedelta(minutes=10)
+    await gateway.register(req)
+    oversized = req.model_copy(update={"job_id": uuid4(), "request_sequence": 2,
+                                      "deadline": req.created_at + timedelta(seconds=31)})
+    with pytest.raises(ValueError, match="fence"):
+        await gateway.register(oversized)
+
+
+@pytest.mark.asyncio
 async def test_scoped_receipts_commit_once_and_terminal_metadata_is_immutable(codex_database):
     factory, scope, _, _, req, gateway = prepared(codex_database)
     await gateway.register(req)

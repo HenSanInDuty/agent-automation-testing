@@ -1,0 +1,33 @@
+{
+  "recorded_at": "2026-11-17T15:42:12.020099+00:00",
+  "iteration_id": "1f13a1e9-d08d-4582-8f3a-bfae43be833e",
+  "session_id": "3d30c88c-9d4d-499a-b4d8-11e8e6739b81",
+  "source_hash": "4b67094dfd3603e3f55e99e90717b7d8c77a6d068884c3bd6a5be4aa05aaf6fc",
+  "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "passed": false,
+  "qualification_streak": 0,
+  "phase": "04",
+  "runtime_state": "unavailable",
+  "runtime_reason": "state_restore_failed",
+  "operations": 41,
+  "attempts": 15,
+  "reviewed_correct": 5,
+  "score_is_lower_bound": true,
+  "coverage_upper_bound_with_available_evidence": {
+    "numerator": 14,
+    "denominator": 47
+  },
+  "accuracy_upper_bound_with_available_evidence": {
+    "numerator": 14,
+    "denominator": 15
+  },
+  "model_jobs": 2,
+  "reported_input_tokens": 11317,
+  "reported_output_tokens": 1380,
+  "monetary_cost_usd": null,
+  "unsettled_operations": [],
+  "active_sessions": [],
+  "report": "ROUND18-20261117.md",
+  "live_fix_effectiveness": "not_established; six samples fell back to final capture"
+}

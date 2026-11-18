@@ -89,6 +89,7 @@ class CodexViewport(ClosedModel):
 
 
 class CodexDomElement(ClosedModel):
+    button_kind: Literal["native", "styled_link", "custom"] | None = None
     element_id: ElementId
     role: str = Field(pattern=r"^[a-z]{1,32}$")
     name: str = Field(max_length=120)
@@ -142,6 +143,8 @@ class CodexBoundObservation(ClosedModel):
 
     observation: CodexDomObservation
     bindings: tuple[CodexElementBinding, ...] = Field(max_length=100)
+    # Worker-owned geometry hint; never part of the model's observation payload.
+    next_scroll_delta_y: int | None = Field(default=None, ge=1, le=2000)
 
     @model_validator(mode="after")
     def binding_ids(self):
@@ -188,7 +191,7 @@ class CodexBridgeRequest(CodexScope):
     job_id: UUID
     bridge_id: UUID
     correlation_id: UUID
-    request_sequence: int = Field(ge=1, le=10)
+    request_sequence: int = Field(ge=1, le=20)
     observation_id: UUID
     snapshot_id: UUID
     state_fingerprint: Digest
@@ -210,6 +213,7 @@ class CodexBridgeRequest(CodexScope):
     def valid_job(self):
         if (self.prompt_version in {
             "codex-dom-v2", "codex-dom-v3", "codex-dom-v4", "codex-dom-v5", "codex-dom-v6",
+            "codex-dom-v7", "codex-dom-v8", "codex-dom-v9", "codex-dom-v10", "codex-dom-v11",
         }
                 and self.context is None):
             raise ValueError("versioned prompt requires bounded task context")
@@ -242,17 +246,40 @@ class CodexCandidate(ClosedModel):
     confidence: float = Field(ge=0, le=1)
     expected_outcome: str = Field(min_length=1, max_length=1000)
 
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema, handler):
+        schema = handler.resolve_ref_schema(handler(core_schema))
+        # The model validator is not represented by Pydantic's default schema.
+        # Advertise the same per-action field combinations to proposal models.
+        variants = []
+        for kind, combinations in cls.action_fields().items():
+            for active in combinations:
+                properties = {"kind": {"const": kind}}
+                for field in ("element_id", "x", "y", "text", "delta_y", "duration_ms"):
+                    field_schema = schema["properties"][field]
+                    properties[field] = (
+                        next(item for item in field_schema["anyOf"] if item.get("type") != "null")
+                        if field in active else {"type": "null"}
+                    )
+                variants.append({"properties": properties})
+        schema["anyOf"] = variants
+        return schema
+
+    @staticmethod
+    def action_fields():
+        return {
+            "click": ({"element_id"}, {"x", "y"}),
+            "type": ({"element_id", "text"}, {"x", "y", "text"}),
+            "scroll": ({"delta_y"},),
+            "wait": ({"duration_ms"},),
+        }
+
     @model_validator(mode="after")
     def fields_match_action(self):
-        target = {"element_id"} if self.element_id else {"x", "y"}
-        required = {
-            "click": target, "type": target | {"text"},
-            "scroll": {"delta_y"}, "wait": {"duration_ms"},
-        }[self.kind]
         present = {key for key in (
             "element_id", "x", "y", "text", "delta_y", "duration_ms",
         ) if getattr(self, key) is not None}
-        if present != required:
+        if present not in self.action_fields()[self.kind]:
             raise ValueError("candidate fields do not match action kind")
         return self
 
@@ -296,7 +323,7 @@ class CodexBridgeResponse(CodexScope):
     job_id: UUID
     bridge_id: UUID
     correlation_id: UUID
-    request_sequence: int = Field(ge=1, le=10)
+    request_sequence: int = Field(ge=1, le=20)
     observation_id: UUID
     snapshot_id: UUID
     state_fingerprint: Digest

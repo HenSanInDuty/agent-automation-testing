@@ -19,7 +19,10 @@ async def publish_vision_once(factory, settings, *, handler=None):
     with transactional_session(factory) as session:
         events = SqlAlchemyOutboxEventRepository(session).list_unpublished(100)
     published = 0
-    async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+    # The application owns each step deadline, including streamed evidence.
+    # A fixed 30s socket cap must not shorten a configured 120s browser step.
+    async with httpx.AsyncClient(timeout=httpx.Timeout(None, connect=10),
+                                follow_redirects=False) as client:
         processor = handler or VisionTraceEventProcessor(
             uow,
             HttpVisualWorker(client, settings.playwright_worker_url, settings.vision_worker_secret),

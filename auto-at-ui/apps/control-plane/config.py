@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     codex_bridge_allowed_tenant: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,200}$")
     codex_bridge_host_spool: str | None = None
     codex_bridge_container_spool: str = "/codex-jobs"
+    codex_bridge_spool_owner_uid: int | None = Field(default=None, ge=1, le=2_147_483_647)
     codex_bridge_executable: str | None = None
     codex_bridge_heartbeat_seconds: float = Field(default=2, gt=0, le=2)
     codex_bridge_stale_seconds: float = Field(default=10, ge=3, le=10)
@@ -70,7 +71,7 @@ class Settings(BaseSettings):
     vision_model: str = "Qwen/Qwen3.8-27B:deepinfra"
     vision_raw_screenshot_transfer_accepted: bool = False
     vision_raw_screenshot_transfer_provider: str | None = None
-    vision_max_steps: int = Field(default=3, ge=1, le=10)
+    vision_max_steps: int = Field(default=3, ge=1, le=20)
     vision_max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)
     vision_max_session_seconds: int = Field(default=120, ge=1, le=3_600)
     vision_max_cost_usd: float = Field(default=0.25, gt=0, le=1_000)

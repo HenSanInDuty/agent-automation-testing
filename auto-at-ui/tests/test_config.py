@@ -2,6 +2,12 @@ import pytest
 from config import Settings
 
 
+@pytest.mark.parametrize("uid", [0, -1, 2_147_483_648])
+def test_codex_spool_owner_rejects_root_or_invalid_uid(uid):
+    with pytest.raises(ValueError):
+        Settings(_env_file=None, codex_bridge_spool_owner_uid=uid)
+
+
 def test_settings_reads_port_from_environment(monkeypatch) -> None:
     monkeypatch.setenv("PORT", "7001")
 

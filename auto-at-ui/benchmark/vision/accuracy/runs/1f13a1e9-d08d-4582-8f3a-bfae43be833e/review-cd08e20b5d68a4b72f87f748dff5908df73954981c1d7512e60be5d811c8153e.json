@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "e30f98c6-20b6-450b-9ef9-28626f7a2925",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_selection",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "after_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+  "finding": "After-frame shows carousel indicator 5 active and Vo Lam Chan Menh, matching mct-55."
+}

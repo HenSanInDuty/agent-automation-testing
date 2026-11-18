@@ -1,0 +1,1423 @@
+{
+  "schema_version": "vision-accuracy-oracle-v1",
+  "source_url": "https://mongchiton.vn/",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "browser_version": "133.0.6943.16",
+  "reviewed_on": "2026-11-09",
+  "annotation_method": "Independent November 1 labels retained; screenshot and public DOM reviewed at 1280x720 on November 9. Runtime detections only cross-check labels.",
+  "scope": "Initial homepage desktop full scroll; 47 positive UI positions, 14 negative sampled content links. No hidden tabs/mobile/other-pages completeness claim.",
+  "evidence_sha256": "8706c631f135e593f01b60acaeffd13c2545d1681a1455f78f5e2d618abc2864",
+  "screenshot_sha256": "164f42d1bba9c386607f01de5156865588c24f2a9bb6b735dd36fe117dd3fac8",
+  "examples": [
+    {
+      "id": "mct-01",
+      "expected": true,
+      "tag": "a",
+      "label": "TRANG CHỦ",
+      "group": "header",
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-dark-brown-linear border-palette-light-brown -translate-y-0.5",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 332,
+        "y": 10,
+        "width": 145,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/",
+      "reference_href_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "navigation_destination",
+        "url": "https://mongchiton.vn/",
+        "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-02",
+      "expected": true,
+      "tag": "a",
+      "label": "SỰ KIỆN",
+      "group": "header",
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(2)",
+      "reference_box": {
+        "x": 488,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/su-kien",
+      "reference_href_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "navigation_destination",
+        "url": "https://mongchiton.vn/su-kien",
+        "url_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-03",
+      "expected": true,
+      "tag": "a",
+      "label": "CẨM NANG",
+      "group": "header",
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(3)",
+      "reference_box": {
+        "x": 643,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/cam-nang",
+      "reference_href_sha256": "5f73a3fff26056154a6bd62585f906565f20b86c49c7edd754905bfd8aa59acc",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "navigation_destination",
+        "url": "https://mongchiton.vn/cam-nang",
+        "url_sha256": "5f73a3fff26056154a6bd62585f906565f20b86c49c7edd754905bfd8aa59acc",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-04",
+      "expected": true,
+      "tag": "a",
+      "label": "ĐIỀU KHOẢN",
+      "group": "header",
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(4)",
+      "reference_box": {
+        "x": 798,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://id.tepaylink.vn/site/rules",
+      "reference_href_sha256": "07dce36ed842f5ca4ad898b5fe5d6aba59e45d4e5284f8383f6e3a54be2dba81",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://id.tepaylink.vn/site/rules",
+        "url_sha256": "07dce36ed842f5ca4ad898b5fe5d6aba59e45d4e5284f8383f6e3a54be2dba81",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-05",
+      "expected": true,
+      "tag": "a",
+      "label": "CỘNG ĐỒNG",
+      "group": "header",
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(5)",
+      "reference_box": {
+        "x": 953,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.facebook.com/groups/mongchiton.vn",
+      "reference_href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://www.facebook.com/groups/mongchiton.vn",
+        "url_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-06",
+      "expected": true,
+      "tag": "a",
+      "label": "HỖ TRỢ",
+      "group": "header",
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(6)",
+      "reference_box": {
+        "x": 1109,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://support.tepaylink.vn/",
+      "reference_href_sha256": "59b5f6fafd2bf8b01e753a8241e5c95543fa5c07da0c7cd1a78966119e16d7f0",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://support.tepaylink.vn/",
+        "url_sha256": "59b5f6fafd2bf8b01e753a8241e5c95543fa5c07da0c7cd1a78966119e16d7f0",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-07",
+      "expected": true,
+      "tag": "a",
+      "label": "NẠP THẺ",
+      "group": "hero_actions",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 764,
+        "y": 508,
+        "width": 82,
+        "height": 68
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://pay.tepaylink.vn/",
+      "reference_href_sha256": "ce035d7ba0aec01a51dd0ef5bb0ea220a2487e12a8226a5c2fbbb4e0b7e5de63",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://pay.tepaylink.vn/",
+        "url_sha256": "ce035d7ba0aec01a51dd0ef5bb0ea220a2487e12a8226a5c2fbbb4e0b7e5de63",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-08",
+      "expected": true,
+      "tag": "a",
+      "label": "ĐĂNG KÝ",
+      "group": "hero_actions",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 851,
+        "y": 508,
+        "width": 82,
+        "height": 68
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://id.tepaylink.vn/register",
+      "reference_href_sha256": "6f0a3a56995847f32d36898c592e69507c36ad7023c3388b6d7ec166582d0a88",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://id.tepaylink.vn/register",
+        "url_sha256": "6f0a3a56995847f32d36898c592e69507c36ad7023c3388b6d7ec166582d0a88",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-09",
+      "expected": true,
+      "tag": "a",
+      "label": "APPSTORE",
+      "group": "hero_actions",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 487,
+        "y": 508,
+        "width": 122,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-ios",
+      "reference_href_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-ios",
+        "url_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-10",
+      "expected": true,
+      "tag": "a",
+      "label": "GOOGLE PLAY",
+      "group": "hero_actions",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 617,
+        "y": 508,
+        "width": 122,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-ggplay",
+      "reference_href_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-ggplay",
+        "url_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-11",
+      "expected": true,
+      "tag": "a",
+      "label": "TRÊN WINDOW",
+      "group": "hero_actions",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(5) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 487,
+        "y": 546,
+        "width": 122,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-pc",
+      "reference_href_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-pc",
+        "url_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-12",
+      "expected": true,
+      "tag": "a",
+      "label": "APK",
+      "group": "hero_actions",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(6) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 617,
+        "y": 546,
+        "width": 122,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-apk",
+      "reference_href_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-apk",
+        "url_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-13",
+      "expected": true,
+      "tag": "a",
+      "label": "CHƠI NGAY",
+      "group": "hero_actions",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(7) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 321,
+        "y": 492,
+        "width": 130,
+        "height": 100
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://h5.mongchiton.vn/",
+      "reference_href_sha256": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://h5.mongchiton.vn/",
+        "url_sha256": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-14",
+      "expected": true,
+      "tag": "a",
+      "label": "Facebook",
+      "group": "hero_social",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(8) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 963,
+        "y": 566,
+        "width": 27,
+        "height": 26
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.facebook.com/mongchiton.vn",
+      "reference_href_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://www.facebook.com/mongchiton.vn",
+        "url_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-15",
+      "expected": true,
+      "tag": "a",
+      "label": "Group Facebook",
+      "group": "hero_social",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(9) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 993,
+        "y": 566,
+        "width": 26,
+        "height": 25
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.facebook.com/groups/mongchiton.vn",
+      "reference_href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://www.facebook.com/groups/mongchiton.vn",
+        "url_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-16",
+      "expected": true,
+      "tag": "a",
+      "label": "Youtube",
+      "group": "hero_social",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(10) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1023,
+        "y": 566,
+        "width": 26,
+        "height": 25
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.youtube.com/playlist",
+      "reference_href_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://www.youtube.com/playlist",
+        "url_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-17",
+      "expected": false,
+      "tag": "a",
+      "label": "",
+      "group": "content_link",
+      "reference_class": "w-full h-full mb-2.5",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 219,
+        "y": 862,
+        "width": 422,
+        "height": 221
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/",
+      "reference_href_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687"
+    },
+    {
+      "id": "mct-18",
+      "expected": true,
+      "tag": "button",
+      "label": "Tin Tức",
+      "group": "news_actions",
+      "reference_class": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secondary-active.png')] bg-no-repeat bg-center bg-cover !bg-[url('/bg-button-news-mobile-active.png')] lg:!bg-[url('/assets/bg-news-secondary-active.png')] w-[111px] h-[32px] lg:w-[215.53px] lg:h-[52.44px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "reference_box": {
+        "x": 650,
+        "y": 831,
+        "width": 143,
+        "height": 35
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_tab",
+        "label": "Tin Tức",
+        "rule": "Selected target is active and matching content is visible; already-active selection is permitted."
+      }
+    },
+    {
+      "id": "mct-19",
+      "expected": true,
+      "tag": "button",
+      "label": "Sự Kiện",
+      "group": "news_actions",
+      "reference_class": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secondary-active.png')] bg-no-repeat bg-center bg-cover w-[111px] h-[32px] lg:w-[215.53px] lg:h-[52.44px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "reference_box": {
+        "x": 799,
+        "y": 831,
+        "width": 143,
+        "height": 35
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_tab",
+        "label": "Sự Kiện",
+        "rule": "Selected target is active and matching content is visible; already-active selection is permitted."
+      }
+    },
+    {
+      "id": "mct-20",
+      "expected": true,
+      "tag": "button",
+      "label": "Cẩm Nang",
+      "group": "news_actions",
+      "reference_class": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secondary-active.png')] bg-no-repeat bg-center bg-cover w-[111px] h-[32px] lg:w-[215.53px] lg:h-[52.44px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+      "reference_box": {
+        "x": 947,
+        "y": 831,
+        "width": 143,
+        "height": 35
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_tab",
+        "label": "Cẩm Nang",
+        "rule": "Selected target is active and matching content is visible; already-active selection is permitted."
+      }
+    },
+    {
+      "id": "mct-21",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "news_actions",
+      "reference_class": " lg:bg-[url('/assets/btn-search.png')] bg-[url('/btn-search-mobile.png')] hover:lg:bg-[url('/assets/btn-search-active.png')] hover:bg-[url('/btn-search-mobile-active.png')] bg-no-repeat transition-all duration-200 ease-in-out bg-center bg-cover w-[42px] h-[32px] lg:w-[56px] lg:h-[43px] cursor-pointer  absolute -right-[1px] top-0  flex items-center justify-center",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1)",
+      "reference_box": {
+        "x": 1054,
+        "y": 877,
+        "width": 37,
+        "height": 29
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "empty_search",
+        "rule": "With empty search input, retain the unfiltered news list, same URL, no error and no form mutation. Nonempty input is outside this oracle."
+      }
+    },
+    {
+      "id": "mct-22",
+      "expected": false,
+      "tag": "a",
+      "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin28/10",
+      "group": "content_link",
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 650,
+        "y": 915,
+        "width": 441,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/khai-mo-may-chu-s13-tai-long-duy-nhat-tren-trinh-duyet-web-vlcm-origin",
+      "reference_href_sha256": "f36349a16b396c4d74f208991634dcfb2cdad701018be7638e6bb571eadea1a4"
+    },
+    {
+      "id": "mct-23",
+      "expected": false,
+      "tag": "a",
+      "label": "[Công Bố Kết Quả] Vinh Danh Bảng Vàng Đua Top Máy Chủ S12 | VLCM Origin19/09",
+      "group": "content_link",
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(2)",
+      "reference_box": {
+        "x": 650,
+        "y": 945,
+        "width": 441,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/cong-bo-ket-qua-vinh-danh-bang-vang-dua-top-may-chu-s12-vlcm-origin",
+      "reference_href_sha256": "ddec1a248eb85b115744547230f20e6dffe7c80bd4a59f0d1eca14e447b99e80"
+    },
+    {
+      "id": "mct-24",
+      "expected": false,
+      "tag": "a",
+      "label": "Thông Báo Thay Đổi Giftcode TÂN THỦ Mới | VLCM Origin03/09",
+      "group": "content_link",
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(3)",
+      "reference_box": {
+        "x": 650,
+        "y": 975,
+        "width": 441,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/thong-bao-thay-doi-giftcode-tan-thu-moi-vlcm-origin",
+      "reference_href_sha256": "caf746ad266a319baac904acacd93f24918247a10da7defa8cd9ae350e8526e3"
+    },
+    {
+      "id": "mct-25",
+      "expected": false,
+      "tag": "a",
+      "label": "Khai Mở Server Mới S12 Mộc Long | VLCM Origin29/08",
+      "group": "content_link",
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(4)",
+      "reference_box": {
+        "x": 650,
+        "y": 1005,
+        "width": 441,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/khai-mo-server-moi-s12-moc-long-vlcm-origin",
+      "reference_href_sha256": "2137c13f79fdeba422fe46ac1c9b4746171628c1f446a11e0a96706c86ab908c"
+    },
+    {
+      "id": "mct-26",
+      "expected": false,
+      "tag": "a",
+      "label": "QUY TỤ ANH HÙNG - CHÍNH SÁCH HỖ TRỢ OFFLINE VÕ LÂM CHÂN MỆNH ORIGIN19/08",
+      "group": "content_link",
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(5)",
+      "reference_box": {
+        "x": 650,
+        "y": 1035,
+        "width": 441,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/quy-tu-anh-hung-chinh-sach-ho-tro-offline-vo-lam-chan-menh-origin",
+      "reference_href_sha256": "362fa70bcffdca8702fe4a601248885d05d0be00986a08e4e9a117ffd108fbf4"
+    },
+    {
+      "id": "mct-27",
+      "expected": false,
+      "tag": "a",
+      "label": "[Công Bố Kết Quả] Vinh Danh Bảng Vàng Đua Top Máy Chủ S11 | VLCM Origin08/08",
+      "group": "content_link",
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(6)",
+      "reference_box": {
+        "x": 650,
+        "y": 1065,
+        "width": 441,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/cong-bo-ket-qua-vinh-danh-bang-vang-dua-top-may-chu-s11-vlcm-origin",
+      "reference_href_sha256": "d854e0c318f6c86aef207447bc714d5371befb72f143adce77874bc123338e2d"
+    },
+    {
+      "id": "mct-28",
+      "expected": false,
+      "tag": "a",
+      "label": "Thông Báo Thay Đổi Giftcode TÂN THỦ Mới Toàn Máy Chủ | VLCM Origin21/07",
+      "group": "content_link",
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(7)",
+      "reference_box": {
+        "x": 650,
+        "y": 1095,
+        "width": 441,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/thong-bao-thay-doi-giftcode-tan-thu-moi-toan-may-chu-vlcm-origin",
+      "reference_href_sha256": "1f1be45b63c9f9dfd7c7222099c39477e9c4805b7ad881416a841a4de21943ef"
+    },
+    {
+      "id": "mct-29",
+      "expected": true,
+      "tag": "a",
+      "label": "",
+      "group": "news_actions",
+      "reference_class": "transition-all duration-200 ease-in-out absolute bg-[url('/assets/btn-more-mobile.png')] hover:bg-[url('/assets/btn-more-mobile-active.png')] lg:bg-[url('/assets/btn-more.png')] lg:hover:bg-[url('/assets/btn-more-active.png')] bg-no-repeat bg-center bg-cover left-[15px] bottom-3 lg:left-auto lg:-right-1 lg:-bottom-27.5 lg:w-[176px] lg:h-[44.4px] w-[353px] h-[23px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 976,
+        "y": 1132,
+        "width": 117,
+        "height": 30
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/tin-tuc",
+      "reference_href_sha256": "ba03dccca03ef065c56e42a8e2ad3053799bd295a73cbb787c278db9da75499c",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "navigation_destination",
+        "url": "https://mongchiton.vn/tin-tuc",
+        "url_sha256": "ba03dccca03ef065c56e42a8e2ad3053799bd295a73cbb787c278db9da75499c",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-30",
+      "expected": true,
+      "tag": "button",
+      "label": "NHÂN VẬT",
+      "group": "characters",
+      "reference_class": "button-common button-character-title active",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "reference_box": {
+        "x": 491,
+        "y": 1273,
+        "width": 146,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_tab",
+        "label": "NHÂN VẬT",
+        "rule": "Selected target is active and matching content is visible; already-active selection is permitted."
+      }
+    },
+    {
+      "id": "mct-31",
+      "expected": true,
+      "tag": "button",
+      "label": "THÚ CƯỠI",
+      "group": "characters",
+      "reference_class": "button-common button-character-title ",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "reference_box": {
+        "x": 643,
+        "y": 1273,
+        "width": 146,
+        "height": 37
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_tab",
+        "label": "THÚ CƯỠI",
+        "rule": "Selected target is active and matching content is visible; already-active selection is permitted."
+      }
+    },
+    {
+      "id": "mct-32",
+      "expected": true,
+      "tag": "div",
+      "label": "",
+      "group": "characters",
+      "reference_class": "character-switcher lg:-ml-5 ml-12",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1)",
+      "reference_box": {
+        "x": 139,
+        "y": 1411,
+        "width": 100,
+        "height": 97
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_character",
+        "index": 1,
+        "rule": "The selected character control becomes active and its matching panel is visible, including an already-selected character."
+      }
+    },
+    {
+      "id": "mct-33",
+      "expected": true,
+      "tag": "a",
+      "label": "NẠP THẺ",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1118,
+        "y": 2484,
+        "width": 78,
+        "height": 49
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://pay.tepaylink.vn/",
+      "reference_href_sha256": "ce035d7ba0aec01a51dd0ef5bb0ea220a2487e12a8226a5c2fbbb4e0b7e5de63",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://pay.tepaylink.vn/",
+        "url_sha256": "ce035d7ba0aec01a51dd0ef5bb0ea220a2487e12a8226a5c2fbbb4e0b7e5de63",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-34",
+      "expected": true,
+      "tag": "a",
+      "label": "ĐĂNG KÝ",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1199,
+        "y": 2484,
+        "width": 78,
+        "height": 49
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://id.tepaylink.vn/register",
+      "reference_href_sha256": "6f0a3a56995847f32d36898c592e69507c36ad7023c3388b6d7ec166582d0a88",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://id.tepaylink.vn/register",
+        "url_sha256": "6f0a3a56995847f32d36898c592e69507c36ad7023c3388b6d7ec166582d0a88",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-35",
+      "expected": true,
+      "tag": "a",
+      "label": "APPSTORE",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1133,
+        "y": 2342,
+        "width": 129,
+        "height": 31
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-ios",
+      "reference_href_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-ios",
+        "url_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-36",
+      "expected": true,
+      "tag": "a",
+      "label": "GOOGLE PLAY",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1133,
+        "y": 2376,
+        "width": 129,
+        "height": 31
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-ggplay",
+      "reference_href_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-ggplay",
+        "url_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-37",
+      "expected": true,
+      "tag": "a",
+      "label": "WINDOW",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(5) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1133,
+        "y": 2410,
+        "width": 129,
+        "height": 31
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-pc",
+      "reference_href_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-pc",
+        "url_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-38",
+      "expected": true,
+      "tag": "a",
+      "label": "APK",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(6) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1133,
+        "y": 2444,
+        "width": 129,
+        "height": 31
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://mongchiton.vn/s/vlcm-apk",
+      "reference_href_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://mongchiton.vn/s/vlcm-apk",
+        "url_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient. Download events must bind to this destination; never install or execute downloads."
+      }
+    },
+    {
+      "id": "mct-39",
+      "expected": true,
+      "tag": "a",
+      "label": "Facebook",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(7) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1152,
+        "y": 2541,
+        "width": 24,
+        "height": 23
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.facebook.com/mongchiton.vn",
+      "reference_href_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://www.facebook.com/mongchiton.vn",
+        "url_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-40",
+      "expected": true,
+      "tag": "a",
+      "label": "Group Facebook",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(8) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1185,
+        "y": 2541,
+        "width": 24,
+        "height": 23
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.facebook.com/groups/mongchiton.vn",
+      "reference_href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://www.facebook.com/groups/mongchiton.vn",
+        "url_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-41",
+      "expected": true,
+      "tag": "a",
+      "label": "Youtube",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(9) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1218,
+        "y": 2541,
+        "width": 24,
+        "height": 23
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.youtube.com/playlist",
+      "reference_href_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://www.youtube.com/playlist",
+        "url_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-42",
+      "expected": true,
+      "tag": "a",
+      "label": "CHƠI NGAY",
+      "group": "floating",
+      "reference_class": "absolute inset-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(10) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 1149,
+        "y": 2570,
+        "width": 97,
+        "height": 75
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://h5.mongchiton.vn/",
+      "reference_href_sha256": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "popup_destination",
+        "url": "https://h5.mongchiton.vn/",
+        "url_sha256": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+        "rule": "Verify declared destination or independently reviewed redirect chain; a popup alone is insufficient."
+      }
+    },
+    {
+      "id": "mct-43",
+      "expected": true,
+      "tag": "button",
+      "label": "TOP",
+      "group": "floating",
+      "reference_class": "absolute inset-0 cursor-pointer",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(11) > button:nth-of-type(1)",
+      "reference_box": {
+        "x": 1184,
+        "y": 2651,
+        "width": 27,
+        "height": 32
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "scroll_top",
+        "scroll_y": 0,
+        "rule": "Homepage remains open and scroll settles at zero."
+      }
+    },
+    {
+      "id": "mct-44",
+      "expected": true,
+      "tag": "div",
+      "label": "",
+      "group": "characters",
+      "reference_class": "character-switcher lg:-ml-35 ml-0 active",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(2)",
+      "reference_box": {
+        "x": 97,
+        "y": 1506,
+        "width": 105,
+        "height": 102
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_character",
+        "index": 2,
+        "rule": "The selected character control becomes active and its matching panel is visible, including an already-selected character."
+      }
+    },
+    {
+      "id": "mct-45",
+      "expected": true,
+      "tag": "div",
+      "label": "",
+      "group": "characters",
+      "reference_class": "character-switcher lg:-ml-35 ml-0",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(3)",
+      "reference_box": {
+        "x": 99,
+        "y": 1605,
+        "width": 100,
+        "height": 97
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_character",
+        "index": 3,
+        "rule": "The selected character control becomes active and its matching panel is visible, including an already-selected character."
+      }
+    },
+    {
+      "id": "mct-46",
+      "expected": true,
+      "tag": "div",
+      "label": "",
+      "group": "characters",
+      "reference_class": "character-switcher lg:-ml-9 ml-8",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(4)",
+      "reference_box": {
+        "x": 134,
+        "y": 1701,
+        "width": 100,
+        "height": 97
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "selected_character",
+        "index": 4,
+        "rule": "The selected character control becomes active and its matching panel is visible, including an already-selected character."
+      }
+    },
+    {
+      "id": "mct-47",
+      "expected": true,
+      "tag": "a",
+      "label": "",
+      "group": "characters",
+      "reference_class": "video-frame group z-10",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 946,
+        "y": 1658,
+        "width": 294,
+        "height": 198
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.youtube.com/watch",
+      "reference_href_sha256": "07edbdafad4f9951b9bd35cb136a80c85c6870145434ede42e7d3628dc678046",
+      "action_kind": "click",
+      "outcome": {
+        "kind": "video_destination_or_dialog",
+        "url": "https://www.youtube.com/watch",
+        "url_sha256": "07edbdafad4f9951b9bd35cb136a80c85c6870145434ede42e7d3628dc678046",
+        "rule": "Verify same declared video in navigation or embedded player; generic visual change is insufficient."
+      }
+    },
+    {
+      "id": "mct-48",
+      "expected": false,
+      "tag": "a",
+      "label": "",
+      "group": "content_link",
+      "reference_class": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 150,
+        "y": 1984,
+        "width": 444,
+        "height": 332
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/d6813323-a3b6-4990-9153-5cc06d4a12ea.webp",
+      "reference_href_sha256": "ee3aa38778fa88aa52065eb5fd24d23a9c85753d8ea29ae60b75ac0c8caeace0"
+    },
+    {
+      "id": "mct-49",
+      "expected": false,
+      "tag": "a",
+      "label": "",
+      "group": "content_link",
+      "reference_class": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 376,
+        "y": 1952,
+        "width": 528,
+        "height": 395
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/24154288-c66f-4881-922f-77aa935c09f6.webp",
+      "reference_href_sha256": "85069897584f86273bdd8f8d7365398b0ca463b5db5c82e214ee1dbdd687d927"
+    },
+    {
+      "id": "mct-50",
+      "expected": false,
+      "tag": "a",
+      "label": "",
+      "group": "content_link",
+      "reference_class": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 686,
+        "y": 1984,
+        "width": 444,
+        "height": 332
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/e9583bb8-9c53-4f42-892b-cd0049ebc720.webp",
+      "reference_href_sha256": "da881d43cedeb2cb369b5428db7956c53d6c06d4d47f2abcc332330b538c51fa"
+    },
+    {
+      "id": "mct-51",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "reference_box": {
+        "x": 585,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_selection",
+        "index": 1,
+        "rule": "Selected indicator and corresponding slide become active. Use immediate captured evidence before autoplay moves again."
+      }
+    },
+    {
+      "id": "mct-52",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "reference_box": {
+        "x": 602,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_selection",
+        "index": 2,
+        "rule": "Selected indicator and corresponding slide become active. Use immediate captured evidence before autoplay moves again."
+      }
+    },
+    {
+      "id": "mct-53",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[41px]  w-[23px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+      "reference_box": {
+        "x": 618,
+        "y": 2375,
+        "width": 27,
+        "height": 8
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_selection",
+        "index": 3,
+        "rule": "Selected indicator and corresponding slide become active. Use immediate captured evidence before autoplay moves again."
+      }
+    },
+    {
+      "id": "mct-54",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(4)",
+      "reference_box": {
+        "x": 654,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_selection",
+        "index": 4,
+        "rule": "Selected indicator and corresponding slide become active. Use immediate captured evidence before autoplay moves again."
+      }
+    },
+    {
+      "id": "mct-55",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(5)",
+      "reference_box": {
+        "x": 670,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_selection",
+        "index": 5,
+        "rule": "Selected indicator and corresponding slide become active. Use immediate captured evidence before autoplay moves again."
+      }
+    },
+    {
+      "id": "mct-56",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(6)",
+      "reference_box": {
+        "x": 687,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_selection",
+        "index": 6,
+        "rule": "Selected indicator and corresponding slide become active. Use immediate captured evidence before autoplay moves again."
+      }
+    },
+    {
+      "id": "mct-57",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": "transition-all rotate-180 duratin-200 ease-in-out absolute  -left-6 lg:-left-25 top-1/2 lg:top-[45%] -translate-y-1/2 scale-x-[-1] cursor-pointer z-30 w-[21.51px] h-[36.67px] lg:w-[69.16px] lg:h-[88px] hover:bg-[url('/assets/btn-feat-left-mobile-active.png')] bg-[url('/assets/btn-feat-left-mobile.png')] hover:lg:bg-[url('/assets/btn-feat-left-active.png')] lg:bg-[url('/assets/btn-feat-left.png')] bg-no-repeat bg-center bg-cover",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "reference_box": {
+        "x": 207,
+        "y": 2116,
+        "width": 46,
+        "height": 59
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_step",
+        "direction": "previous",
+        "rule": "Active slide advances one position with wraparound in the declared direction. Autoplay alone is not evidence of the click result."
+      }
+    },
+    {
+      "id": "mct-58",
+      "expected": true,
+      "tag": "button",
+      "label": "",
+      "group": "carousel",
+      "reference_class": "rotate-180 transition-all duratin-200 ease-in-out absolute -right-6 lg:-right-25 top-1/2 lg:top-[45%] -translate-y-1/2 cursor-pointer z-30 w-[21.51px] h-[36.67px] lg:w-[69.16px] lg:h-[88px] hover:bg-[url('/assets/btn-feat-left-mobile-active.png')] bg-[url('/assets/btn-feat-left-mobile.png')] lg:hover:bg-[url('/assets/btn-feat-left-active.png')] lg:bg-[url('/assets/btn-feat-left.png')] bg-no-repeat bg-center bg-cover",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "reference_box": {
+        "x": 1027,
+        "y": 2116,
+        "width": 46,
+        "height": 59
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": null,
+      "reference_href_sha256": null,
+      "action_kind": "click",
+      "outcome": {
+        "kind": "carousel_step",
+        "direction": "next",
+        "rule": "Active slide advances one position with wraparound in the declared direction. Autoplay alone is not evidence of the click result."
+      }
+    },
+    {
+      "id": "mct-59",
+      "expected": false,
+      "tag": "a",
+      "label": "FANPAGE",
+      "group": "content_link",
+      "reference_class": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:after:hidden lg:after:right-[-50px] after:right-[-25px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "reference_box": {
+        "x": 488,
+        "y": 2661,
+        "width": 61,
+        "height": 20
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.facebook.com/mongchiton.vn",
+      "reference_href_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837"
+    },
+    {
+      "id": "mct-60",
+      "expected": false,
+      "tag": "a",
+      "label": "GROUP",
+      "group": "content_link",
+      "reference_class": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:after:hidden lg:after:right-[-50px] after:right-[-25px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(2)",
+      "reference_box": {
+        "x": 615,
+        "y": 2661,
+        "width": 47,
+        "height": 20
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.facebook.com/groups/mongchiton.vn",
+      "reference_href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a"
+    },
+    {
+      "id": "mct-61",
+      "expected": false,
+      "tag": "a",
+      "label": "YOUTUBE",
+      "group": "content_link",
+      "reference_class": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:after:hidden lg:after:right-[-50px] after:right-[-25px]",
+      "reference_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(3)",
+      "reference_box": {
+        "x": 729,
+        "y": 2661,
+        "width": 63,
+        "height": 20
+      },
+      "evidence": "audit-1280-20261109-visible.json",
+      "reference_href": "https://www.youtube.com/playlist",
+      "reference_href_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637"
+    }
+  ]
+}

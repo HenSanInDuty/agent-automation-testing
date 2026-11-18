@@ -26,6 +26,11 @@ class Events:
         ("state.captured", {"state_sequence": 1, "hop": 0}),
         ("candidate.requested", {"state_sequence": 1, "hop": 0}),
         ("candidate.received", {"state_sequence": 1, "candidate_count": 2}),
+        ("viewport.scan_ready", {"state_sequence": 2}),
+        ("candidate.revalidated", {"state_sequence": 2, "candidate_count": 2}),
+        ("candidate.revalidation_rejected", {"reason_code": "stale_dom_context"}),
+        ("candidate.revalidation_rejected", {"reason_code": "stale_dom_target"}),
+        ("candidate.revalidation_rejected", {"reason_code": "state_changed_during_observation"}),
         ("action.recorded", {"action_sequence": 1, "action_kind": "click"}),
         ("limit.reached", {"state_count": 5}),
         ("draft.handoff", {"outcome": "accepted"}),
@@ -43,6 +48,7 @@ class Events:
         ("codex.queued", {"job_id": str(uuid4()), "call_sequence": 1, "mode": "dom"}),
         ("codex.started", {"mode": "image", "elapsed_ms": 0}),
         ("codex.image_requested", {"call_sequence": 2}),
+        ("codex.queued", {"call_sequence": 20}),
         ("codex.validating", {}),
         ("codex.completed", {}),
         ("codex.failed", {"reason_code": "bridge_interrupted"}),
@@ -117,7 +123,7 @@ def test_unavailable_progress_is_session_scoped_and_redacted() -> None:
 
 
 @pytest.mark.parametrize("metadata", [
-    {"job_id": "private/path"}, {"mode": "raw prompt"}, {"call_sequence": 11},
+    {"job_id": "private/path"}, {"mode": "raw prompt"}, {"call_sequence": 21},
     {"elapsed_ms": "raw output"}, {"response": "raw output"}, {"reason_code": "private error"},
 ])
 def test_codex_progress_rejects_unbounded_or_untrusted_metadata(metadata):

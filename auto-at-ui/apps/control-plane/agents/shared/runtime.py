@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 
 from auto_at.contracts.codex_bridge import CodexInputPolicy
+from auto_at.contracts.codex_generation import GenerationProviderPolicy
 from config import Settings
 from pydantic import BaseModel, Field, model_validator
 
@@ -19,7 +20,7 @@ class EvidencePolicy(BaseModel):
 
 class StepGuardPolicy(BaseModel):
     max_tokens: int = Field(ge=1, le=100_000)
-    max_steps_per_run: int = Field(ge=1, le=10)
+    max_steps_per_run: int = Field(ge=1, le=20)
     max_evidence_bytes_per_step: int = Field(ge=1_024, le=5_000_000)
     max_concurrency: int = Field(default=1, ge=1, le=100)
 
@@ -39,8 +40,9 @@ class VisionPolicy(BaseModel):
     model: str = Field(default="Qwen/Qwen3.8-27B:deepinfra", max_length=200)
     raw_screenshot_transfer_accepted: bool = False
     raw_screenshot_transfer_provider: VisionProviderId | None = None
-    max_steps: int = Field(default=3, ge=1, le=10)
+    max_steps: int = Field(default=3, ge=1, le=20)
     max_screenshot_bytes: int = Field(default=1_000_000, ge=1_024, le=5_000_000)
+    # Retained wire/config name; new v4 records snapshot this as step_timeout_seconds.
     max_session_seconds: int = Field(default=120, ge=1, le=3_600)
     max_cost_usd: float = Field(default=0.25, gt=0, le=1_000)
     max_requests_per_minute: int = Field(default=5, ge=1, le=10_000)
@@ -76,6 +78,12 @@ class AgentRuntimeConfig(BaseModel):
     guard: StepGuardPolicy
     fallback: FallbackModel | None = None
     vision: VisionPolicy = Field(default_factory=VisionPolicy)
+    generation: GenerationProviderPolicy | None = None
+
+    def generation_policy(self) -> GenerationProviderPolicy:
+        return self.generation or GenerationProviderPolicy(
+            provider=self.provider, model=self.model, text_transfer_accepted=True,
+        )
 
     @model_validator(mode="after")
     def requires_an_installed_provider_adapter(self) -> "AgentRuntimeConfig":

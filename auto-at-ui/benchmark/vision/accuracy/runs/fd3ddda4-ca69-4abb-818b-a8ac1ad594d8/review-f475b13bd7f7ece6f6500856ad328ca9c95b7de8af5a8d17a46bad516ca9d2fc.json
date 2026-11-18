@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "69fe0b64-3e76-45cb-ba4e-9296c8252b66",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "after_checksum": "0c7c2ad5ca735d51445cfaf1f30e94e90a42f3b50ed12ab2207c42b7371070cb",
+  "finding": "After URL hash exactly matches declared H5 destination; image shows the VLCM Origin login landing page. No login/game action performed."
+}

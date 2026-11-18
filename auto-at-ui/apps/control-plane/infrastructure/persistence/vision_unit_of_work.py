@@ -77,6 +77,21 @@ class SqlAlchemyVisualTraceUnitOfWork:
         with transactional_session(self._factory) as session:
             self._progress(session, lease, stage, key, metadata)
 
+    def page_inventory(self, lease, inventory):
+        from auto_at.contracts.vision_coverage import VisualPageInventory
+        inventory = VisualPageInventory.model_validate(inventory.model_dump())
+        with transactional_session(self._factory) as session:
+            repository = SqlAlchemyVisualTraceRepository(session)
+            repository._fence(lease)
+            state = repository._legacy_ref(
+                VisualExplorationStateModel, lease.scope, inventory.state_id,
+            )
+            if state is None or not state.checkpoint or (
+                state.checkpoint["id"] != str(inventory.checkpoint_id)
+            ):
+                raise ValueError("inventory checkpoint mismatch")
+            state.page_inventory = inventory.model_dump(mode="json")
+
     @staticmethod
     def _progress(session, lease, stage, key, metadata=None):
         record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
@@ -176,8 +191,10 @@ class SqlAlchemyVisualTraceUnitOfWork:
                 "unavailable" if reason else "completed",
                 "unavailable" if reason else "completed",
                 {"reason_code": reason} if reason in VISION_MODEL_FAILURE_REASONS | {
-                    "policy_disabled", "session_timeout", "image_delivery_auth_required",
+                    "policy_disabled", "session_timeout", "step_timeout",
+                    "image_delivery_auth_required",
                     "initial_capture_failed", "capture_failed",
+                    "exploration_call_limit", "exploration_coverage_incomplete",
                 } else None,
             )
             SqlAlchemyAuditEventRepository(session).append(

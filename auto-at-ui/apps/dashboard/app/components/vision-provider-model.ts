@@ -57,6 +57,12 @@ export function visionConfirmation(saved: VisionPolicy): { expected_provider: st
 }
 
 const failureMessages: Record<string, string> = {
+  state_mismatch: "The page changed after its saved screenshot. Exploration stopped before using stale targets. Reload to capture the current page.",
+  state_changed_during_observation: "The page changed while its controls were being read. No action was taken from that observation. Reload to try again.",
+  dom_snapshot_limit: "The session reached its page observation limit. Saved controls and screenshots remain available.",
+  dom_observation_unavailable: "The browser could not read the page controls. Saved screenshots remain available; reload to start a new session.",
+  unattributed_popup: "A new tab appeared outside a recorded browser action. Exploration stopped because the source of that tab could not be verified.",
+  popup_open_timeout: "The link was clicked, but its new tab did not open within the allowed time. The click was not repeated.",
   bridge_offline: "The Codex bridge is disconnected. Start the bridge, then reload to create a new session.",
   bridge_cli_unsupported: "The Codex bridge needs a compatible CLI before it can accept requests.",
   bridge_login_required: "The Codex login is unavailable or expired. Renew the existing login, then reload.",
@@ -77,9 +83,13 @@ const failureMessages: Record<string, string> = {
   step_limit: "The model-call limit was reached. Image requests count toward the same limit.",
   worker_state_unavailable: "The browser session was interrupted and cannot be resumed. The last saved screen is shown. Use Reload to start a new session; previous evidence is preserved.",
   session_timeout: "The exploration time limit was reached. The last saved screen is shown. Use Reload to start a new session.",
+  step_timeout: "This step exceeded its time limit. Earlier evidence is saved; an interrupted click is not repeated automatically.",
+  worker_idle_timeout: "The browser was closed after the controller stopped sending work. Earlier evidence is saved.",
   state_restore_failed: "Vision could not restore the recorded page state, so exploration stopped. Check the rejected operations below for the underlying cause.",
   origin_denied: "The browser blocked a request outside the project's allowed origins. Review the permitted domains before starting a new session.",
   initial_capture_failed: "Vision could not capture the opened page. Exploration stopped before requesting model actions. Use Reload to start a new session.",
+  exploration_call_limit: "Partial exploration: the model-call budget was reached. Some controls or page regions remain unchecked; retained actions are not a full-site test result.",
+  exploration_coverage_incomplete: "Partial exploration: some controls were skipped, rejected or remain unchecked. Review the retained evidence and page inventory.",
   capture_failed: "Vision could not capture the page after a browser action. Exploration stopped; recorded actions remain available.",
   provider_not_configured: "The Vision provider is not configured on the server. Ask a tenant administrator to check its availability.",
   provider_auth_failed: "The Vision provider rejected access. An administrator must check the server credentials and permissions.",

@@ -1,0 +1,46 @@
+{
+  "recorded_at": "2026-11-17T15:28:34.378015+00:00",
+  "adr": "034",
+  "red": {
+    "tests": 1,
+    "failed": 1,
+    "expected_captured_index": 4,
+    "observed_captured_index": 5,
+    "baseline_source": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3"
+  },
+  "regression": {
+    "startTime": "2026-11-17T15:21:43.192Z",
+    "duration": 379150.606,
+    "expected": 108,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "final_focused": {
+    "startTime": "2026-11-17T15:23:35.276Z",
+    "duration": 21045.446,
+    "expected": 7,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "regression_note": "Broad matrix began before the final connected-target reuse restriction. Final focused seven-case matrix validates that restriction and replacement fallback on final source.",
+  "python": {
+    "passed": 43,
+    "skipped": 3,
+    "skip_reason": "Codex harness-image-only tests",
+    "initial_error": "Windows pytest default temp directory ACL; fresh workspace basetemp passed"
+  },
+  "checks": [
+    "worker typecheck passed",
+    "full Ruff passed",
+    "manifest validation 7 passed, 3 harness-image skips",
+    "execution and worker contracts unchanged"
+  ],
+  "sources": {
+    "workers/playwright/src/vision-operations.ts": "c2e11538f0bf991b5e112323e99a125d8c4768523c11cb84f362f885bb26fef2",
+    "workers/playwright/src/vision-outcome-capture.spec.ts": "9eaf7bb0b01847ea5c816d7ceddcc32fd54f101f6023cc02d76d2549b64c6a31"
+  },
+  "source_hash": "4b67094dfd3603e3f55e99e90717b7d8c77a6d068884c3bd6a5be4aa05aaf6fc",
+  "live_effectiveness": "not_established"
+}

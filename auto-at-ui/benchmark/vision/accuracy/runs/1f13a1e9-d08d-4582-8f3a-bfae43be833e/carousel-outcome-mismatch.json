@@ -1,0 +1,31 @@
+{
+  "operation_id": "5f988cae-b3ab-4fc8-b15a-1a3d73ba4b16",
+  "sequence": 24,
+  "target_id": "mct-53",
+  "expected_index": 3,
+  "observed_after_index": 4,
+  "observed_slide": "Thu Cuoi Kinh Dien",
+  "verdict": "unverified",
+  "before": {
+    "id": "29bc03fe-a625-462c-9623-a4295bd71de8",
+    "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+    "availability": "retained",
+    "byte_count": 780157
+  },
+  "after": {
+    "id": "d6723260-9b02-46a1-92ab-930b3aa4b82d",
+    "checksum": "6010227a4f99f696173c51db5911d59daff65c0954c9eed7675f2b349e8f9f6e",
+    "availability": "retained",
+    "byte_count": 776268
+  },
+  "finding": "The third indicator proposal has a verified binding but retained after-frame shows fourth slide; no outcome credit. ADR-034 does not yet establish reliable live carousel evidence.",
+  "coverage_upper_bound_ignoring_outcomes": {
+    "numerator": 15,
+    "denominator": 47
+  },
+  "coverage_upper_bound_with_available_evidence": {
+    "numerator": 14,
+    "denominator": 47
+  },
+  "review_scope": "Six carousel outcomes inspected; five matching and one unverified. Other nine click outcomes remain unreviewed after coverage gate failed."
+}

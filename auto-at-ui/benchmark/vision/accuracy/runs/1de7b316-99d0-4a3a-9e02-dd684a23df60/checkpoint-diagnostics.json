@@ -1,0 +1,79 @@
+[
+  {
+    "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+    "checkpoint_id": "76c1562b-0f2e-4672-8da6-3a0cee09523c",
+    "state_id": "12913686-68e8-41f4-a4f6-8e8f5debcc05",
+    "url_changed": false,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": true,
+    "form_values_changed": true,
+    "scroll_changed": false
+  },
+  {
+    "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+    "checkpoint_id": "faeefcef-2704-4b70-a843-09cd8d7df41b",
+    "state_id": "db5c6c6c-1105-4815-bcc3-a0680a57d130",
+    "url_changed": true,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": false
+  },
+  {
+    "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+    "checkpoint_id": "faeefcef-2704-4b70-a843-09cd8d7df41b",
+    "state_id": "db5c6c6c-1105-4815-bcc3-a0680a57d130",
+    "url_changed": true,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": false
+  },
+  {
+    "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+    "checkpoint_id": "fd449206-0519-4c65-b396-806470191e2a",
+    "state_id": "0bfe5a9c-a0de-4fc6-94e2-df7945793ab6",
+    "url_changed": true,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": false
+  },
+  {
+    "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+    "checkpoint_id": "fd449206-0519-4c65-b396-806470191e2a",
+    "state_id": "0bfe5a9c-a0de-4fc6-94e2-df7945793ab6",
+    "url_changed": false,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": true
+  },
+  {
+    "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+    "checkpoint_id": "fd449206-0519-4c65-b396-806470191e2a",
+    "state_id": "0bfe5a9c-a0de-4fc6-94e2-df7945793ab6",
+    "url_changed": false,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": true
+  },
+  {
+    "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+    "checkpoint_id": "fd449206-0519-4c65-b396-806470191e2a",
+    "state_id": "0bfe5a9c-a0de-4fc6-94e2-df7945793ab6",
+    "url_changed": false,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": true
+  }
+]

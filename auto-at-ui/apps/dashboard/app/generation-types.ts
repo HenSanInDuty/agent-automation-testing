@@ -66,6 +66,7 @@ export type ProjectExecutionPolicy = {
   vision_max_states: number;
 };
 export type VisualExploration = {
+  step_timeout_seconds?: number | null;
   trace_version?: "legacy" | "v4";
   id: string;
   project_id: string;
@@ -122,11 +123,29 @@ export type VisionDebugEvidence = {
 };
 export type VisionDebugEvidencePayload = VisionDebugEvidence & { payload: string };
 
+export type VisionExplorationConclusion = {
+  status: "completed" | "partial" | "cancelled" | "in_progress";
+  coverage: "observed_controls_completed" | "not_established";
+  interaction_scope: "buttons" | "visual_buttons" | "all" | "unknown";
+  observed_controls: number | null;
+  control_kinds?: Partial<Record<"native" | "styled_link" | "custom", number>>;
+  completed_controls: number | null;
+  remaining_controls: number | null;
+  inventory_limited: boolean;
+  operations_completed: number;
+  operations_failed: number;
+  operations_rejected: number;
+  operations_unknown: number;
+  operations_pending: number;
+  candidates_not_attempted: number;
+  business_outcome: "unverified";
+};
 export type VisionExplorationReport = {
-  status: "partial" | "in_progress";
-  coverage: "not_established";
+  conclusion?: VisionExplorationConclusion;
+  status: "completed" | "partial" | "in_progress";
+  coverage: "not_established" | "observed_controls_completed";
   stop_reason: string | null;
-  limits: { max_steps: number; max_hops: number; max_states: number; max_session_seconds: number };
+  limits: { max_steps: number; max_hops: number; max_states: number; max_session_seconds: number; step_timeout_seconds?: number | null };
   summary: { controls_acted_on: number; actions_rejected: number; actions_failed: number; actions_unknown: number; scrolls_completed: number; candidates_not_attempted: number };
   findings: { operation_id: string; sequence: number; action_kind: string; status: string; reason_code: string | null; target: string | null; url_change: string; visual_change: string }[];
 };
@@ -134,7 +153,8 @@ export type VisionExplorationReport = {
 export type ExecutedClick = { x: number; y: number; viewport_width: number; viewport_height: number; before_frame_id: string; confirmed_at: string };
 export type OperationFrame = { id: string | null; availability: "retained" | "deleted" | "missing"; reason_code: string | null; captured_at?: string };
 export type VisualOperation = { executed_click?: ExecutedClick | null; id: string; sequence: number; purpose: "setup" | "explore" | "restore" | "replay"; action_kind: string; status: string; started_at: string; outcome_code: string | null; state_id: string | null; locator_id: string | null; before: OperationFrame; after: OperationFrame };
-export type VisualLocator = { id: string; operation_id: string; status: string; reason_code: string | null; verified_at: string | null; descriptor: { strategy: string; role: string | null; value: string; scope: { kind: string; selector: string }[] } | null; bounding_box: { x: number; y: number; width: number; height: number } | null };
-export type VisualTrace = { schema_version: string; session_id: string; revision: string; trace_version: string; items: VisualOperation[]; locators: VisualLocator[]; next_sequence: number; has_more: boolean };
+export type VisualLocator = { originating_frame_id?: string | null; id: string; operation_id: string; status: string; reason_code: string | null; verified_at: string | null; descriptor: { strategy: string; role: string | null; value: string; scope: { kind: string; selector: string }[] } | null; bounding_box: { x: number; y: number; width: number; height: number } | null };
+export type VisualPageInventory = { state_id: string; checkpoint_id: string; page_url: string | null; url_fingerprint: string; interaction_scope?: "all" | "buttons" | "visual_buttons"; truncated: boolean; scrollable: boolean; skipped_count: number; controls: { key: string; button_kind?: "native" | "styled_link" | "custom" | null; role: string; name: string; status: "pending" | "queued" | "completed" | "failed" | "rejected"; proposal_id: string | null; operation_id: string | null }[] };
+export type VisualTrace = { schema_version: string; session_id: string; revision: string; trace_version: string; items: VisualOperation[]; locators: VisualLocator[]; pages?: VisualPageInventory[]; next_sequence: number; has_more: boolean };
 export type VisionHandoffBranch = { id: string; status: "ready" | "blocked"; reason_code: string | null; steps: { operation_id: string; locator_id: string | null; input_reference: string | null }[] };
 export type VisionResult = { exploration_report?: VisionExplorationReport; schema_version: string; session_id: string; project_id: string; revision: string; exploration_state: string; completion_reason: string | null; evidence_status: string; counts: Record<string, number>; branches: { id: string; status: string; reason_code: string | null }[]; handoffs: { id: string; branches: VisionHandoffBranch[] }[]; links: Record<"handoff" | "generation" | "draft" | "run" | "report", { state: string; id: string | null; href: string | null; reason_code?: string | null }>; limitations: string[] };

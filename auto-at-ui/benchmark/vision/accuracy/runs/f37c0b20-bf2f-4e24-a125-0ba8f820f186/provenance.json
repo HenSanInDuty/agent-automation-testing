@@ -1,0 +1,50 @@
+{
+  "session_id": "ccad7a7d-737a-4de8-b071-16ce457c9753",
+  "source_hash": "7062d7e611a5d50fd44e3d5a414cbfb6634e8e264ab87e8df193de3efd156e03",
+  "images": {
+    "control-plane": "sha256:3b4785cc5bf1a53dba5c378f0451a6efa000be36b283d565f9bb1e972b3f2c00",
+    "temporal-worker": "sha256:0bce4f34e5936ff38d6a5ece4cbea9f8aacd2906204484257127975d51055757",
+    "playwright-worker": "sha256:7786656c2710ab3e0eae958e5441ce71e1395e1df069a3e65f1217f88b8b2cae",
+    "codex-bridge": "sha256:d5cbc0aec49efcaf4157d726b206c201024f47810c1610d1569cce52d23693bd",
+    "dashboard": "sha256:8de1616616aa83002555b133ce2c4b46c2da644daa6ff09d92f6c5d4c7aa2212"
+  },
+  "deployed_source_checks": {
+    "control-plane:apps/control-plane/application/vision_trace_events.py": "524e08f7b33eeba5abc4596dc41c4bdb66e5d2f5a726d9bc937b1870988306d7",
+    "control-plane:apps/control-plane/api/v1/routes/generation.py": "692e8a1a02cbfba299d170c885fed6e41688bb73350241ac43801b4b0fef0331",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "temporal-worker:apps/control-plane/application/vision_trace_events.py": "524e08f7b33eeba5abc4596dc41c4bdb66e5d2f5a726d9bc937b1870988306d7",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "playwright-worker:workers/playwright/src/vision-operations.ts": "8892a93643d938e0c79e013b6023bb9b72d8e7926b4aa4dcb4998022d50f8824",
+    "playwright-worker:workers/playwright/src/vision.ts": "870a7117b89aacad5459d05c7c4edf124d28c87daeadd1e52938cebcf8af1380",
+    "playwright-worker:workers/playwright/src/vision-dom.ts": "4b2d28180ba863baac31e2971e4f602657bb7eb8b54d0c37717490bef31aec16",
+    "playwright-worker:workers/playwright/src/vision-history.ts": "d7021992377589c2a3e51137426e3ad3cdabc9c499b6d0349c24703d194962b3",
+    "playwright-worker:workers/playwright/src/vision-contract.generated.ts": "d13ed057a1d6126b3af22143821dc67ed0faacb75e64a745d9369f8beb2fe32f"
+  },
+  "prompt_version": "codex-dom-v11",
+  "playwright_version": "1.50.1",
+  "chromium_version": "133.0.6943.16",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "runtime_policy": {
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "prompt_version": "codex-dom-v11",
+    "max_steps": 20,
+    "max_requests_per_minute": 5,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": "0.25"
+  },
+  "hypothesis": "User-approved 100-state/20-hop policy permits continued exploration of mutated local UI at depths beyond ten while preserving all state, action and evidence guards."
+}

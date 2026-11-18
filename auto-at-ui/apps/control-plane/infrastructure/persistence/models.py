@@ -129,6 +129,7 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     max_states: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     max_screenshot_bytes: Mapped[int] = mapped_column(Integer)
     max_session_seconds: Mapped[int] = mapped_column(Integer)
+    step_timeout_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_cost_usd: Mapped[str] = mapped_column(String(32))
     max_requests_per_minute: Mapped[int] = mapped_column(Integer)
     trace_version: Mapped[str] = mapped_column(
@@ -187,7 +188,7 @@ class CodexBridgeJobModel(TenantRecord, Base):
              "visual_exploration_sessions.id"], name="fk_codex_job_session",
         ),
         UniqueConstraint("session_id", "request_sequence", name="uq_codex_job_sequence"),
-        CheckConstraint("request_sequence BETWEEN 1 AND 10 AND fencing_token > 0",
+        CheckConstraint("request_sequence BETWEEN 1 AND 20 AND fencing_token > 0",
                         name="ck_codex_job_sequence"),
         CheckConstraint("stage IN ('dom', 'image')", name="ck_codex_job_stage"),
         CheckConstraint(
@@ -239,6 +240,7 @@ class VisualExplorationStateModel(TenantRecord, Base):
     hop: Mapped[int] = mapped_column(Integer)
     screenshot_checksum: Mapped[str] = mapped_column(String(64))
     checkpoint: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    page_inventory: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

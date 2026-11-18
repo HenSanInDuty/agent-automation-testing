@@ -8,10 +8,14 @@ from pathlib import Path
 
 from agents.prompts.codex_exploration import build_prompt
 from application.codex_bridge import BridgeService
+from application.codex_generation_bridge import GenerationBridgeService
 from config import Settings
 from infrastructure.codex_bridge.doctor import doctor
+from infrastructure.codex_bridge.generation_process import GenerationProcess
+from infrastructure.codex_bridge.generation_spool import GenerationSpool
 from infrastructure.codex_bridge.process import CodexProcess
 from infrastructure.codex_bridge.spool import FileSpool
+from infrastructure.observability.logging import configure_logging
 
 
 async def run(settings, readiness):
@@ -23,6 +27,7 @@ async def run(settings, readiness):
     spool = FileSpool(
         Path(settings.codex_bridge_container_spool), settings.codex_bridge_id,
         settings.codex_bridge_allowed_tenant, settings.codex_bridge_max_pending,
+        owner_uid=settings.codex_bridge_spool_owner_uid,
     )
     service = BridgeService(
         settings, spool, CodexProcess(
@@ -30,6 +35,14 @@ async def run(settings, readiness):
             poll_seconds=settings.codex_bridge_cancel_poll_seconds,
             kill_grace_seconds=settings.codex_bridge_kill_grace_seconds,
         ), build_prompt, readiness.model_copy(update={"online": True}),
+        generation=GenerationBridgeService(
+            GenerationSpool(
+                Path(settings.codex_bridge_container_spool) / ".generation",
+                settings.codex_bridge_id, settings.codex_bridge_allowed_tenant,
+                owner_uid=settings.codex_bridge_spool_owner_uid,
+            ),
+            GenerationProcess(CodexProcess(settings.codex_bridge_executable)),
+        ),
     )
     try:
         await service.serve(stopped)
@@ -42,6 +55,7 @@ def main() -> int:
     parser.add_argument("command", choices=("doctor", "run"))
     args = parser.parse_args()
     settings = Settings(_env_file=None)
+    configure_logging(settings, service="auto-at-codex-bridge")
     readiness = doctor(settings)
     print(json.dumps(readiness.model_dump(mode="json")), flush=True)
     if args.command == "doctor":

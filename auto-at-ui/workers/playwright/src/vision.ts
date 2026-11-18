@@ -83,7 +83,7 @@ export function visualTreeRequestOf(value: unknown): VisualTreeRequest {
     !Number.isInteger(request.max_session_seconds) || !Array.isArray(request.replay_path) ||
     (request.parent_url_fingerprint !== undefined &&
       (typeof request.parent_url_fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(request.parent_url_fingerprint)))) throw new Error("visual tree request does not satisfy contract v3");
-  if ((request.max_hops as number) < 1 || (request.max_hops as number) > 10 || (request.max_states as number) < 1 || (request.max_states as number) > 200 ||
+  if ((request.max_hops as number) < 1 || (request.max_hops as number) > 20 || (request.max_states as number) < 1 || (request.max_states as number) > 200 ||
     (request.max_screenshot_bytes as number) < 1024 || (request.max_session_seconds as number) < 1 ||
     request.replay_path.length > (request.max_hops as number) || !allowed(request.target_url, request.allowed_origins)) throw new Error("visual tree request violates worker policy");
   request.replay_path.forEach(actionOf);

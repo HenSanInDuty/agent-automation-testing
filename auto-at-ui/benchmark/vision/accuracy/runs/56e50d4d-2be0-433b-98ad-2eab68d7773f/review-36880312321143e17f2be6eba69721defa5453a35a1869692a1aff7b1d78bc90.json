@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "217eef87-36de-4c4d-b7f5-a7f9c1a164a0",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_step",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "bbc46ae9884e25ae7336c9ff81fec24e0574eb38dd489f8491df7736eea1d2bb",
+  "after_checksum": "1ee8e03ff5a22eb97c4d6a10a4b78cef46465bcf7b8b108f9d32b4d29e0d41ac",
+  "finding": "Before/after frames show active feature slide 3 (Chinh Phuc PvE) moving exactly one position left to slide 2 (Bang Chien Nay Lua); verified left-arrow locator and retained immediate click evidence."
+}

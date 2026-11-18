@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "21eb65c5-c098-43f4-a9e1-b1f91707e427",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_character",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "88ed87bb4a961c1cb5050aa0facad2ff3d6f7e555dfc8ea457156f12469ac7e0",
+  "after_checksum": "dcb54a7cab0b9fe8cad591095fa5a109c8b93af5d2b8f2562cc5d44ec31e0277",
+  "finding": "Second character control is visibly active and matching Dao Hoa character panel is displayed."
+}

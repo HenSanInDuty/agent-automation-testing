@@ -118,7 +118,11 @@ class SqlAlchemyCodexJobGateway:
             or row.correlation_id != request.correlation_id
             or row.fencing_token != request.fencing_token
             or request.request_sequence > row.max_steps
-            or request.deadline > row.updated_at + timedelta(seconds=row.max_session_seconds)
+            or request.deadline > (
+                request.created_at + timedelta(seconds=row.step_timeout_seconds)
+                if row.step_timeout_seconds is not None
+                else row.updated_at + timedelta(seconds=row.max_session_seconds)
+            )
         ):
             raise ValueError("bridge session fence rejected")
         frozen = CodexConsentSnapshot.model_validate(row.model_input_policy)

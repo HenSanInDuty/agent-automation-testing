@@ -1,0 +1,2451 @@
+{
+  "schema_version": "vision-accuracy-evidence-v1",
+  "session_id": "378d318d-ecca-4637-ae22-cbd8bf5619fc",
+  "state": "unavailable",
+  "trace_revision": "30cc797f6d11d174b968954260856419e90676063cb084b3a67c2e248efcc52a",
+  "operations": [
+    {
+      "id": "59afb16c-e330-4119-9acf-48b482267eeb",
+      "sequence": 1,
+      "status": "completed",
+      "action_kind": "navigate",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": null,
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "f6211e8b-6c20-4da7-810e-67a5651f3512",
+        "checksum": "c4b3344c0140948b69d89b18ffd9f7f3c7517d71415595458dc3a82eb4f89b78",
+        "availability": "retained",
+        "byte_count": 4331
+      },
+      "after": {
+        "id": "30563424-7ddc-4d33-9d16-29b75c0bc796",
+        "checksum": "813d7a80a5f79c6a2c19de9a7af426f0e50562479b2d5ca93f5217ddc7b2aa01",
+        "availability": "retained",
+        "byte_count": 463738
+      }
+    },
+    {
+      "id": "80554952-9127-4618-b828-95c81ba5f989",
+      "sequence": 2,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "3bf0f6cf-efeb-4ec6-b04b-8c4039b89fb6",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "59afb16c-e330-4119-9acf-48b482267eeb",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "c162383f-eb1b-425d-a437-eac24f0decf6",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "987f87eb-09fe-436a-84fd-300ff1d8b3a4",
+        "checksum": "8f8b7d9ebe219f057c6811b09320787588b66d4a67c038317d1d4f13a8641dce",
+        "availability": "retained",
+        "byte_count": 1019615
+      }
+    },
+    {
+      "id": "7a8c3358-6075-4314-b5cd-d9fca8a4f2c2",
+      "sequence": 3,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "ac2e96e7-20ff-46ce-a313-6b965f7efcc5",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "80554952-9127-4618-b828-95c81ba5f989",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "7bf3518a-6c17-4bd6-a1d1-b41f774ce943",
+        "checksum": "8f8b7d9ebe219f057c6811b09320787588b66d4a67c038317d1d4f13a8641dce",
+        "availability": "retained",
+        "byte_count": 1019615
+      },
+      "after": {
+        "id": "5ecdeb28-8753-4593-80a1-49a3d08d9ea7",
+        "checksum": "be82f56923e90ce86cad1063e20852a773197d14faa490ede515e315ea752619",
+        "availability": "retained",
+        "byte_count": 922085
+      }
+    },
+    {
+      "id": "3f47efed-e846-4317-bf7e-1b9c950ff026",
+      "sequence": 4,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "7e8b642b-06b3-49a3-b519-699d467792a5",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "7a8c3358-6075-4314-b5cd-d9fca8a4f2c2",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "d681372c-4c62-4f81-8e1c-50044128a44c",
+        "checksum": "8a11b699426f56c197db23b7bffa3d7432f23ac0e401b1f7ace4f7f248ece018",
+        "availability": "retained",
+        "byte_count": 900601
+      },
+      "after": {
+        "id": "ab70228c-1990-4c80-a0f6-9b1f88a7a232",
+        "checksum": "8311e45c147a9b9470ef3abff2a576e180b2298b7c998c4d4411503d27acb9e8",
+        "availability": "retained",
+        "byte_count": 1007451
+      }
+    },
+    {
+      "id": "aa658fa8-93de-4ba5-845c-ded922c3ee26",
+      "sequence": 5,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "b2b94be0-a7ec-4185-81ee-8fa64641a6f3",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "3f47efed-e846-4317-bf7e-1b9c950ff026",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "fca50c26-a54e-4515-b61c-0a9e64fc54ff",
+        "checksum": "96901c746fdd37fe7650f27510eb4bc90333bb893741ee37c32324aff049387b",
+        "availability": "retained",
+        "byte_count": 1078127
+      },
+      "after": {
+        "id": "50bf036b-d4d0-4bc0-95a6-e27372414a48",
+        "checksum": "d17bd2b855924cb37b6a6aa2b41c8707b55c077b80426dbae73e605e68e1b5ab",
+        "availability": "retained",
+        "byte_count": 1266642
+      }
+    },
+    {
+      "id": "119d5af4-4f11-4653-af5e-1835c4a0f8ea",
+      "sequence": 6,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "d5bb2932-395f-4403-8bdb-45119ee6c36f",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "aa658fa8-93de-4ba5-845c-ded922c3ee26",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "c294d373-d127-4eee-924b-f4bcbbcfd354",
+        "checksum": "34e9cbc1967c8c75849eab55d088c3cac6c13b024d8fa8d90f8075864fcc7525",
+        "availability": "retained",
+        "byte_count": 1266684
+      },
+      "after": {
+        "id": "29a277c3-cc87-41ba-81f6-5c0e7ce075ab",
+        "checksum": "a3a31821649709e48e815c30823b69be7594e23eb249f393491ab27e27321223",
+        "availability": "retained",
+        "byte_count": 1133322
+      }
+    },
+    {
+      "id": "a856f2f7-4494-4f35-b035-3e212b29271d",
+      "sequence": 7,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "8c70fe74-a99b-4883-bc81-2e78c7495502",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "119d5af4-4f11-4653-af5e-1835c4a0f8ea",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "b660da10-2c70-46d1-ae27-b65242091311",
+        "checksum": "a3a31821649709e48e815c30823b69be7594e23eb249f393491ab27e27321223",
+        "availability": "retained",
+        "byte_count": 1133322
+      },
+      "after": {
+        "id": "5fb5d727-9869-4f1a-88dd-8c75be23199b",
+        "checksum": "02b239e9d118012a08fd41b08c2185b85c4d72398f40fca3b50f8bbc30f295d5",
+        "availability": "retained",
+        "byte_count": 826648
+      }
+    },
+    {
+      "id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "sequence": 8,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "26ea2fa0-ad25-479d-8f6c-82e5cadabf9c",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "a856f2f7-4494-4f35-b035-3e212b29271d",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "590cfbf5-6e3c-42f5-bddb-cb564272e54b",
+        "checksum": "02b239e9d118012a08fd41b08c2185b85c4d72398f40fca3b50f8bbc30f295d5",
+        "availability": "retained",
+        "byte_count": 826648
+      },
+      "after": {
+        "id": "2a03bd55-adcc-46ff-a796-3a1575f6f4b6",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      }
+    },
+    {
+      "id": "4ed9bf4b-b758-46a5-89ff-69985b62bca6",
+      "sequence": 9,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "9be8e0a8-66e8-4a26-a52b-b96b1200924a",
+      "proposal_id": "8be79242-2301-481d-aa14-b5f3f35ef5dc",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "8c227cdb-5902-4b01-a921-45e955532740",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "3738215d-c1a8-4782-8f9b-d10095ff5a22",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      },
+      "after": {
+        "id": "c98c8399-e19c-421d-9a2a-473d5438b6fc",
+        "checksum": "bda54c75150b7ffa5e52f69233120419c68b99e87de0af5e7285804161eb07c6",
+        "availability": "retained",
+        "byte_count": 784573
+      }
+    },
+    {
+      "id": "c9ac5fff-a717-4558-b53a-9afaa483bdbc",
+      "sequence": 10,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "4ed9bf4b-b758-46a5-89ff-69985b62bca6",
+      "before_page_id": "8c227cdb-5902-4b01-a921-45e955532740",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "18092159-6055-413c-bf47-bc9f0ea1000d",
+        "checksum": "bda54c75150b7ffa5e52f69233120419c68b99e87de0af5e7285804161eb07c6",
+        "availability": "retained",
+        "byte_count": 784573
+      },
+      "after": {
+        "id": "adf7c298-1ebf-43e6-9cb2-c97f284f8f6e",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      }
+    },
+    {
+      "id": "8b51e31f-8436-44ad-832a-bcbcf22532b3",
+      "sequence": 11,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": "47a8a306-62b1-4d6a-8a94-11e89d95436e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "4ed9bf4b-b758-46a5-89ff-69985b62bca6",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "72d6590b-7793-4b07-a623-c04bc1252390",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      },
+      "after": {
+        "id": "cbe3d39f-7dcd-4ca8-90a2-f65c78af6b42",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      }
+    },
+    {
+      "id": "a41bf094-9e54-47da-b813-d6bdbb8c472b",
+      "sequence": 12,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "df6db2f9-05a7-4abc-9ba7-16bc4ad52cf4",
+      "proposal_id": "8581268a-c7d4-4f04-963e-c03ad20eb556",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "e00627c1-60b8-403b-b7f8-31dbbddc41b6",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "db776a72-d06f-45bb-84e0-790b63d144e0",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      },
+      "after": {
+        "id": "c0d40970-f73c-4eec-9b8d-f57a26b1fe6a",
+        "checksum": "05948a94e7433a3f0c63ace826d8fef1f46ec5f93a06323cd504a072870e57a9",
+        "availability": "retained",
+        "byte_count": 200471
+      }
+    },
+    {
+      "id": "1ca0a633-ecb6-4e6b-bc68-d4126c9640af",
+      "sequence": 13,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "a41bf094-9e54-47da-b813-d6bdbb8c472b",
+      "before_page_id": "e00627c1-60b8-403b-b7f8-31dbbddc41b6",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "7e678d74-f6d2-4388-a79e-715b420c0cee",
+        "checksum": "ae6a4b85202237f6ad60a337be37bbf123344411381559b65e306ccba1fbccbc",
+        "availability": "retained",
+        "byte_count": 404712
+      },
+      "after": {
+        "id": "4a7e28d1-3b1a-45d7-af58-361ecd9aa0f0",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      }
+    },
+    {
+      "id": "a2653bde-c5fd-4f7d-ab75-e50320cb476a",
+      "sequence": 14,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": "47a8a306-62b1-4d6a-8a94-11e89d95436e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "a41bf094-9e54-47da-b813-d6bdbb8c472b",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "3cb9b016-9cab-4629-94b7-560571e9311f",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      },
+      "after": {
+        "id": "de902fc8-64d1-427f-a3ed-35f2edbcf68e",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      }
+    },
+    {
+      "id": "2350bfc4-0281-45a0-9821-b56a917016ca",
+      "sequence": 15,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "0a20b9fc-fb02-4ee3-8a34-c7207c81e02f",
+      "proposal_id": "a7b76056-531c-49a0-86e4-76961fdf27a6",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "35ed3cad-4fb5-4c97-a847-9ab17d09ff91",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "048cab1c-ab06-4f1f-9cda-948c69427f17",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      },
+      "after": {
+        "id": "97873f90-68f4-40e3-b806-fd47f05b626a",
+        "checksum": "23f8a83618444422f7a15134cdbc46a702328a17885fc2662799fedc14e0f3ca",
+        "availability": "retained",
+        "byte_count": 53994
+      }
+    },
+    {
+      "id": "15e6629f-f410-4fbd-b421-3f4e5bbdc88d",
+      "sequence": 16,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "2350bfc4-0281-45a0-9821-b56a917016ca",
+      "before_page_id": "35ed3cad-4fb5-4c97-a847-9ab17d09ff91",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "8a94cf43-0c65-4669-b58d-2d46d4c31ce7",
+        "checksum": "23f8a83618444422f7a15134cdbc46a702328a17885fc2662799fedc14e0f3ca",
+        "availability": "retained",
+        "byte_count": 53994
+      },
+      "after": {
+        "id": "c1fe4ddb-9c6a-4309-b313-619b1fb16a04",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      }
+    },
+    {
+      "id": "180e8c34-0103-4aff-9311-9bda33b5239c",
+      "sequence": 17,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": "47a8a306-62b1-4d6a-8a94-11e89d95436e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "2350bfc4-0281-45a0-9821-b56a917016ca",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "d5d3ed69-8263-46ef-b5d3-ffd96b573b1c",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      },
+      "after": {
+        "id": "aecd6c2b-0a38-40da-b20e-67e6cb45df8b",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      }
+    },
+    {
+      "id": "69935167-733e-4186-8a7e-5c4458922764",
+      "sequence": 18,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "976a2be1-04ce-4384-b02c-607ac44d1bfd",
+      "proposal_id": "13c51255-32c8-4721-8888-1d5f0aa95566",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "7e6d1790-d4a2-4198-8bed-9fbe0a98667f",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "c4f40cd3-9fab-4981-8c25-03372c1e0a1f",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      },
+      "after": {
+        "id": "995af77c-a904-41e9-b6c6-a62df938922f",
+        "checksum": "66043d306d0e190af12543188b5a292d4b84977111015d17185df251a2d8b91a",
+        "availability": "retained",
+        "byte_count": 641830
+      }
+    },
+    {
+      "id": "e1822acd-7e87-498c-a998-da8d4b80eb3c",
+      "sequence": 19,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "69935167-733e-4186-8a7e-5c4458922764",
+      "before_page_id": "7e6d1790-d4a2-4198-8bed-9fbe0a98667f",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "aa19d486-43a2-4ae4-b0f5-e027bf0110bc",
+        "checksum": "66043d306d0e190af12543188b5a292d4b84977111015d17185df251a2d8b91a",
+        "availability": "retained",
+        "byte_count": 641830
+      },
+      "after": {
+        "id": "5002495b-74c0-41c5-a2f9-fff9028252f2",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      }
+    },
+    {
+      "id": "e14d4d13-fdf5-4bd3-9bfe-a87a91c99bc1",
+      "sequence": 20,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": "47a8a306-62b1-4d6a-8a94-11e89d95436e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "69935167-733e-4186-8a7e-5c4458922764",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "48531f48-7b51-4b97-8fce-af313fe4d842",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      },
+      "after": {
+        "id": "62f845fc-71f5-4cd5-96c7-dc663e97e541",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      }
+    },
+    {
+      "id": "9b60e3e2-fada-4322-86ee-6d30ba9d23e5",
+      "sequence": 21,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "d12a0999-e01a-4f45-87a5-c8ffd58a3b1f",
+      "proposal_id": "1e74c7a6-a703-4f5c-a021-868b39899420",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "14187f09-3201-4265-b7a4-e39a172494bf",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "edcf5f5b-80c9-4757-a663-609e98321f83",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      },
+      "after": {
+        "id": "9f9194fe-f7f1-4aac-868f-1b7866a42d68",
+        "checksum": "ea64a5d5c2272ff7632be19eb7e75d510f132c9e1a8061a9f282ba6ca5db4de3",
+        "availability": "retained",
+        "byte_count": 1070525
+      }
+    },
+    {
+      "id": "f47cd2d7-631c-49cb-8d5c-8613f7b08922",
+      "sequence": 22,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "9b60e3e2-fada-4322-86ee-6d30ba9d23e5",
+      "before_page_id": "14187f09-3201-4265-b7a4-e39a172494bf",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "029ee878-07ab-4cbb-8077-0941caa4bb6a",
+        "checksum": "ea64a5d5c2272ff7632be19eb7e75d510f132c9e1a8061a9f282ba6ca5db4de3",
+        "availability": "retained",
+        "byte_count": 1070525
+      },
+      "after": {
+        "id": "6c9b1417-507e-4856-8de2-be327decd6df",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      }
+    },
+    {
+      "id": "666d419a-03b2-462f-9836-d48a608656ea",
+      "sequence": 23,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": "47a8a306-62b1-4d6a-8a94-11e89d95436e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "9b60e3e2-fada-4322-86ee-6d30ba9d23e5",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "a33469ac-587d-47a0-be3c-3619bedca825",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      },
+      "after": {
+        "id": "e2a3f88c-83b5-4c8a-8ce5-a4fc69066258",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      }
+    },
+    {
+      "id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "sequence": 24,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "download_started",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "6fbac6d3-a749-478e-a913-9b2b776588d1",
+      "proposal_id": "2e7190b7-2e3d-4267-9e19-f26a3ce180cf",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "e18dd96c-b592-43b4-a8da-bcc55716ecb0",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      },
+      "after": {
+        "id": "2c0b59de-1d55-4572-990c-82896fa1590b",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      }
+    },
+    {
+      "id": "f64d54fa-6839-48be-bf2a-143b6a7c2a84",
+      "sequence": 25,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "c9ea08d9-6e6a-4e95-a11e-95068079a615",
+      "proposal_id": "35e1125f-c997-414e-9639-684520e70c1d",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "010c1ee5-64df-41ab-938a-bbef741b1242",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      },
+      "after": {
+        "id": "2a352fd4-0401-45bc-8be4-6472d06c2a9f",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      }
+    },
+    {
+      "id": "ce19bbd8-c01a-47e8-8f1c-7b94800b8d71",
+      "sequence": 26,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": "47a8a306-62b1-4d6a-8a94-11e89d95436e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "f64d54fa-6839-48be-bf2a-143b6a7c2a84",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "a7b69a1d-6bcd-46c1-8ef2-627fe29b4504",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      },
+      "after": {
+        "id": "e97054e8-b758-43ee-8241-0e806cb2ed5a",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      }
+    },
+    {
+      "id": "ee0e7495-2995-4591-ac03-feb00eb50cae",
+      "sequence": 27,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "9b1d0013-8489-4094-b6f0-32889224fba0",
+      "proposal_id": "2dd81aa1-6931-4166-b99b-d5643b6abc1c",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "8aff7894-895a-4fa3-ac81-08cdef55b67e",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "71c94f0e-76d4-48d2-9589-ca919d13fb12",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      },
+      "after": {
+        "id": "f7f8efed-d80d-4d29-87bd-5828b8d726d9",
+        "checksum": "1ed9faa8c0cd187959f807164a45544c0b3b8852b6d55106e05bc8f853b6d79b",
+        "availability": "retained",
+        "byte_count": 923134
+      }
+    },
+    {
+      "id": "0f8fc187-ebbe-4110-9033-b76c16ab1df8",
+      "sequence": 28,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "ee0e7495-2995-4591-ac03-feb00eb50cae",
+      "before_page_id": "8aff7894-895a-4fa3-ac81-08cdef55b67e",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "02f0bbb2-4e62-46b8-bf5e-084cb33ae7a7",
+        "checksum": "8934be4776b6654f9b2189bfa03e7c98d3d02d0985fe44759d95dac4181cdfbf",
+        "availability": "retained",
+        "byte_count": 922809
+      },
+      "after": {
+        "id": "8ddfd3a5-d4ab-47df-ba1d-31447f961483",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      }
+    },
+    {
+      "id": "0e58b40d-3016-4a0c-a2c9-57164535c648",
+      "sequence": 29,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": "47a8a306-62b1-4d6a-8a94-11e89d95436e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "ee0e7495-2995-4591-ac03-feb00eb50cae",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "cfad021d-2c64-426a-a8ed-12d7b36a3246",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      },
+      "after": {
+        "id": "71e70da2-e3fe-40eb-8039-be053e2af5df",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      }
+    },
+    {
+      "id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "sequence": 30,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "0bd862d6-388a-4018-912c-901a47c05b97",
+      "checkpoint_id": null,
+      "locator_id": "f26677e6-f6f4-422f-a434-02631c550b72",
+      "proposal_id": "79ea57d4-9c07-454b-b98c-d1c9aa0ff299",
+      "parent_operation_id": "73965fdc-e257-43ef-8530-15f64965e9e7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "f9392c2a-7565-4975-b7e0-1b27bb13ce81",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      },
+      "after": {
+        "id": "f6e1f242-a2c0-411e-9253-249b49df5cb4",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "9972e0fd-d8ee-498c-bb38-d0b82f2ced85",
+      "sequence": 31,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": "475b2b1d-b179-42ae-a99e-69d68d56adc6",
+      "proposal_id": "f2c3f8fc-d249-4c78-8f2e-f3b5938fb290",
+      "parent_operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "e9579729-64ea-4e20-8c14-1150d3f63a93",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "85cbec4a-afb6-4545-bf46-756fd21fda89",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "1ddf8116-fa7b-43f4-9d66-15530030ebb3",
+        "checksum": "c2c8f8a6d8c718f93cd003ef9f2c409d13fec4f10db6832e1f8a991475f0a17a",
+        "availability": "retained",
+        "byte_count": 404739
+      }
+    },
+    {
+      "id": "868b5630-d4df-449d-b2b5-d8c2a94024b9",
+      "sequence": 32,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "9972e0fd-d8ee-498c-bb38-d0b82f2ced85",
+      "before_page_id": "e9579729-64ea-4e20-8c14-1150d3f63a93",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "67742940-6b1e-43fd-8972-59ec2bad1058",
+        "checksum": "c2c8f8a6d8c718f93cd003ef9f2c409d13fec4f10db6832e1f8a991475f0a17a",
+        "availability": "retained",
+        "byte_count": 404739
+      },
+      "after": {
+        "id": "43fa4c3e-19a4-4836-bbfa-777611b246e0",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "bddb6a3c-a79a-458c-9874-f6d00e449488",
+      "sequence": 33,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "9c5b77df-39b4-490a-88e8-48bd95796f0d",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "9972e0fd-d8ee-498c-bb38-d0b82f2ced85",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "923e344d-b63b-4a28-8f57-118a1c9aea2d",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "cba8e155-5c13-4095-855a-5a13e1f8119f",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "683daa57-fbc5-4cf5-a27d-399d9aad7d55",
+      "sequence": 34,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "bddb6a3c-a79a-458c-9874-f6d00e449488",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "ad273bab-a8b3-475d-9ba6-6a66ad1256b2",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "61e160fd-17bc-46b0-aadb-fdca7961290b",
+        "checksum": "88a62866b649585b5f2d6129f07913b104bbf947090327b8c147dce1cb5a2a65",
+        "availability": "retained",
+        "byte_count": 1073682
+      }
+    },
+    {
+      "id": "20f83afb-2f5b-499e-a8c5-9520b17d08e1",
+      "sequence": 35,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "bddb6a3c-a79a-458c-9874-f6d00e449488",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "68d0ec94-1f57-4f6a-ac8c-557f19c663f8",
+        "checksum": "88a62866b649585b5f2d6129f07913b104bbf947090327b8c147dce1cb5a2a65",
+        "availability": "retained",
+        "byte_count": 1073682
+      },
+      "after": {
+        "id": "00f4afe2-2d7b-4276-9730-2f14dce4d7b9",
+        "checksum": "73fa6f3e9f441ca0959c7805ccaeb5e4d363283cc93e6ef01f00f5f368470249",
+        "availability": "retained",
+        "byte_count": 791274
+      }
+    },
+    {
+      "id": "b3a74005-0f79-45fd-b632-1997711fdc3e",
+      "sequence": 36,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "bddb6a3c-a79a-458c-9874-f6d00e449488",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "28a0a6b9-8baf-4bb1-9b76-2ecaa7bbd0f5",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      },
+      "after": {
+        "id": "26368dcd-d853-4f45-952a-43902c8e1138",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      }
+    },
+    {
+      "id": "fb130de4-f224-4c79-afea-5bafb7565e11",
+      "sequence": 37,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "443f5770-b23c-4b1d-a315-c25b8ef3e690",
+      "proposal_id": "c7f649a2-61e8-4e21-8dbd-84acd533f3ad",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "53c44eb5-ffbb-496f-b0b5-a22022ca162b",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      },
+      "after": {
+        "id": "9ea2bee3-1d8f-4fb8-8bff-debd79e85e7d",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      }
+    },
+    {
+      "id": "aaa48ee1-f962-41e3-8caf-47a46ce7b792",
+      "sequence": 38,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "fb130de4-f224-4c79-afea-5bafb7565e11",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "13bf71aa-4a66-4e66-9be0-4dc9d842a17c",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      },
+      "after": {
+        "id": "f8e5922c-fea2-48e5-a0ed-8f714b69bb7a",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      }
+    },
+    {
+      "id": "63f3a367-6f9e-4eac-9c42-e1c0db037f2d",
+      "sequence": 39,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "25033250-3379-4ffa-93ee-6184e9909c3d",
+      "proposal_id": "644565e9-a2e3-49b2-82c7-bfe66afc2b39",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "b875113c-2ef8-4a80-9b89-5f8094ef1e75",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      },
+      "after": {
+        "id": "7789d01d-49db-4308-bb7a-d352e2d2f7e9",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      }
+    },
+    {
+      "id": "f0d7b306-4654-45f2-837b-58dad24bc2f3",
+      "sequence": 40,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "63f3a367-6f9e-4eac-9c42-e1c0db037f2d",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "32701aa9-1337-4922-979f-ea39a7734c14",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      },
+      "after": {
+        "id": "12f854df-cc26-4b8e-bd13-b14a1f34a981",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      }
+    },
+    {
+      "id": "b1f6ee4c-994d-4115-b7e8-c421e2d4ebb9",
+      "sequence": 41,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "a8500a8f-49d7-43d7-8a43-918d6cc17f26",
+      "proposal_id": "e9d5f1fc-1f51-442b-9108-1cca45528d16",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "30a49b6b-4787-49ed-901a-e327829accdf",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      },
+      "after": {
+        "id": "34d94393-f98a-4027-aa39-3d5b727feca3",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      }
+    },
+    {
+      "id": "d46ec424-a9f5-46b7-9ef5-74bf5b6bfc1f",
+      "sequence": 42,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "b1f6ee4c-994d-4115-b7e8-c421e2d4ebb9",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "536f5d22-1077-4688-95e3-95e471417e93",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      },
+      "after": {
+        "id": "3bf33fef-15c8-4017-b43c-00f1baeffc9b",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      }
+    },
+    {
+      "id": "60019293-9e9d-40d1-977e-8a21879fe77b",
+      "sequence": 43,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "b9116571-4c3b-4ffa-92e2-f0413689f772",
+      "proposal_id": "ca4bc265-3a47-43e0-94c4-5d9ec7c8241c",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "3f5a93a5-11ed-48b5-a924-d7c498d3ec40",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      },
+      "after": {
+        "id": "f2095e32-511d-429f-b02d-5763e914b04a",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      }
+    },
+    {
+      "id": "5619e7c3-02c7-47e0-a909-d56f2baf16e6",
+      "sequence": 44,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "60019293-9e9d-40d1-977e-8a21879fe77b",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "4dd852ef-7c8a-4da0-809d-43928f4bf140",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      },
+      "after": {
+        "id": "65ef1405-1b5e-4d51-8cc0-062b76d13a2e",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      }
+    },
+    {
+      "id": "a2f0286d-888e-45e8-8be4-f399b2dd832b",
+      "sequence": 45,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "5541f64a-3ec2-4900-9424-d45f16105662",
+      "proposal_id": "6416bac9-2910-46c9-9cc4-8a73835239a5",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "ed23a143-a286-455a-a491-1ceeac61795d",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      },
+      "after": {
+        "id": "2190894b-6f36-4bc9-8d2c-baf681b86849",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      }
+    },
+    {
+      "id": "ab30916d-9405-4f17-bf9e-73ad9f0dea44",
+      "sequence": 46,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "a2f0286d-888e-45e8-8be4-f399b2dd832b",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "82fba9ce-ce38-450b-8955-eb1011243699",
+        "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+        "availability": "retained",
+        "byte_count": 803561
+      },
+      "after": {
+        "id": "b127613d-6121-45a4-8cb4-cdd3ba6f34b8",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      }
+    },
+    {
+      "id": "24ff5491-8c07-42c8-ad53-f90aa211e10a",
+      "sequence": 47,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "d369a455-a6f6-442b-ae54-a664cbde0011",
+      "proposal_id": "666f45cc-17f8-4ad7-89a6-0a86729f4ddc",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "81c07115-60d9-4771-9e7e-1ecc9cba2fb7",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "41317503-65cf-4e0e-8615-79072771ab05",
+        "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+        "availability": "retained",
+        "byte_count": 812792
+      },
+      "after": {
+        "id": "b158c784-c416-41a5-a0f8-e12245174ace",
+        "checksum": "cbaf10bce042a3d69244b9b6267fa9ef032cd244d6f04ed851d3b23095bb1aad",
+        "availability": "retained",
+        "byte_count": 313366
+      }
+    },
+    {
+      "id": "ab77295b-0c0f-4166-95c3-25d67aa47f1d",
+      "sequence": 48,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "24ff5491-8c07-42c8-ad53-f90aa211e10a",
+      "before_page_id": "81c07115-60d9-4771-9e7e-1ecc9cba2fb7",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "fcdd44b3-abb5-4c79-821f-dfe9bd1ac043",
+        "checksum": "d5f6b9885255d2cc4bab5ab10bf76a3b45e2466e94e6c7eaee8742c2f25d38d5",
+        "availability": "retained",
+        "byte_count": 313342
+      },
+      "after": {
+        "id": "aa11f868-10d1-4f54-96e5-7e15b6124d27",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      }
+    },
+    {
+      "id": "36bfd72d-ee10-4c0f-8bed-9fb090fce340",
+      "sequence": 49,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "24ff5491-8c07-42c8-ad53-f90aa211e10a",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "b2cec468-f4b9-4b8c-a656-735884648b54",
+        "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+        "availability": "retained",
+        "byte_count": 790452
+      },
+      "after": {
+        "id": "dd8094a6-e30c-4968-928d-3b0fe5f74fdf",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      }
+    },
+    {
+      "id": "dab599f6-b36a-4e62-8c73-17e79b33eccd",
+      "sequence": 50,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "2bc024c7-4a37-40cf-9865-fa3d1e6a92b7",
+      "proposal_id": "574cdb2b-a59d-4bde-a134-d06e660b5627",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "098532da-cc50-4eca-9b62-97cfd26e0594",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "b27ca800-fa85-473c-99da-c2b76782b0bc",
+        "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+        "availability": "retained",
+        "byte_count": 798710
+      },
+      "after": {
+        "id": "9b8a2733-467f-4dfe-bed0-6bb28180ad4a",
+        "checksum": "15477bcd51d6d9bb2700a74091f0275d24c4c08636e1817980dd0f4a32ea1511",
+        "availability": "retained",
+        "byte_count": 221844
+      }
+    },
+    {
+      "id": "889c65ee-1e28-4d31-a88a-0026ae643064",
+      "sequence": 51,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "dab599f6-b36a-4e62-8c73-17e79b33eccd",
+      "before_page_id": "098532da-cc50-4eca-9b62-97cfd26e0594",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "6278d428-8581-48bb-bd0d-6e9e7bb87eeb",
+        "checksum": "0b4623aa3824f6ccfdb663ba7db1fd9fa118f27797d7695fd653bb9d7fe85ad8",
+        "availability": "retained",
+        "byte_count": 222019
+      },
+      "after": {
+        "id": "1c84664e-72db-4d06-89f7-1b28483c5083",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      }
+    },
+    {
+      "id": "5239314c-68d4-4b0f-920a-a966766a5492",
+      "sequence": 52,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": "b2f9ef52-8a5f-4723-9177-a06d80a985d4",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "dab599f6-b36a-4e62-8c73-17e79b33eccd",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "19c59df6-3831-4cfe-9abb-ad00b4124465",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      },
+      "after": {
+        "id": "f96e218c-4e03-4cc5-9527-40a5aa52afeb",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      }
+    },
+    {
+      "id": "15a94ef3-65b7-481e-b2bf-b4aadd0d0107",
+      "sequence": 53,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "8320e2a5-37f8-495f-9b8e-206af809d870",
+      "checkpoint_id": null,
+      "locator_id": "31839e2f-5c38-4966-ab62-364b3083300a",
+      "proposal_id": "bef8bca7-6650-45be-8cc7-fa4381f13bb4",
+      "parent_operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "9b5b2d46-0a0e-402f-9c95-b2dad1dce7ad",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "422f19a5-f3a2-4665-b06e-2cc9954360dd",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      },
+      "after": {
+        "id": "c904e397-ca0e-4a60-bd8a-7e0f6b00a924",
+        "checksum": "a338324218f642a6301afd63b904e24d209d6e53c740fb270c42926257190d6d",
+        "availability": "retained",
+        "byte_count": 49015
+      }
+    },
+    {
+      "id": "e494d2d0-01cd-4e19-818c-5d80d939e73d",
+      "sequence": 54,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "15a94ef3-65b7-481e-b2bf-b4aadd0d0107",
+      "before_page_id": "9b5b2d46-0a0e-402f-9c95-b2dad1dce7ad",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "30d813a3-6359-4911-90f3-cc81f188942e",
+        "checksum": "a338324218f642a6301afd63b904e24d209d6e53c740fb270c42926257190d6d",
+        "availability": "retained",
+        "byte_count": 49015
+      },
+      "after": {
+        "id": "9b1a71df-7349-4ff1-889a-43949105eba5",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      }
+    },
+    {
+      "id": "51229107-f3d2-4b3e-a4f8-803d0241d0c7",
+      "sequence": 55,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": "772cb80d-4aae-4684-9f4f-33e4e2dbe79d",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "15a94ef3-65b7-481e-b2bf-b4aadd0d0107",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "bd0d8ad4-b5b8-40f3-86d1-414a3daf6446",
+        "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+        "availability": "retained",
+        "byte_count": 783148
+      },
+      "after": {
+        "id": "d9ad4746-0360-4966-bb6a-3ca38d6fcee9",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      }
+    },
+    {
+      "id": "20275c87-77ef-44dc-aa83-8bc0e00761af",
+      "sequence": 56,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "51229107-f3d2-4b3e-a4f8-803d0241d0c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "2f05f894-328e-4a88-9c25-2b4ff5e27777",
+        "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+        "availability": "retained",
+        "byte_count": 780157
+      },
+      "after": {
+        "id": "af096032-b692-4352-9e8c-61a702eeed72",
+        "checksum": "de3e85ff22c55d6033855317323e0efff90aa2b5854f710ac93933572d3d15e9",
+        "availability": "retained",
+        "byte_count": 1007261
+      }
+    },
+    {
+      "id": "775fe214-aef8-4ded-b782-3bc0b1705b86",
+      "sequence": 57,
+      "status": "completed",
+      "action_kind": "scroll",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "51229107-f3d2-4b3e-a4f8-803d0241d0c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "changed",
+      "before": {
+        "id": "b859ea0f-604a-4540-a336-43ed4056a1a9",
+        "checksum": "de3e85ff22c55d6033855317323e0efff90aa2b5854f710ac93933572d3d15e9",
+        "availability": "retained",
+        "byte_count": 1007261
+      },
+      "after": {
+        "id": "3dc2468d-3a7d-4350-8af1-97898d3953f0",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "a825139f-968f-4491-a89f-dcf3ae61c0cf",
+      "sequence": 58,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": "07d10d75-9e64-42a2-9aa7-b8530ab6765e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "51229107-f3d2-4b3e-a4f8-803d0241d0c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "a99eba3f-f779-49ac-8a9f-8b28461e3e41",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "5979f342-b6cf-4f4e-b900-15f69a4187cd",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "3af60bde-4b91-412d-98f2-ad83797223a5",
+      "sequence": 59,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": "00a47c78-d927-4b33-9d21-285ea9ea0458",
+      "proposal_id": "04f66c9e-b8cf-4be7-817b-d9883d634d2e",
+      "parent_operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "79211fc0-9a45-4849-a8a9-4b17ac415d3a",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "a65e4ce8-f09c-4142-9188-3177e1ac69ad",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "76120aa8-b0f2-4f5a-b1b8-26e5eb39cb1c",
+        "checksum": "ea64a5d5c2272ff7632be19eb7e75d510f132c9e1a8061a9f282ba6ca5db4de3",
+        "availability": "retained",
+        "byte_count": 1070525
+      }
+    },
+    {
+      "id": "4589f2f1-fe50-4ad0-a18f-aab545b824d3",
+      "sequence": 60,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "3af60bde-4b91-412d-98f2-ad83797223a5",
+      "before_page_id": "79211fc0-9a45-4849-a8a9-4b17ac415d3a",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "e2426ea9-21c5-4a6d-924c-382b2701dfc1",
+        "checksum": "ea64a5d5c2272ff7632be19eb7e75d510f132c9e1a8061a9f282ba6ca5db4de3",
+        "availability": "retained",
+        "byte_count": 1070525
+      },
+      "after": {
+        "id": "f3d4ad46-591b-43cd-9989-14b59d7fe473",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "7d113361-45bc-417d-b0af-7bf85838a55f",
+      "sequence": 61,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": "07d10d75-9e64-42a2-9aa7-b8530ab6765e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "3af60bde-4b91-412d-98f2-ad83797223a5",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "297cab3f-ef5f-4212-b62f-555b805b0c2a",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "26fa0153-7b1f-45d0-b621-491f388583be",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "1c5a3f07-e85d-4e17-84c6-281ddbfd0c31",
+      "sequence": 62,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "download_started",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": "e0645309-bc13-407e-964b-922baf295a87",
+      "proposal_id": "31ae153c-7c63-414f-9ec8-80ee5cfd44de",
+      "parent_operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "ee8e4d9b-9fcc-4574-9d2a-a3cfe346905b",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "e0d5a827-9bc3-4758-8688-1b310f011b91",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "1fb31cb2-ab15-4688-a7a4-f5547253a4c3",
+      "sequence": 63,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "c3a5b390-2a0a-43af-936d-df647b38c5e5",
+      "checkpoint_id": null,
+      "locator_id": "8804b33c-bf22-42ea-ba41-fee23ebb9cc5",
+      "proposal_id": "37eccb6a-2602-4190-b4dc-e2a730a62384",
+      "parent_operation_id": "1c5a3f07-e85d-4e17-84c6-281ddbfd0c31",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "4daa886c-a899-48fc-871b-8966f7ccd12b",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "54ef39d0-2c22-4273-9036-96f4fbf0a18c",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "5ba4f5b8-6b10-4105-9b13-cd74c1c9d256",
+      "sequence": 64,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": "07d10d75-9e64-42a2-9aa7-b8530ab6765e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "1fb31cb2-ab15-4688-a7a4-f5547253a4c3",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "0a997cf9-a5ed-4a0b-96d2-7b08ef528439",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "d4a5260f-c6f0-4684-abf1-1eccf40f2e81",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "4a3adbff-1c5b-41da-bb69-6c7309d6bfa3",
+      "sequence": 65,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": "58a76ec1-bd7e-496f-a3eb-e771a4ebd24e",
+      "proposal_id": "fee9906d-a918-4895-a293-f88bd5870211",
+      "parent_operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "f490c0f3-b5c0-4ba4-90b4-9363cd756ef5",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "27de9fdd-dec0-4908-b745-46ee420517ee",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "3b43a238-1916-4d53-aa69-26e62481cd4c",
+        "checksum": "a0f0810b2976a3f898ea68c7ee50990ccc42effc663282b0c0591f110c5af856",
+        "availability": "retained",
+        "byte_count": 740021
+      }
+    },
+    {
+      "id": "1493d1a2-5f4e-4c70-9cc3-2b76fe6ab3e2",
+      "sequence": 66,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "4a3adbff-1c5b-41da-bb69-6c7309d6bfa3",
+      "before_page_id": "f490c0f3-b5c0-4ba4-90b4-9363cd756ef5",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "c347123c-42d4-4c08-9176-427830de2b28",
+        "checksum": "3adb2217379fc2cb1fb00e171763ac40777de34deb92fc39b95d3329e70993d2",
+        "availability": "retained",
+        "byte_count": 922839
+      },
+      "after": {
+        "id": "3ec4c1bd-1766-46c9-a00f-f811c5fb9823",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "920e1f8c-41c8-4791-a889-1ea2f0c07372",
+      "sequence": 67,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": "07d10d75-9e64-42a2-9aa7-b8530ab6765e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "4a3adbff-1c5b-41da-bb69-6c7309d6bfa3",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "55dcc5f7-7769-4e8c-a9c3-16869639666b",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "8b370997-97ab-4e82-8a1b-779af0741521",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "7b370468-c0b9-4518-913f-e65d5a991a30",
+      "sequence": 68,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": "bf1f9ade-2ba0-4c8c-adea-330b840dc598",
+      "proposal_id": "72bc27a3-6857-446d-8c2f-b8b5186d9d9f",
+      "parent_operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "8ba1dba6-fcb9-4fdf-99e5-2bcb36cb0f41",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "da9b830e-330e-4376-ae0d-bc702639c2d9",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "2df7c6e1-fbae-4b91-8842-76c0afaa8e41",
+        "checksum": "d5f6b9885255d2cc4bab5ab10bf76a3b45e2466e94e6c7eaee8742c2f25d38d5",
+        "availability": "retained",
+        "byte_count": 313342
+      }
+    },
+    {
+      "id": "36fd85b7-f280-4e98-a296-f7ba070484bd",
+      "sequence": 69,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "7b370468-c0b9-4518-913f-e65d5a991a30",
+      "before_page_id": "8ba1dba6-fcb9-4fdf-99e5-2bcb36cb0f41",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "46e00f4d-3b87-4765-acbe-33891bf49894",
+        "checksum": "cbaf10bce042a3d69244b9b6267fa9ef032cd244d6f04ed851d3b23095bb1aad",
+        "availability": "retained",
+        "byte_count": 313366
+      },
+      "after": {
+        "id": "5742965d-3385-4fd1-87d6-5c34c1fea2be",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "2ce572d8-93e5-4133-8ce7-fcc85c5cff04",
+      "sequence": 70,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": "07d10d75-9e64-42a2-9aa7-b8530ab6765e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "7b370468-c0b9-4518-913f-e65d5a991a30",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "d6894e5f-65c1-45e7-a175-faf75e5090e7",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "cddc448b-395d-496b-91cd-fec4426e4a7a",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "41028c72-14f9-4e01-a7eb-1c3c54a88ced",
+      "sequence": 71,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": "a3f5f5f6-72e4-4124-b336-b347b09ab903",
+      "proposal_id": "d7e74b0d-0eb5-4870-855e-f0301f3af7e8",
+      "parent_operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "19fed367-fbb9-4e98-b3e5-3b88d14e7df9",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "dcc76a48-f009-4e7e-90cb-3ee3192a6538",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "176403aa-4184-4d44-a8ad-6e26c8e3016d",
+        "checksum": "15477bcd51d6d9bb2700a74091f0275d24c4c08636e1817980dd0f4a32ea1511",
+        "availability": "retained",
+        "byte_count": 221844
+      }
+    },
+    {
+      "id": "3dbc38db-4d50-442e-9a82-108d16e6c431",
+      "sequence": 72,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "41028c72-14f9-4e01-a7eb-1c3c54a88ced",
+      "before_page_id": "19fed367-fbb9-4e98-b3e5-3b88d14e7df9",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "9fba0dba-91a6-4841-a1ec-ff86749aa964",
+        "checksum": "0b4623aa3824f6ccfdb663ba7db1fd9fa118f27797d7695fd653bb9d7fe85ad8",
+        "availability": "retained",
+        "byte_count": 222019
+      },
+      "after": {
+        "id": "a910b7bd-2477-4471-b268-a523633a858d",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "dc53ef95-10ac-41d1-9fb2-b075cc5159a1",
+      "sequence": 73,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": "07d10d75-9e64-42a2-9aa7-b8530ab6765e",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "41028c72-14f9-4e01-a7eb-1c3c54a88ced",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "a491cd48-49b1-462e-82fc-b4f58d15aa6e",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "bcbeea09-f289-479d-b0f5-6a735f784718",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "62a323d6-9f0a-421c-bcdb-496415f9cd45",
+      "sequence": 74,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "2b01f3c7-47c8-43e2-8a70-649a85abbbb9",
+      "checkpoint_id": null,
+      "locator_id": "8b779836-b7b2-4c56-b929-4607e34bd8c8",
+      "proposal_id": "72c9758f-d664-4892-86d9-d083f2971d08",
+      "parent_operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "e4886214-a005-407a-842a-0da9cac4b0d8",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "2ff1bba4-8fc9-4232-b905-609ac8f03c5f",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "d31d97a0-c482-47ef-947c-00f09ec110fe",
+        "checksum": "063880aac39aefe9f7f9fba43be7663782b89b738b1c9da5ac69893f45fed214",
+        "availability": "retained",
+        "byte_count": 49069
+      }
+    },
+    {
+      "id": "f682881b-3873-4c08-b3b8-515d061f7641",
+      "sequence": 75,
+      "status": "completed",
+      "action_kind": "close_popup",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "62a323d6-9f0a-421c-bcdb-496415f9cd45",
+      "before_page_id": "e4886214-a005-407a-842a-0da9cac4b0d8",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "f59c2b5b-4ba1-4bd0-a8b0-8f567149eb1b",
+        "checksum": "063880aac39aefe9f7f9fba43be7663782b89b738b1c9da5ac69893f45fed214",
+        "availability": "retained",
+        "byte_count": 49069
+      },
+      "after": {
+        "id": "a404f106-7792-4340-aa5c-ed4b16946f9c",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "682214fd-c4da-452d-b4c5-b309859cc63e",
+      "sequence": 76,
+      "status": "completed",
+      "action_kind": "wait",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": "c3a5b390-2a0a-43af-936d-df647b38c5e5",
+      "checkpoint_id": "7bd5c866-676d-4e5e-9355-5abe9334d4a6",
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "62a323d6-9f0a-421c-bcdb-496415f9cd45",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "unchanged",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "b4ddbc0e-6688-4f1f-b672-028b6fa279bb",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "ae9bad9e-95b0-402a-94ad-5c8d92a9062d",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      }
+    },
+    {
+      "id": "eb307d8e-918d-4f0d-9071-28490dcda3ef",
+      "sequence": 77,
+      "status": "completed",
+      "action_kind": "click",
+      "purpose": "explore",
+      "outcome_code": "observed",
+      "state_id": "c3a5b390-2a0a-43af-936d-df647b38c5e5",
+      "checkpoint_id": null,
+      "locator_id": "07fd4f57-2ecb-4ff4-887c-0e9dfa5f3f01",
+      "proposal_id": "e7e79d47-1b73-4d66-a1d2-bc61f9350f22",
+      "parent_operation_id": "1c5a3f07-e85d-4e17-84c6-281ddbfd0c31",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "changed",
+      "before": {
+        "id": "11f52749-c4ec-42c5-a675-73f27d4abcf7",
+        "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+        "availability": "retained",
+        "byte_count": 1009785
+      },
+      "after": {
+        "id": "ff69f0d1-3d73-4a46-97fe-1470a78ee196",
+        "checksum": "7038f4630be7c1b0d4ad4f3739c49a1a2c2f84493ac92a2be3fa761c5feaa957",
+        "availability": "retained",
+        "byte_count": 1006412
+      }
+    },
+    {
+      "id": "0f37783b-7fe1-4fa7-ac12-e0cb65ec072f",
+      "sequence": 78,
+      "status": "completed",
+      "action_kind": "back",
+      "purpose": "restore",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": "eb307d8e-918d-4f0d-9071-28490dcda3ef",
+      "before_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "after_page_id": "43d8416a-2de6-4a67-9a81-6941460cd70b",
+      "url_change": "changed",
+      "visual_change": "unchanged",
+      "before": {
+        "id": "40b4a2d3-4ab4-47e3-9b96-ab6de4eae74c",
+        "checksum": "7038f4630be7c1b0d4ad4f3739c49a1a2c2f84493ac92a2be3fa761c5feaa957",
+        "availability": "retained",
+        "byte_count": 1006412
+      },
+      "after": {
+        "id": "9382fd34-abba-4c51-8ce0-de0879b9109a",
+        "checksum": "7038f4630be7c1b0d4ad4f3739c49a1a2c2f84493ac92a2be3fa761c5feaa957",
+        "availability": "retained",
+        "byte_count": 1006412
+      }
+    }
+  ],
+  "locators": [
+    {
+      "id": "00a47c78-d927-4b33-9d21-285ea9ea0458",
+      "operation_id": "3af60bde-4b91-412d-98f2-ad83797223a5",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(5) > a:nth-of-type(1)"
+    },
+    {
+      "id": "07fd4f57-2ecb-4ff4-887c-0e9dfa5f3f01",
+      "operation_id": "eb307d8e-918d-4f0d-9071-28490dcda3ef",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(2)"
+    },
+    {
+      "id": "0a20b9fc-fb02-4ee3-8a34-c7207c81e02f",
+      "operation_id": "2350bfc4-0281-45a0-9821-b56a917016ca",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)"
+    },
+    {
+      "id": "25033250-3379-4ffa-93ee-6184e9909c3d",
+      "operation_id": "63f3a367-6f9e-4eac-9c42-e1c0db037f2d",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)"
+    },
+    {
+      "id": "2bc024c7-4a37-40cf-9865-fa3d1e6a92b7",
+      "operation_id": "dab599f6-b36a-4e62-8c73-17e79b33eccd",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(8) > a:nth-of-type(1)"
+    },
+    {
+      "id": "31839e2f-5c38-4966-ab62-364b3083300a",
+      "operation_id": "15a94ef3-65b7-481e-b2bf-b4aadd0d0107",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(9) > a:nth-of-type(1)"
+    },
+    {
+      "id": "443f5770-b23c-4b1d-a315-c25b8ef3e690",
+      "operation_id": "fb130de4-f224-4c79-afea-5bafb7565e11",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)"
+    },
+    {
+      "id": "475b2b1d-b179-42ae-a99e-69d68d56adc6",
+      "operation_id": "9972e0fd-d8ee-498c-bb38-d0b82f2ced85",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > a:nth-of-type(1)"
+    },
+    {
+      "id": "5541f64a-3ec2-4900-9424-d45f16105662",
+      "operation_id": "a2f0286d-888e-45e8-8be4-f399b2dd832b",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(6)"
+    },
+    {
+      "id": "58a76ec1-bd7e-496f-a3eb-e771a4ebd24e",
+      "operation_id": "4a3adbff-1c5b-41da-bb69-6c7309d6bfa3",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(7) > a:nth-of-type(1)"
+    },
+    {
+      "id": "6fbac6d3-a749-478e-a913-9b2b776588d1",
+      "operation_id": "93918161-3322-4fad-b541-e00f905a84f1",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(6) > a:nth-of-type(1)"
+    },
+    {
+      "id": "8804b33c-bf22-42ea-ba41-fee23ebb9cc5",
+      "operation_id": "1fb31cb2-ab15-4688-a7a4-f5547253a4c3",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "id": "8b779836-b7b2-4c56-b929-4607e34bd8c8",
+      "operation_id": "62a323d6-9f0a-421c-bcdb-496415f9cd45",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(10) > a:nth-of-type(1)"
+    },
+    {
+      "id": "976a2be1-04ce-4384-b02c-607ac44d1bfd",
+      "operation_id": "69935167-733e-4186-8a7e-5c4458922764",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)"
+    },
+    {
+      "id": "9b1d0013-8489-4094-b6f0-32889224fba0",
+      "operation_id": "ee0e7495-2995-4591-ac03-feb00eb50cae",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(10) > a:nth-of-type(1)"
+    },
+    {
+      "id": "9be8e0a8-66e8-4a26-a52b-b96b1200924a",
+      "operation_id": "4ed9bf4b-b758-46a5-89ff-69985b62bca6",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "id": "a3f5f5f6-72e4-4124-b336-b347b09ab903",
+      "operation_id": "41028c72-14f9-4e01-a7eb-1c3c54a88ced",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(9) > a:nth-of-type(1)"
+    },
+    {
+      "id": "a8500a8f-49d7-43d7-8a43-918d6cc17f26",
+      "operation_id": "b1f6ee4c-994d-4115-b7e8-c421e2d4ebb9",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(4)"
+    },
+    {
+      "id": "b9116571-4c3b-4ffa-92e2-f0413689f772",
+      "operation_id": "60019293-9e9d-40d1-977e-8a21879fe77b",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(5)"
+    },
+    {
+      "id": "bf1f9ade-2ba0-4c8c-adea-330b840dc598",
+      "operation_id": "7b370468-c0b9-4518-913f-e65d5a991a30",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(8) > a:nth-of-type(1)"
+    },
+    {
+      "id": "c9ea08d9-6e6a-4e95-a11e-95068079a615",
+      "operation_id": "f64d54fa-6839-48be-bf2a-143b6a7c2a84",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)"
+    },
+    {
+      "id": "d12a0999-e01a-4f45-87a5-c8ffd58a3b1f",
+      "operation_id": "9b60e3e2-fada-4322-86ee-6d30ba9d23e5",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(5) > a:nth-of-type(1)"
+    },
+    {
+      "id": "d369a455-a6f6-442b-ae54-a664cbde0011",
+      "operation_id": "24ff5491-8c07-42c8-ad53-f90aa211e10a",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(7) > a:nth-of-type(1)"
+    },
+    {
+      "id": "df6db2f9-05a7-4abc-9ba7-16bc4ad52cf4",
+      "operation_id": "a41bf094-9e54-47da-b813-d6bdbb8c472b",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)"
+    },
+    {
+      "id": "e0645309-bc13-407e-964b-922baf295a87",
+      "operation_id": "1c5a3f07-e85d-4e17-84c6-281ddbfd0c31",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(6) > a:nth-of-type(1)"
+    },
+    {
+      "id": "f26677e6-f6f4-422f-a434-02631c550b72",
+      "operation_id": "0184bcd6-f499-4b88-822a-0730fbae33c7",
+      "status": "verified",
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(11) > button:nth-of-type(1)"
+    }
+  ],
+  "diagnostics": [],
+  "runtime_conclusion": {
+    "status": "partial",
+    "coverage": "not_established",
+    "interaction_scope": "visual_buttons",
+    "observed_controls": 47,
+    "completed_controls": 26,
+    "remaining_controls": 21,
+    "inventory_limited": false,
+    "operations_completed": 78,
+    "operations_failed": 0,
+    "operations_rejected": 0,
+    "operations_unknown": 0,
+    "operations_pending": 0,
+    "candidates_not_attempted": 7,
+    "business_outcome": "unverified"
+  },
+  "diagnosis": {
+    "categories": [],
+    "missing_evidence_operations": [],
+    "reason": "exploration_coverage_incomplete",
+    "physical_retry_authorized": false
+  }
+}

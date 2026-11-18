@@ -1,0 +1,18 @@
+{
+  "outcome_accuracy": {
+    "numerator": 5,
+    "denominator": 47,
+    "percent": 10.638297872340425,
+    "above_95": false
+  },
+  "coverage": {
+    "numerator": 5,
+    "denominator": 47,
+    "percent": 10.638297872340425,
+    "above_95": false
+  },
+  "reviewed_correct_operations": 5,
+  "remaining_interactions": 42,
+  "review_method": "independent retained-image evidence review; remaining outcomes unverified",
+  "limitations": "Conservative lower bound from five independently reviewed outcomes. Operation 26 lacks the required selected-slide evidence; even crediting every other eligible completed binding yields only 44/47. Remaining outcomes were not reviewed after this gate failed. No wrong physical target or business success claim; runtime unsafe_replay unchanged."
+}

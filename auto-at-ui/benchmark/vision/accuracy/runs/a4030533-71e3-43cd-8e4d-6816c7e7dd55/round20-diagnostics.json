@@ -1,0 +1,47 @@
+{
+  "source_unchanged": true,
+  "state": "unavailable",
+  "reason": "operation_unavailable",
+  "operations": 85,
+  "click_type_attempts": 31,
+  "attempt_statuses": {
+    "completed": 30,
+    "unknown": 1
+  },
+  "maximum_correct_attempts": 30,
+  "maximum_unique_correct_targets": 30,
+  "oracle_positive_count": 47,
+  "missing_completed_positive_bindings": [
+    "mct-13",
+    "mct-14",
+    "mct-15",
+    "mct-16",
+    "mct-18",
+    "mct-19",
+    "mct-20",
+    "mct-21",
+    "mct-30",
+    "mct-31",
+    "mct-32",
+    "mct-44",
+    "mct-45",
+    "mct-46",
+    "mct-47",
+    "mct-57",
+    "mct-58"
+  ],
+  "unmatched_attempts": [],
+  "operation_rejections": [
+    {
+      "sequence": 85,
+      "kind": "click",
+      "purpose": "explore",
+      "status": "unknown",
+      "outcome_code": "worker_response_lost"
+    }
+  ],
+  "preflight_checks": 135,
+  "preflight_target_misses": 0,
+  "preflight_context_misses": 0,
+  "retired_proposals": 0
+}

@@ -1271,6 +1271,11 @@ class SqlAlchemyVisualTraceRepository:
 
     def snapshot(self, scope: VisualSessionScope) -> dict[str, tuple]:
         """Return detached contracts, including frame tombstones, from one DB snapshot."""
+        from auto_at.contracts.vision_coverage import VisualPageInventory
+        pages = self._session.scalars(select(VisualExplorationStateModel).where(
+            VisualExplorationStateModel.tenant_id == scope.tenant_id,
+            VisualExplorationStateModel.session_id == scope.session_id,
+        ).order_by(VisualExplorationStateModel.created_at, VisualExplorationStateModel.id))
         operations = self._session.scalars(
             select(VisualOperationModel)
             .where(
@@ -1300,6 +1305,8 @@ class SqlAlchemyVisualTraceRepository:
             .order_by(VisualLocatorHandoffModel.version)
         )
         return {
+            "pages": tuple(VisualPageInventory.model_validate(row.page_inventory)
+                           for row in pages if row.page_inventory is not None),
             "operations": tuple(VisualOperation.model_validate(row.payload) for row in operations),
             "frames": tuple(self._frame_record(row) for row in frames),
             "locators": tuple(

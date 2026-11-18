@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "afb257be-6adb-4c71-a1fc-b8cba328e793",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+  "after_checksum": "be962869e674ec7fe308cec814cfc0029b67ad4bad2f55ac5a90f016e9607165",
+  "finding": "Google Play renders Vo Lam Chan Menh Origin - TPL by TEPAYLINK JSC; independently reviewed declared Google Play shortlink redirects to this store destination."
+}

@@ -1,0 +1,45 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 121.403,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "stride_only": {
+    "passed": 6,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 356.045,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "reuse_regression_before_test_wiring_fix": {
+    "passed": 16,
+    "failed": 2,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 317.591,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "final": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 257.389,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "worker_boundary_passed": 3,
+  "worker_regression_passed": 38,
+  "contract_passed": 105,
+  "transport_model_passed": 67,
+  "ruff": "passed",
+  "typecheck": "passed",
+  "contract_check": "passed"
+}

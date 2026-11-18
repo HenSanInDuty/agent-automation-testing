@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "4d1fd490-8780-4cfd-90ac-f6ca39567d68",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "after_checksum": "22d3b663925de61d4c3f171233d36c388cd8d426f5b486f5d6a9f2e0fe1611a1",
+  "finding": "Payment landing page at pay.tpl.vn renders Tepaylink portal. Independently reviewed 301 from declared pay.tepaylink.vn confirms destination; no payment submitted."
+}

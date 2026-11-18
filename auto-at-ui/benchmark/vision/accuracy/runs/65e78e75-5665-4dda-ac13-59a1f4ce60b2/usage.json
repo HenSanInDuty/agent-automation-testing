@@ -1,0 +1,63 @@
+{
+  "jobs": [
+    {
+      "request_sequence": 1,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5855,
+      "output_tokens": 772,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 5,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5527,
+      "output_tokens": 411,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 2,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5296,
+      "output_tokens": 537,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 3,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 6291,
+      "output_tokens": 393,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 6,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5596,
+      "output_tokens": 528,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 4,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5981,
+      "output_tokens": 159,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 7,
+      "status": "cancelled",
+      "stage": "dom",
+      "input_tokens": null,
+      "output_tokens": null,
+      "safe_reason": "bridge_policy_revoked"
+    }
+  ],
+  "model_jobs": 7,
+  "monetary_cost_usd": null,
+  "cost_status": "not_reported"
+}

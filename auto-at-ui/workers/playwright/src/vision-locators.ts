@@ -99,7 +99,7 @@ async function uniqueScopes(page: Page, scopes: VisualLocatorScope[]): Promise<b
 }
 
 export async function groundLocator(page: Page, x: number, y: number, editable = false,
-  expected?: VisualLocatorDescriptor | null): Promise<GroundedLocator> {
+  expected?: VisualLocatorDescriptor | null, allowAnonymousButton = false): Promise<GroundedLocator> {
   const viewport = page.viewportSize();
   if (!viewport) return unresolved("unsupported", "viewport_unavailable");
   const hit = await hitTarget(page, x * (viewport.width - 1), y * (viewport.height - 1));
@@ -120,15 +120,30 @@ export async function groundLocator(page: Page, x: number, y: number, editable =
       const names = [el.getAttribute("aria-label"), labelled, ...labels, formControl ? null : el.textContent?.trim(), el.getAttribute("title")]
         .filter((value): value is string => !!value && value.length <= 240);
       const attributes = ["id", "data-testid", "name", "aria-label", "title"].map((key) => [key, el.getAttribute(key)]);
-      return { role, names, labels, attributes, tag, password: type === "password", testId: el.getAttribute("data-testid") };
+      let buttonPath: string | null = null;
+      if (tag === "button" && names.length === 0 && el.getRootNode() === el.ownerDocument) {
+        const parts: string[] = [];
+        let node: Element | null = el;
+        while (node && node.tagName !== "HTML" && parts.length < 25) {
+          const parent: Element | null = node.parentElement;
+          if (!parent) break;
+          const siblings = Array.from(parent.children).filter(other => other.tagName === node!.tagName);
+          parts.unshift(`${node.tagName.toLowerCase()}:nth-of-type(${siblings.indexOf(node) + 1})`);
+          node = parent;
+        }
+        if (node?.tagName === "HTML") buttonPath = `html > ${parts.join(" > ")}`;
+      }
+      return { role, names, labels, attributes, tag, buttonPath, password: type === "password", testId: el.getAttribute("data-testid") };
     });
     if (details.password) return unresolved("unsupported", "credential_input_unsupported");
     const candidates: VisualLocatorDescriptor[] = [];
     let redacted = false;
     const candidate = (strategy: VisualLocatorDescriptor["strategy"], value: string | null, role: string | null = null) => {
       if (!value) return;
-      try { candidates.push(validateVision("VisualLocatorDescriptor", { strategy, value, role, scope })); }
-      catch { redacted ||= !safeLocatorValue(value); }
+      try { candidates.push(validateVision("VisualLocatorDescriptor", {
+        schema_version: strategy === "dom_path" ? "v2" : "v1", strategy, value, role, scope,
+      })); }
+      catch { redacted ||= !safeLocatorValue(value, strategy === "dom_path" ? 1024 : 240); }
     };
     if (expected) candidates.push(validateVision("VisualLocatorDescriptor", expected));
     else {
@@ -136,16 +151,26 @@ export async function groundLocator(page: Page, x: number, y: number, editable =
       for (const label of details.labels) candidate("label", label);
       candidate("test_id", details.testId);
       for (const [attr, value] of details.attributes) if (value && !/["\\\r\n]/.test(value)) candidate("css", `${details.tag}[${attr}="${value}"]`);
+      if (allowAnonymousButton && scope.length === 0) candidate("dom_path", details.buttonPath);
     }
     let maxCount = 0;
+    // Repeated accessible-name sources often produce identical candidates.
+    // Keep their order, but do not repeat the same browser queries.
+    const seen = new Set<string>();
     for (const descriptor of candidates) {
+      const key = JSON.stringify(descriptor);
+      if (seen.has(key)) continue;
+      seen.add(key);
       if (!await uniqueScopes(page, descriptor.scope)) continue;
       const locator = resolveDescriptor(page, descriptor);
       const count = await locator.count(); maxCount = Math.max(maxCount, Math.min(count, 100_000));
       if (count !== 1 || !await locator.evaluate((element, source) => element === source, target).catch(() => false)) continue;
-      if (!await locator.isVisible() || !await locator.isEnabled() || (editable && !await locator.isEditable()))
+      const [visible, enabled, canEdit, box] = await Promise.all([
+        locator.isVisible(), locator.isEnabled(), editable ? locator.isEditable() : true,
+        locator.boundingBox(),
+      ]);
+      if (!visible || !enabled || !canEdit)
         return unresolved("not_found", "target_not_actionable", 1);
-      const box = await locator.boundingBox();
       if (!box || box.x < 0 || box.y < 0 || box.x + box.width > viewport.width || box.y + box.height > viewport.height)
         return unresolved("unsupported", "target_outside_viewport", 1);
       keepTarget = true;

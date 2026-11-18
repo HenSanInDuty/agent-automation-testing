@@ -1,0 +1,103 @@
+{
+  "jobs": [
+    {
+      "request_sequence": 1,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5856,
+      "output_tokens": 781,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 2,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5473,
+      "output_tokens": 534,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 3,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 6306,
+      "output_tokens": 761,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 4,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5648,
+      "output_tokens": 476,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 5,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5519,
+      "output_tokens": 379,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 6,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5604,
+      "output_tokens": 581,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 7,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5301,
+      "output_tokens": 178,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 8,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5282,
+      "output_tokens": 18,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 9,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5538,
+      "output_tokens": 489,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 10,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5231,
+      "output_tokens": 99,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 11,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5258,
+      "output_tokens": 162,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 12,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5022,
+      "output_tokens": 93,
+      "safe_reason": null
+    }
+  ],
+  "model_jobs": 12,
+  "monetary_cost_usd": null,
+  "cost_status": "not_reported"
+}

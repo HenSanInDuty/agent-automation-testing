@@ -1,0 +1,425 @@
+{
+  "classification": "live_authorized_metadata_only",
+  "sessions": [
+    {
+      "session_id": "d69fc7fa-d35a-42b4-a546-c5919baf9044",
+      "state": "unavailable",
+      "reason": "unsafe_replay",
+      "provider": "codex_cli",
+      "model": "gpt-6-luna",
+      "limits": {
+        "model_calls": 20,
+        "calls_per_minute": 5,
+        "states": 50,
+        "hops": 10
+      },
+      "states_recorded": 28,
+      "operations": [
+        {
+          "action": "back",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "click",
+          "purpose": "explore",
+          "status": "completed",
+          "count": 19
+        },
+        {
+          "action": "close_popup",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 10
+        },
+        {
+          "action": "navigate",
+          "purpose": "replay",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "navigate",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "scroll",
+          "purpose": "explore",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "scroll",
+          "purpose": "replay",
+          "status": "completed",
+          "count": 7
+        },
+        {
+          "action": "scroll",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 7
+        },
+        {
+          "action": "wait",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 15
+        }
+      ],
+      "missing_after": 0,
+      "model_jobs": [
+        {
+          "request_sequence": 1,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 2,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 3,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 4,
+          "status": "completed",
+          "safe_reason": null
+        }
+      ]
+    },
+    {
+      "session_id": "ca56188a-e0e7-4dfb-8559-3fd899165f42",
+      "state": "unavailable",
+      "reason": "dom_snapshot_limit",
+      "provider": "codex_cli",
+      "model": "gpt-6-luna",
+      "limits": {
+        "model_calls": 20,
+        "calls_per_minute": 5,
+        "states": 50,
+        "hops": 10
+      },
+      "states_recorded": 37,
+      "operations": [
+        {
+          "action": "click",
+          "purpose": "explore",
+          "status": "completed",
+          "count": 26
+        },
+        {
+          "action": "close_popup",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 14
+        },
+        {
+          "action": "navigate",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "scroll",
+          "purpose": "explore",
+          "status": "completed",
+          "count": 2
+        },
+        {
+          "action": "scroll",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 2
+        },
+        {
+          "action": "scroll",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 7
+        },
+        {
+          "action": "wait",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 22
+        },
+        {
+          "action": "wait",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 1
+        }
+      ],
+      "missing_after": 0,
+      "model_jobs": [
+        {
+          "request_sequence": 1,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 2,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 3,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 4,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 5,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 6,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 7,
+          "status": "completed",
+          "safe_reason": null
+        }
+      ]
+    },
+    {
+      "session_id": "d8e1598d-6558-46fd-a8c3-26b67517bf6f",
+      "state": "completed",
+      "reason": null,
+      "provider": "codex_cli",
+      "model": "gpt-6-luna",
+      "limits": {
+        "model_calls": 20,
+        "calls_per_minute": 5,
+        "states": 50,
+        "hops": 10
+      },
+      "states_recorded": 1,
+      "operations": [
+        {
+          "action": "navigate",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 1
+        }
+      ],
+      "missing_after": 0,
+      "model_jobs": null
+    },
+    {
+      "session_id": "83f1c907-50f8-47d7-bdd5-d3f140d184b2",
+      "state": "unavailable",
+      "reason": "unsafe_replay",
+      "provider": "codex_cli",
+      "model": "gpt-6-luna",
+      "limits": {
+        "model_calls": 20,
+        "calls_per_minute": 5,
+        "states": 50,
+        "hops": 10
+      },
+      "states_recorded": 32,
+      "operations": [
+        {
+          "action": "back",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "click",
+          "purpose": "explore",
+          "status": "completed",
+          "count": 20
+        },
+        {
+          "action": "close_popup",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 10
+        },
+        {
+          "action": "navigate",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "scroll",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 4
+        },
+        {
+          "action": "scroll",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 7
+        },
+        {
+          "action": "wait",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 16
+        },
+        {
+          "action": "wait",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 4
+        }
+      ],
+      "missing_after": 0,
+      "model_jobs": [
+        {
+          "request_sequence": 1,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 2,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 3,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 4,
+          "status": "completed",
+          "safe_reason": null
+        }
+      ]
+    },
+    {
+      "session_id": "c8fbd0ea-c2cd-467d-a90e-3fabab39e462",
+      "state": "unavailable",
+      "reason": "state_restore_failed",
+      "provider": "codex_cli",
+      "model": "gpt-6-luna",
+      "limits": {
+        "model_calls": 20,
+        "calls_per_minute": 5,
+        "states": 50,
+        "hops": 10
+      },
+      "states_recorded": 36,
+      "operations": [
+        {
+          "action": "click",
+          "purpose": "explore",
+          "status": "completed",
+          "count": 27
+        },
+        {
+          "action": "close_popup",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 18
+        },
+        {
+          "action": "navigate",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "scroll",
+          "purpose": "explore",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "scroll",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 1
+        },
+        {
+          "action": "scroll",
+          "purpose": "setup",
+          "status": "completed",
+          "count": 7
+        },
+        {
+          "action": "wait",
+          "purpose": "restore",
+          "status": "completed",
+          "count": 25
+        },
+        {
+          "action": "wait",
+          "purpose": "restore",
+          "status": "rejected",
+          "count": 1
+        }
+      ],
+      "missing_after": 0,
+      "model_jobs": [
+        {
+          "request_sequence": 1,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 2,
+          "status": "completed",
+          "safe_reason": null
+        },
+        {
+          "request_sequence": 3,
+          "status": "completed",
+          "safe_reason": null
+        }
+      ],
+      "conclusion": {
+        "status": "partial",
+        "coverage": "not_established",
+        "interaction_scope": "visual_buttons",
+        "observed_controls": 47,
+        "control_kinds": {
+          "styled_link": 28,
+          "native": 15,
+          "custom": 4
+        },
+        "completed_controls": 27,
+        "remaining_controls": 20,
+        "inventory_limited": false,
+        "operations_completed": 80,
+        "operations_failed": 0,
+        "operations_rejected": 1,
+        "operations_unknown": 0,
+        "operations_pending": 0,
+        "candidates_not_attempted": 0,
+        "business_outcome": "unverified"
+      },
+      "final_diagnostic": {
+        "operation_sequence": 81,
+        "failure_stage": "before_dispatch",
+        "code": "state_mismatch",
+        "url_changed": false,
+        "interaction_changed": true,
+        "visual_semantics_changed": true,
+        "form_presence_changed": false,
+        "form_values_changed": false,
+        "scroll_changed": false
+      }
+    }
+  ]
+}

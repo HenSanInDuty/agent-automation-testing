@@ -49,6 +49,28 @@ Keep the control plane under `apps/control-plane/` with one-way dependencies:
    uv run pytest
    ```
 
+## Assistant token budget and round handoff
+
+- Run polling in one script/process; default to final-result output and emit only
+  meaningful state changes when requested. For Vision use
+  `uv run python scripts/watch_vision_session.py --help`. Do not alternate model
+  turns between `sleep` and unchanged status queries. Keep individual tool waits
+  at most 60 seconds; empty output needs no new investigation or repeated status prose.
+- Keep complete logs and evidence on disk. Default tool output to 2,000 tokens;
+  read targeted ranges or error summaries instead of entire logs, histories or
+  tool inventories. Read unchanged documentation once per session.
+- Review at most two relevant images per tool call, with a specific question for
+  each comparison. Record image paths/checksums and findings in the review artifact;
+  do not reload reviewed images without a new reason. Preserve all evidence and
+  required independent reviews; output limits must not weaken scoring or validation.
+- Finish one benchmark round, collect its evidence and record its result, then
+  write a concise handoff in the canonical plan README: iteration/session IDs,
+  source/config/oracle identity, changed files, checks, result, artifact paths,
+  active processes and the exact next command. End the conversation turn at that
+  boundary and continue the next round in a fresh session. This user preference
+  overrides plan guidance to continue across rounds. Do not claim to have created
+  a fresh session automatically or mark an incomplete plan complete.
+
 ## Boundaries requiring user direction
 
 Ask before selecting a cloud provider, LLM provider/model, authentication provider, managed-vs-self-hosted Temporal deployment, production data retention period, or any action that can incur material cost or touch external production systems.

@@ -11,7 +11,16 @@ from auto_at.contracts.vision import VisualHandoffBranch, VisualHandoffStep, Vis
 def build_vision_handoff(scope, snapshot):
     operations = {o.id: o for o in snapshot["operations"] if o.purpose in {"setup", "explore"}}
     locators = {item.id: item for item in snapshot["locators"]}
-    parents = {o.parent_operation_id for o in operations.values()}
+    # A trailing read-only refresh must not hide the preceding explored branch.
+    parents = set()
+    for item in operations.values():
+        if item.purpose != "explore":
+            continue
+        parent, seen = item.parent_operation_id, set()
+        while parent in operations and parent not in seen:
+            seen.add(parent)
+            parents.add(parent)
+            parent = operations[parent].parent_operation_id
     leaves = [o for o in operations.values() if o.id not in parents and o.purpose == "explore"]
     branches = []
     for leaf in leaves:
@@ -40,6 +49,10 @@ def build_vision_handoff(scope, snapshot):
                 reason = "locator_unavailable"
             elif not operation.actual_after_frame_id:
                 reason = "capture_unavailable"
+            elif locator and locator.descriptor and locator.descriptor.strategy == "dom_path":
+                # A live-node binding is usable for this advisory session, not an
+                # approved durable test locator across page reloads or builds.
+                reason = "ephemeral_locator"
             codes = ("visible", "enabled") if locator and locator.status == "verified" else ()
             steps.append(
                 VisualHandoffStep(

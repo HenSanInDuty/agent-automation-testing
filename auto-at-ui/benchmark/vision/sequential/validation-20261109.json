@@ -1,0 +1,119 @@
+{
+  "classification": "synthetic_offline",
+  "baseline": {
+    "artifact": ".pytest-artifacts/codex-offline-86f46f9620a5.json",
+    "scope": "Recovered source before November 9 edits",
+    "result": {
+      "passed": 1046,
+      "failed": 0,
+      "skipped": 2,
+      "errors": 0,
+      "duration_seconds": 983.475,
+      "exit_code": 0,
+      "synthetic_measurements": [
+        {
+          "mode": "dom",
+          "responses": "fake_cli",
+          "cli_calls": 1,
+          "image_calls": 0,
+          "verified_actions": 2,
+          "unique_branch_actions": 2,
+          "deterministic_rerun": "passed",
+          "exploration_seconds": 7.671,
+          "input_tokens_synthetic": 2,
+          "output_tokens_synthetic": 3
+        },
+        {
+          "mode": "image",
+          "responses": "fake_cli",
+          "cli_calls": 2,
+          "image_calls": 1,
+          "verified_actions": 2,
+          "unique_branch_actions": 2,
+          "deterministic_rerun": "passed",
+          "exploration_seconds": 7.453,
+          "input_tokens_synthetic": 4,
+          "output_tokens_synthetic": 6
+        }
+      ]
+    }
+  },
+  "dashboard_model_tests": {
+    "passed": 43,
+    "failed": 0
+  },
+  "visual_button_chromium_tests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "focused_regression": {
+    "artifact": ".pytest-artifacts/codex-offline-3dab1f4b788a.json",
+    "scope": "Popup/snapshot changes before the initial-empty viewport fix: page batch, persisted browser flow, viewport scan, handoff and benchmark provenance",
+    "result": {
+      "passed": 80,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration_seconds": 694.539,
+      "exit_code": 0,
+      "synthetic_measurements": []
+    }
+  },
+  "current_source_hashes": {
+    "apps/control-plane/application/vision_trace_events.py": "01cb1048af014ba0b2c550803afd8ad58271b7c6f6a417a20cde96b161262305",
+    "tests/test_vision_page_batch.py": "4f6b43e3ee9a87b1a4cbd3e3094da4dd50d973589b102ce423f3261314a4622b",
+    "workers/playwright/src/fixtures/vision-target.ts": "32f97e0d2d7453f0a6378b714e139a539f36d5f922acdfc45f424cc6bbbd2a4d"
+  },
+  "startup_development": {
+    "artifact": ".pytest-artifacts/codex-offline-725303c4719a.json",
+    "scope": "Intermediate startup implementation; permanent-empty result still failed",
+    "result": {
+      "passed": 6,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration_seconds": 112.739,
+      "exit_code": 1,
+      "synthetic_measurements": []
+    }
+  },
+  "startup_final": {
+    "artifact": ".pytest-artifacts/codex-offline-7cf7272e5513.json",
+    "scope": "Final source: controlled hydration and permanent-empty viewport",
+    "result": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration_seconds": 17.24,
+      "exit_code": 0,
+      "synthetic_measurements": []
+    }
+  },
+  "history_development": {
+    "artifact": ".pytest-artifacts/codex-offline-5429a17874ba.json",
+    "scope": "Page-batch follow-up: 27 passed, delayed history exposed stale captured fingerprint",
+    "result": {
+      "passed": 27,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration_seconds": 359.277,
+      "exit_code": 1,
+      "synthetic_measurements": []
+    }
+  },
+  "history_final": {
+    "artifact": ".pytest-artifacts/codex-offline-efbd21ce1739.json",
+    "scope": "Final history fingerprint fix: delayed and stuck histories",
+    "result": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration_seconds": 26.849,
+      "exit_code": 0,
+      "synthetic_measurements": []
+    }
+  }
+}

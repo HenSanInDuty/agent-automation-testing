@@ -117,11 +117,13 @@ def test_snapshot_and_retry_survive_policy_switch_and_revocation(submission, tra
     saved = response.json()
     assert saved["provider"] == "gemini" and saved["model"] == "gemini-3.8-flash"
     assert saved["trace_version"] == ("v4" if v4 else "legacy")
+    assert saved["step_timeout_seconds"] == (120 if v4 else None)
     with factory() as session:
         record = session.get(VisualExplorationSessionModel, UUID(saved["id"]))
         assert record.prompt_version == VISION_PROMPT_VERSION
         historical = session.get(VisualExplorationSessionModel, scope.session_id)
         assert historical.prompt_version == "fixture"
+        assert historical.step_timeout_seconds is None
     before = counts(factory)
     policy("huggingface", enabled=False, raw_screenshot_transfer_accepted=False)
     settings.vision_trace_v4_enabled = not v4
@@ -262,7 +264,7 @@ def test_codex_dom_only_submission_freezes_consent_and_rejects_stale_confirmatio
         row = db.get(VisualExplorationSessionModel, UUID(result.json()["id"]))
         assert row.model_input_policy["dom_transfer_accepted"] is True
         assert row.model_input_policy["raw_screenshot_transfer_accepted"] is False
-    assert row.prompt_version == "codex-dom-v6"
+    assert row.prompt_version == "codex-dom-v11"
     # Existing keys preserve frozen consent; a newly granted image scope cannot alias it.
     changed = set_policy("codex_cli", model="gpt-6-luna", codex=policy.codex.model_dump())
     assert submit(client, payload).json() == result.json()

@@ -175,6 +175,7 @@ class SubmitVisualExploration:
             max_states=project_policy.vision_max_states,
             max_screenshot_bytes=policy.max_screenshot_bytes,
             max_session_seconds=policy.max_session_seconds,
+            step_timeout_seconds=policy.max_session_seconds if trace_v4_enabled else None,
             max_cost_usd=str(policy.max_cost_usd),
             max_requests_per_minute=policy.max_requests_per_minute,
             safe_failure_reason=None,

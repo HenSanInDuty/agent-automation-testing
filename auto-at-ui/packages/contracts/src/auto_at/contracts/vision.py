@@ -34,6 +34,7 @@ class VisualTrajectoryOutcomeCode(StrEnum):
     HOP_LIMIT = "hop_limit"
     STATE_LIMIT = "state_limit"
     SESSION_TIMEOUT = "session_timeout"
+    STEP_TIMEOUT = "step_timeout"
     POLICY_BLOCK = "policy_block"
     NAVIGATION_FAILED = "navigation_failed"
     CAPTURE_FAILED = "capture_failed"
@@ -161,7 +162,7 @@ class VisualExplorationRequest(BaseModel):
     target_url: str = Field(min_length=1, max_length=2_000)
     task_intent: str = Field(min_length=1, max_length=4_000)
     allowed_origins: list[str] = Field(min_length=1, max_length=100)
-    max_steps: int = Field(ge=1, le=10)
+    max_steps: int = Field(ge=1, le=20)
     max_screenshot_bytes: int = Field(ge=1_024, le=5_000_000)
     max_session_seconds: int = Field(ge=1, le=3_600)
     stop_conditions: list[str] = Field(default_factory=list, max_length=50)
@@ -174,7 +175,7 @@ class VisualStateNode(BaseModel):
 
     id: UUID = Field(default_factory=uuid4)
     parent_id: UUID | None = None
-    hop: int = Field(ge=0, le=10)
+    hop: int = Field(ge=0, le=20)
     screenshot_checksum: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
@@ -210,6 +211,10 @@ _SENSITIVE_LOCATOR = re.compile(
 _CSS_LOCATOR = re.compile(
     r'(?:[a-z][a-z0-9-]*)?\[(?:id|data-testid|name|aria-label|title)="[^"\\\r\n]+"\]'
 )
+_DOM_BUTTON_PATH = re.compile(
+    r'html(?: > [a-z][a-z0-9-]*:nth-of-type\([1-9][0-9]{0,3}\)){1,23}'
+    r' > button:nth-of-type\([1-9][0-9]{0,3}\)'
+)
 
 
 def validate_locator_value(value: str) -> str:
@@ -239,9 +244,9 @@ class VisualLocatorScope(BaseModel):
 class VisualLocatorDescriptor(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["v1"] = "v1"
-    strategy: Literal["role", "label", "test_id", "css"]
-    value: str = Field(min_length=1, max_length=240)
+    schema_version: Literal["v1", "v2", "v3"] = "v1"
+    strategy: Literal["role", "label", "test_id", "css", "dom_path"]
+    value: str = Field(min_length=1, max_length=1024)
     role: str | None = Field(default=None, pattern=r"^[a-z]{3,32}$")
     exact: Literal[True] = True
     scope: tuple[VisualLocatorScope, ...] = Field(default=(), max_length=8)
@@ -249,6 +254,17 @@ class VisualLocatorDescriptor(BaseModel):
     @model_validator(mode="after")
     def safe_descriptor(self) -> "VisualLocatorDescriptor":
         validate_locator_value(self.value)
+        if self.strategy == "dom_path":
+            pattern = _DOM_BUTTON_PATH if self.schema_version == "v2" else re.compile(
+                r"html(?: > [a-z][a-z0-9-]*:nth-of-type\([1-9][0-9]{0,3}\)){1,23}"
+                r" > (?:button|a|div|span|input):nth-of-type\([1-9][0-9]{0,3}\)"
+            )
+            if self.schema_version not in {"v2", "v3"} or self.scope or not pattern.fullmatch(
+                self.value
+            ):
+                raise ValueError("DOM path requires a v2 main-document button path")
+        elif self.schema_version != "v1" or len(self.value) > 240:
+            raise ValueError("stable locators require v1 and a bounded value")
         if (self.strategy == "role") != (self.role is not None):
             raise ValueError("role is required only for the role strategy")
         if self.strategy == "css" and not _CSS_LOCATOR.fullmatch(self.value):
@@ -421,6 +437,14 @@ class VisualCheckpoint(BaseModel):
     scroll_x: int = Field(ge=0, le=10_000_000)
     scroll_y: int = Field(ge=0, le=10_000_000)
     form_presence_fingerprint: Fingerprint | None = None
+    page_url: str | None = Field(default=None, max_length=2000)
+    url_restore_allowed: bool = False
+
+    @field_validator("page_url")
+    @classmethod
+    def redacted_url(cls, value):
+        from auto_at.contracts.vision_coverage import safe_page_url
+        return safe_page_url(value)
 
 
 class VisualHandoffStep(BaseModel):

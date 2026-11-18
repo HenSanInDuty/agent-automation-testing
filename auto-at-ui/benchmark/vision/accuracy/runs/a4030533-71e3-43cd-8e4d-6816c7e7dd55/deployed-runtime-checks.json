@@ -1,0 +1,26 @@
+{
+  "control-plane": {
+    "apps/control-plane/application/vision_trace_events.py": "894a25c7b3d4a4af5a2e27f6dcf3902513beb5210d1783eaf0c9dfcf5df8a669",
+    "apps/control-plane/domain/vision_restoration.py": "ed1b0a074644ec34c75c386d42e1811c295a37d616ef57bfb92b41ef3f0bdb8e",
+    "apps/control-plane/domain/ports.py": "7c784662e08fe1e7003e4b26fe8e71d899a506637abccbec892e417fc31ca72f",
+    "apps/control-plane/infrastructure/vision_worker.py": "f04d89d1ae982f73cf32ffaa0d2b7ea0df0027c117e956d3685109e72158c433",
+    "packages/contracts/src/auto_at/contracts/vision_worker.py": "3d4ca93610ccca37852b759d99d92ac86ff3e5aef05d8269bf7341ac0235b954"
+  },
+  "temporal-worker": {
+    "apps/control-plane/application/vision_trace_events.py": "894a25c7b3d4a4af5a2e27f6dcf3902513beb5210d1783eaf0c9dfcf5df8a669",
+    "apps/control-plane/domain/vision_restoration.py": "ed1b0a074644ec34c75c386d42e1811c295a37d616ef57bfb92b41ef3f0bdb8e",
+    "apps/control-plane/domain/ports.py": "7c784662e08fe1e7003e4b26fe8e71d899a506637abccbec892e417fc31ca72f",
+    "apps/control-plane/infrastructure/vision_worker.py": "f04d89d1ae982f73cf32ffaa0d2b7ea0df0027c117e956d3685109e72158c433",
+    "packages/contracts/src/auto_at/contracts/vision_worker.py": "3d4ca93610ccca37852b759d99d92ac86ff3e5aef05d8269bf7341ac0235b954"
+  },
+  "playwright-worker": {
+    "workers/playwright/src/vision-contract.generated.ts": "a3eead9cf86d0a9692e25c5b1dc676a979ad1bfe06801002b1677ed1b97499b9",
+    "workers/playwright/src/vision-operations.ts": "56fe09578ff926ba9c48bb9909699ce3ec8ff46f55e3437acbb2966b66952855",
+    "workers/playwright/src/vision-http.ts": "5a30277fb2a1723c1c09da5ee360b4696ffa991ea546afac931bd471703cfaa3",
+    "workers/playwright/src/vision-checkpoints.ts": "aedac077ac1f7a18cec6af6df0f9e50dc44625a92d817b211d959d27f93d5f49",
+    "workers/playwright/src/vision-button-semantics.ts": "6f93ca28d37c9f1295b1eed382ffe73f6d7cd6e93f9dd5de6f3cfcfaa531bd7c",
+    "workers/playwright/src/vision-screen.ts": "01169ef75e48a1c156323f4f163bcbc7fb08f65e50aa808de9807d26d0dc7fc5",
+    "workers/playwright/src/vision-dom.ts": "99d295f2ebdacea5ed32e6408036c8d28ddcbdebed55930ca479c659ffed5655",
+    "workers/playwright/src/vision-revalidation.ts": "65e0b696cd01f1df902be435c75f4a41a5fdb3547c423ba6365c4cf7a0f1b623"
+  }
+}

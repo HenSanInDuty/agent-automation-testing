@@ -1,0 +1,47 @@
+{
+  "jobs": [
+    {
+      "request_sequence": 1,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5856,
+      "output_tokens": 768,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 2,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5295,
+      "output_tokens": 543,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 3,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 6288,
+      "output_tokens": 957,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 4,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5625,
+      "output_tokens": 434,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 5,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5524,
+      "output_tokens": 413,
+      "safe_reason": null
+    }
+  ],
+  "model_jobs": 5,
+  "monetary_cost_usd": null,
+  "cost_status": "not_reported"
+}

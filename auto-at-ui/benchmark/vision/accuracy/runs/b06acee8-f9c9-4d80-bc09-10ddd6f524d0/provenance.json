@@ -1,0 +1,45 @@
+{
+  "session_id": "f5280096-0c1a-4499-b395-837984da4c8f",
+  "source_hash": "502192bf9ec281e3f9f766a7a3343556de6cc761c511993b956a2135ee2ef5a6",
+  "images": {
+    "control-plane": "sha256:ebbe0078faf3da79696771ab8e2e34add0d78ac6bc8fbc7ebad305654453e23f",
+    "temporal-worker": "sha256:e9d5292ba6f99eaab0173cfca3a792a2ae7e82ed9f187a84010e3b28249a66a9",
+    "playwright-worker": "sha256:ad0a35ec6b5a4b812ebd23ba22095189cd7783767ec8b01c1becc0b894422519",
+    "codex-bridge": "sha256:d5cbc0aec49efcaf4157d726b206c201024f47810c1610d1569cce52d23693bd"
+  },
+  "deployed_source_checks": {
+    "control-plane:apps/control-plane/application/vision_trace_events.py": "524e08f7b33eeba5abc4596dc41c4bdb66e5d2f5a726d9bc937b1870988306d7",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision_worker.py": "106464b429a8e26f617ae765e865939e31731c5c6a2e0af654160aefac4ad14c",
+    "temporal-worker:apps/control-plane/application/vision_trace_events.py": "524e08f7b33eeba5abc4596dc41c4bdb66e5d2f5a726d9bc937b1870988306d7",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision_worker.py": "106464b429a8e26f617ae765e865939e31731c5c6a2e0af654160aefac4ad14c",
+    "playwright-worker:workers/playwright/src/vision-operations.ts": "8892a93643d938e0c79e013b6023bb9b72d8e7926b4aa4dcb4998022d50f8824",
+    "playwright-worker:workers/playwright/src/vision-dom.ts": "4b2d28180ba863baac31e2971e4f602657bb7eb8b54d0c37717490bef31aec16",
+    "playwright-worker:workers/playwright/src/vision-history.ts": "d7021992377589c2a3e51137426e3ad3cdabc9c499b6d0349c24703d194962b3",
+    "playwright-worker:workers/playwright/src/vision-contract.generated.ts": "b4771ca8251a8da27295c17bc4902eab2063938d109f4527fe8bf482485c4bfa"
+  },
+  "prompt_version": "codex-dom-v11",
+  "playwright_version": "1.50.1",
+  "chromium_version": "133.0.6943.16",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 10,
+    "max_states": 50,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "runtime_policy": {
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "prompt_version": "codex-dom-v11",
+    "max_steps": 20,
+    "max_requests_per_minute": 5,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": "0.25"
+  },
+  "hypothesis": "Recover only proven undispatched read-only refresh prepare races under the original deadline; renew private GET history handles only after exact same-Page checkpoint verification."
+}

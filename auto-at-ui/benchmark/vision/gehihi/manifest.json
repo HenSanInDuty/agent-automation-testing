@@ -10,12 +10,12 @@
   "fixture_version": "gehihi-controls-v1",
   "source_hash_algorithm": "sha256_utf8_lf",
   "sources": {
-    "workers/playwright/src/fixtures/vision-target.ts": "648afcbb194c3562894814e880f0b976b0c3f211574a30cf207ec2d94e6479da",
-    "workers/playwright/src/fixtures/vision-integration-server.ts": "5a5a1d5816901de56871458d09d7fc76b02dcec87f6363bc5816db5ac67d6daa",
-    "workers/playwright/src/vision-operations.spec.ts": "6eb44676371243c5c36cab393c4f2b2e6f9e7bb741253c45f45cc3791ce32684",
+    "workers/playwright/src/fixtures/vision-target.ts": "b6c0a8ff19d32b41802a10f066d865f56e728f8b045b9b447a6baec19952a913",
+    "workers/playwright/src/fixtures/vision-integration-server.ts": "eb20c48a60c885b5bc8c14dcac39eefc47bdf11a97146ba1c8a64689f480cf8b",
+    "workers/playwright/src/vision-operations.spec.ts": "38fd82edfec127a88d1f3f13a070d1bb7c97baed975788581019de52fb273920",
     "workers/playwright/src/vision-locators.spec.ts": "e98ee8aae6325f16190e1b34c1534ef1ab2795b47fdfae81230b11949b5ebe03",
     "tests/test_vision_provider_integration.py": "a36d7b6fac916b81261bf750ec65fa93c524e9494e750d932f584c5546ce5104",
-    "tests/test_vision_live_persistence.py": "2feade327255cbf5affc5ad91cfe5098912c68f7d3e2b98a35196850923a69e0",
+    "tests/test_vision_live_persistence.py": "18e138f12331b7593892daa4a6497778f31cc9925c7923d3851fb18fd761d364",
     "tests/test_gemini_vision_model.py": "7a3035ee93fa7cde7ec22d47338db2927d7951da8ebd99b23cb6664bf90b5f8d",
     "apps/control-plane/agents/prompts/vision.py": "43e9bc753fdae54a682a71f3e758c45c7ebe97fdd8b5ac85727a92f59cbd70ca"
   },

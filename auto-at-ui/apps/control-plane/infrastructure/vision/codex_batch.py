@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
@@ -22,6 +23,9 @@ from auto_at.contracts.codex_bridge import (
 )
 from domain.codex_bridge import validate_response
 from domain.ports import CodexBridgeReadinessPort, CodexBridgeSpool, CodexJobGateway
+
+from infrastructure.codex_bridge.diagnostics import exception_details
+from infrastructure.observability.logging import log_event
 
 
 class CodexModelBatch:
@@ -93,28 +97,41 @@ class CodexModelBatch:
 
         check()
         registered = published = finished = False
+        phase = "register"
         try:
             async with asyncio.timeout((deadline - datetime.now(UTC)).total_seconds()):
                 await self.gateway.register(request)
                 registered = True
+                phase = "policy_check"
                 check()
+                phase = "publish"
                 self.spool.publish(request, dom, schema, image.data if image else None)
                 published = True
                 last_authorization = None
                 while True:
+                    phase = "policy_check"
                     check()
-                    await self.gateway.poll(request, self.spool.stages(request))
+                    phase = "stages_read"
+                    stages = self.spool.stages(request)
+                    phase = "stages_persist"
+                    await self.gateway.poll(request, stages)
                     now = datetime.now(UTC)
                     if (last_authorization is None
                             or (now - last_authorization).total_seconds() >= 2):
+                        phase = "authorize"
                         self.spool.authorize(request, min(now + timedelta(seconds=8), deadline))
                         last_authorization = now
+                    phase = "result"
                     response = self.spool.result(request)
                     if response is not None:
+                        phase = "result_validate"
                         validate_response(request, response, now=datetime.now(UTC))
+                        phase = "policy_check"
                         check()
+                        phase = "finish"
                         await self.gateway.finish(request, response)
                         finished = True
+                        phase = "acknowledge"
                         self.spool.acknowledge(request)
                         return response
                     await asyncio.sleep(self.poll_seconds)
@@ -122,13 +139,22 @@ class CodexModelBatch:
             await self._cancel(request, published, registered and not finished, "bridge_cancelled")
             raise
         except Exception as exc:
+            failure = ("bridge_malformed_output" if isinstance(exc, ValueError)
+                       else "bridge_io_error")
+            log_event(logging.getLogger(__name__), logging.WARNING,
+                      "codex.handoff.failed", "Codex handoff failed.",
+                      job_id=str(request.job_id), session_id=str(request.session_id),
+                      correlation_id=str(request.correlation_id), tenant_id=request.tenant_id,
+                      bridge_id=str(request.bridge_id), request_sequence=request.request_sequence,
+                      phase=phase, registered=registered, published=published, finished=finished,
+                      failure_code=exc.reason if isinstance(exc, CodexUnavailable) else failure,
+                      **exception_details(exc))
             await self._cancel(request, published, registered and not finished,
-                               "bridge_policy_revoked")
+                               "bridge_policy_revoked" if isinstance(exc, CodexUnavailable)
+                               else failure)
             if isinstance(exc, CodexUnavailable):
                 raise
-            raise CodexUnavailable(
-                "bridge_malformed_output" if isinstance(exc, ValueError) else "bridge_io_error",
-            ) from exc
+            raise CodexUnavailable(failure) from exc
 
     async def _cancel(self, request, published, registered, reason):
         try:

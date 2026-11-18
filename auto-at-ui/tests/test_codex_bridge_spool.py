@@ -1,6 +1,8 @@
 """Filesystem behavior with synthetic data; no CLI or app database is used."""
 
+import errno
 import hashlib
+import json
 import os
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
@@ -8,6 +10,7 @@ from uuid import uuid4
 import pytest
 from auto_at.contracts.codex_bridge import canonical_bytes
 from infrastructure.codex_bridge.spool import FileSpool, SpoolError
+from infrastructure.observability.logging import JsonFormatter
 from test_codex_bridge_contracts import observation, request, response
 
 
@@ -40,6 +43,74 @@ def test_atomic_publication_integrity_and_exclusive_claim(published):
     with pytest.raises(FileExistsError):
         spool.claim(req)
     assert not spool.has_file(req, "screenshot.png")
+
+
+@pytest.mark.parametrize("name", [".atomic-fixture", "raw-output.json"])
+def test_request_scan_survives_consumed_temporary_file(published, monkeypatch, name):
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    transient = spool.path(req.job_id) / name
+    transient.write_bytes(b"private synthetic output")
+    original = module._plain
+
+    def racing(path, **kwargs):
+        if path == transient and path.exists():
+            path.unlink()
+        return original(path, **kwargs)
+
+    monkeypatch.setattr(module, "_plain", racing)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=8))
+    assert spool.load(req.job_id) == req
+
+
+def test_missing_progress_waits_but_malformed_receipt_fails(published, monkeypatch):
+    spool, req = published
+    spool.claim(req)
+    spool.record_stage(req, "claimed")
+    original = spool.read_file
+    pending = True
+
+    def read(directory, name, limit):
+        nonlocal pending
+        if name == "events.jsonl" and pending:
+            pending = False
+            raise FileNotFoundError("synthetic shared filesystem race")
+        return original(directory, name, limit)
+
+    monkeypatch.setattr(spool, "read_file", read)
+    assert spool.stages(req) == ()
+    assert spool.stages(req)[0].stage == "claimed"
+    (spool.path(req.job_id) / "events.jsonl").write_bytes(b"malformed\n")
+    with pytest.raises(ValueError):
+        spool.stages(req)
+
+
+def test_file_io_diagnostic_identifies_operation_without_leaking_payloads(
+    published, monkeypatch, caplog,
+):
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    failure = OSError(errno.EIO, "private-secret-message", "/private/path/events.jsonl")
+
+    def failed_fstat(_fd):
+        raise failure
+
+    monkeypatch.setattr(module.os, "fstat", failed_fstat)
+    with pytest.raises(OSError) as caught:
+        spool.read_file(spool.path(req.job_id), "request.json", 16_384)
+    assert caught.value is failure
+    record = next(r for r in caplog.records if getattr(r, "event", None)
+                  == "codex.spool.read_failed")
+    encoded = JsonFormatter("synthetic", "test").format(record)
+    payload = json.loads(encoded)
+    assert payload["job_id"] == str(req.job_id)
+    assert payload["io_operation"] == "fstat" and payload["file_name"] == "request.json"
+    assert payload["errno"] == errno.EIO and payload["errno_name"] == "EIO"
+    assert payload["code_locations"][-1]["function"] == "read_file"
+    assert "private-secret" not in encoded and "/private/path" not in encoded
+    assert "task_intent" not in encoded
 
 
 def test_cancel_and_stale_authorization_prevent_launch(published):

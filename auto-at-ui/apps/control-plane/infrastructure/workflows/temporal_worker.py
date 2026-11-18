@@ -16,6 +16,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from infrastructure.artifacts.rustfs import RustFSArtifactStore
+from infrastructure.codex_bridge.generation_model import generation_model_factory
 from infrastructure.observability import configure_logging, log_event
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
@@ -64,6 +65,7 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         SqlAlchemyAuditEventRepository(session),
                         settings,
                         SqlAlchemyActivityEventRepository(session),
+                        codex_model_factory=generation_model_factory(settings, session_factory),
                     ),
                     ReportingEventProcessor(
                         SqlAlchemyRunRepository(session),

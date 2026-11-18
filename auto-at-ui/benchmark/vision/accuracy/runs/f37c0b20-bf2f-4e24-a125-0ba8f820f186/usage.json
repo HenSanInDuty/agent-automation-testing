@@ -1,0 +1,63 @@
+{
+  "jobs": [
+    {
+      "request_sequence": 2,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5290,
+      "output_tokens": 520,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 3,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 6296,
+      "output_tokens": 828,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 1,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5862,
+      "output_tokens": 792,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 4,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5619,
+      "output_tokens": 453,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 5,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5531,
+      "output_tokens": 403,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 6,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5619,
+      "output_tokens": 580,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 7,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5253,
+      "output_tokens": 162,
+      "safe_reason": null
+    }
+  ],
+  "model_jobs": 7,
+  "monetary_cost_usd": null,
+  "cost_status": "not_reported"
+}

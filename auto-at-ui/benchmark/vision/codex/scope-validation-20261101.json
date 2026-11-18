@@ -1,0 +1,27 @@
+{
+  "classification": "synthetic_local_only",
+  "responses": "live_model",
+  "provider": "codex_cli",
+  "model": "gpt-6-luna",
+  "prompt_version": "codex-dom-v9",
+  "cli_calls": 2,
+  "browser_actions_executed": 0,
+  "full_canary_run": false,
+  "cases": [
+    {
+      "id": "buttons_task_mixed_controls",
+      "passed": true,
+      "observed": "One button click; no link click",
+      "input_tokens": 5144,
+      "output_tokens": 75
+    },
+    {
+      "id": "buttons_task_links_only_scrollable",
+      "passed": true,
+      "observed": "Scroll by 576; element_id and coordinates null; strict parser accepted",
+      "input_tokens": 5099,
+      "output_tokens": 80
+    }
+  ],
+  "limitation": "Two synthetic samples establish format and scope behavior for these inputs, not reliability on every page."
+}

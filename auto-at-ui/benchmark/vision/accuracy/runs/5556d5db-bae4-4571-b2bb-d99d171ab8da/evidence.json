@@ -1,0 +1,27 @@
+{
+  "schema_version": "vision-accuracy-evidence-v1",
+  "session_id": "472aa413-dde2-4bcd-a28e-66bd6e975d82",
+  "state": "unavailable",
+  "trace_revision": "b8f3df86e5a5b57fbe1d090b1c39c55175810c500417c5a9a8dffd41798f8b3e",
+  "operations": [],
+  "locators": [],
+  "diagnostics": [],
+  "runtime_conclusion": {
+    "status": "partial",
+    "coverage": "not_established",
+    "inventory_limited": false,
+    "operations_completed": 0,
+    "operations_failed": 0,
+    "operations_rejected": 0,
+    "operations_unknown": 0,
+    "operations_pending": 0,
+    "candidates_not_attempted": 0,
+    "business_outcome": "unverified"
+  },
+  "diagnosis": {
+    "categories": [],
+    "missing_evidence_operations": [],
+    "reason": "visual_exploration_unavailable",
+    "physical_retry_authorized": false
+  }
+}

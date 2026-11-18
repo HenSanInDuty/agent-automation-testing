@@ -1,0 +1,40 @@
+{
+  "schema_version": "target-exploration-regression-v1",
+  "classification": "public_web_advisory",
+  "date": "2026-11-01",
+  "target_origin": "https://mongchiton.vn",
+  "session_id": "d802f4a3-eb24-4e53-9b96-f12b6763128e",
+  "state": "completed",
+  "safe_failure_reason": null,
+  "interaction_scope": "buttons",
+  "provider": "codex_cli",
+  "model": "gpt-6-luna",
+  "prompt_version": "codex-dom-v9",
+  "limits": {"model_calls": 20, "hops": 10, "states": 50},
+  "operations": {
+    "completed": 78,
+    "failed_or_rejected": 0,
+    "click": 15,
+    "navigate": 1,
+    "scroll": 47,
+    "wait": 15
+  },
+  "model_jobs": {"completed": 3, "failed": 0},
+  "coverage": {
+    "distinct_buttons_completed": 15,
+    "named_buttons": 6,
+    "anonymous_buttons": 9,
+    "states": 48,
+    "maximum_observed_hop": 7,
+    "skipped_count": 0,
+    "truncated_inventories": 0
+  },
+  "loki": {
+    "service": "auto-at-playwright-worker",
+    "session_filter": "d802f4a3-eb24-4e53-9b96-f12b6763128e",
+    "queried_events": ["vision.operation.failed", "vision.state.mismatch", "vision.dom.coverage_limited"],
+    "matching_entries": 0
+  },
+  "evidence_sources": ["persisted_session", "persisted_operations", "persisted_page_inventories", "persisted_model_jobs", "loki"],
+  "scope_of_result": "Completed advisory button exploration for this target; not a functional test verdict or the standard live canary."
+}

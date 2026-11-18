@@ -1,0 +1,8 @@
+{
+  "session_id": "378d318d-ecca-4637-ae22-cbd8bf5619fc",
+  "first_operation_started_at": "2026-11-09T05:20:05.008442Z",
+  "last_operation_ended_at": "2026-11-09T05:26:29.284000Z",
+  "operation_window_seconds": 384.275558,
+  "includes_queue": false,
+  "note": "Session-row updated_at is not maintained through terminal execution; the initial row-based estimate is retained separately as invalid."
+}

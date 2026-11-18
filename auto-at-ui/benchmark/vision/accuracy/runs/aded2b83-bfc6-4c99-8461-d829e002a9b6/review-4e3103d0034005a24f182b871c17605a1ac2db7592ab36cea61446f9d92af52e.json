@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "46f87a58-dd83-465a-a6f0-632696810d37",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_selection",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "e94a45a3442f57f7f95f63d9079677008d2cfcfc48eca21c45aeb4bbc0c92aca",
+  "after_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "finding": "Second carousel indicator is selected after the bound click; the visible slide is Bang Chien Nay Lua."
+}

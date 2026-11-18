@@ -7,6 +7,7 @@ services:
       CODEX_BRIDGE_ALLOWED_TENANT: ${CODEX_BRIDGE_ALLOWED_TENANT:?Set the trusted local tenant}
       CODEX_BRIDGE_HOST_SPOOL: /codex-jobs
       CODEX_BRIDGE_CONTAINER_SPOOL: /codex-jobs
+      CODEX_BRIDGE_SPOOL_OWNER_UID: "1000"
       CODEX_BRIDGE_EXECUTABLE: /usr/local/bin/codex
       VISION_TRACE_V4_ENABLED: ${VISION_TRACE_V4_ENABLED:-false}
     volumes:

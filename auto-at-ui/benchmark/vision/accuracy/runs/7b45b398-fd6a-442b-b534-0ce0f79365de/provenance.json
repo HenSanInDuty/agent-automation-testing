@@ -1,0 +1,35 @@
+{
+  "session_id": "79a9170d-1882-4b6a-abbf-5325c06e5174",
+  "source_hash": "39675e7a705a354298420b4b0aa4a391a20497245c745295cd8b8f4e34ccd78d",
+  "images": {
+    "control-plane": "sha256:be19f002433ff116ca74046befd11b0258a75f14f88a0aff0e5ff481099f4a82",
+    "temporal-worker": "sha256:11c013c49eb0e9e5913ff78e6c50a144709dad92c8d9ed1d19be71dfbc5e9643",
+    "playwright-worker": "sha256:728689b293ca5123b7264fb6aea67de65bcad0da2fc7646b3397c85bab115dbf",
+    "codex-bridge": "sha256:d5cbc0aec49efcaf4157d726b206c201024f47810c1610d1569cce52d23693bd"
+  },
+  "prompt_version": "codex-dom-v11",
+  "playwright_version": "1.50.1",
+  "chromium_version": "133.0.6943.16",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 10,
+    "max_states": 50,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "runtime_policy": {
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "max_steps": 20,
+    "max_requests_per_minute": 5,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": 0.25,
+    "input_policy_fingerprint": "4ce9f8ca6cd98a3b24c760f18f55dd28cc21f9f191f384201e851b456a65b6b6"
+  },
+  "hypothesis": "Proven pre-dispatch restore rejection can recover through bounded observations when the original checkpoint returns."
+}

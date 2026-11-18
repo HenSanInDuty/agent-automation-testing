@@ -1,0 +1,24 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 14.247,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "final": {
+    "passed": 19,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 492.226,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "checks": {
+    "ruff": "passed",
+    "worker_typecheck": "passed"
+  }
+}

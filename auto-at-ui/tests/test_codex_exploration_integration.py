@@ -90,6 +90,7 @@ class SyntheticProcess:
         "publish_failed",
         "db_failed",
         "stale_binding",
+        "partial",
     ],
 )
 def test_codex_browser_jobs_bindings_and_safe_stops(  # noqa: F811
@@ -106,9 +107,12 @@ def test_codex_browser_jobs_bindings_and_safe_stops(  # noqa: F811
         raw_screenshot_transfer_accepted=variant == "image",
         raw_screenshot_transfer_provider="codex_cli" if variant == "image" else None,
     )
-    factory, scope, uow, store, _ = seed(
-        codex_database, target=live_browser_worker["target"], policy=policy
+    # Complete-flow cases have exactly the two requested branches. The original
+    # mixed-control page remains an explicit partial-coverage regression.
+    target = live_browser_worker["target"] + (
+        "/codex-two-branches" if variant in {"dom", "image"} else "/"
     )
+    factory, scope, uow, store, _ = seed(codex_database, target=target, policy=policy)
     bridge_id = uuid4()
     spool = FileSpool(tmp_path / "jobs", bridge_id, scope.tenant_id)
     settings = Settings(
@@ -213,12 +217,15 @@ def test_codex_browser_jobs_bindings_and_safe_stops(  # noqa: F811
                 seen = []
 
                 async def verify_binding(command):
-                    if command.purpose == "explore":
+                    if command.purpose == "explore" and command.action.kind == "click":
                         assert command.dom_snapshot_id and command.dom_element_id
                         assert command.expected_locator.value in {"Branch A", "Branch B"}
                         seen.append(command)
                         if variant == "stale_binding" and len(seen) == 2:
                             command = command.model_copy(update={"dom_snapshot_id": uuid4()})
+                    elif command.purpose == "explore" and command.action.kind == "scroll":
+                        assert command.proposal_id is None
+                        assert command.dom_snapshot_id is None and command.dom_element_id is None
                     return await prepare(command)
 
                 worker.prepare = verify_binding
@@ -243,11 +250,16 @@ def test_codex_browser_jobs_bindings_and_safe_stops(  # noqa: F811
                     assert await processor.execute(event) == "busy"
                 result = await asyncio.wait_for(task, 30)
                 assert await processor.execute(event) == "already_processed"
-                if variant in {"dom", "image", "stale_binding"}:
-                    assert result == "completed", uow.get_session(
+                if variant in {"dom", "image", "stale_binding", "partial"}:
+                    expected = "completed" if variant in {"dom", "image"} else "unavailable"
+                    assert result == expected, (uow.get_session(
                         scope.tenant_id,
                         scope.session_id,
-                    ).safe_failure_reason
+                    ).safe_failure_reason, [(op.sequence, op.status, op.outcome_code)
+                                           for op in uow.read_snapshot(scope)["operations"]])
+                    if expected == "unavailable":
+                        record = uow.get_session(scope.tenant_id, scope.session_id)
+                        assert record.safe_failure_reason == "exploration_coverage_incomplete"
                     assert len(seen) == 2
                     assert seen[0].dom_snapshot_id == seen[1].dom_snapshot_id
                 else:
@@ -260,7 +272,7 @@ def test_codex_browser_jobs_bindings_and_safe_stops(  # noqa: F811
 
     asyncio.run(scenario())
     snapshot = uow.read_snapshot(scope)
-    success = variant in {"dom", "image", "stale_binding"}
+    success = variant in {"dom", "image", "stale_binding", "partial"}
     assert len(snapshot["locators"]) == (1 if variant == "stale_binding" else 2 if success else 0)
     if variant == "stale_binding":
         rejected = [item for item in snapshot["operations"] if item.status == "rejected"]
@@ -273,13 +285,27 @@ def test_codex_browser_jobs_bindings_and_safe_stops(  # noqa: F811
         assert all(job.status in {"completed", "cancelled", "failed"} for job in jobs)
         proposals = db.scalars(select(VisualActionProposalModel)).all()
         assert len(proposals) == (2 if success else 0)
-        assert all(item.target_binding and "text" not in item.action for item in proposals)
+        assert all(item.target_binding and "text" not in item.action for item in proposals
+                   if item.action["kind"] != "stop")
         events = db.scalars(select(ActivityEventModel)).all()
         assert any(item.stage == "codex.queued" for item in events)
         assert all("raw-output" not in str(item.event_metadata) for item in events)
     if success:
         assert not spool.jobs()
         assert len(snapshot["handoffs"]) == 1
+        pages = snapshot["pages"]
+        assert pages and pages[0].page_url == target
+        controls = {item.name: item for item in pages[0].controls}
+        assert controls["Branch A"].status == "completed"
+        assert controls["Branch B"].status == (
+            "rejected" if variant == "stale_binding" else "completed"
+        )
+        if variant in {"stale_binding", "partial"}:
+            assert any(item.status == "pending" for item in pages[0].controls)
+        else:
+            assert len(controls) == 2
+            assert all(item.status == "completed" for item in pages[0].controls)
+        assert all(item.operation_id for item in controls.values() if item.status == "completed")
     assert len(process.calls) == (
         0 if variant == "publish_failed" else 2 if variant == "image" else 1
     )

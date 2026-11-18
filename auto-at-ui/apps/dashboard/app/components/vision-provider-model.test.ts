@@ -32,7 +32,7 @@ test("Codex readiness distinguishes connection, login, compatibility, model acce
     [{ capabilities_qualified: false }, /compatible CLI/], [{ model_access: "unavailable" }, /model unavailable/],
     [{ busy: true }, /busy/], [{ model_access: "available" }, /bridge ready/],
   ] as const) assert.match(codexReadinessLabel({ ...codex, bridge_readiness: { ...codex.bridge_readiness!, ...change } }), expected);
-  for (const reason of ["bridge_login_required", "bridge_stale_result", "bridge_interrupted", "bridge_cleanup_pending", "image_consent_required", "step_limit"]) assert.ok(visionFailureMessage(reason));
+  for (const reason of ["bridge_login_required", "bridge_stale_result", "bridge_interrupted", "bridge_cleanup_pending", "image_consent_required", "step_limit", "exploration_call_limit", "exploration_coverage_incomplete"]) assert.ok(visionFailureMessage(reason));
 });
 
 test("switching recipient resets consent, enablement and model without changing saved policy", () => {

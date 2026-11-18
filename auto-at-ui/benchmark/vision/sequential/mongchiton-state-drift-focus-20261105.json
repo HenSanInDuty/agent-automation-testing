@@ -1,0 +1,1871 @@
+{
+  "target": "https://mongchiton.vn/",
+  "model_calls": 0,
+  "clicks": 0,
+  "reduced_motion": "reduce",
+  "service_workers": "block",
+  "worker_source_sha256": "780f399eefd1c2f05ed4650a0c2e51413284637b861f58fff0ef2ca0c6b4aad0",
+  "samples": [
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 1049,
+      "sample": 1,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 8,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              755,
+              522,
+              1049,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "video-frame group z-10",
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              856,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "mb-4 play-icon",
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              856,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 2096,
+      "sample": 2,
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": []
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 3137,
+      "sample": 3,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 4,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-5 ml-12",
+            "bounds": [
+              139,
+              275,
+              239,
+              372
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-5 ml-12",
+            "bounds": [
+              139,
+              275,
+              239,
+              372
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 5,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              97,
+              370,
+              202,
+              471
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              200,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 6,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0 active",
+            "bounds": [
+              97,
+              466,
+              202,
+              568
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 8,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "video-frame group z-10",
+            "bounds": [
+              223,
+              522,
+              517,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "mb-4 play-icon",
+            "bounds": [
+              324,
+              570,
+              415,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              324,
+              570,
+              415,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 4190,
+      "sample": 4,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              99,
+              372,
+              200,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 8,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              223,
+              522,
+              517,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "video-frame group z-10",
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              324,
+              570,
+              415,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "mb-4 play-icon",
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              324,
+              570,
+              415,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 5232,
+      "sample": 5,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 6281,
+      "sample": 6,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 7343,
+      "sample": 7,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 6,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              97,
+              466,
+              202,
+              568
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 7,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              134,
+              565,
+              234,
+              662
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-9 ml-8 active",
+            "bounds": [
+              131,
+              563,
+              237,
+              664
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 8376,
+      "sample": 8,
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": []
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 9411,
+      "sample": 9,
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": []
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 10455,
+      "sample": 10,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 4,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              139,
+              275,
+              239,
+              372
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-5 ml-12 active",
+            "bounds": [
+              137,
+              273,
+              242,
+              374
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 6,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-35 ml-0",
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 7,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              131,
+              563,
+              237,
+              664
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "character-switcher lg:-ml-9 ml-8",
+            "bounds": [
+              134,
+              565,
+              234,
+              662
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 8,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "video-frame group z-10",
+            "bounds": [
+              6,
+              522,
+              300,
+              720
+            ],
+            "hit_test": [
+              false,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "mb-4 play-icon",
+            "bounds": [
+              107,
+              570,
+              198,
+              661
+            ],
+            "hit_test": [
+              false,
+              true,
+              false,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              107,
+              570,
+              198,
+              661
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 11498,
+      "sample": 11,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 8,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              6,
+              522,
+              300,
+              720
+            ],
+            "hit_test": [
+              false,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "video-frame group z-10",
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              107,
+              570,
+              198,
+              661
+            ],
+            "hit_test": [
+              false,
+              true,
+              false,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": "mb-4 play-icon",
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              107,
+              570,
+              198,
+              661
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "classes_at_current_sample": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 12537,
+      "sample": 12,
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "visible_control_styles": [
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "transition-all duration-200 ease-in-out absolute bg-[url('/assets/btn-more-mobile.png')] hover:bg-[url('/assets/btn-more-mobile-active.png')] lg:bg-[url('/asset",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            976,
+            -4,
+            1093,
+            26
+          ],
+          "motion": []
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title active",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            491,
+            137,
+            637,
+            174
+          ],
+          "motion": []
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            643,
+            137,
+            789,
+            174
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-5 ml-12 active",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            137,
+            273,
+            242,
+            374
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-35 ml-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            99,
+            372,
+            199,
+            469
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-35 ml-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            99,
+            469,
+            199,
+            565
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-9 ml-8",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            134,
+            565,
+            234,
+            662
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "video-frame group z-10",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            754,
+            522,
+            1048,
+            720
+          ],
+          "motion": [
+            {
+              "tag": "DIV",
+              "classes": "animate-fade-in",
+              "css_animation": "fadeIn",
+              "transform": "none",
+              "animations": []
+            }
+          ]
+        },
+        {
+          "tag": "svg",
+          "id": "",
+          "classes": "[object SVGAnimatedString]",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            855,
+            570,
+            947,
+            661
+          ],
+          "motion": [
+            {
+              "tag": "DIV",
+              "classes": "animate-fade-in",
+              "css_animation": "fadeIn",
+              "transform": "none",
+              "animations": []
+            }
+          ]
+        },
+        {
+          "tag": "path",
+          "id": "",
+          "classes": "[object SVGAnimatedString]",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            855,
+            570,
+            947,
+            661
+          ],
+          "motion": [
+            {
+              "tag": "DIV",
+              "classes": "animate-fade-in",
+              "css_animation": "fadeIn",
+              "transform": "none",
+              "animations": []
+            }
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1118,
+            303,
+            1196,
+            352
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1199,
+            303,
+            1277,
+            352
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            161,
+            1262,
+            192
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            195,
+            1262,
+            226
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            229,
+            1262,
+            260
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            263,
+            1262,
+            294
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1152,
+            360,
+            1176,
+            383
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1185,
+            360,
+            1209,
+            383
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1218,
+            360,
+            1242,
+            383
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1151,
+            390,
+            1244,
+            463
+          ],
+          "motion": []
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "absolute inset-0 cursor-pointer",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1184,
+            470,
+            1211,
+            502
+          ],
+          "motion": []
+        }
+      ]
+    }
+  ]
+}

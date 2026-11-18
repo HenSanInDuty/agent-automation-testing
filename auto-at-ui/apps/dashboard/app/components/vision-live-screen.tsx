@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ControlPlaneError, getOperationFrameBlob, getVisionScreen } from "../generation-api";
 import type { ExecutedClick, VisualLocator, VisualOperation, VisionProgressActivity } from "../generation-types";
 import { visionFailureMessage } from "./vision-provider-model";
-import { advanceClickPreview, clickMarkerPosition, confirmedClick, confirmedClickTarget, type ClickPreviewHistory } from "./vision-click-model";
+import { advanceClickPreview, verifiedClickTarget, verifiedTargetPosition, clickMarkerPosition, confirmedClick, confirmedClickTarget, type ClickPreviewHistory } from "./vision-click-model";
 import { VisionClickOverlay } from "./vision-click-overlay";
 import { operationLabel, operationStatus } from "./vision-operation-model";
 import { isVisionModelPending, visionModelWaitLabel, visionProgressMetrics } from "./vision-progress-timeline-model";
@@ -15,16 +15,18 @@ export function VisionLiveScreen({ apiUrl, sessionId, live, operations, locators
   progress?: VisionProgressActivity | null; completionReason?: string | null;
 }) {
   const latest = operations.at(-1);
+  const lastClick = [...operations].reverse().find((item) => confirmedClick(item, item.before.id) || verifiedClickTarget(item, locators.find((locator) => locator.id === item.locator_id), item.before.id));
+  const stoppedClick = !live && follow ? lastClick : undefined;
   const selected = operations.find((item) => item.id === selectedId);
   const [selection, setSelection] = useState<{ id: string; role: "before" | "after" } | null>(null);
   const role = selection?.id === selected?.id ? selection?.role ?? "before" : "before";
-  const frame = follow ? [...operations].reverse().find((item) => item.after.availability === "retained")?.after : selected?.[role];
+  const frame = stoppedClick?.before ?? (follow ? [...operations].reverse().find((item) => item.after.availability === "retained")?.after : selected?.[role]);
   const preview = live && follow;
   const history = useRef<ClickPreviewHistory>({ initialized: false, following: false, seen: new Set() });
   const [recentId, setRecentId] = useState<string | null>(null);
   const [loadedRecentId, setLoadedRecentId] = useState<string | null>(null);
   const recent = preview ? operations.find((item) => item.id === recentId && confirmedClick(item, item.before.id)) : undefined;
-  const activity = recent ?? (follow ? latest : selected);
+  const activity = recent ?? stoppedClick ?? (follow ? latest : selected);
   const activityLocator = locators.find((item) => item.id === activity?.locator_id && item.operation_id === activity?.id);
   const busy = live && follow && Boolean(activity && ["prepared", "executing"].includes(activity.status));
   const thinking = live && follow && !recent && isVisionModelPending(progress, latest);
@@ -41,7 +43,7 @@ export function VisionLiveScreen({ apiUrl, sessionId, live, operations, locators
     return () => clearTimeout(timer);
   }, [recent?.id, loadedRecentId]);
   const saved = frame?.availability === "retained" ? frame.id : null;
-  const label = follow ? "Session stopped · last saved screen" : `${role === "before" ? "Before" : "After"} operation ${selected?.sequence ?? ""} · recorded frame`;
+  const label = stoppedClick ? `Click operation ${stoppedClick.sequence} · recorded click location` : follow ? "Session stopped · last saved screen" : `${role === "before" ? "Before" : "After"} operation ${selected?.sequence ?? ""} · recorded frame`;
   return <section className="workspace-section vision-screen-card" aria-label="Vision browser screen">
     <div className="section-heading"><h2>Website</h2>{!follow && <button type="button" className="button button--secondary" onClick={() => onFollow(true)}>Return to live</button>}</div>
     <div className={"vision-screen-activity" + (busy || thinking ? " vision-screen-activity--busy" : "") + (stopped ? " vision-screen-activity--stopped" : "")}>
@@ -58,11 +60,15 @@ export function VisionLiveScreen({ apiUrl, sessionId, live, operations, locators
       {(["before", "after"] as const).map((value) => <button type="button" key={value} className="button button--secondary" aria-pressed={role === value} onClick={() => setSelection({ id: selected.id, role: value })}>{value === "before" ? "Before" : "After"}</button>)}
     </div>}
     <div className="vision-screen-content" hidden={Boolean(recent)}>
-      <ScreenImage key={`${apiUrl}:${sessionId}:${preview ? "live" : `${selectedId}:${role}:${saved}:${frame?.availability}`}`} apiUrl={apiUrl} sessionId={sessionId} live={preview} saved={preview ? null : saved} label={label} click={!follow && role === "before" ? confirmedClick(selected, saved) : null} target={!follow && role === "before" ? confirmedClickTarget(selected, activityLocator, saved) : null} onUnavailable={() => { if (preview) setRecentId(null); }} missing={frame?.availability === "deleted" ? "This frame was deleted." : !follow ? "No saved image is available for this step." : "No saved page image is available."} />
+      <ScreenImage key={`${apiUrl}:${sessionId}:${preview ? "live" : `${selectedId}:${role}:${saved}:${frame?.availability}`}`} apiUrl={apiUrl} sessionId={sessionId} live={preview} saved={preview ? null : saved} label={label} click={stoppedClick ? confirmedClick(stoppedClick, saved) : !follow && role === "before" ? confirmedClick(selected, saved) : null} target={stoppedClick ? (confirmedClickTarget(stoppedClick, activityLocator, saved) ?? verifiedClickTarget(stoppedClick, activityLocator, saved)) : !follow && role === "before" ? (confirmedClickTarget(selected, activityLocator, saved) ?? verifiedClickTarget(selected, activityLocator, saved)) : null} onUnavailable={() => { if (preview) setRecentId(null); }} missing={frame?.availability === "deleted" ? "This frame was deleted." : !follow ? "No saved image is available for this step." : "No saved page image is available."} />
     </div>
     {recent && <div className="vision-screen-content">
       <ScreenImage key={`${sessionId}:${recent.id}:${recent.before.id}`} apiUrl={apiUrl} sessionId={sessionId} live={false} saved={recent.before.id} label={`Recent click · operation ${recent.sequence} · recorded frame`} missing="Click frame unavailable." click={confirmedClick(recent, recent.before.id)} target={confirmedClickTarget(recent, activityLocator, recent.before.id)} pulse onLoaded={() => setLoadedRecentId(recent.id)} onUnavailable={() => setRecentId((id) => id === recent.id ? null : id)} />
     </div>}
+    {live && follow && lastClick && !recent && <details className="vision-last-click" open>
+      <summary>Last confirmed click — step {lastClick.sequence}</summary>
+      <ScreenImage key={`confirmed:${sessionId}:${lastClick.id}`} apiUrl={apiUrl} sessionId={sessionId} live={false} saved={lastClick.before.id} label={`Click operation ${lastClick.sequence} · recorded click location`} missing="Click frame unavailable." click={confirmedClick(lastClick, lastClick.before.id)} target={confirmedClickTarget(lastClick, locators.find((item) => item.id === lastClick.locator_id), lastClick.before.id) ?? verifiedClickTarget(lastClick, locators.find((item) => item.id === lastClick.locator_id), lastClick.before.id)} />
+    </details>}
     {!follow && selected?.action_kind === "click" && !confirmedClick(selected, selected.before.id) && <p className="vision-click-caption">Click position unavailable.</p>}
     {!live && follow && latest?.status === "rejected" && <p role="alert">{visionFailureMessage(latest.outcome_code) ?? "The browser action was rejected before execution."}</p>}
     {!live && follow && latest?.status !== "rejected" && latest?.after.availability === "missing" && <p role="alert">The page screenshot could not be captured ({latest.after.reason_code?.replaceAll("_", " ") ?? "capture unavailable"}). Use Reload to start a new session.</p>}
@@ -118,6 +124,7 @@ function ScreenImage({ apiUrl, sessionId, live, saved, label, missing, click, ta
     void load();
     return () => { abort.abort(); if (timer) clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [apiUrl, sessionId, live, saved, label]);
+  const targetBounds = image && target ? verifiedTargetPosition(target, image, container) : null;
   return <><p role="status">{status}</p>
     <div ref={viewport} className="vision-screen-viewport">
       {url ? <img key={url} src={url} alt="Vision browser screen" onLoad={(event) => {
@@ -125,7 +132,9 @@ function ScreenImage({ apiUrl, sessionId, live, saved, label, missing, click, ta
         callbacks.current.onLoaded?.();
       }} onError={() => { setUrl(null); setImage(null); setStatus("Screen could not be displayed."); callbacks.current.onUnavailable?.(); }} /> : <p>{live ? "Waiting for a browser frame…" : missing}</p>}
       {url && image?.url === url && click && <VisionClickOverlay click={click} image={image} container={container} pulse={pulse} target={target} />}
+      {url && image?.url === url && !click && targetBounds && <span aria-hidden="true" data-testid="vision-click-target" className="vision-click-target" style={targetBounds} />}
     </div>
+    {url && image?.url === url && !click && targetBounds && <p className="vision-click-caption">Verified click target: exact click position was not recorded</p>}
     {url && image?.url === url && click && <p className="vision-click-caption">{clickMarkerPosition(click, image, container) ? "Click location · recorded before the action" : "Click position unavailable."}</p>}
   </>;
 }
