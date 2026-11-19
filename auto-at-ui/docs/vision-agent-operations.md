@@ -513,6 +513,13 @@ users/runs and can invoke configured providers, so do not run it as a fixture-on
 check. Record skipped Compose checks explicitly. Browser dashboard tests require
 `VISION_DASHBOARD_URL` pointing to a local dashboard with intercepted API fixtures.
 
+## Claude (`claude -p`) local bridge
+
+Claude runs as the `claude_cli` Vision provider through the same local DOM-first
+bridge as Codex, not through the Anthropic API. See
+[Claude local bridge](claude-local-bridge.md) and
+[ADR-037](adr/037-claude-cli-bridge-engine.md).
+
 ## Gehihi (Google Gemini) local setup
 
 This is an opt-in synthetic evaluation path, approved in [ADR-009](adr/009-gehihi-vision-provider.md).

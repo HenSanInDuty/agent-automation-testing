@@ -781,3 +781,111 @@ On the next explicit resume, read this handoff and `ROUND20-20261118.md`, then
 durable commit failure of operation 85. Preserve its unknown verdict and staged
 evidence; do not retry that physical click or begin round 21 before a scoped fix
 and relevant validation. Model, prompt, oracle and limits remain unchanged.
+
+## Round 20 remediation - 2026-11-19
+
+Cause: **chưa chứng minh được** (unproven). Evidence chỉ cho phép loại trừ:
+- Outcome là `operation_unavailable`, không phải `screenshot_byte_limit`/`frame_ack_unavailable`
+  (`VisualOperationStopped` được re-raise nguyên mã), nên lỗi là một exception không-typed.
+- Worker frame GET 200 xảy ra sau execute, và object RustFS đã tồn tại với checksum khớp,
+  nên fetch + `write_operation_frame` đã qua. Còn lại: store read-back, hoặc giao dịch DB
+  của `commit_captured` (`add_frame`, `save_operation`, `_observe`: `save_checkpoint`
+  "checkpoint invariants are immutable"/"ancestors must form one branch", edge lookup
+  `next()` -> StopIteration). Giao dịch rollback sẽ không để lại dòng PG ERROR, khớp
+  bằng chứng; `execute()` nuốt exception và không log gì (`vision_operations.py` handler).
+- Frame 1,023,509 B > `VISION_MAX_SCREENSHOT_BYTES=1000000` nhưng không phải nguyên nhân
+  (check đó chạy trước khi fetch và có mã riêng); đáng ghi nhận như một rủi ro riêng.
+
+Fix (diagnostics only, safety giữ nguyên): operation không chứng minh được vẫn
+`unknown/worker_response_lost`, không bao giờ thành completed, staging và fencing/tenant
+không đổi, không re-click. Thêm phân loại `failure_stage` allowlist + `error_type`/
+`error_module` (không message, URL, giá trị form): log `vision.operation.failure_stage`
+và `ExecuteVisualOperation.last_failure`. Stage: `frame_limit|frame_fetch|frame_signature|
+store_write|store_readback|db_commit|db_frame|db_locator|db_operation|db_observe|
+db_checkpoint|db_edge|db_progress|capture_before|capture_after|ack|...`.
+
+Changed files: `apps/control-plane/application/vision_operations.py`,
+`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` (chỉ
+`commit_captured`/`_observe`), new `tests/test_vision_operation_failure_stage.py`.
+
+Tests (CODEX_BRIDGE_ENABLED=false): new file 5 passed (trước fix: ImportError/không có
+`last_failure`); `uv run ruff check .` pass. Các test cần PostgreSQL fixture
+(127.0.0.1:55437) bị skip (149 skipped) nên chưa chạy lại được trong phiên này.
+
+Unproven / next: lần chạy live kế tiếp sẽ đọc `failure_stage` từ log controller để chốt
+nguyên nhân rồi mới sửa gốc. Không chạy lại click của operation 85.
+
+## Round 21 in progress - 2026-11-19 (Claude via `claude -p`)
+
+User direction: start Docker, run (a) the op-85 remediation, (b) Claude through the
+same DOM-first bridge, (c) a quick Claude look, and run Claude with `claude -p`
+instead of the API. (c) is folded into this round: the screenshot-only path needed
+the API and would not be comparable with Codex.
+
+- (a) Op-85 cause still unproven; typed `vision.operation.failure_stage`
+  diagnostics added (see "Round 20 remediation"). This round can classify a repeat.
+- (b) New provider `claude_cli / claude-opus-5-5` (ADR-037, `docs/claude-local-bridge.md`).
+  Same task prompt `codex-dom-v11`, schema, validator, oracle and limits; only the
+  bridge engine and model differ. Qualification streak resets (model change).
+- Policy switched via local tenant admin: `benchmark/vision/accuracy/policy-change-20261119-claude.json`
+  (limits unchanged; DOM + image consent bound to `claude_cli`).
+- Iteration `d3e65e1e-e3bb-4818-b2b3-5d9fdfc8db32`; session `cf3385a4-8949-43ca-ab49-965280327333`;
+  source `995c6b28ee68439cdf95fd80f4a63068630362def207648dccc8919a4c0a1058`; config `e3039b749716d2af4fc5f6b8cc7bb5c28879171d4041c45ad41d58c231bd2307`;
+  oracle `9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e` (unchanged).
+- Deployed control-plane, temporal-worker, dashboard and `claude-bridge`; Playwright
+  worker unchanged from round 20. Offline: 444 passed / 68 DB-gated skips; doctor and
+  one in-container `claude -p` smoke passed.
+
+### Round 21 attempts 1-2 (integration defects, not model results)
+
+- Attempt 1, iteration `d3e65e1e-e3bb-4818-b2b3-5d9fdfc8db32` / session `cf3385a4-8949-43ca-ab49-965280327333`:
+  `model_output_invalid` before any bridge job. `codex_batch.py` built
+  `CodexBridgeRequest` with Codex defaults, so the contract rejected the
+  Claude-bound consent (ValueError → model_output_invalid). Zero model calls.
+  Fixed (pass policy provider/model); red/green regression in `tests/test_claude_bridge.py`.
+- Attempt 2, iteration `54f7335d-dc91-49e2-81e8-1d1cdcfb35bb` / session `2128e10e-babe-44ad-8733-cbec9553386f`:
+  `exploration_call_limit`; 20/20 Claude jobs completed, 18 proposals all
+  `stop`, 0 explore clicks. Root cause reproduced on host: the shared response
+  schema is unsatisfiable under strict JSON Schema (candidate variants set
+  additionalProperties=false without the parent-required confidence /
+  expected_outcome). Codex receives the schema only as prompt text; `--json-schema`
+  enforces it, so Claude's valid click batches were rejected twice and it fell
+  back to stop. Fix: Claude-only `enforceable_schema` (merges common fields into
+  each variant; prompt text unchanged). Host re-probe: valid click batch first try.
+  Added safe per-job log (outcome, stop reason enum, candidate count, schema
+  rejections). Usage attempt 2: 697,746 input (541,061 cached) / 41,017 output tokens.
+- Neither attempt measures Claude accuracy; both are recorded, not scored.
+
+## Round 21 handoff - 2026-11-19
+
+- Scored attempt 4: iteration `39de5dc7-c68e-49e1-b1b5-9cdc3b3a6391`, session
+  `3af27fd0-49f2-443a-9072-ced07a69e3f7`, `claude_cli / claude-opus-5-5`. 47 clicks, 0 rejected/unknown,
+  46/47 oracle positives (missing mct-47, recurring video copy). Ceilings
+  C=A=46/47=97.8723%; outcomes unreviewed, so not a pass. Runtime
+  `unavailable / unsafe_replay` at restore op 154. Report `benchmark/vision/accuracy/ROUND21-20261119.md`.
+- Attempt 3 fixed the round-20 op-85 class: RustFS zero-size read right after PUT
+  (`store_write / ArtifactStorageError`, RustFS `FileCorrupt`); bounded verified
+  read retry in `infrastructure/artifacts/rustfs.py` + `tests/test_rustfs_read_after_write.py`.
+- Validation: Ruff clean; 496 passed / 69 DB-gated skips (focused sweep); dashboard
+  tests/typecheck/lint passed. Deployed control-plane, temporal-worker, dashboard,
+  claude-bridge (`auto-at-claude-bridge:2.1.328`). Codex bridge stopped; tenant
+  policy on `claude_cli` (switch back per `docs/claude-local-bridge.md`).
+- Claude access token for the bridge expires ~2026-11-20 03:50 (Asia/Saigon); rerun
+  `scripts/export_claude_bridge_token.py` before another live run.
+- No active session; monitors exited. No commit/push. Next command (fresh session):
+
+```powershell
+Get-Content benchmark/vision/accuracy/ROUND21-20261119.md
+```
+
+### Round 21 outcome review - 2026-11-19
+
+- Same iteration/session/source/config/oracle as above. 46 bound clicks reviewed:
+  45 correct (45 content-addressed reviews); op 128 mct-57 previous arrow shows no
+  slide change -> no credit (`carousel-outcome-mismatch.json`).
+- Score (`run.py evaluate` via `.pytest-artifacts/score_round21.py`): C=A=45/47
+  =95.7447% pass; detection R=47/47, **P=47/50=94.0% fail** (3 recurring unmatched
+  inventory keys); inventory complete; no unsafe/unsettled. **Round 21 failed.**
+- Open: mct-57 previous-arrow outcome, mct-47 video copy, the 3 unmatched inventory
+  keys (precision), restoration terminal. No code changes, no commit/push.
+- Next command (fresh session): `Get-Content benchmark/vision/accuracy/ROUND21-20261119.md`

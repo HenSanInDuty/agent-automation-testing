@@ -12,7 +12,7 @@ from auto_at.contracts.codex_bridge import (
     content_hash,
 )
 from config import Settings
-from domain.codex_bridge import CLI_VERSION, BridgeProcessResult
+from domain.codex_bridge import BRIDGE_CLI_VERSIONS, BridgeProcessResult
 from domain.ports import CodexBridgeHostSpool, CodexBridgeProcessPort
 
 
@@ -48,6 +48,9 @@ class BridgeService:
             stop = self.spool.stop_reason(request, started)
             if self.spool.has_file(request, "claim.json"):
                 result = BridgeProcessResult(failure_code="bridge_interrupted")
+            elif request.provider != self.readiness.provider:
+                # This bridge runs one CLI engine; never answer for another provider.
+                result = BridgeProcessResult(failure_code="bridge_model_unavailable")
             elif stop == "bridge_policy_revoked":
                 # Producer publishes then authorizes; do not race that handoff.
                 continue
@@ -77,7 +80,8 @@ class BridgeService:
             )}
             envelope = dict(
                 **identity, request_hash=content_hash(request),
-                cli_version=CLI_VERSION, started_at=started, completed_at=datetime.now(UTC),
+                cli_version=BRIDGE_CLI_VERSIONS[request.provider],
+                started_at=started, completed_at=datetime.now(UTC),
             )
             try:
                 response = CodexBridgeResponse(
@@ -130,4 +134,6 @@ class BridgeService:
                 for task in tasks:
                     task.cancel()
                 await asyncio.gather(*tasks, return_exceptions=True)
-                self.spool.heartbeat(CodexBridgeReadiness().model_dump(mode="json"))
+                self.spool.heartbeat(CodexBridgeReadiness(
+                    provider=self.readiness.provider,
+                ).model_dump(mode="json"))

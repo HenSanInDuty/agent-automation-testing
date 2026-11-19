@@ -326,6 +326,10 @@ Tenant administrators can choose **Gehihi (Google Gemini)** with
 accept Google screenshot transfer and save the tenant policy. The catalogue
 reports key presence only. Gemini sends images inline and needs no Drive OAuth;
 Hugging Face retains its existing image-delivery path. Defaults stay HF/disabled.
+**Claude (claude -p, local bridge)** with `claude-opus-5-5` uses the same
+DOM-first bridge protocol as Codex, run by the `claude-bridge` container and the
+existing Claude Code login (no Anthropic API key). See
+[Claude local bridge](docs/claude-local-bridge.md).
 
 Only approved synthetic data is permitted for this local evaluation. Screenshots
 are raw, and free-tier terms/quota must be checked before a live demo. Saved

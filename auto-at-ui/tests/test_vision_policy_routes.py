@@ -43,7 +43,8 @@ def test_provider_catalogue_is_readable_by_a_tenant_viewer(client):
         "X-Tenant-Id": "tenant-a", "X-Actor-Roles": "viewer",
     })
     assert response.status_code == 200
-    hf, gemini, codex = response.json()["items"]
+    hf, gemini, codex, claude = response.json()["items"]
+    assert claude["id"] == "claude_cli" and not claude["configured"]
     assert codex["id"] == "codex_cli" and not codex["configured"]
     assert not hf["configured"]
     assert gemini["configured"]

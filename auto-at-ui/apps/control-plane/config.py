@@ -1,6 +1,7 @@
 # file cấu hình các thông tin từ env
 from functools import lru_cache
 from pathlib import PurePosixPath, PureWindowsPath
+from typing import Literal
 from uuid import UUID
 
 from pydantic import AliasChoices, Field, model_validator
@@ -62,6 +63,10 @@ class Settings(BaseSettings):
     codex_bridge_container_spool: str = "/codex-jobs"
     codex_bridge_spool_owner_uid: int | None = Field(default=None, ge=1, le=2_147_483_647)
     codex_bridge_executable: str | None = None
+    # One bridge container runs one CLI engine: `codex exec` or `claude -p`.
+    codex_bridge_engine: Literal["codex", "claude"] = "codex"
+    # Read-only mounted OAuth token file for `claude -p`; never an application secret.
+    claude_bridge_token_file: str = "/bridge-secrets/claude-oauth-token"
     codex_bridge_heartbeat_seconds: float = Field(default=2, gt=0, le=2)
     codex_bridge_stale_seconds: float = Field(default=10, ge=3, le=10)
     codex_bridge_cancel_poll_seconds: float = Field(default=1, gt=0, le=2)
@@ -155,8 +160,9 @@ class Settings(BaseSettings):
                     or value.startswith(("\\\\", "//"))):
                 raise ValueError("Codex paths must be absolute local paths without traversal")
         executable = self.codex_bridge_executable
-        if executable and PureWindowsPath(executable).name.lower() not in {"codex.exe", "codex"}:
-            raise ValueError("Codex requires a fixed native executable, not a shell or shim")
+        allowed = {"codex.exe", "codex"} if self.codex_bridge_engine == "codex" else {"claude"}
+        if executable and PureWindowsPath(executable).name.lower() not in allowed:
+            raise ValueError("bridge requires a fixed native executable, not a shell or shim")
         if self.codex_bridge_enabled and (
             self.environment != "local" or not self.codex_bridge_id
             or not self.codex_bridge_allowed_tenant or not self.codex_bridge_host_spool

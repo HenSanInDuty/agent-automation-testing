@@ -64,7 +64,22 @@ test("recipient labels and error messages do not expose arbitrary provider diagn
   assert.equal(visionProviderLabel("constructor"), "Unknown Vision provider");
   assert.match(screenshotDisclosure("gemini"), /sent to Google/);
   assert.match(screenshotDisclosure("gemini"), /data-use conditions/);
+  assert.equal(visionProviderLabel("claude_cli"), "Claude (claude -p, existing account)");
+  assert.match(screenshotDisclosure("claude_cli"), /sent to Anthropic/);
+  assert.match(screenshotDisclosure("codex_cli"), /sent to OpenAI/);
   for (const code of ["provider_not_configured", "provider_auth_failed", "provider_billing_required", "provider_rate_limited", "provider_model_unavailable", "provider_timeout", "model_output_invalid", "policy_disabled", "model_unavailable", "image_delivery_auth_required", "worker_state_unavailable", "session_timeout"]) assert.ok(visionFailureMessage(code));
   assert.equal(visionFailureMessage("arbitrary provider body"), undefined);
   assert.equal(visionFailureMessage("__proto__"), undefined);
+});
+
+test("claude_cli uses the DOM-first bridge consent bound to its own provider", () => {
+  const claude: VisionProvider = { id: "claude_cli", display_name: "Claude", models: [{ id: "claude-opus-5-5", display_name: "claude-opus-5-5" }], configured: true, supports_inline_images: false };
+  const draft = switchVisionProvider(saved, claude);
+  assert.equal(draft.model, "claude-opus-5-5");
+  assert.equal(draft.codex?.input_mode, "dom_first");
+  assert.equal(hasVisionConsent(draft), false);
+  const accepted = { ...draft, codex: { ...draft.codex!, dom_transfer_accepted: true, dom_transfer_provider: "claude_cli" as const } };
+  assert.equal(hasVisionConsent(accepted), true);
+  assert.equal(hasVisionConsent({ ...accepted, codex: { ...accepted.codex, dom_transfer_provider: "codex_cli" as const } }), false);
+  assert.match(visionDisclosure(accepted), /Anthropic using the existing Claude Code account/);
 });

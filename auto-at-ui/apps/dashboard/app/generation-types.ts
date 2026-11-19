@@ -45,7 +45,7 @@ export type VisionProvider = {
   supports_inline_images: boolean;
   bridge_readiness?: { configured: boolean; online: boolean; authenticated: boolean; capabilities_qualified: boolean; model_access: "unverified" | "available" | "unavailable"; failure_code: string | null; busy?: boolean } | null;
 };
-export type CodexInputPolicy = { input_mode: "dom_first"; dom_transfer_accepted: boolean; dom_transfer_provider: "codex_cli" | null; max_dom_elements: number; max_dom_bytes: number };
+export type CodexInputPolicy = { input_mode: "dom_first"; dom_transfer_accepted: boolean; dom_transfer_provider: "codex_cli" | "claude_cli" | null; max_dom_elements: number; max_dom_bytes: number };
 export type VisionPolicy = {
   enabled: boolean;
   provider: string;

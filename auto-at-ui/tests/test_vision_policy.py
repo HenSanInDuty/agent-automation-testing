@@ -55,7 +55,7 @@ def test_catalogue_preserves_custom_hf_models_and_exposes_only_readiness():
     configs = Configs()
     configs.values["tenant-a", AGENT_RUNTIME_CONFIG_KEY] = {"vision": {"model": "custom/hf"}}
     service = VisionPolicies(settings(gemini_api_key="synthetic-secret"), configs, Audit())
-    hf, gemini, codex = service.providers("tenant-a", principal())
+    hf, gemini, codex, claude = service.providers("tenant-a", principal())
     assert codex["id"] == "codex_cli" and not codex["configured"]
     assert {item["id"] for item in hf["models"]} >= {"custom/hf"}
     assert not hf["configured"]
@@ -64,7 +64,12 @@ def test_catalogue_preserves_custom_hf_models_and_exposes_only_readiness():
         "models": [{"id": "gemini-3.8-flash", "display_name": "gemini-3.8-flash"}],
         "configured": True, "supports_inline_images": True,
     }
-    assert "synthetic-secret" not in str([hf, gemini])
+    assert claude["id"] == "claude_cli" and not claude["configured"]
+    assert claude["models"] == [{"id": "claude-opus-5-5", "display_name": "claude-opus-5-5"}]
+    # Each bridge provider reports only its own engine's readiness.
+    assert claude["bridge_readiness"]["provider"] == "claude_cli"
+    assert codex["bridge_readiness"]["provider"] == "codex_cli"
+    assert "synthetic-secret" not in str([hf, gemini, claude])
     assert not configs.writes
 
 

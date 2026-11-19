@@ -15,6 +15,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from auto_at.contracts.codex_bridge import (
+    BRIDGE_PROVIDER_MODELS,
     CodexBridgeEvent,
     CodexBridgeReceipt,
     CodexBridgeRequest,
@@ -24,7 +25,7 @@ from auto_at.contracts.codex_bridge import (
     content_hash,
 )
 from domain.codex_bridge import (
-    CLI_VERSION,
+    BRIDGE_CLI_VERSIONS,
     validate_observation,
     validate_request_time,
     validate_response,
@@ -576,13 +577,14 @@ class FileSpool:
         self._write(directory, "events.jsonl", data)
 
     def heartbeat(self, readiness: dict):
+        provider = readiness.get("provider", "codex_cli")
         payload = {
             "bridge_id": str(self.bridge_id),
             "tenant_id": self.tenant_id,
             "recorded_at": datetime.now(UTC).isoformat(),
             "readiness": readiness,
-            "model": "gpt-6-luna",
+            "model": BRIDGE_PROVIDER_MODELS[provider],
             "protocol": "v1",
-            "cli_version": CLI_VERSION,
+            "cli_version": BRIDGE_CLI_VERSIONS[provider],
         }
         self._write(self.root, ".heartbeat.json", json.dumps(payload).encode())

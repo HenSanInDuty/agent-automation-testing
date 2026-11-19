@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from agents.prompts.codex_exploration import PROMPT_VERSION as CODEX_PROMPT_VERSION
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.intent import encrypt_visual_intent
 from auto_at.contracts.codex_bridge import CodexConsentSnapshot, content_hash
 from auto_at.contracts.generation import (
@@ -100,8 +101,8 @@ class SubmitVisualExploration:
                 existing.provider, existing.model
             ):
                 raise VisionPolicyChanged("vision_policy_changed")
-            if existing.provider == "codex_cli" and (
-                expected_provider != "codex_cli" or not existing.model_input_policy
+            if is_bridge_provider(existing.provider) and (
+                expected_provider != existing.provider or not existing.model_input_policy
                 or expected_input_policy_fingerprint != content_hash(
                     CodexConsentSnapshot.model_validate(existing.model_input_policy)
                 )
@@ -113,17 +114,19 @@ class SubmitVisualExploration:
         ):
             raise VisionPolicyChanged("vision_policy_changed")
         if policy.provider == "gemini" and expected_provider is None:
-            raise VisionStateError("expected_provider and expected_model are required for Gemini")
-        if policy.provider == "codex_cli":
+            raise VisionStateError(
+                "expected_provider and expected_model are required for this provider"
+            )
+        if is_bridge_provider(policy.provider):
             if not trace_v4_enabled:
                 raise VisionStateError("Codex requires v4 exploration")
-            if (expected_provider != "codex_cli" or not expected_input_policy_fingerprint
+            if (expected_provider != policy.provider or not expected_input_policy_fingerprint
                     or expected_input_policy_fingerprint != input_fingerprint(policy)):
                 raise VisionPolicyChanged("vision_policy_changed")
             consented = policy.codex and policy.codex.dom_transfer_accepted
-            if self._readiness is None or not self._readiness.read(
-                tenant_id, datetime.now(UTC),
-            ).ready:
+            readiness = (self._readiness.read(tenant_id, datetime.now(UTC))
+                         if self._readiness is not None else None)
+            if readiness is None or not readiness.ready or readiness.provider != policy.provider:
                 raise VisionStateError("bridge_offline")
         else:
             consented = (policy.raw_screenshot_transfer_accepted
@@ -165,10 +168,10 @@ class SubmitVisualExploration:
             policy_version=AGENT_RUNTIME_CONFIG_KEY,
             provider=policy.provider,
             model=policy.model,
-            prompt_version=(CODEX_PROMPT_VERSION if policy.provider == "codex_cli"
+            prompt_version=(CODEX_PROMPT_VERSION if is_bridge_provider(policy.provider)
                             else VISION_PROMPT_VERSION),
             model_input_policy=(input_snapshot(policy).model_dump(mode="json")
-                                if policy.provider == "codex_cli" else None),
+                                if is_bridge_provider(policy.provider) else None),
             trace_version="v4" if trace_v4_enabled else "legacy",
             max_steps=policy.max_steps,
             max_hops=project_policy.vision_max_hops,

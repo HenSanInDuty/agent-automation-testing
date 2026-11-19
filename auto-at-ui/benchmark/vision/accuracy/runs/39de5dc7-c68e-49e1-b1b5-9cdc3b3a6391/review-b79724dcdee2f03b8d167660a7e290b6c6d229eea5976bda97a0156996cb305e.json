@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "11c45200-8b5d-428a-8c74-3a9a1003b45c",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "scroll_top",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "finding": "Before image is the footer area; after image shows homepage header and hero at scroll_y=0 in retained state evidence. TOP control has the frozen verified binding."
+}

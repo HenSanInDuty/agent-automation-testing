@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "7dea6d54-60d7-499d-b332-74d4f18f43a5",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_step",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "c4dfbd02ca29db5f31e5a1165b3fdd3dec463ec53a08c2ca120459427a330557",
+  "after_checksum": "eb55c8f2e735e455216f18727bad8d97b27b1bced76bb698f951373bc418499c",
+  "finding": "Before frame has first indicator/slide Chuoi Nhiem Vu; after frame has second indicator/slide Bang Chien Nay Lua. Verified next-arrow click and paired frames establish one next step."
+}

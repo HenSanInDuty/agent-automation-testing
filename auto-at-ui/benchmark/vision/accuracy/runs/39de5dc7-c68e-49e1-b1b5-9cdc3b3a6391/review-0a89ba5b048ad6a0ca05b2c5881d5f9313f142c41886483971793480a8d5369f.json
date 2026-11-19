@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "732e9dc4-0089-4bad-8299-4019bbb51bf7",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "after_checksum": "ed815afcb07315066954ea5f5668bd98a0c3bd955a80a1b639aad92f2e84b09e",
+  "finding": "After URL hash exactly matches declared h5.mongchiton.vn; image shows VLCM Origin H5 login landing branded h5.mongchiton.vn. No login/game action performed."
+}

@@ -1,22 +1,36 @@
 import type { VisionPolicy, VisionProvider } from "../generation-types";
 
+const bridgeVendors: Record<string, string> = { codex_cli: "OpenAI", claude_cli: "Anthropic" };
+
+/** Local DOM-first CLI bridge providers (`codex exec`, `claude -p`). */
+export function isBridgeProvider(provider: string | null | undefined): boolean {
+  return Boolean(provider && Object.hasOwn(bridgeVendors, provider));
+}
+
+/** Company that receives page elements/screenshots for a bridge provider. */
+export function bridgeVendor(provider: string): string {
+  return Object.hasOwn(bridgeVendors, provider) ? bridgeVendors[provider] : "the provider";
+}
+
 export function visionProviderLabel(provider: string): string {
   if (provider === "gemini") return "Gehihi (Google Gemini)";
+  if (provider === "claude_cli") return "Claude (claude -p, existing account)";
   if (provider === "huggingface") return "Hugging Face";
   if (provider === "codex_cli") return "Codex (existing account)";
   return "Unknown Vision provider";
 }
 
 export function screenshotDisclosure(provider: string): string {
-  if (provider === "codex_cli") return "When separately permitted and requested, screenshots are sent to OpenAI. Images may contain personal data or secrets. Use only approved synthetic data.";
+  if (isBridgeProvider(provider)) return `When separately permitted and requested, screenshots are sent to ${bridgeVendor(provider)}. Images may contain personal data or secrets. Use only approved synthetic data.`;
   return provider === "gemini"
     ? "Raw screenshots will be sent to Google through Gehihi (Google Gemini). They may contain personal data or secrets. Google's free tier has data-use conditions, including use to improve its products. Use only approved synthetic data."
     : `Raw screenshots may be sent to ${visionProviderLabel(provider)}. They may contain personal data or secrets. Use only approved data.`;
 }
 
 export function visionDisclosure(policy: VisionPolicy): string {
-  if (policy.provider !== "codex_cli") return screenshotDisclosure(policy.provider);
-  return "Sanitized page elements and task text are sent to OpenAI using the existing Codex account. The local bridge does not mean offline model processing. "
+  if (!isBridgeProvider(policy.provider)) return screenshotDisclosure(policy.provider);
+  const account = policy.provider === "claude_cli" ? "Claude Code" : "Codex";
+  return `Sanitized page elements and task text are sent to ${bridgeVendor(policy.provider)} using the existing ${account} account. The local bridge does not mean offline model processing. `
     + (hasImageConsent(policy) ? "Screenshots may also be sent when requested; each image request counts toward the same call limit." : "Screenshot transfer is disabled. The agent stops if an image is needed.");
 }
 
@@ -34,11 +48,11 @@ export function codexReadinessLabel(provider: VisionProvider | undefined): strin
 export function switchVisionProvider(policy: VisionPolicy, provider: VisionProvider): VisionPolicy {
   if (policy.provider === provider.id) return policy;
   return { ...policy, provider: provider.id, model: provider.models[0]?.id ?? "", enabled: false, raw_screenshot_transfer_accepted: false, raw_screenshot_transfer_provider: null,
-    input_policy_fingerprint: null, codex: provider.id === "codex_cli" ? { input_mode: "dom_first", dom_transfer_accepted: false, dom_transfer_provider: null, max_dom_elements: 100, max_dom_bytes: 65536 } : null };
+    input_policy_fingerprint: null, codex: isBridgeProvider(provider.id) ? { input_mode: "dom_first", dom_transfer_accepted: false, dom_transfer_provider: null, max_dom_elements: 100, max_dom_bytes: 65536 } : null };
 }
 
 export function hasVisionConsent(policy: VisionPolicy): boolean {
-  if (policy.provider === "codex_cli") return Boolean(policy.codex?.dom_transfer_accepted && policy.codex.dom_transfer_provider === "codex_cli");
+  if (isBridgeProvider(policy.provider)) return Boolean(policy.codex?.dom_transfer_accepted && policy.codex.dom_transfer_provider === policy.provider);
   return hasImageConsent(policy);
 }
 
@@ -53,7 +67,7 @@ export function hasUnsavedVisionPolicy(saved: VisionPolicy | null, draft: Vision
 
 export function visionConfirmation(saved: VisionPolicy): { expected_provider: string; expected_model: string; expected_input_policy_fingerprint?: string } {
   return { expected_provider: saved.provider, expected_model: saved.model,
-    ...(saved.provider === "codex_cli" && saved.input_policy_fingerprint ? { expected_input_policy_fingerprint: saved.input_policy_fingerprint } : {}) };
+    ...(isBridgeProvider(saved.provider) && saved.input_policy_fingerprint ? { expected_input_policy_fingerprint: saved.input_policy_fingerprint } : {}) };
 }
 
 const failureMessages: Record<string, string> = {

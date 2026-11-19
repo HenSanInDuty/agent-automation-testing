@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "5e6be5b5-067c-4640-ba2c-3159837b8243",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_selection",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+  "after_checksum": "39841ebacccd39553d4a4799f081d5fdc15a2ae06f5ca34ff38f37fde4c2f6d6",
+  "finding": "After frame explicitly shows carousel indicator 3 selected and matching slide Chinh Phuc PvE, following the verified bound selector click. Credit uses selection identity, not generic animation."
+}

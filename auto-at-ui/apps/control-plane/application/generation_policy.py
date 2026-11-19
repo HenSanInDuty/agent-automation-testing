@@ -28,7 +28,9 @@ class GenerationPolicies:
 
     def configured(self, tenant_id, provider):
         if provider == "codex_cli":
-            return self.readiness.read(tenant_id, datetime.now(UTC)).ready
+            readiness = self.readiness.read(tenant_id, datetime.now(UTC))
+            # Draft generation runs only on the Codex engine of the local bridge.
+            return readiness.ready and readiness.provider == "codex_cli"
         return bool(self.settings.huggingface_api_key if provider == "huggingface"
                     else self.settings.openrouter_api_key)
 

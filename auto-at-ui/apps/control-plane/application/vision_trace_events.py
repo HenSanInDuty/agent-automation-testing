@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AgentStepGuard, resolve_agent_runtime
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.executor import VisualCandidateBatchOutcome, policy_to_step_guard
 from agents.vision.intent import decrypt_visual_intent
 from auto_at.contracts.codex_bridge import CodexConsentSnapshot
@@ -94,7 +95,7 @@ class VisionTraceEventProcessor:
         calls = 0
         model_failure = None
         frozen_input = None
-        if record.provider == "codex_cli":
+        if is_bridge_provider(record.provider):
             try:
                 frozen_input = CodexConsentSnapshot.model_validate(record.model_input_policy)
             except ValueError:
@@ -111,7 +112,7 @@ class VisionTraceEventProcessor:
                 or not live.enabled
                 or current.fencing_token != lease.fencing_token
                 or (
-                    record.provider != "codex_cli"
+                    not is_bridge_provider(record.provider)
                     and (
                         not live.raw_screenshot_transfer_accepted
                         or live.raw_screenshot_transfer_provider != record.provider
@@ -146,7 +147,9 @@ class VisionTraceEventProcessor:
                             }
                         ),
                         "raw_screenshot_transfer_accepted": image_allowed,
-                        "raw_screenshot_transfer_provider": "codex_cli" if image_allowed else None,
+                        "raw_screenshot_transfer_provider": (
+                            record.provider if image_allowed else None
+                        ),
                     }
                 )
             if step_timeout is None and datetime.now(UTC) >= record.updated_at + timedelta(

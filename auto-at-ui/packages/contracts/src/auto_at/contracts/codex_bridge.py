@@ -33,6 +33,14 @@ FailureCode = Literal[
     "bridge_tool_rejected", "bridge_provider_unavailable",
     "bridge_cleanup_pending",
 ]
+# Local CLI bridge engines. Each provider is pinned to exactly one model; consent,
+# requests and responses must all name the same provider.
+BridgeProvider = Literal["codex_cli", "claude_cli"]
+BridgeModel = Literal["gpt-6-luna", "claude-opus-5-5"]
+BRIDGE_PROVIDER_MODELS: dict[str, str] = {
+    "codex_cli": "gpt-6-luna", "claude_cli": "claude-opus-5-5",
+}
+BRIDGE_PROVIDERS = frozenset(BRIDGE_PROVIDER_MODELS)
 
 
 class ClosedModel(BaseModel):
@@ -52,27 +60,31 @@ def content_hash(value: BaseModel) -> str:
 class CodexInputPolicy(ClosedModel):
     input_mode: Literal["dom_first"] = "dom_first"
     dom_transfer_accepted: bool = False
-    dom_transfer_provider: Literal["codex_cli"] | None = None
+    dom_transfer_provider: BridgeProvider | None = None
     max_dom_elements: int = Field(default=100, ge=1, le=100)
     max_dom_bytes: int = Field(default=65_536, ge=1024, le=65_536)
 
     @model_validator(mode="after")
     def consent(self):
-        if self.dom_transfer_accepted != (self.dom_transfer_provider == "codex_cli"):
-            raise ValueError("DOM consent must be explicitly bound to codex_cli")
+        if self.dom_transfer_accepted != (self.dom_transfer_provider is not None):
+            raise ValueError("DOM consent must be explicitly bound to a bridge provider")
         return self
 
 
 class CodexConsentSnapshot(CodexInputPolicy):
     raw_screenshot_transfer_accepted: bool = False
-    raw_screenshot_transfer_provider: Literal["codex_cli"] | None = None
+    raw_screenshot_transfer_provider: BridgeProvider | None = None
 
     @model_validator(mode="after")
     def image_consent(self):
         if self.raw_screenshot_transfer_accepted != (
-            self.raw_screenshot_transfer_provider == "codex_cli"
+            self.raw_screenshot_transfer_provider is not None
         ):
-            raise ValueError("image consent must be explicitly bound to codex_cli")
+            raise ValueError("image consent must be explicitly bound to a bridge provider")
+        if (self.raw_screenshot_transfer_provider is not None
+                and self.dom_transfer_provider is not None
+                and self.raw_screenshot_transfer_provider != self.dom_transfer_provider):
+            raise ValueError("image and DOM consent must name the same bridge provider")
         return self
 
 
@@ -195,8 +207,8 @@ class CodexBridgeRequest(CodexScope):
     observation_id: UUID
     snapshot_id: UUID
     state_fingerprint: Digest
-    provider: Literal["codex_cli"] = "codex_cli"
-    model: Literal["gpt-6-luna"] = "gpt-6-luna"
+    provider: BridgeProvider = "codex_cli"
+    model: BridgeModel = "gpt-6-luna"
     prompt_version: str = Field(pattern=r"^codex-dom-v[1-9][0-9]*$")
     stage: Stage
     created_at: AwareDatetime
@@ -217,6 +229,10 @@ class CodexBridgeRequest(CodexScope):
         }
                 and self.context is None):
             raise ValueError("versioned prompt requires bounded task context")
+        if BRIDGE_PROVIDER_MODELS[self.provider] != self.model:
+            raise ValueError("bridge provider and model mismatch")
+        if self.consent.dom_transfer_provider != self.provider:
+            raise ValueError("DOM consent is bound to another bridge provider")
         duration = (self.deadline - self.created_at).total_seconds()
         if not 0 < duration <= 3600:
             raise ValueError("job deadline must be within the session duration")
@@ -329,7 +345,7 @@ class CodexBridgeResponse(CodexScope):
     state_fingerprint: Digest
     request_hash: Digest
     stage: Stage
-    actual_model: Literal["gpt-6-luna"] | None
+    actual_model: BridgeModel | None
     cli_version: str = Field(pattern=r"^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$")
     started_at: AwareDatetime
     completed_at: AwareDatetime
@@ -364,6 +380,7 @@ class CodexBridgeReceipt(CodexScope):
 
 
 class CodexBridgeReadiness(ClosedModel):
+    provider: BridgeProvider = "codex_cli"
     busy: bool = False
     configured: bool = False
     online: bool = False

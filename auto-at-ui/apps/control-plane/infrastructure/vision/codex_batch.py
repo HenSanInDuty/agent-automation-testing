@@ -66,7 +66,8 @@ class CodexModelBatch:
             **{key: getattr(observation, key) for key in (
                 "tenant_id", "project_id", "session_id", "fencing_token", "observation_id",
                 "snapshot_id", "state_fingerprint",
-            )}, job_id=uuid4(), bridge_id=self.bridge_id, correlation_id=session.correlation_id,
+            )}, provider=policy.provider, model=policy.model,
+            job_id=uuid4(), bridge_id=self.bridge_id, correlation_id=session.correlation_id,
             request_sequence=sequence, prompt_version=PROMPT_VERSION,
             stage="image" if image else "dom",
             created_at=datetime.now(UTC), deadline=deadline, consent=consent,
@@ -87,12 +88,13 @@ class CodexModelBatch:
                     or len(dom) > live.codex.max_dom_bytes
                     or len(observation.elements) > live.codex.max_dom_elements
                     or image and (not live.raw_screenshot_transfer_accepted
-                                  or live.raw_screenshot_transfer_provider != "codex_cli"
+                                  or live.raw_screenshot_transfer_provider != live.provider
                                   or len(image.data) > live.max_screenshot_bytes)):
                 raise CodexUnavailable("policy_changed")
             if datetime.now(UTC) >= deadline:
                 raise CodexUnavailable("provider_timeout")
-            if not self.readiness.read(session.tenant_id, datetime.now(UTC)).ready:
+            readiness = self.readiness.read(session.tenant_id, datetime.now(UTC))
+            if not readiness.ready or readiness.provider != session.provider:
                 raise CodexUnavailable("bridge_offline")
 
         check()
