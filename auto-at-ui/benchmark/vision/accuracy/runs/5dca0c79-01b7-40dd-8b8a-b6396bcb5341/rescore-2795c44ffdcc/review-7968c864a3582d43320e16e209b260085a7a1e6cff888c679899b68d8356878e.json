@@ -1,0 +1,11 @@
+{
+  "after_checksum": "fea1e9de2d9fe6693319ea27df267a99696047da69922775bbe7bbdc73ec2162",
+  "before_checksum": "b0d9905a02691ad0cbaabd1a35cd36b485c732c1048947f45f32af0253f90628",
+  "finding": "mct-32: first character control becomes active and the Thieu Lam panel is shown (before: Toan Chan).",
+  "operation_id": "cea11295-c4c4-45ef-8623-37aa8f56af91",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

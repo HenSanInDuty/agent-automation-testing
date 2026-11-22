@@ -1,0 +1,11 @@
+{
+  "after_checksum": "370be89e4467f2ca0becfac8355ce9332ddf711dc571641c43ac1b1f06ba208e",
+  "before_checksum": "48b397a669324637555281932dac3d9f8c68ad749f13a941bcb8246af2f01132",
+  "finding": "mct-58: next arrow; before frame indicator 2 Bang Chien Nay Lua, after frame indicator 3 Chinh Phuc PvE: one step forwards, same paired-frame standard as round 21 op 130.",
+  "operation_id": "3975e9e8-50f3-44fc-9f7f-ad010e243f1f",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_step",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

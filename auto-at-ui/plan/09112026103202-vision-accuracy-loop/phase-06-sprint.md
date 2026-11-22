@@ -4,7 +4,7 @@ day: 1-done
 started: 2026-11-22
 deadline: 2026-11-24 (3 ngày làm việc)
 live_run_budget: 8
-live_runs_used: 0
+live_runs_used: 2
 ---
 # Phase 06 — Sprint 3 ngày: đóng lỗi round 21 rồi qualification (engine v4 + Claude)
 

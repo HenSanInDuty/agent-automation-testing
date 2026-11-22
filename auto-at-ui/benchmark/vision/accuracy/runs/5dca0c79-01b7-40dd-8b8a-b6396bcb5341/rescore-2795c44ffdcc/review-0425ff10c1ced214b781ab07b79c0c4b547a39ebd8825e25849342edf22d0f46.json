@@ -1,0 +1,11 @@
+{
+  "after_checksum": "72656d2f2d0d62244ce5571d4d9c9a13ab6a1c8264840ebe2954a6da07bf1adb",
+  "before_checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+  "finding": "mct-19: Su Kien tab becomes visibly active and its event list replaces the news list.",
+  "operation_id": "1f242c43-91f7-47b6-a138-632cc6bd391a",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "00d8f37a9ddceca103f444f49220f684042b0ba814a8ad5d7339b6d8a6e8ec0e",
+  "before_checksum": "1a0430ea127afabe907a48f0c0a9913ce5b89eec37fa0fe6461cc6652ac77bf7",
+  "finding": "mct-46: fourth character control becomes active and the Co Mo panel is shown (before: Thieu Lam).",
+  "operation_id": "d71b266e-e10a-472b-9517-3cb884355b13",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

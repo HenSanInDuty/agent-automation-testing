@@ -1,0 +1,159 @@
+{
+  "jobs": [
+    {
+      "request_sequence": 1,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 8009,
+      "output_tokens": 1056,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 2,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7507,
+      "output_tokens": 727,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 3,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7881,
+      "output_tokens": 745,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 4,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 8686,
+      "output_tokens": 1080,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 5,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7437,
+      "output_tokens": 278,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 6,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7191,
+      "output_tokens": 182,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 7,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7268,
+      "output_tokens": 287,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 8,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7202,
+      "output_tokens": 247,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 9,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7193,
+      "output_tokens": 180,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 10,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7188,
+      "output_tokens": 183,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 11,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7191,
+      "output_tokens": 184,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 12,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7197,
+      "output_tokens": 174,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 13,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7194,
+      "output_tokens": 186,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 14,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7126,
+      "output_tokens": 174,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 15,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7245,
+      "output_tokens": 489,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 16,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7118,
+      "output_tokens": 396,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 17,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7087,
+      "output_tokens": 302,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 18,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7072,
+      "output_tokens": 173,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 19,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 7219,
+      "output_tokens": 290,
+      "safe_reason": null
+    }
+  ],
+  "model_jobs": 19,
+  "monetary_cost_usd": null,
+  "cost_status": "not_reported"
+}

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "dbdd7e8ae5c0f62545e2dec653ed1e5c91ec4931ffddc0a5b3a1d44e3e3d865b",
+  "before_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "finding": "mct-56: after frame shows indicator 6 selected with matching slide Hoi Sinh Tinh Hoa Vo Lam (before: indicator 1).",
+  "operation_id": "77f32b7c-0894-4264-b292-f46b8ce395ec",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}
