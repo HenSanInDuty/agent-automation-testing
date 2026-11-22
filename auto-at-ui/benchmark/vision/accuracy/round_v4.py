@@ -16,9 +16,11 @@ Private headers/policy files stay in `.pytest-artifacts/`; nothing secret is wri
 
 import argparse
 import hashlib
+import io
 import json
 import subprocess
 import sys
+import tarfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -82,12 +84,15 @@ def check_images(report):
     for service, roots in SERVICES.items():
         container = f"auto-at-ui-{service}-1"
         for host_root, remote_root in roots:
-            listing = subprocess.run(
-                ["docker", "exec", container, "sh", "-c",
-                 f"cd {remote_root} && find . -type f \\( -name '*.py' -o -name '*.ts' \\) "
-                 "-exec sha256sum {} +"], capture_output=True, text=True, check=True).stdout
-            remote = {line.split(maxsplit=1)[1].strip()[2:]: line.split()[0]
-                      for line in listing.splitlines() if line.strip()}
+            # Images built from a Windows working copy may carry CRLF: compare LF-normalized.
+            archive = subprocess.run(["docker", "exec", container, "tar", "-C", remote_root,
+                                      "-cf", "-", "."], capture_output=True, check=True).stdout
+            remote = {}
+            with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+                for member in tar.getmembers():
+                    if member.isfile() and member.name.endswith((".py", ".ts")):
+                        body = tar.extractfile(member).read().replace(b"\r\n", b"\n")
+                        remote[member.name.removeprefix("./")] = hashlib.sha256(body).hexdigest()
             for name in tracked(host_root):
                 relative = name[len(host_root) + 1:]
                 if remote.get(relative) != lf_sha(ROOT / name):
@@ -114,7 +119,11 @@ def token_hours():
 
 def worker_open_close():
     """Open and close one worker session inside the container: browser launch, no LLM, no click."""
-    payload = {"tenant_id": "default", "project_id": "00000000-0000-4000-8000-000000000001",
+    # Same shape as the v4 controller open (vision_trace_events.py) for a frozen-input reload.
+    payload = {"contract_version": "v4", "required_capabilities": [
+                   "dom-observation-v1", "viewport-context-v1", "target-preflight-v1",
+                   "step-timeout-v1"],
+               "tenant_id": "default", "project_id": "00000000-0000-4000-8000-000000000001",
                "target_url": "https://mongchiton.vn", "allowed_origins": ["https://mongchiton.vn"],
                "max_session_seconds": 120, "step_timeout_seconds": 120, "max_states": 100,
                "max_hops": 20, "max_screenshot_bytes": 1000000, "interaction_scope": "all",
