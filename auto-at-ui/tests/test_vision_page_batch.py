@@ -1042,6 +1042,7 @@ def test_restored_tabs_and_viewport_coverage_keep_verified_targets(
 @pytest.mark.parametrize("variant", [
     "stable", "form_drift", "state_limit", "history_delay", "history_stuck",
     "history_duplicate", "history_duplicate_form", "history_overwritten",
+    "history_overwritten_unreachable",
     "history_scroll_reset", "history_scroll_reset_form", "history_scroll_reset_up",
     "mutation_cross_viewport",
 ])
@@ -1056,6 +1057,8 @@ def test_popup_restore_uses_returned_page_scroll_and_never_replays_effects(
         "/coverage-history-duplicate" if variant == "history_duplicate" else
         "/coverage-history-duplicate-form" if variant == "history_duplicate_form" else
         "/coverage-history-overwritten" if variant == "history_overwritten" else
+        "/coverage-history-overwritten-unreachable"
+        if variant == "history_overwritten_unreachable" else
         "/coverage-history-delay" if variant.startswith("history_") else
         "/coverage-popup-scroll-form" if variant == "form_drift" else "/coverage-popup-scroll"
     )
@@ -1131,6 +1134,42 @@ def test_popup_restore_uses_returned_page_scroll_and_never_replays_effects(
     record = uow.get_session(scope.tenant_id, scope.session_id)
     details = (record.safe_failure_reason, calls,
                [(op.sequence, op.action_kind, op.status, op.outcome_code) for op in operations])
+    if variant == "history_overwritten_unreachable":
+        # ADR-044: the revealed branch cannot be restored (history overwritten, its
+        # path holds a non-replayable click). Skip only that branch, never replay or
+        # repeat Back, then continue with the URL-restorable root viewport.
+        visits = httpx.get(live_browser_worker["worker"] + "/fixture-visits").json()
+        clicked = {path.removeprefix("/record-button/"): count
+                   for path, count in visits.items() if path.startswith("/record-button/")}
+        assert clicked == {"reveal": 1, "next": 1, "top-action": 1}, details
+        # Only the replayable setup prefix (navigate/scroll) may be replayed; no click.
+        assert all(op.action_kind in {"navigate", "scroll"}
+                   for op in operations if op.purpose == "replay"), details
+        backs = [op for op in operations if op.action_kind == "back"]
+        assert backs and all(op.status == "rejected"
+                             and op.outcome_code == "history_checkpoint_unavailable"
+                             for op in backs), details
+        top = next(op for op in operations if op.action_kind == "click"
+                   and op.sequence > backs[0].sequence)
+        assert top.status == "completed" and top.actual_after_frame_id, details
+        assert all(op.status in {"completed", "rejected"} for op in operations), details
+        assert {op.id for op in operations if op.status == "rejected"} == {
+            op.id for op in backs}, details
+        refresh = next(op for op in operations if op.sequence == backs[0].sequence + 1)
+        assert (refresh.action_kind, refresh.purpose, refresh.status) == (
+            "wait", "setup", "completed"), details
+        sibling = next(c for p in snapshot["pages"] for c in p.controls if c.name == "Sibling")
+        assert sibling.status == "pending", details
+        assert state == "unavailable" and record.safe_failure_reason == "unsafe_replay", details
+        from infrastructure.persistence.repositories import SqlAlchemyVisionRepository
+        with factory() as db:
+            edges = SqlAlchemyVisionRepository(db).list_trajectory_edges(
+                scope.tenant_id, scope.session_id,
+            )
+        retired = [edge for edge in edges if edge.outcome_code == "unsafe_replay"]
+        assert len(retired) == 1 and retired[0].status == "terminal", details
+        assert all(op.proposal_id != retired[0].proposal_id for op in operations), details
+        return
     if variant.startswith("history_scroll_reset"):
         visits = httpx.get(live_browser_worker["worker"] + "/fixture-visits").json()
         assert visits.get("/record-button/reveal") == 1

@@ -153,6 +153,7 @@ for _stage, _summary in {
     "state.restore_started": "Browser state restoration started.",
     "state.restored": "Browser state restoration was verified.",
     "state.restore_failed": "Browser state restoration failed.",
+    "state.branch_unreachable": "A branch was skipped: restoring it would need an unsafe replay.",
     "handoff.ready": "Verified exploration evidence is ready for generation.",
     "handoff.unavailable": "Exploration handoff is unavailable.",
 }.items():
