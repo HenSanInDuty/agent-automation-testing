@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ControlPlaneError, deleteOperationFrames, deleteVisualReplayFrames, getVisualLocators, getVisualTrace, getVisionResult } from "../generation-api";
 import type { VisualExploration, VisualLocator, VisualTrace, VisionResult, VisionProgressActivity } from "../generation-types";
+import { Button } from "@/components/ui/button";
+import { Code, Disclosure, Notice } from "./agent-ui";
 import { ConfirmDialog } from "./confirm-dialog";
 import { VisionLocatorCatalog } from "./vision-locator-catalog";
 import { selectedOperation, shouldPollVisionResult } from "./vision-operation-model";
@@ -80,26 +82,28 @@ export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: 
     } catch { setError("Evidence deletion is unavailable. Retry to finish remaining frames."); }
     finally { setDeletion(null); setDeleting(false); }
   }
-  return <div className="vision-session-detail" aria-label="Saved Vision session">
-    {result ? <VisionResultSummary result={result} apiUrl={apiUrl} compact /> : !error && <p role="status">Loading exploration result…</p>}
-    {session.trace_version === "v4" && <div className="vision-live-workspace">
+  return <div className="grid min-w-0 gap-6" aria-label="Saved Vision session">
+    {session.trace_version === "v4" && <div className="vision-live-workspace grid items-stretch gap-6 min-[900px]:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
       <VisionLiveScreen apiUrl={apiUrl} sessionId={session.id} live={live} progress={progress} completionReason={completionReason} operations={deleting ? [] : trace?.items ?? []} locators={trace?.locators ?? []} selectedId={selected} follow={follow} onFollow={setFollow} onSelect={(id) => { setFollow(false); setSelected(id); }} />
       <VisionOperationLedger items={trace?.items ?? []} locators={trace?.locators ?? []} branches={result?.handoffs.at(-1)?.branches ?? []} selectedId={selected} onSelect={(id) => { setFollow(false); setSelected(id); }} follow={follow} onFollow={setFollow} />
     </div>}
-    {error && <p role="alert">{error}</p>}
+    {result ? <VisionResultSummary result={result} apiUrl={apiUrl} compact /> : !error && <p role="status" className="text-sm text-muted-foreground">Loading exploration result…</p>}
+    {error && <Notice tone="warning" role="alert">{error}</Notice>}
     <VisionPageInventoryList pages={trace?.pages ?? []} live={live} onSelect={(id) => { setFollow(false); setSelected(id); }} />
-    <a className="vision-report-link" href={`#vision-report-${session.id}`} onClick={() => { if (reportRef.current) reportRef.current.open = true; }}>View exploration report</a>
-    <details ref={reportRef} className="workspace-section"><summary>Exploration report</summary>
+    <a className="justify-self-start text-sm font-medium text-primary underline-offset-4 hover:underline" href={`#vision-report-${session.id}`} onClick={() => { if (reportRef.current) reportRef.current.open = true; }}>View exploration report</a>
+    <Disclosure ref={reportRef} title="Exploration report">
       {result && <VisionResultSummary result={result} apiUrl={apiUrl} />}
-    </details>
-    <details className="workspace-section"><summary>Technical details</summary>
-    <p>Session: <code>{session.id}</code></p>
-    <p>Session provider: {visionProviderLabel(session.provider)} · Model: <code>{session.model}</code></p>
-    <p>Correlation: <code>{session.correlation_id}</code></p>
-    {session.trace_version === "v4" && <VisionProgressTimeline apiUrl={apiUrl} sessionId={session.id} live={live} onActivity={onActivity} onProgress={setProgress} />}
-    {trace?.trace_version === "v4" && <VisionLocatorCatalog items={catalog} hasMore={more} onMore={() => void loadMore()} />}
-    <div className="button-row"><button type="button" className="button button--secondary" onClick={() => setRefresh((value) => value + 1)}>Refresh saved result</button>{canDelete && trace?.items.length ? <button type="button" className="button button--danger" onClick={() => setDeletion("all")}>Delete all evidence</button> : null}</div>
-    </details>
+    </Disclosure>
+    <Disclosure title="Technical details" bodyClassName="space-y-5">
+      <div className="grid gap-1.5 text-sm">
+        <p>Session: <Code>{session.id}</Code></p>
+        <p>Session provider: {visionProviderLabel(session.provider)} · Model: <Code>{session.model}</Code></p>
+        <p>Correlation: <Code>{session.correlation_id}</Code></p>
+      </div>
+      {session.trace_version === "v4" && <VisionProgressTimeline apiUrl={apiUrl} sessionId={session.id} live={live} onActivity={onActivity} onProgress={setProgress} />}
+      {trace?.trace_version === "v4" && <VisionLocatorCatalog items={catalog} hasMore={more} onMore={() => void loadMore()} />}
+      <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" onClick={() => setRefresh((value) => value + 1)}>Refresh saved result</Button>{canDelete && trace?.items.length ? <Button type="button" variant="destructive" size="sm" onClick={() => setDeletion("all")}>Delete all evidence</Button> : null}</div>
+    </Disclosure>
     <ConfirmDialog open={deletion !== null} title="Delete private evidence?" description="The selected frame bytes will be permanently deleted. The recorded operations remain in the history." confirmLabel="Delete evidence" onConfirm={() => void remove()} onCancel={() => setDeletion(null)} busy={deleting} />
   </div>;
 }

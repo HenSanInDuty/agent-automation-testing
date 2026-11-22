@@ -10,7 +10,22 @@ Sign in and retain the cookies locally:
 ```bash
 curl -c cookies.txt -X POST http://127.0.0.1:7000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"tenant_id":"demo-tenant","email":"admin@example.test","password":"TEMPORARY_PASSWORD"}'
+  -d '{"email":"admin@example.test","password":"TEMPORARY_PASSWORD"}'
+```
+
+`tenant_id` is optional. Without it the session opens in the account's first
+tenant (sorted by id) and the response lists every membership in `tenants`;
+`tenant_selection_required` is `true` when there is more than one. Pass
+`"tenant_id"` to sign straight into a specific tenant. List and switch tenants
+on an existing session (switching revokes the old session and sets new cookies):
+
+```bash
+curl -b cookies.txt http://127.0.0.1:7000/api/v1/auth/tenants
+
+curl -b cookies.txt -c cookies.txt -X POST http://127.0.0.1:7000/api/v1/auth/tenant \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: CSRF_VALUE" \
+  -d '{"tenant_id":"another-tenant"}'
 ```
 
 Copy the `auto_at_csrf` value from `cookies.txt` when sending a state-changing

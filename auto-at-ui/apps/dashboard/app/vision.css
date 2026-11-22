@@ -1,0 +1,5 @@
+/* Keyframes for the Vision click marker (Tailwind arbitrary animation `animate-[vision-click-pulse_...]`). */
+@keyframes vision-click-pulse {
+  from { box-shadow: 0 0 0 2px #172033, 0 0 0 4px rgb(250 204 21 / 0.7); }
+  to { box-shadow: 0 0 0 2px #172033, 0 0 0 12px rgb(250 204 21 / 0); }
+}

@@ -179,9 +179,13 @@ Then open [the local login page](http://localhost:3000/login) and sign in with:
 
 | Field | Value |
 | --- | --- |
-| Tenant | `demo-tenant` |
 | Email | `admin@example.test` |
 | Temporary password | `DemoAdminPass123` |
+
+The sign-in form asks only for email and password. An account that belongs to
+several tenants chooses one right after signing in (`/select-tenant`) and can
+switch later from the user menu or the tenant card in the sidebar; an account
+with a single tenant goes straight to the dashboard.
 
 The first login forces a password replacement. New passwords must have at least
 12 characters and include uppercase, lowercase, and a digit. After changing it,

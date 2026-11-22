@@ -8,6 +8,7 @@ from application.authentication import (
     AccountService,
     AuthenticationError,
     PasswordPolicyError,
+    TenantGrant,
 )
 from config import Settings, get_settings
 from domain.authorization import (
@@ -29,9 +30,15 @@ admin_router = APIRouter(prefix="/admin/users", tags=["administration"])
 
 
 class LoginRequest(BaseModel):
-    tenant_id: str = Field(min_length=1, max_length=200)
+    # Optional: without it the session opens in the user's first tenant and the
+    # dashboard asks the user to choose when they belong to more than one.
+    tenant_id: str | None = Field(default=None, min_length=1, max_length=200)
     email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=1, max_length=1024)
+
+
+class SelectTenantRequest(BaseModel):
+    tenant_id: str = Field(min_length=1, max_length=200)
 
 
 class ChangePasswordRequest(BaseModel):
@@ -62,6 +69,20 @@ class ProvisionedUserResponse(UserResponse):
 
 class MeResponse(UserResponse):
     tenant_id: str
+
+
+class TenantOption(BaseModel):
+    tenant_id: str
+    role: Role
+
+
+class LoginResponse(MeResponse):
+    tenants: list[TenantOption]
+    tenant_selection_required: bool
+
+
+def tenant_options(grants: tuple[TenantGrant, ...]) -> list[TenantOption]:
+    return [TenantOption(tenant_id=grant.tenant_id, role=grant.role) for grant in grants]
 
 
 def response_account(account: Account) -> UserResponse:
@@ -98,13 +119,13 @@ def set_session_cookies(
     )
 
 
-@router.post("/login", response_model=MeResponse)
+@router.post("/login", response_model=LoginResponse)
 def login(
     body: LoginRequest,
     response: Response,
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> MeResponse:
+) -> LoginResponse:
     # This in-process limiter is a local safety net; production needs a shared limiter.
     attempts = getattr(request.app.state, "login_attempts", {})
     key = f"{request.client.host if request.client else 'unknown'}:{body.email.lower()}"
@@ -127,7 +148,42 @@ def login(
     request.app.state.login_attempts = attempts
     set_session_cookies(response, settings, issued.token, issued.csrf_token)
     account = response_account(issued.account)
-    return MeResponse(**account.model_dump(), tenant_id=body.tenant_id)
+    return LoginResponse(
+        **account.model_dump(),
+        tenant_id=issued.tenant_id,
+        tenants=tenant_options(issued.tenants),
+        tenant_selection_required=body.tenant_id is None and len(issued.tenants) > 1,
+    )
+
+
+@router.get("/tenants", response_model=list[TenantOption])
+def list_tenants(
+    account: Annotated[Account, Depends(current_account)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[TenantOption]:
+    with create_session_factory(settings)() as session:
+        return tenant_options(AccountService(session).tenants(account.id))
+
+
+@router.post("/tenant", response_model=MeResponse, dependencies=[Depends(require_csrf)])
+def select_tenant(
+    body: SelectTenantRequest,
+    response: Response,
+    account: Annotated[Account, Depends(current_account)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str | None, Cookie(alias="auto_at_session")] = None,
+) -> MeResponse:
+    """Switch the session to another tenant of the same user (old session is revoked)."""
+    try:
+        with transactional_session(create_session_factory(settings)) as session:
+            issued = AccountService(session).switch_tenant(
+                token or "", body.tenant_id, settings.session_ttl_seconds
+            )
+    except AuthenticationError as error:
+        # Same answer for "no such tenant" and "not a member": do not disclose tenants.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.") from error
+    set_session_cookies(response, settings, issued.token, issued.csrf_token)
+    return MeResponse(**response_account(issued.account).model_dump(), tenant_id=issued.tenant_id)
 
 
 @router.post(
