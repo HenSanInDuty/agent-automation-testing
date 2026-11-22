@@ -110,6 +110,10 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "idempotency_key"),
         UniqueConstraint("tenant_id", "project_id", "id", name="uq_visual_session_scope"),
+        CheckConstraint(
+            "exploration_engine IN ('planner', 'agent_loop')",
+            name="ck_visual_session_exploration_engine",
+        ),
     )
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -134,6 +138,9 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     max_requests_per_minute: Mapped[int] = mapped_column(Integer)
     trace_version: Mapped[str] = mapped_column(
         String(20), default="legacy", server_default="legacy"
+    )
+    exploration_engine: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="planner", server_default="planner"
     )
     lease_owner: Mapped[UUID | None] = mapped_column(nullable=True)
     fencing_token: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -455,6 +462,39 @@ class VisualLocatorHandoffModel(TenantRecord, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # The reciprocal request FK is inserted after the immutable handoff exists.
     generation_request_id: Mapped[UUID | None] = mapped_column(nullable=True)
+
+
+class VisualAgentStepModel(TenantRecord, Base):
+    """One agent-loop step: the model's reasoning fields plus what the code ran or skipped."""
+
+    __tablename__ = "visual_agent_steps"
+    __table_args__ = (
+        UniqueConstraint("session_id", "step_index", name="uq_visual_agent_step_index"),
+        ForeignKeyConstraint(
+            ["tenant_id", "project_id", "session_id"],
+            [
+                "visual_exploration_sessions.tenant_id",
+                "visual_exploration_sessions.project_id",
+                "visual_exploration_sessions.id",
+            ],
+            name="fk_visual_agent_step_session",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    project_id: Mapped[UUID] = mapped_column()
+    session_id: Mapped[UUID] = mapped_column()
+    step_index: Mapped[int] = mapped_column(Integer)
+    snapshot_version: Mapped[int] = mapped_column(Integer)
+    evaluation_previous_goal: Mapped[str] = mapped_column(Text)
+    memory: Mapped[str] = mapped_column(Text)
+    next_goal: Mapped[str] = mapped_column(Text)
+    actions: Mapped[list[dict[str, object]]] = mapped_column(JSONB)
+    operation_ids: Mapped[list[str]] = mapped_column(JSONB)
+    stop_reason: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    job_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
 
 
 class GenerationRequestModel(TenantRecord, Base):

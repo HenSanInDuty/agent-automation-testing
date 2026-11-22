@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { VisionPolicy, VisionProvider } from "../generation-types";
-import { codexReadinessLabel, hasImageConsent, hasUnsavedVisionPolicy, hasVisionConsent, screenshotDisclosure, switchVisionProvider, visionConfirmation, visionDisclosure, visionFailureMessage, visionProviderLabel } from "./vision-provider-model.ts";
+import { agentStepView, blockedReasonMessage, codexReadinessLabel, engineRequestFields, explorationEngine, hasImageConsent, hasUnsavedVisionPolicy, hasVisionConsent, screenshotDisclosure, switchVisionProvider, visionConfirmation, visionDisclosure, visionFailureMessage, visionProviderLabel } from "./vision-provider-model.ts";
 
 const saved: VisionPolicy = { enabled: true, provider: "huggingface", model: "custom/hf-model", raw_screenshot_transfer_accepted: true, max_steps: 3, max_screenshot_bytes: 1000, max_session_seconds: 120, max_cost_usd: 0, max_requests_per_minute: 5 };
 const gemini: VisionProvider = { id: "gemini", display_name: "Gehihi (Google Gemini)", models: [{ id: "gemini-3.8-flash", display_name: "gemini-3.8-flash" }], configured: true, supports_inline_images: true };
@@ -82,4 +82,60 @@ test("claude_cli uses the DOM-first bridge consent bound to its own provider", (
   assert.equal(hasVisionConsent(accepted), true);
   assert.equal(hasVisionConsent({ ...accepted, codex: { ...accepted.codex, dom_transfer_provider: "codex_cli" as const } }), false);
   assert.match(visionDisclosure(accepted), /Anthropic using the existing Claude Code account/);
+});
+
+const agentCodes = ["stale_ref", "invalid_ref", "origin_blocked", "sensitive_action_blocked", "action_kind_blocked", "ineligible_target", "batch_stopped", "agent_step_limit", "agent_done", "agent_stopped"];
+
+test("agent-loop reason codes map to their own copy, not the generic fallback", () => {
+  const messages = agentCodes.map((code) => visionFailureMessage(code));
+  for (const message of messages) assert.ok(message);
+  assert.equal(new Set(messages).size, agentCodes.length);
+  assert.match(visionFailureMessage("stale_ref")!, /page changed/);
+  assert.match(visionFailureMessage("sensitive_action_blocked")!, /No text was typed/);
+});
+
+test("unknown or hostile skipped reasons fall back to a bounded, non-generic line", () => {
+  assert.equal(blockedReasonMessage(undefined), "Skipped before it was sent to the browser.");
+  assert.equal(blockedReasonMessage(""), "Skipped before it was sent to the browser.");
+  assert.equal(blockedReasonMessage("future_new_code"), "Skipped (future new code).");
+  assert.notEqual(blockedReasonMessage("future_new_code"), blockedReasonMessage("stale_ref"));
+  assert.match(blockedReasonMessage("__proto__"), /^Skipped \(/);
+  assert.equal(blockedReasonMessage("x".repeat(500)).length, "Skipped ()." .length + 80);
+});
+
+test("agent step view is absent without a step and renders three fields for a step", () => {
+  assert.equal(agentStepView({} as never), null);
+  assert.equal(agentStepView({ agent_step: null } as never), null);
+  assert.deepEqual(agentStepView({ agent_step: {} } as never), { previous: "Not recorded", memory: "Not recorded", next: "Not recorded", blocked: [] });
+  const view = agentStepView({ agent_step: { step_index: 1, evaluation_previous_goal: "  Đã mở trang sản phẩm  ", memory: "   ", next_goal: "y".repeat(2000),
+    skipped_actions: [{ index: 2, kind: "click", skipped_reason: "stale_ref" }, { index: 3, kind: "type", skipped_reason: "future_code" }] } } as never);
+  assert.ok(view);
+  assert.equal(view.previous, "Đã mở trang sản phẩm");
+  assert.equal(view.memory, "Not recorded");
+  assert.equal(view.next.length, 601);
+  assert.ok(view.next.endsWith("…"));
+  assert.match(view.blocked[0], /^click: The page changed after the agent chose this element/);
+  assert.equal(view.blocked[1], "type: Skipped (future code).");
+  const longKind = agentStepView({ agent_step: { step_index: 2, evaluation_previous_goal: "", memory: "", next_goal: "", skipped_actions: [{ kind: "k".repeat(200), skipped_reason: "agent_done" }] } } as never);
+  assert.equal(longKind?.blocked[0].split(":")[0].length, 40);
+});
+
+test("engine values: unknown strings act as Planner and only Agent loop adds the request field", () => {
+  assert.equal(explorationEngine("agent_loop"), "agent_loop");
+  assert.equal(explorationEngine("planner"), "planner");
+  assert.equal(explorationEngine("constructor"), "planner");
+  assert.equal(explorationEngine(undefined), "planner");
+  assert.deepEqual(engineRequestFields("planner"), {});
+  assert.deepEqual(engineRequestFields("agent_loop"), { engine: "agent_loop" });
+});
+
+test("QA: agent step view tolerates malformed skipped actions and caps the blocked list", () => {
+  const many = Array.from({ length: 50 }, (_, i) => ({ index: i, kind: "click", skipped_reason: "origin_blocked" }));
+  assert.equal(agentStepView({ agent_step: { step_index: 1, evaluation_previous_goal: "a", memory: "b", next_goal: "c", skipped_actions: many } } as never)?.blocked.length, 20);
+  const bad = agentStepView({ agent_step: { step_index: 1, evaluation_previous_goal: "a", memory: "b", next_goal: "c", skipped_actions: "oops" } } as never);
+  assert.deepEqual(bad?.blocked, []);
+  const nulls = agentStepView({ agent_step: { step_index: 1, evaluation_previous_goal: 7, memory: null, next_goal: "Chuyển sang trang thanh toán", skipped_actions: [null, { kind: 5, skipped_reason: 9 }] } } as never);
+  assert.equal(nulls?.previous, "Not recorded");
+  assert.equal(nulls?.next, "Chuyển sang trang thanh toán");
+  assert.deepEqual(nulls?.blocked, ["Action: Skipped before it was sent to the browser.", "Action: Skipped before it was sent to the browser."]);
 });

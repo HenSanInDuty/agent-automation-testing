@@ -1,0 +1,740 @@
+<title>Tiến độ Agent Loop Vision</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: một cột đọc ~900px; đầu trang, bảng tổng 7 phase, rồi mỗi phase một <section class="phase"> lặp lại được. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1c2330;
+  --muted: #5d687a;
+  --line: #dde2ea;
+  --accent: #1f5fbf;
+  --ok: #17794a;
+  --ok-bg: #e0f3e8;
+  --warn: #9a6200;
+  --warn-bg: #fbefd3;
+  --pend: #596579;
+  --pend-bg: #e9ecf1;
+  --code-bg: #eef1f6;
+  --font-text: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161d; --surface: #1a2029; --fg: #e5e9f0; --muted: #98a3b5; --line: #2b3441;
+    --accent: #7eb0f5; --ok: #6fd3a0; --ok-bg: #173628; --warn: #f0c46a; --warn-bg: #3a2e12;
+    --pend: #a3aebf; --pend-bg: #242c38; --code-bg: #232b37; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --fg: #e5e9f0; --muted: #98a3b5; --line: #2b3441;
+  --accent: #7eb0f5; --ok: #6fd3a0; --ok-bg: #173628; --warn: #f0c46a; --warn-bg: #3a2e12;
+  --pend: #a3aebf; --pend-bg: #242c38; --code-bg: #232b37; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-text); }
+.wrap { max-width: 920px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-head); text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: 28px; }
+h2 { font-size: 20px; }
+h3 { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+p { margin: 0; max-width: 70ch; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font: 12.5px var(--font-mono); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.head { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.meta { font-size: 13px; color: var(--muted); }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill.ok { color: var(--ok); background: var(--ok-bg); }
+.pill.pend { color: var(--pend); background: var(--pend-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.phase { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.phase-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.blk { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 14px; font-size: 14px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; }
+ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+li { max-width: 78ch; }
+.ins { font-size: 13px; color: var(--muted); }
+.verdict { border-left: 3px solid var(--ok); padding: 8px 14px; background: var(--ok-bg); border-radius: 0 4px 4px 0; }
+@media (max-width: 560px) { .kv { grid-template-columns: 1fr; gap: 0 } .kv dd { margin-bottom: 8px } h1 { font-size: 23px } .phase { padding: 14px } }
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <div class="eyebrow">Tiến độ thực thi plan</div>
+  <h1>Engine agent loop cho Vision</h1>
+  <p>Cho phép chọn <code>engine=agent_loop</code> khi tạo session Vision. Mỗi bước worker trả snapshot mới, model trả đánh giá bước trước, memory, mục tiêu kế tiếp và 1..N action; control-plane kiểm an toàn bằng code, chạy từng action qua <code>ExecuteVisualOperation</code>, ghi step log rồi lặp. Không restore/replay. Engine planner v4 giữ nguyên và là mặc định; test case "click hết control" chạy như task bình thường, chấm bằng benchmark độc lập như cũ.</p>
+  <div class="meta">Plan: <code>plan/20261119-2212-browser-agent-loop/plan.md</code> · Nhánh <code>mantaray</code> · Artifact phạm vi: <a href="https://claude.ai/artifact/BCxug7E5uWx9zym2wxfZLd" target="_blank" rel="noopener">mở trang phạm vi</a></div>
+</header>
+
+<section id="overview" class="blk">
+  <h2>Trạng thái 7 phase</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th class="num">#</th><th>Phase</th><th>Trạng thái</th><th>Owner</th><th>QA</th><th>Phụ thuộc</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0</td><td><a href="#phase-0">Ổn định nền</a></td><td><span class="pill ok">completed</span></td><td>be-developer-junior</td><td>skip</td><td>—</td></tr>
+        <tr><td class="num">1</td><td><a href="#phase-1">Contract + DB + chọn engine</a></td><td><span class="pill ok">completed</span></td><td>be-developer</td><td>required</td><td>0</td></tr>
+        <tr><td class="num">2</td><td><a href="#phase-2">Worker agent mode</a></td><td><span class="pill ok">completed</span></td><td>be-developer</td><td>required</td><td>1</td></tr>
+        <tr><td class="num">3</td><td><a href="#phase-3">Prompt + bridge</a></td><td><span class="pill ok">completed</span></td><td>be-developer</td><td>required</td><td>1</td></tr>
+        <tr><td class="num">4</td><td><a href="#phase-4">Agent loop processor + safety</a></td><td><span class="pill ok">completed</span></td><td>be-developer</td><td>required</td><td>1, 2, 3</td></tr>
+        <tr><td class="num">5</td><td><a href="#phase-5">Dashboard</a></td><td><span class="pill ok">completed</span></td><td>fe-developer-junior</td><td>required</td><td>1, 4</td></tr>
+        <tr><td class="num">6</td><td>End-to-end + benchmark + docs</td><td><span class="pill pend">pending</span></td><td>be-developer</td><td>required</td><td>2, 3, 4, 5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="ins">Phase 2 và 3 chạy song song được sau phase 1; phase 5 sau phase 4 (theo <code>plan.md</code>). Phase 2, 3, 4 và 5 đã xong; <b>phase kế: Phase 6 — End-to-end + benchmark + docs</b> (be-developer, phụ thuộc 2, 3, 4, 5 đều đã đủ).</p>
+</section>
+
+<!-- PHASE SECTION: lặp lại cấu trúc này cho phase sau. id="phase-N". -->
+<section id="phase-0" class="phase">
+  <div class="phase-head">
+    <h2>Phase 0 — Ổn định nền</h2>
+    <span class="pill ok">completed</span>
+    <span class="pill ok">leader: PASS</span>
+  </div>
+
+  <dl class="kv">
+    <dt>Mục tiêu</dt><dd>Chốt baseline trước khi sửa: commit WIP, đo test/typecheck/lint, ghi hash đối chứng v4 để phase 1 và 3 so sánh.</dd>
+    <dt>Ai làm</dt><dd>be-developer-junior, 3 vòng: r1 hết trần 45 phút; r2 chạy lại theo nhóm; r3 chạy nốt 21 test <code>page_batch</code>. Leader review (<code>reports/phase-00/leader-r1.md</code>).</dd>
+    <dt>QA</dt><dd>Bỏ qua theo plan (<code>qa: skip</code>).</dd>
+    <dt>Convention</dt><dd><code>AGENTS.md</code>; <code>docs/code-standards.md</code> (tạo trong phiên này) chỉ là chỉ mục. Không lệch.</dd>
+  </dl>
+
+  <div class="blk">
+    <h3>Diff thật</h3>
+    <p class="ins">Hai commit WIP do user duyệt ở bước 1–2 của phase (nguồn: <code>git show --numstat</code>), gom theo nhóm.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Commit</th><th>Nhóm</th><th class="num">File</th><th class="num">+</th><th class="num">−</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="9"><code>a2e43d6</code><br>Claude CLI bridge, RustFS read-after-write, round 21<br><b>113 file · +20494 / −128</b></td><td><code>benchmark/vision</code> (evidence round 21)</td><td class="num">69</td><td class="num">18720</td><td class="num">0</td></tr>
+        <tr><td><code>apps/control-plane</code> + <code>apps/dashboard</code></td><td class="num">30</td><td class="num">759</td><td class="num">116</td></tr>
+        <tr><td><code>tests</code></td><td class="num">5</td><td class="num">665</td><td class="num">3</td></tr>
+        <tr><td><code>docs</code></td><td class="num">3</td><td class="num">104</td><td class="num">0</td></tr>
+        <tr><td><code>packages/contracts</code></td><td class="num">1</td><td class="num">26</td><td class="num">9</td></tr>
+        <tr><td><code>docker</code></td><td class="num">1</td><td class="num">25</td><td class="num">0</td></tr>
+        <tr><td><code>plan/09112026103202-vision-accuracy-loop</code></td><td class="num">1</td><td class="num">108</td><td class="num">0</td></tr>
+        <tr><td>Gốc/scripts (README, compose, script token)</td><td class="num">3</td><td class="num">87</td><td class="num">0</td></tr>
+        <tr><td colspan="4" class="ins">Chi tiết từng file benchmark không liệt kê.</td></tr>
+        <tr><td rowspan="3"><code>f85091a</code><br>Plan browser-agent-loop + graph file<br><b>23 file · +2635 / −0</b></td><td><code>plan/20261119-…-browser-agent-loop</code> (plan, phase, reports)</td><td class="num">17</td><td class="num">1583</td><td class="num">0</td></tr>
+        <tr><td><code>docs</code> (4 graph, <code>docs/graphs/README.md</code>, <code>code-standards.md</code>)</td><td class="num">6</td><td class="num">1052</td><td class="num">0</td></tr>
+        <tr><td colspan="4" class="ins">Chỉ thêm mới, không sửa file cũ.</td></tr>
+      </tbody>
+    </table></div>
+
+    <p class="ins">Thay đổi hiện tại của phase (nguồn: <code>git status --short</code>, <code>git diff --numstat</code>), HEAD <code>f85091a</code>, chưa commit.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>File</th><th>Tạo/sửa</th><th class="num">+/−</th><th>Tóm tắt</th></tr></thead>
+      <tbody>
+        <tr><td><code>tests/fixtures/v4_identity.json</code></td><td>tạo</td><td class="num">+20 / −0</td><td>Hash đối chứng v4 cho phase 1 và 3.</td></tr>
+        <tr><td><code>plan/…/reports/phase-00/*</code></td><td>tạo</td><td class="num">36 file</td><td>Log pytest/worker/dashboard/ruff/hgraph, <code>v4_identity.py</code>, bản sao <code>vision-contract.generated.ts.txt</code>, báo cáo r1–r3 và leader.</td></tr>
+        <tr><td><code>docs/graphs/codex-bridge.md</code></td><td>sửa</td><td class="num">+11 / −5</td><td><code>hgraph add</code>: thêm <code>v4_identity.py</code> vào graph, cập nhật ngày 2026-11-20, bảng quan hệ và sơ đồ.</td></tr>
+        <tr><td><code>docs/graphs/README.md</code></td><td>sửa</td><td class="num">+1 / −1</td><td>Dòng <code>codex-bridge</code>: 18 → 19 file, ngày 2026-11-20.</td></tr>
+        <tr><td><code>plan/…/phase-00-baseline.md</code></td><td>sửa</td><td class="num">+1 / −1</td><td>Frontmatter <code>cook_step</code>: B1 → B4.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="blk">
+    <h3>Database</h3>
+    <p>Không đụng (không migration, không ghi). Alembic head <code>a4c6e8f01234</code>. PostgreSQL <code>127.0.0.1:5432</code> đang lắng nghe (tiến trình <code>com.docker.backend.exe</code>); chưa có bằng chứng kết nối thật.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Test baseline (HEAD f85091a)</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Bộ</th><th>Kết quả</th><th>Nguồn</th></tr></thead>
+      <tbody>
+        <tr><td>pytest (chia nhóm, <code>--basetemp</code>)</td><td><b>1292 pass</b> · <span class="pill warn">1 fail</span> · 20 skip</td><td>r2 + r3; leader cộng lại khớp</td></tr>
+        <tr><td>Test đỏ có sẵn</td><td><code>tests/test_codex_bridge_benchmark.py::test_offline_manifest_provenance_and_explicit_live_boundary</code> — lệch hash manifest <code>3b1c1ca0… ≠ dfbd0cbf…</code></td><td><code>pytest-B-g1-basetemp.log</code></td></tr>
+        <tr><td>Worker (4 spec, <code>--workers=1</code>)</td><td>155 pass: locators 10, dom 38, history 8, operations 99</td><td><code>worker-vision-*-r2.log</code></td></tr>
+        <tr><td>Dashboard test</td><td>44 pass, 0 fail</td><td><code>dashboard-test-r2.log</code></td></tr>
+        <tr><td>Dashboard typecheck, lint</td><td>exit 0, sạch</td><td><code>dashboard-typecheck-r2.log</code>, <code>dashboard-lint-r2.log</code></td></tr>
+        <tr><td>Worker typecheck</td><td>exit 0, sạch</td><td><code>worker-typecheck.log</code></td></tr>
+        <tr><td>ruff</td><td>All checks passed</td><td><code>ruff-check.log</code></td></tr>
+      </tbody>
+    </table></div>
+    <p class="ins">Cách chạy đã chốt: <code>CODEX_BRIDGE_ENABLED=false</code> qua tiến trình, <code>--basetemp</code> ngoài Temp mặc định, <code>-p no:cacheprovider</code>, <code>corepack pnpm</code>; worker chạy từng spec. Nhóm pytest giữ dưới 9 phút.</p>
+    <dl class="kv">
+      <dt>Hash v4</dt><dd>
+        <code>codex_output_schema</code> sha256 <code>572143fe7414be16b23706eeb7b666cd1c2dc73108dc46a36763d27a26f93ef9</code> (3797 byte)<br>
+        <code>codex-dom-v11</code> prompt + schema sha256 <code>cc45b11674650ed8232f4cdbb643524de8ec08a760738aeacd36ff6519f29259</code> (9269 byte; <code>candidate_limit</code> 3, stage <code>dom</code>)<br>
+        Nguồn: <code>tests/fixtures/v4_identity.json</code>, sinh bởi <code>v4_identity.py</code>.
+      </dd>
+    </dl>
+  </div>
+
+  <div class="blk">
+    <h3>Graph và Ponytail</h3>
+    <ul>
+      <li>Graph lập trước phase: <code>vision-exploration</code>, <code>codex-bridge</code>, <code>playwright-vision-worker</code>, <code>vision-dashboard</code>. <code>v4_identity.py</code> đã thêm vào <code>codex-bridge</code>; <code>hgraph check --changed</code> exit 0.</li>
+      <li>Ponytail: không có comment <code>ponytail:</code>; 1 <code>shrink:</code> ở <code>v4_identity.py:L88-L108</code> (ghi chú, không chặn).</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Nợ và rủi ro</h3>
+    <ul>
+      <li><code>.env</code> bật <code>CODEX_BRIDGE_ENABLED=true</code> nhưng thiếu executable: chạy nguyên trạng thì 19 module lỗi collect (<code>config.py:166-171</code>). Mỗi lần chạy phải override.</li>
+      <li><code>test_vision_page_batch.py</code> ghi đè <code>benchmark/vision/visual-buttons/flow-result.json</code>; chạy đủ 81 test thì file về đúng bản đã commit.</li>
+      <li>WinError 5 / PermissionError ở thư mục <code>pytest-of-hen</code> trong Temp (83 error ở lần chạy không có <code>--basetemp</code>).</li>
+      <li>Chưa chứng minh kết nối PostgreSQL thật; phase 1 và 4 cần kiểm lại cho test migration/fence.</li>
+      <li>Mốc 69 skip của round 21 không đối chiếu được (hiện 20 skip ở G1+G2).</li>
+      <li>Bằng chứng yếu: 60 test <code>page_batch</code> chạy ở r2 chỉ suy ra từ dấu chấm của log timeout; leader chấp nhận.</li>
+      <li>Phase 1 và 3 phải dùng đúng <code>sample_request()</code> của <code>v4_identity.py</code> khi so hash.</li>
+    </ul>
+  </div>
+
+  <div class="verdict"><b>Kết luận leader: PASS</b> (<code>reports/phase-00/leader-r1.md</code>), không có mục chặn.<br>
+    Phase kế: <b>Phase 1 — Contract + DB + chọn engine</b> (be-developer, QA required): cột chọn engine, bảng step log, field API, cờ config, schema output agent, <code>VisualWorkerOpen.agent_mode</code> và regenerate TS.</div>
+</section>
+
+<section id="phase-1" class="phase">
+  <div class="phase-head">
+    <h2>Phase 1 — Contract + DB + chọn engine</h2>
+    <span class="pill ok">completed</span>
+    <span class="pill ok">leader: PASS (r1, r2)</span>
+    <span class="pill ok">QA: PASS (r2)</span>
+  </div>
+
+  <dl class="kv">
+    <dt>Mục tiêu</dt><dd>Đặt nền cho engine agent loop mà chưa đổi hành vi runtime: cột chọn engine + bảng step log, field API <code>engine</code>, cờ config, schema output agent (<code>AgentStep</code>), <code>VisualWorkerOpen.agent_mode</code> và regenerate TS. Engine planner v4 giữ nguyên byte.</dd>
+    <dt>Ai làm</dt><dd>be-developer r1 (implement). be-developer-junior r2 (vòng sửa: nới <code>AgentRef</code>, trần byte). pm trả lời 2 ASK_PM (<code>pm-r1.md</code>). Leader review r1 và r2. QA r1 (FAIL vì cổng graph) và r2 (PASS).</dd>
+    <dt>Báo cáo</dt><dd><code>reports/phase-01/</code>: <code>be-developer-r1.md</code>, <code>be-developer-junior-r2.md</code>, <code>pm-r1.md</code>, <code>leader-r1.md</code>, <code>leader-r2.md</code>, <code>qa-r1.md</code>, <code>qa-r2.md</code> và log (pytest, alembic, hgraph, ruff, worker).</dd>
+    <dt>Tài liệu QA</dt><dd><a href="qa/phase-01/test-cases.md">test-cases.md</a> · <a href="qa/phase-01/test-report.md">test-report.md</a></dd>
+    <dt>Convention</dt><dd><code>AGENTS.md</code> (Code organization rules); <code>docs/code-standards.md</code> chỉ là chỉ mục. <code>docs/api-conventions.md</code> không tồn tại, bỏ qua theo yêu cầu. Hai chỗ lệch, leader đều chấp nhận (xem "Lệch convention").</dd>
+  </dl>
+
+  <div class="blk">
+    <h3>Diff thật</h3>
+    <p class="ins">Nguồn: <code>git diff --numstat</code>, <code>git status --short</code>, <code>wc -l</code> cho file untracked. Chỉ file của phase 1; HEAD <code>f85091a</code>, chưa commit. Số liệu sau cả r1 và r2.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>File</th><th>Tạo/sửa</th><th class="num">+/−</th><th>Tóm tắt</th></tr></thead>
+      <tbody>
+        <tr><td><code>migrations/versions/b7c9d1e3f5a7_add_agent_loop_engine.py</code></td><td>tạo</td><td class="num">+72 / −0</td><td>Cột <code>exploration_engine</code> + CHECK + bảng <code>visual_agent_steps</code>, downgrade đầy đủ.</td></tr>
+        <tr><td><code>tests/test_agent_loop_contracts.py</code></td><td>tạo</td><td class="num">+554 / −0</td><td>Contract agent, schema strict, hash v4, ref 24 ký tự, trần 131 072 byte.</td></tr>
+        <tr><td><code>tests/test_vision_agent_engine_selection.py</code></td><td>tạo</td><td class="num">+484 / −0</td><td>Chọn engine qua route/application, policy, reload, migration up/down, step log, CHECK/FK.</td></tr>
+        <tr><td><code>tests/test_qa_phase01_edges.py</code></td><td>tạo</td><td class="num">+259 / −0</td><td>Test biên do QA viết; r2 đổi 10 ca <code>test_qa_ref_bad</code> sang hành vi ref mới, thêm ca đúng 131 072 byte.</td></tr>
+        <tr><td><code>packages/contracts/src/auto_at/contracts/codex_bridge.py</code></td><td>sửa</td><td class="num">+138 / −2</td><td><code>AgentAction</code>, <code>AgentStep</code>, <code>AgentLoopOutput</code>, <code>AgentLoopContext</code>, <code>parse_agent_output</code>, schema agent; r2: <code>AgentRef</code> nới, <code>AGENT_REF_PATTERN</code>, <code>AGENT_REQUEST_MAX_BYTES</code>. Serializer bỏ <code>agent_context</code> khi null để giữ byte v4.</td></tr>
+        <tr><td><code>packages/contracts/src/auto_at/contracts/vision_worker.py</code></td><td>sửa</td><td class="num">+7 / −1</td><td><code>VisualWorkerOpen.agent_mode</code>, <code>blocked_action_terms</code>.</td></tr>
+        <tr><td><code>workers/playwright/src/vision-contract.generated.ts</code></td><td>sửa</td><td class="num">+17 / −1</td><td>Sinh lại bằng <code>export_vision_worker.py</code>; diff chỉ là hai field mới.</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/persistence/models.py</code></td><td>sửa</td><td class="num">+40 / −0</td><td>Cột <code>exploration_engine</code> + CHECK, model <code>VisualAgentStepModel</code>.</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/persistence/vision_unit_of_work.py</code></td><td>sửa</td><td class="num">+45 / −0</td><td><code>record_agent_step</code> (fence + redact), <code>agent_steps(scope)</code>.</td></tr>
+        <tr><td><code>apps/control-plane/api/v1/routes/vision.py</code></td><td>sửa</td><td class="num">+15 / −3</td><td><code>engine</code> ở request/response, <code>agent_loop_enabled</code> ở policy.</td></tr>
+        <tr><td><code>apps/control-plane/application/vision.py</code></td><td>sửa</td><td class="num">+16 / −2</td><td>Tham số <code>engine</code>; kiểm cờ, provider, allowlist; idempotency theo engine.</td></tr>
+        <tr><td><code>apps/control-plane/application/vision_reload.py</code></td><td>sửa</td><td class="num">+2 / −0</td><td>Reload giữ engine của session gốc.</td></tr>
+        <tr><td><code>apps/control-plane/config.py</code></td><td>sửa</td><td class="num">+3 / −0</td><td><code>vision_agent_loop_enabled</code>, <code>vision_agent_snapshot_chars</code>.</td></tr>
+        <tr><td><code>.env.example</code></td><td>sửa</td><td class="num">+3 / −0</td><td>Hai biến <code>VISION_AGENT_LOOP_ENABLED</code>, <code>VISION_AGENT_SNAPSHOT_CHARS</code>.</td></tr>
+        <tr><td><code>apps/control-plane/domain/activity.py</code></td><td>sửa</td><td class="num">+14 / −0</td><td>Stage <code>agent.step</code> và 7 reason code mới.</td></tr>
+        <tr><td><code>tests/test_vision_handoff_repository.py</code></td><td>sửa</td><td class="num">+1 / −1</td><td>Ngoài phạm vi: assert head revision đổi thành <code>b7c9d1e3f5a7</code>.</td></tr>
+        <tr><td><code>tests/test_vision_policy_persistence.py</code></td><td>sửa</td><td class="num">+2 / −1</td><td>Ngoài phạm vi: so response PUT với policy đã lưu, loại <code>agent_loop_enabled</code>.</td></tr>
+        <tr><td><code>tests/test_vision_policy_routes.py</code></td><td>sửa</td><td class="num">+2 / −1</td><td>Ngoài phạm vi: như trên.</td></tr>
+        <tr><td><code>docs/graphs/vision-exploration.md</code></td><td>sửa</td><td class="num">+111 / −75</td><td><code>hgraph add</code> + <code>sync --apply</code> (xem phần Graph).</td></tr>
+        <tr><td><code>plan/…/qa/phase-01/*</code></td><td>tạo</td><td class="num">2 file</td><td><code>test-cases.md</code> (47 dòng), <code>test-report.md</code> (41 dòng).</td></tr>
+        <tr><td><code>plan/…/reports/phase-01/*</code></td><td>tạo</td><td class="num">32 file</td><td>Báo cáo r1/r2 của dev, pm, leader, qa và log pytest/alembic/hgraph/ruff/worker (chưa tính báo cáo artifact này).</td></tr>
+        <tr><td><code>plan/…/reports/phase-00/v4_identity.py</code></td><td>sửa</td><td class="num">—</td><td>Phiên chính sửa lỗi ruff (I001, E501) theo đề nghị của leader; file này tạo từ phase 0.</td></tr>
+        <tr><td colspan="4" class="ins">Tổng 20 file sửa: 454 thêm / 102 xóa trong <code>git diff --stat</code> (gồm cả file docs/plan sửa từ trước phiên, không liệt kê ở trên). Không xóa file nào của phase 1.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="blk">
+    <h3>Database</h3>
+    <ul>
+      <li>Cột mới <code>visual_exploration_sessions.exploration_engine</code>: VARCHAR(20) NOT NULL, server_default <code>'planner'</code>, không index. CHECK <code>ck_visual_session_exploration_engine</code> (<code>IN ('planner','agent_loop')</code>).</li>
+      <li>Bảng mới <code>visual_agent_steps</code>: <code>id</code> uuid PK; <code>tenant_id</code>, <code>project_id</code>, <code>session_id</code>; <code>step_index</code>, <code>snapshot_version</code>; <code>evaluation_previous_goal</code>, <code>memory</code>, <code>next_goal</code>; <code>actions</code>, <code>operation_ids</code> (JSONB); <code>stop_reason</code>, <code>job_id</code> (nullable); <code>created_at</code>. Ràng buộc: UNIQUE <code>uq_visual_agent_step_index (session_id, step_index)</code>, FK 3 cột <code>fk_visual_agent_step_session</code> tới <code>visual_exploration_sessions(tenant_id, project_id, id)</code>, index <code>ix_visual_agent_steps_tenant_id</code>.</li>
+      <li>Migration <code>b7c9d1e3f5a7</code>, <code>down_revision = "a4c6e8f01234"</code> (head cũ). Không backfill: dòng cũ đọc ra <code>planner</code>. ADD COLUMN default hằng là metadata-only; ADD CHECK quét bảng nhỏ dưới khóa ngắn (leader ghi OPTIONAL, chấp nhận).</li>
+      <li>Rollback: <code>uv run alembic downgrade -1</code> (<code>drop_table visual_agent_steps</code>, <code>drop_constraint</code>, <code>drop_column</code>). Mất marker engine và step log của session <code>agent_loop</code>, nên phải tắt <code>VISION_AGENT_LOOP_ENABLED</code> trước khi rollback (ghi trong docstring migration).</li>
+      <li>Kiểm chứng: alembic up/down/up chạy trên DB test riêng <code>auto_at_agent_loop_test</code> (<code>127.0.0.1:5432</code>), kết thúc ở head <code>b7c9d1e3f5a7</code>. QA r1 chạy lại độc lập và xác nhận constraint qua <code>pg_constraint</code>. Không đụng DB <code>auto_at</code>. Log: <code>reports/phase-01/alembic-test-db.log</code>.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Test</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Bộ</th><th>Kết quả</th><th>Nguồn</th></tr></thead>
+      <tbody>
+        <tr><td>Dev r1: test mới (<code>test_agent_loop_contracts</code> 76 + <code>test_vision_agent_engine_selection</code> 34)</td><td><b>110 pass</b>, 0 skip</td><td><code>pytest-new-tests.log</code></td></tr>
+        <tr><td>Dev r1: hồi quy 2 nhóm</td><td>148 pass; 44 pass</td><td><code>pytest-regression-1/2.log</code></td></tr>
+        <tr><td>Dev r1: suite chia nhóm G1–G4b + <code>page_batch</code></td><td>1 fail có sẵn (baseline), còn lại pass; <code>page_batch</code> 81 test, 0 fail</td><td><code>pytest-G*.log</code>, <code>pytest-page-batch-*.log</code></td></tr>
+        <tr><td>Dev r2 (be-developer-junior)</td><td>263 pass · 10 fail (<code>test_qa_ref_bad</code>, đỏ vì hành vi ref mới có chủ đích)</td><td><code>be-developer-junior-r2.md</code></td></tr>
+        <tr><td>QA r1</td><td>Test QA 59 pass; hồi quy 148 + 71 pass; suite đủ chỉ còn 1 test đỏ baseline; verdict FAIL vì cổng graph</td><td><code>qa-r1.md</code></td></tr>
+        <tr><td>QA r2 (7 file, <code>CODEX_BRIDGE_ENABLED=false</code>)</td><td><b>330 pass</b>, 0 skip; 10 ca ref cũ đã thay</td><td><code>qa-r2.md</code></td></tr>
+        <tr><td>Test đỏ có sẵn từ baseline</td><td><code>tests/test_codex_bridge_benchmark.py::test_offline_manifest_provenance_and_explicit_live_boundary</code> (lệch hash manifest; sửa <code>codex_bridge.py</code> làm giá trị hash đổi <code>3b1c…</code> → <code>07bf…</code> nhưng cùng assertion). Không do phase 1.</td><td><code>pytest-G1.log</code></td></tr>
+        <tr><td>Hash v4</td><td>Khớp <code>tests/fixtures/v4_identity.json</code>: <code>CodexOutput</code> <code>572143fe…3ef9</code>; <code>codex-dom-v11</code> <code>cc45b116…9259</code>; hash request mẫu <code>7d124f62…3f5e</code> không đổi</td><td><code>pytest-new-tests.log</code>, <code>qa-r1.md</code></td></tr>
+        <tr><td>Worker, ruff</td><td>Worker typecheck exit 0; diff TS chỉ <code>agent_mode</code> + <code>blocked_action_terms</code>; <code>ruff check .</code> sạch. Worker lint exit 1 (22 lỗi có sẵn, không ở file phase 1)</td><td><code>worker-typecheck.log</code>, <code>worker-lint.log</code>, <code>ruff-check.log</code></td></tr>
+      </tbody>
+    </table></div>
+    <p class="ins">Chưa test được (QA nêu): <code>test_vision_page_batch.py</code> chạy lại, e2e UI/worker thật; stress không cần. Tài liệu QA: <a href="qa/phase-01/test-cases.md">test-cases.md</a>, <a href="qa/phase-01/test-report.md">test-report.md</a>.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Lệch convention</h3>
+    <ul>
+      <li>3 file test ngoài phạm vi (<code>test_vision_handoff_repository.py</code>, <code>test_vision_policy_persistence.py</code>, <code>test_vision_policy_routes.py</code>) sửa 1–2 dòng vì hợp đồng đổi đúng phase. Leader chấp nhận.</li>
+      <li>Validator JSON Schema tự viết (<code>tests/test_agent_loop_contracts.py</code>) thay vì thêm <code>jsonschema</code>, vì thư viện không có trong <code>uv.lock</code> và thêm dependency cần duyệt. Có test chống "pass rỗng". Leader chấp nhận; thay bằng <code>jsonschema</code> nếu sau này vào dev group.</li>
+      <li><code>docs/api-conventions.md</code> không tồn tại.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Graph</h3>
+    <ul>
+      <li><code>vision-exploration</code> được thêm: migration, 2 test mới, test QA, <code>models.py</code>, <code>contracts/codex_bridge.py</code> (và <code>agents/shared/redaction.py</code> do <code>sync</code> thêm vì <code>vision_unit_of_work.py</code> giờ import <code>redact_value</code>).</li>
+      <li><code>hgraph check</code>: exit 0 (4 graph, 442 file, không vấn đề).</li>
+      <li><code>hgraph check --changed</code>: exit 1 vì công cụ so đường dẫn có tiền tố <code>auto-at-ui/</code> (git toplevel là <code>agent-at/</code>, repo lồng). User chấp nhận. <b>Nợ:</b> sửa hgraph khớp đường dẫn cho repo lồng. Phase 0 qua cổng này vì lúc đó đường dẫn không có tiền tố.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Quyết định user duyệt (2026-11-20)</h3>
+    <ul>
+      <li><code>AgentRef</code> nới thành <code>str</code> 1..24 ký tự, xuất <code>AGENT_REF_PATTERN</code> (<code>^[0-9]+:[0-9]+$</code>); ref sai định dạng parse được, <code>invalid_ref</code> xử lý ở domain phase 4 (dùng <code>re.fullmatch</code>). Ref rỗng hoặc dài hơn 24 vẫn bị từ chối.</li>
+      <li><code>AGENT_REQUEST_MAX_BYTES = 131 072</code>: validator ở <code>CodexBridgeRequest.valid_job</code> chỉ áp cho request agent (đo byte UTF-8 thật), làm ở phase 1 r2.</li>
+      <li><code>spool.py</code> (trần đọc <code>request.json</code> 16 384 byte, ghi 65 536) chuyển vào <b>phase 3</b>, kèm test round-trip snapshot 24 000 ký tự tiếng Việt.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Ponytail</h3>
+    <ul>
+      <li>Không có comment <code>ponytail:</code> trong code. Không thêm dependency; không có mục delete/yagni/stdlib/native.</li>
+      <li>Ghi chú shrink của leader (không chặn): <code>application/vision.py:L124</code> kiểm <code>engine</code> lặp lại <code>Literal</code> ở route (giữ vì reload đọc từ DB); <code>vision_unit_of_work.py:~L495</code> kiểm <code>len(operation_ids) &gt; len(actions)</code> không có trong plan nhưng nhỏ và có test (giữ); <code>agent_loop_output_schema</code> sao chép <code>strict()</code> của <code>output_schema</code>, phase 3 có thể gộp.</li>
+      <li>Net: 20 file sửa 454 thêm / 102 xóa (gồm cả file docs/plan có sẵn); thêm 4 file code mới (migration + 3 test, 1369 dòng).</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Nợ và rủi ro</h3>
+    <ul>
+      <li><code>spool.py:245</code> vẫn đọc <code>request.json</code> tối đa 16 384 byte; request agent lớn chưa load được cho tới khi phase 3 nâng trần.</li>
+      <li>Reason code <code>agent_*</code> chưa có trong <code>VISION_MODEL_FAILURE_REASONS</code> (<code>domain/vision.py</code>); phase 4 phải xử lý <code>safe_failure_reason</code>.</li>
+      <li><code>BridgeProcessResult.output</code> (<code>domain/codex_bridge.py:43</code>) chưa nhận <code>AgentStep</code>; phase 3 mở rộng.</li>
+      <li>Phase 3 thêm một dòng định dạng ref <code>version:n</code> vào prompt vì schema không còn ép <code>pattern</code>.</li>
+      <li>Chạy test cần <code>CODEX_BRIDGE_ENABLED=false</code> (như phase 0); lỗi <code>PermissionError</code> ở thư mục pytest trong Temp khi thiếu <code>--basetemp</code>.</li>
+    </ul>
+  </div>
+
+  <div class="verdict"><b>Kết luận leader: r1 PASS, r2 PASS</b> (không có mục BLOCKING). <b>QA: r1 FAIL</b> (chỉ vì cổng graph, hành vi đạt), <b>r2 PASS</b> (330 pass; <code>--changed</code> chỉ lỗi tiền tố, user chấp nhận).<br>
+    Phase kế: <b>Phase 2 — Worker agent mode</b> và <b>Phase 3 — Prompt + bridge</b>, đều chỉ phụ thuộc phase 1, chạy song song được; phase 3 nhận thêm <code>spool.py</code>.</div>
+</section>
+
+<section id="phase-2" class="phase">
+  <div class="phase-head">
+    <h2>Phase 2 — Worker agent mode</h2>
+    <span class="pill ok">completed</span>
+    <span class="pill ok">leader: PASS (r1)</span>
+    <span class="pill ok">QA: PASS (r1)</span>
+  </div>
+
+  <dl class="kv">
+    <dt>Mục tiêu</dt><dd>Worker Playwright có chế độ agent (<code>VisualWorkerOpen.agent_mode</code>): snapshot chỉ còn bản mới nhất (evict + dispose handle), <code>stale_dom_snapshot</code> khi dùng snapshot cũ, chạy tuần tự không giới hạn <code>hop/state/dom_snapshot</code>, allowlist origin (K3), chặn hành động nhạy cảm theo <code>blocked_action_terms</code>, re-baseline sau <code>type</code>, hồi phục dialog/download (K4). Mọi nhánh nằm sau <code>session.agentMode</code>; v4 chạy code path cũ.</dd>
+    <dt>Ai làm</dt><dd>be-developer r1 (implement). Leader review r1. QA r1.</dd>
+    <dt>Báo cáo</dt><dd><code>reports/phase-02/</code>: <code>be-developer-r1.md</code>, <code>leader-r1.md</code>, <code>qa-r1.md</code> và các file <code>.log</code>.</dd>
+    <dt>Tài liệu QA</dt><dd><a href="qa/phase-02/test-cases.md">test-cases.md</a> · <a href="qa/phase-02/test-report.md">test-report.md</a></dd>
+    <dt>Convention</dt><dd><code>AGENTS.md</code>; <code>docs/code-standards.md</code> chỉ là chỉ mục; <code>docs/api-conventions.md</code> không tồn tại. Tuân theo: không sửa tay <code>vision-contract.generated.ts</code>, không đổi chữ ký public, không thêm dependency, hành vi mới đều có test. Không có chỗ lệch convention; các điểm lệch so với plan xem phần "Quyết định".</dd>
+  </dl>
+
+  <div class="blk">
+    <h3>Diff thật</h3>
+    <p class="ins">Nguồn: <code>git diff --numstat</code>, <code>git status --short</code>, <code>wc -l</code> cho file untracked. Chỉ file của phase 2; HEAD <code>f85091a</code>, chưa commit. <code>vision-dom.ts</code> không sửa. <code>vision-contract.generated.ts</code> đang có diff nhưng thuộc phase 1, không tính.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>File</th><th>Tạo/sửa</th><th class="num">+/−</th><th>Tóm tắt</th></tr></thead>
+      <tbody>
+        <tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td>sửa</td><td class="num">+87 / −11</td><td>Toàn bộ agent mode: <code>evictSnapshots</code>, stale check, chạy tuần tự, <code>origin_blocked</code>, <code>sensitive_action_blocked</code>, re-baseline, <code>Session.recovered</code> cho K4.</td></tr>
+        <tr><td><code>workers/playwright/src/vision-agent-mode.spec.ts</code></td><td>tạo</td><td class="num">+320 / −0</td><td>23 test Chromium thật do dev viết.</td></tr>
+        <tr><td><code>workers/playwright/src/fixtures/agent-loop-target.ts</code></td><td>tạo</td><td class="num">+78 / −0</td><td>Fixture loopback 2 origin (form, dialog, download, ảnh origin khác).</td></tr>
+        <tr><td><code>workers/playwright/src/vision-agent-mode.qa.spec.ts</code></td><td>tạo</td><td class="num">+273 / −0</td><td>18 test biên do QA viết.</td></tr>
+        <tr><td><code>docs/graphs/playwright-vision-worker.md</code></td><td>sửa</td><td class="num">+89 / −72</td><td><code>hgraph add</code> + <code>sync --apply</code>: thêm 3 file mới, cập nhật bảng quan hệ và sơ đồ (xác nhận bằng <code>git diff</code>).</td></tr>
+        <tr><td><code>plan/…/qa/phase-02/*</code></td><td>tạo</td><td class="num">2 file</td><td><code>test-cases.md</code> (39 dòng), <code>test-report.md</code> (40 dòng).</td></tr>
+        <tr><td><code>plan/…/reports/phase-02/*</code></td><td>tạo</td><td class="num">6 file</td><td>Báo cáo dev, leader, qa và 3 file <code>.log</code> (chưa tính báo cáo artifact này).</td></tr>
+        <tr><td colspan="4" class="ins">Không xoá file nào. Ba file graph khác (<code>README.md</code>, <code>codex-bridge.md</code>, <code>vision-exploration.md</code>) đang sửa từ phase 0/1, không thuộc phase 2.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="blk">
+    <h3>Database</h3>
+    <p>Không đụng (worker giữ state trong RAM; không migration, không backfill). Public contract và <code>operation_budget</code> không đổi; thêm mã outcome <code>origin_blocked</code>, <code>sensitive_action_blocked</code> chỉ ở agent mode.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Test</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Bộ</th><th>Kết quả</th><th>Nguồn</th></tr></thead>
+      <tbody>
+        <tr><td>Spec dev <code>vision-agent-mode.spec.ts</code></td><td><b>23/23 pass</b> (2.3m), 3 lần liên tiếp</td><td><code>be-developer-r1.md</code>; leader chạy lại 23 pass (2.4m)</td></tr>
+        <tr><td>Spec QA <code>vision-agent-mode.qa.spec.ts</code></td><td><b>18/18 pass</b> (1.2m), 3 lần liên tiếp</td><td><code>qa-r1.md</code>, <code>test-report.md</code></td></tr>
+        <tr><td>Hồi quy <code>vision-operations.spec.ts</code></td><td><b>99 pass</b> (6.2m), bằng baseline phase 0</td><td>dev + QA</td></tr>
+        <tr><td>Hồi quy 8 spec (dom, history, locators, target-preflight, visual-buttons, readiness, outcome-capture, contract)</td><td>110 pass, 1 skip (<code>contract.spec.ts:120</code>, chỉ chạy trong image)</td><td><code>be-developer-r1.md</code></td></tr>
+        <tr><td>Hồi quy 5 spec (vision, observability, click-evidence, sample-guard, settle-observability)</td><td>26 pass</td><td><code>be-developer-r1.md</code></td></tr>
+        <tr><td>QA tổng</td><td>33 mục; 41 test Chromium mới (23 + 18) + 239 hồi quy; 0 fail (14 spec còn lại: 140 pass, 1 skip)</td><td><code>qa-r1.md</code></td></tr>
+        <tr><td>Typecheck</td><td><code>tsc --noEmit</code> exit 0</td><td>dev, leader, QA</td></tr>
+        <tr><td>Lint</td><td>3 file phase 2 sạch (eslint exit 0). <code>npm run lint</code> toàn worker exit 1: 22 lỗi có sẵn ở 6 file không đụng tới</td><td>dev, QA</td></tr>
+        <tr><td>pytest</td><td>Không chạy (phase không đụng Python)</td><td>dev</td></tr>
+      </tbody>
+    </table></div>
+    <p class="ins">Chưa test được (QA nêu): target mongchiton thật (phase 6); redirect 30x sang origin ngoài cùng tab (chưa có fixture); <code>div role=button</code> gửi form bằng JS (worker không phát hiện, chỉ dựa từ khoá); spec dashboard (ngoài blast radius). Lint baseline worker không có log phase 0, kết luận "có sẵn" dựa trên việc 6 file không bị sửa. Tài liệu QA: <a href="qa/phase-02/test-cases.md">test-cases.md</a>, <a href="qa/phase-02/test-report.md">test-report.md</a>.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Graph</h3>
+    <ul>
+      <li>Graph <code>playwright-vision-worker</code>: thêm <code>vision-agent-mode.spec.ts</code>, <code>fixtures/agent-loop-target.ts</code> (dev) và <code>vision-agent-mode.qa.spec.ts</code> (QA).</li>
+      <li><code>hgraph check</code>: exit 0 (4 graph, 445 file, không vấn đề).</li>
+      <li><code>hgraph check --changed</code>: exit 1 do tiền tố <code>auto-at-ui/</code> (git root là thư mục cha) và 12 file phase 1 chưa thuộc graph. Hai file phase 2 bị liệt kê nhầm (<code>vision-operations.ts</code>, <code>vision-contract.generated.ts</code>) thực ra đã thuộc graph (<code>hgraph which</code>). <b>Nợ mang từ phase 1, không do phase 2.</b></li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Ponytail</h3>
+    <ul>
+      <li>Không có comment <code>ponytail:</code>; không thêm dependency; không có mục delete/yagni/stdlib/native.</li>
+      <li>Ghi chú shrink của leader (không chặn): <code>vision-operations.ts:L637-641</code> đặt <code>session.recovered = null</code> hai lần (trước dispatch và trong <code>finally</code>).</li>
+      <li>Net: sửa 1 file code <b>+87 / −11</b>; thêm 3 file mới (2 spec + 1 fixture, 671 dòng).</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Quyết định developer và phán xét leader</h3>
+    <ul>
+      <li><b>(a)</b> Test 25 vòng → 20 vòng vì <code>operation_budget = 1 + max_states*(2*max_hops+3) = 22</code> với 3/2. Leader: chấp nhận.</li>
+      <li><b>(b)</b> K3 kiểm URL hiện tại của page ở <code>prepare</code> thay vì đánh dấu trong route handler; <code>about:blank</code> không coi là origin ngoài. Leader: chấp nhận.</li>
+      <li><b>(c)</b> <code>type</code> có <code>\r</code>/<code>\n</code> bị <code>sensitive_action_blocked</code> (AC3: type không gửi Enter). Leader: chấp nhận; <b>nên ghi vào plan phase 4</b> để Python không tạo text xuống dòng.</li>
+      <li><b>(d)</b> <code>close_popup</code> được phép với purpose <code>explore</code> ở agent mode. Leader: chấp nhận.</li>
+      <li><b>(e)</b> Từ khoá chỉ NFC + lowercase, không bỏ dấu, khớp kiểu "chứa". Leader: <b>chuyển phase 4</b> — danh sách <code>blocked_action_terms</code> phải có cả dạng có dấu và không dấu, và phase 4 phải test. QA xác nhận: <code>"nap the"</code> không chặn <code>Nạp thẻ</code>; <code>"xoa"</code> chặn cả <code>Xoa bo loc</code>.</li>
+    </ul>
+    <p class="ins">OPTIONAL của leader: <code>sensitiveFacts</code> dùng <code>el</code> trực tiếp, nếu target là span trong nút submit thì bỏ sót (có thể dùng <code>el.closest("button,input")</code> sau); worker không kiểm lại độ dài từ khoá.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Nợ và rủi ro</h3>
+    <ul>
+      <li>Chưa chạy trên target thật: rủi ro chặn nhầm phụ thuộc danh sách từ khoá của phase 4.</li>
+      <li>Worker lint đỏ sẵn 22 lỗi ở 6 file ngoài phase.</li>
+      <li><code>hgraph check --changed</code> còn đỏ (tiền tố repo lồng + 12 file phase 1 chưa có graph).</li>
+    </ul>
+  </div>
+
+  <div class="verdict"><b>Kết luận leader: PASS</b> (không có mục BLOCKING). <b>QA VERDICT: PASS</b> (41 test mới + 239 hồi quy, 0 fail).<br>
+    Phase kế: <b>Phase 3 — Prompt + bridge</b> (be-developer, QA required), phụ thuộc phase 1, đã sẵn sàng; nhận thêm <code>spool.py</code>.</div>
+</section>
+
+<section id="phase-3" class="phase">
+  <div class="phase-head">
+    <h2>Phase 3 — Prompt + bridge</h2>
+    <span class="pill ok">completed</span>
+    <span class="pill ok">leader: PASS (r1)</span>
+    <span class="pill ok">QA: PASS (r1)</span>
+  </div>
+
+  <dl class="kv">
+    <dt>Mục tiêu</dt><dd>Thêm họ prompt thứ hai <code>agent-loop-v1</code> (<code>agents/prompts/agent_loop.py</code>: <code>INSTRUCTIONS</code>, <code>build_prompt</code> 5 khối theo thứ tự cache, snapshot trang nằm khối cuối trong delimiter không tin cậy) và cho bridge nhận job agent: chọn builder theo <code>prompt_version</code>, chọn parser theo <code>agent_context</code>, nâng trần <code>request.json</code> lên 131 072 byte. Job v4 giữ nguyên byte (hash phase 0).</dd>
+    <dt>Ai làm</dt><dd>be-developer r1 (implement). Leader review r1. QA r1.</dd>
+    <dt>Báo cáo</dt><dd><code>reports/phase-03/</code>: <code>be-developer-r1.md</code>, <code>leader-r1.md</code>, <code>qa-r1.md</code> và các file <code>.log</code>.</dd>
+    <dt>Tài liệu QA</dt><dd><a href="qa/phase-03/test-cases.md">test-cases.md</a> · <a href="qa/phase-03/test-report.md">test-report.md</a></dd>
+    <dt>Convention</dt><dd><code>AGENTS.md</code> mục Prompt management: prompt nằm ở <code>apps/control-plane/agents/prompts/</code>, README có dòng <code>agent-loop-v1</code> kèm version, caller chỉ import prompt. <code>docs/code-standards.md</code> chỉ là chỉ mục; <code>docs/api-conventions.md</code> không tồn tại. <b>Lệch quy trình:</b> dev sửa <code>spool.py</code> một lần bằng script Python qua heredoc (trái luật chỉ Write/Edit); diff đã kiểm đúng, các sửa sau dùng Edit/Write. Leader xác nhận đây là vi phạm quy trình, không phải lỗi code.</dd>
+  </dl>
+
+  <div class="blk">
+    <h3>Diff thật</h3>
+    <p class="ins">Nguồn: <code>git diff --numstat</code>, <code>git status --short</code>, <code>wc -l</code> cho file untracked. HEAD <code>f85091a</code>, chưa commit. Với file sửa, con số là <b>diff tích luỹ so với HEAD</b> (các file này có thể đã bị phase trước đụng, không tách được phần riêng của phase 3). <code>codex_exploration.py</code> và <code>codex_bridge.py</code> contract không thuộc phase 3.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>File</th><th>Tạo/sửa</th><th class="num">+/−</th><th>Tóm tắt</th></tr></thead>
+      <tbody>
+        <tr><td><code>apps/control-plane/agents/prompts/agent_loop.py</code></td><td>tạo</td><td class="num">+122 / −0</td><td><code>PROMPT_VERSION="agent-loop-v1"</code>, <code>INSTRUCTIONS</code>, <code>build_prompt</code> 5 khối, hằng header/delimiter, redact task/memory/history.</td></tr>
+        <tr><td><code>apps/control-plane/agents/prompts/README.md</code></td><td>sửa</td><td class="num">+1 / −0</td><td>Dòng <code>agent_loop.py</code> / <code>agent-loop-v1</code>.</td></tr>
+        <tr><td><code>apps/control-plane/agents/vision/codex_service.py</code></td><td>sửa</td><td class="num">+6 / −0</td><td>Thêm <code>agent_output_schema()</code> bọc schema của contract; <code>output_schema()</code> giữ nguyên.</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/vision/codex_batch.py</code></td><td>sửa</td><td class="num">+10 / −5</td><td>Tham số tuỳ chọn <code>prompt_version</code>, <code>schema_bytes</code>, <code>stage</code>, <code>agent_context</code>; mặc định = v4.</td></tr>
+        <tr><td><code>apps/control-plane/application/codex_bridge.py</code></td><td>sửa</td><td class="num">+4 / −1</td><td><code>with_response_schema</code> chỉ khi <code>agent_context is None</code>.</td></tr>
+        <tr><td><code>apps/control-plane/codex_bridge_cli.py</code></td><td>sửa</td><td class="num">+14 / −1</td><td><code>PROMPT_BUILDERS</code> chọn builder theo <code>prompt_version</code>; version lạ → <code>ValueError</code>.</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/codex_bridge/process.py</code></td><td>sửa</td><td class="num">+14 / −4</td><td><code>output_parser</code> mặc định <code>None</code> → <code>parse_agent_output</code> nếu có <code>agent_context</code>; thêm field agent vào whitelist log chẩn đoán.</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/codex_bridge/claude_process.py</code></td><td>sửa</td><td class="num">+7 / −2</td><td>Chọn parser như <code>process.py</code>; không đổi argv.</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/codex_bridge/spool.py</code></td><td>sửa</td><td class="num">+7 / −2</td><td><code>REQUEST_MAX_BYTES = AGENT_REQUEST_MAX_BYTES</code> (131 072) cho đọc và ghi <code>request.json</code>; <code>dom.json</code>/schema 65 536, screenshot 5 000 000 giữ nguyên.</td></tr>
+        <tr><td><code>tests/test_agent_loop_prompt.py</code></td><td>tạo</td><td class="num">+201 / −0</td><td>Test dev: thứ tự khối, tiền tố chung, redact, delimiter, ref, kích thước.</td></tr>
+        <tr><td><code>tests/test_agent_loop_bridge.py</code></td><td>tạo</td><td class="num">+407 / −0</td><td>Test dev: job agent qua fake Codex/Claude, v4 giữ hash phase 0, output sai schema, request.json &gt; 65 536, stdin &gt; 100 KB.</td></tr>
+        <tr><td><code>tests/test_agent_loop_bridge_qa.py</code></td><td>tạo</td><td class="num">+297 / −0</td><td>Test biên do QA viết.</td></tr>
+        <tr><td><code>tests/fixtures/v4_identity.json</code></td><td>tạo</td><td class="num">chưa đếm</td><td>Hash v4 của phase 0 dùng để so; <b>untracked, cần commit cùng phase</b>.</td></tr>
+        <tr><td><code>docs/graphs/codex-bridge.md</code></td><td>sửa</td><td class="num">+96 / −54</td><td>Diff tích luỹ (phase 0/1 cũng sửa): thêm file phase 3 vào graph, bullet "Họ prompt thứ hai".</td></tr>
+        <tr><td><code>plan/…/qa/phase-03/*</code></td><td>tạo</td><td class="num">2 file</td><td><code>test-cases.md</code> (33 dòng), <code>test-report.md</code> (49 dòng).</td></tr>
+        <tr><td><code>plan/…/reports/phase-03/*</code></td><td>tạo</td><td class="num">6 file</td><td>Báo cáo dev, leader, qa và 3 file <code>.log</code> (chưa tính báo cáo artifact này).</td></tr>
+        <tr><td colspan="4" class="ins">Không xoá file nào. <code>docs/graphs/vision-exploration.md</code> chỉ chạy <code>hgraph sync --apply</code> (khối auto), danh sách file không đổi.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="blk">
+    <h3>Database</h3>
+    <p>Không đụng (không bảng/cột/migration/backfill/index; <code>codex_bridge_jobs</code> và <code>ck_codex_job_sequence</code> không đổi). Contract package không đổi (phase 1 đã có sẵn).</p>
+  </div>
+
+  <div class="blk">
+    <h3>Test</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Bộ</th><th>Kết quả</th><th>Nguồn</th></tr></thead>
+      <tbody>
+        <tr><td>Test mới của dev (Windows)</td><td><b>29 passed, 10 skipped</b> (10 skip là test process chỉ chạy trên Linux)</td><td><code>be-developer-r1.md</code></td></tr>
+        <tr><td>Test mới của dev (Linux docker, <code>--network none</code>)</td><td><b>24 passed</b> (<code>test_agent_loop_bridge.py</code>)</td><td><code>be-developer-r1.md</code></td></tr>
+        <tr><td>Leader chạy lại (prompt + bridge + contracts)</td><td>115 passed, 10 skipped</td><td><code>leader-r1.md</code></td></tr>
+        <tr><td>QA Windows (7 file checklist + 3 file mới)</td><td><b>171 passed / 28 skipped</b>, 0 fail</td><td><code>qa-r1.md</code></td></tr>
+        <tr><td>QA Linux docker</td><td><b>367 passed / 2 skipped</b>, 0 fail</td><td><code>qa-r1.md</code></td></tr>
+        <tr><td>QA tổng</td><td>19 nhóm case; 49 test QA mới (tính cả parametrize)</td><td><code>qa-r1.md</code></td></tr>
+        <tr><td>Ruff</td><td><code>uv run ruff check .</code>: All checks passed</td><td>dev, leader, QA</td></tr>
+        <tr><td>Test đỏ baseline (không tính)</td><td><code>test_codex_bridge_benchmark::test_offline_manifest_provenance_and_explicit_live_boundary</code> đã đỏ từ phase 0 (hash manifest), không do phase 3</td><td><code>be-developer-r1.md</code></td></tr>
+      </tbody>
+    </table></div>
+    <p class="ins">Chưa test được (QA nêu): job thật qua Codex/Claude thật (cần user cho phép, chuyển phase 6); giới hạn stdin của <code>claude</code> thật; chất lượng prompt với model thật. Tài liệu QA: <a href="qa/phase-03/test-cases.md">test-cases.md</a>, <a href="qa/phase-03/test-report.md">test-report.md</a>.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Graph</h3>
+    <ul>
+      <li>Graph <code>codex-bridge</code>: thêm <code>agent_loop.py</code>, <code>codex_service.py</code> (trước đó chưa thuộc graph nào), <code>test_agent_loop_prompt.py</code>, <code>test_agent_loop_bridge.py</code> (dev) và <code>test_agent_loop_bridge_qa.py</code> (QA).</li>
+      <li><code>hgraph check</code>: exit 0 (4 graph, 449 file, không vấn đề).</li>
+      <li><code>hgraph check --changed</code>: exit 1 do lệch tiền tố <code>auto-at-ui/</code> (git root là thư mục cha) và file phase 1 chưa thuộc graph; không có file phase 3 nào thiếu graph. <b>Đề xuất:</b> chạy <code>/h-graph</code> (graph <code>vision-agent-loop</code> chưa có, nên lập sau phase 4).</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Ponytail</h3>
+    <ul>
+      <li>Không có comment <code>ponytail:</code> trong file phase 3 (grep rỗng); không thêm dependency; không có mục delete/yagni/stdlib/native.</li>
+      <li>Ghi chú shrink của leader (không chặn): <code>codex_batch.py:L50</code> tham số <code>stage</code> thừa (contract buộc <code>stage == "image"</code> khi và chỉ khi có ảnh; giữ vì plan liệt kê, bỏ ở phase sau); <code>agent_loop.py:L91</code> <code>_redact</code> trùng logic <code>task_context.redact</code> (gộp một nguồn trong <code>agents/shared</code> sau).</li>
+      <li>Net: 8 file sửa (+63 / −15 theo numstat, không tính graph), 1 file prompt mới 122 dòng, 3 file test mới 905 dòng.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Nợ và rủi ro</h3>
+    <ul>
+      <li>Codex CLI vẫn chạy với instructions v4 cố định (<code>process.py:62</code>); <code>agent-loop-v1</code> chỉ nằm ở message người dùng, giảm nhẹ bằng câu mở đầu "replace". Quyết ở <b>phase 6</b> sau QA thật; nếu lệch thì mở phase nhỏ tạo file instructions thứ hai. Claude không bị ảnh hưởng.</li>
+      <li>Prompt &gt; 131 072 byte ở ca cực đoan (100 host × 255 ký tự) bị từ chối fail-closed <code>bridge_output_limit</code>; ca thực tế ~106-110 KB qua. <b>Phase 4</b> phải giới hạn <code>allowed_hosts</code>.</li>
+      <li><code>parse_agent_output</code> chấp nhận ref sai dạng và không kiểm field null: <b>phase 4</b> phải kiểm ref theo snapshot (AC2).</li>
+      <li>QA gọi model thật chuyển <b>phase 6</b>. Stdin Claude dùng <code>ensure_ascii</code> nên tiếng Việt ~2x byte, chưa kiểm giới hạn thật.</li>
+      <li><code>CodexStop.reason</code> là enum, không có text tự do (ngoài phase).</li>
+      <li>Fixture <code>tests/fixtures/v4_identity.json</code> chưa track, cần commit; <code>hgraph check --changed</code> còn đỏ như trên.</li>
+    </ul>
+  </div>
+
+  <div class="verdict"><b>Kết luận leader: PASS</b> (không có mục BLOCKING). <b>QA VERDICT: PASS</b> (Windows 171 passed/28 skipped, Linux 367 passed/2 skipped, ruff sạch, 0 fail).<br>
+    Phase kế: <b>Phase 4 — Agent loop processor + safety</b> (be-developer, QA required), phụ thuộc phase 1, 2, 3, đã sẵn sàng.</div>
+</section>
+
+<section id="phase-4" class="phase">
+  <div class="phase-head">
+    <h2>Phase 4 — Agent loop processor + safety</h2>
+    <span class="pill ok">completed</span>
+    <span class="pill ok">leader: PASS (r1, r2)</span>
+    <span class="pill ok">QA: PASS (r1)</span>
+  </div>
+
+  <dl class="kv">
+    <dt>Mục tiêu</dt><dd>Thêm <code>VisionAgentLoopProcessor</code> (vòng observe → render snapshot ref <code>version:n</code> → hỏi model qua bridge → kiểm an toàn bằng code → chạy từng action qua <code>ExecuteVisualOperation</code> → ghi step log) và lớp an toàn thuần <code>domain/vision_agent_safety.py</code> (<code>check_action</code>, <code>BLOCKED_ACTION_TERMS</code>, kiểm origin). Publisher chọn processor theo <code>exploration_engine</code>; planner v4 giữ nguyên, không phát <code>restore</code>/<code>replay</code>. Trần gọi model = <code>min(record.max_steps, runtime.max_steps, 20)</code>, mỗi lần gọi đều qua <code>CodexCallBudget.reserve()</code>.</dd>
+    <dt>Ai làm</dt><dd>be-developer r1 (implement). be-developer-junior r2 (sửa <code>agent_steps</code> cho <code>/trace</code> production, sau khi user duyệt mở rộng phạm vi). Leader review r1 và r2. QA r1.</dd>
+    <dt>Báo cáo</dt><dd><code>reports/phase-04/</code>: <code>be-developer-r1.md</code>, <code>be-developer-junior-r2.md</code>, <code>leader-r1.md</code>, <code>leader-r2.md</code>, <code>qa-r1.md</code> và các file <code>.log</code> (pytest, ruff, hồi quy, page_batch).</dd>
+    <dt>Tài liệu QA</dt><dd><a href="qa/phase-04/test-cases.md">test-cases.md</a> · <a href="qa/phase-04/test-report.md">test-report.md</a></dd>
+    <dt>Convention</dt><dd><code>AGENTS.md</code>: domain thuần (chỉ import contracts + stdlib), application điều phối qua uow/worker/exchange, không hard-code prompt (dùng prompt phase 3), test cùng phase. <code>docs/code-standards.md</code> chỉ là chỉ mục; <code>docs/api-conventions.md</code> không tồn tại. <b>Lệch/ghi chú:</b> <code>vision_agent_loop.py</code> dài 665 dòng, không tách (AGENTS.md không đặt ngưỡng; plan chỉ nói "tách nếu &gt; ~400" và liệt kê đúng một file); gợi ý tách <code>render_snapshot</code>/<code>resolve_ref</code>/<code>allowed_hosts</code> (~70 dòng) ở phase 6. Lặp logic <code>primitive()</code> và <code>_recover</code> của v4 là <b>nợ có chủ đích</b> (AC7 đóng băng <code>vision_trace_events.py</code>), ghi vào <b>ADR-038 ở phase 6</b>.</dd>
+  </dl>
+
+  <div class="blk">
+    <h3>Diff thật</h3>
+    <p class="ins">Nguồn: <code>git diff --numstat</code>, <code>git status --short</code>, <code>wc -l</code> cho file untracked. HEAD <code>f85091a</code>, chưa commit. File sửa: con số là <b>diff tích luỹ so với HEAD</b>. <code>vision_unit_of_work.py</code> đã bị phase 1 sửa trước, nên +42 gồm cả thay đổi phase 1 (phần phase 4 chỉ là khối <code>agent_steps</code>). <code>repositories.py</code> và <code>vision_unit_of_work.py</code> là phạm vi mở rộng do user duyệt sau leader-r1.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>File</th><th>Tạo/sửa</th><th class="num">+/−</th><th>Tóm tắt</th></tr></thead>
+      <tbody>
+        <tr><td><code>apps/control-plane/application/vision_agent_loop.py</code></td><td>tạo</td><td class="num">+665 / −0</td><td><code>render_snapshot</code>, <code>resolve_ref</code>, <code>allowed_hosts</code>, <code>run_operation</code>, <code>stop_cause</code>, <code>VisionAgentLoopProcessor</code> (vòng lặp, step log, resume, kết thúc theo lý do).</td></tr>
+        <tr><td><code>apps/control-plane/domain/vision_agent_safety.py</code></td><td>tạo</td><td class="num">+84 / −0</td><td><code>check_action</code>, <code>Decision</code>, <code>BLOCKED_ACTION_TERMS</code> (31 từ khoá), <code>origin_allowed</code>, <code>blocked_term</code>.</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/workflows/vision_publisher.py</code></td><td>sửa</td><td class="num">+12 / −6</td><td>Chọn processor theo <code>record.exploration_engine</code>; <code>handler</code> giữ nguyên nghĩa (ghi đè cả hai).</td></tr>
+        <tr><td><code>apps/control-plane/application/vision_results.py</code></td><td>sửa</td><td class="num">+20 / −1</td><td><code>read_trace</code> thêm key tuỳ chọn <code>agent_step</code> cho op thuộc một bước agent (chỉ session <code>agent_loop</code>).</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/persistence/repositories.py</code></td><td>sửa</td><td class="num">+9 / −0</td><td>Mở rộng phạm vi: <code>SqlAlchemyVisualTraceRepository.agent_steps(scope)</code> (đúng scope tenant/project/session, <code>order_by(step_index)</code>).</td></tr>
+        <tr><td><code>apps/control-plane/infrastructure/persistence/vision_unit_of_work.py</code></td><td>sửa</td><td class="num">+42 / −0</td><td>Mở rộng phạm vi: <code>agent_steps</code> của UoW gọi lại method repo, vẫn trả list detached. Số liệu gồm cả thay đổi phase 1.</td></tr>
+        <tr><td><code>tests/test_vision_agent_safety.py</code></td><td>tạo</td><td class="num">+165 / −0</td><td>Test dev: 52 test bảng quyết định an toàn.</td></tr>
+        <tr><td><code>tests/test_vision_agent_loop.py</code></td><td>tạo</td><td class="num">+939 / −0</td><td>Test dev: 50 test (renderer, ref, processor với fake worker/exchange, trace, dispatch); r2 thêm test repo SQL thật qua <code>VisionResults</code>.</td></tr>
+        <tr><td><code>tests/test_vision_agent_loop_qa.py</code></td><td>tạo</td><td class="num">+340 / −0</td><td>Test biên do QA viết (133 test).</td></tr>
+        <tr><td><code>docs/graphs/vision-agent-loop.md</code></td><td>tạo</td><td class="num">+187 / −0</td><td>Graph mới của phase 4.</td></tr>
+        <tr><td><code>docs/graphs/vision-exploration.md</code></td><td>sửa</td><td class="num">+188 / −130</td><td>Diff tích luỹ nhiều phase; phase 4 chỉ <code>hgraph sync --apply</code> (thêm <code>vision_agent_loop.py</code>, <code>test_vision_agent_loop.py</code>).</td></tr>
+        <tr><td><code>plan/…/qa/phase-04/*</code></td><td>tạo</td><td class="num">2 file</td><td><code>test-cases.md</code> (49 dòng), <code>test-report.md</code> (39 dòng).</td></tr>
+        <tr><td><code>plan/…/reports/phase-04/*</code></td><td>tạo</td><td class="num">nhiều file</td><td>5 báo cáo (dev r1, junior r2, leader r1/r2, qa) và các file <code>.log</code> (chưa tính báo cáo artifact này).</td></tr>
+        <tr><td colspan="4" class="ins">Không xoá file nào. <code>vision_trace_events.py</code>, <code>routes/vision.py</code>, worker, contract package, schema: không đổi. <code>git status --short -- benchmark</code> rỗng.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="blk">
+    <h3>Database</h3>
+    <p>Không đổi schema, không migration, không backfill, không index mới. Chỉ ghi vào bảng đã có: <code>visual_agent_steps</code> (phase 1, qua <code>uow.record_agent_step</code>) và các bảng v4 mà <code>ExecuteVisualOperation</code> vẫn ghi: <code>visual_exploration_states</code>, <code>visual_action_proposals</code>, <code>visual_trajectory_edges</code>, <code>visual_operations</code>, <code>visual_operation_frames</code>, <code>visual_locator_evidence</code>. Bảng <code>visual_agent_steps</code> chỉ được đọc thêm ở <code>/trace</code> (r2).</p>
+  </div>
+
+  <div class="blk">
+    <h3>Test</h3>
+    <p class="ins">Mọi lệnh pytest cần <code>CODEX_BRIDGE_ENABLED=false</code>: <code>.env</code> local đặt <code>CODEX_BRIDGE_ENABLED=true</code> và <code>config.py:182</code> đòi tenant local tường minh, nên không đặt biến thì lỗi collection <code>ValidationError</code> (môi trường, không do code phase 4).</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Bộ</th><th>Kết quả</th><th>Nguồn</th></tr></thead>
+      <tbody>
+        <tr><td>Test mới của dev (r1)</td><td><b>102 test mới</b> (50 loop + 52 safety); chạy cùng test phase 1 liên quan: 222 passed</td><td><code>be-developer-r1.md</code></td></tr>
+        <tr><td>Leader r1 chạy lại (safety + loop)</td><td>102 passed</td><td><code>leader-r1.md</code></td></tr>
+        <tr><td>QA riêng</td><td><b>133 passed</b>, 0 fail (41 case trong test-cases.md)</td><td><code>qa-r1.md</code>, <code>test-report.md</code></td></tr>
+        <tr><td>QA nhóm phase 4 + liên quan</td><td><b>385 passed, 3 skipped</b> (3 skip: bridge chỉ chạy trong container Linux)</td><td><code>test-report.md</code></td></tr>
+        <tr><td>Hồi quy</td><td>141 passed (event_processor…target_preflight) + 50 passed (provider_integration…accuracy_loop) + <code>page_batch</code> 81/81 passed</td><td>dev r1, <code>test-report.md</code></td></tr>
+        <tr><td>r2 (junior) sau sửa <code>agent_steps</code></td><td>236 passed (loop + safety + QA); 79 passed (results + live_persistence + engine_selection)</td><td><code>be-developer-junior-r2.md</code></td></tr>
+        <tr><td>Leader r2</td><td><b>96 passed</b> (loop + results + live_persistence)</td><td><code>leader-r2.md</code></td></tr>
+        <tr><td>Ruff</td><td><code>uv run ruff check .</code>: All checks passed</td><td>dev, leader, QA</td></tr>
+        <tr><td>Mutation</td><td>Dev bỏ nhánh <code>url_change</code> trong <code>stop_cause</code> → 2 test đỏ; đã khôi phục</td><td><code>be-developer-r1.md</code></td></tr>
+      </tbody>
+    </table></div>
+    <p class="ins">Chưa test được (QA nêu): worker Playwright, model và bridge thật, <code>/trace</code> qua route HTTP thật (chuyển phase 6); stress không cần (trần cứng 20 lần gọi × 10 action). Tài liệu QA: <a href="qa/phase-04/test-cases.md">test-cases.md</a>, <a href="qa/phase-04/test-report.md">test-report.md</a>.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Graph</h3>
+    <ul>
+      <li>Graph mới <code>vision-agent-loop</code> (<code>hgraph new</code>, entry <code>vision_agent_loop.py</code>). File đã add: <code>vision_agent_loop.py</code>, <code>vision_agent_safety.py</code>, <code>test_vision_agent_loop.py</code>, <code>test_vision_agent_safety.py</code> và (QA) <code>test_vision_agent_loop_qa.py</code>; <code>vision_publisher.py</code>, <code>vision_results.py</code> đã thuộc graph.</li>
+      <li><code>hgraph check</code>: exit 0 (5 graph, 454 file, không vấn đề).</li>
+      <li><code>hgraph check --changed</code>: exit 1 do lệch tiền tố <code>auto-at-ui/</code> (git root là thư mục cha), lỗi cũ từ phase 1; không có file phase 4 nào thiếu graph.</li>
+      <li><code>hgraph sync vision-exploration</code> (dry run, r2): báo lệch 3 file từ phase khác (<code>persistence/models.py</code>, migration <code>b7c9d1e3f5a7</code>, <code>contracts/codex_bridge.py</code>), không do phase 4, chưa sửa; cần <code>hgraph sync</code> có chủ đích.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Ponytail</h3>
+    <ul>
+      <li>Không có comment <code>ponytail:</code> trong file phase 4 (grep rỗng); không thêm dependency; không có mục delete/yagni/stdlib/native.</li>
+      <li>Ghi chú shrink của leader (không chặn): <code>vision_agent_loop.py:L69</code> dict <code>STOP_REASONS</code> một mục dùng một lần, thay bằng <code>"agent_done" if output.reason == "complete" else "agent_stopped"</code>; <code>L74-76</code> <code>worker_operation_budget</code> có tham số mặc định chỉ để test (chấp nhận được); <code>L109-111</code> vòng <code>while</code> dựng lại chuỗi mỗi lần giảm 1 (O(n²), đủ nhanh cho ~1000 phần tử, có thể tính độ dài cộng dồn).</li>
+      <li>Gợi ý ngoài phạm vi: <code>L582-595</code> nhánh lỗi dùng <code>next(reversed(run.results))</code> dựa thứ tự dict (đúng, có test, nhưng mong manh); thêm mã <code>agent_*</code> vào tập <code>reason_code</code> ở <code>vision_unit_of_work.py:211-217</code> để activity cuối có chi tiết.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Mở rộng phạm vi được user duyệt (2026-11-20)</h3>
+    <ul>
+      <li>Leader r1 xác nhận <code>agent_step</code> chưa chạy ở production: route truyền <code>SqlAlchemyVisualTraceRepository</code> nhưng <code>agent_steps</code> chỉ có ở UoW, nên <code>VisionResults._agent_steps</code> luôn rỗng (test r1 chỉ gán tay). Không chặn phase 4 nhưng là điều kiện trước phase 5.</li>
+      <li>User duyệt sửa thêm <code>repositories.py</code> (và <code>vision_unit_of_work.py</code> để gọi lại, tránh trùng truy vấn). Junior r2 làm, không sửa route; test mới dùng repo SQL thật qua <code>VisionResults</code>, kiểm thứ tự <code>[1,2,3,4]</code> và scope khác tenant/project rỗng. Leader r2 PASS, không BLOCKING.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Quan sát QA và lệch quy trình</h3>
+    <ul>
+      <li>Từ khoá <code>gửi</code> chỉ có dạng không dấu <code>gui di</code>, nên control tên "Gui" (không dấu) không bị chặn ở cả Python lẫn worker; có chủ đích để tránh false positive ("guide"), rủi ro thấp, phase 6 cân nhắc.</li>
+      <li>Khi <code>lease_owner</code> đổi mà <code>fencing_token</code> giữ nguyên, <code>check_policy</code> không phát hiện: tốn thêm 1 lần gọi model trước khi bước ghi bị từ chối; không ghi trùng.</li>
+      <li><b>Vi phạm quy trình nhẹ:</b> <code>test_vision_page_batch</code> ghi đè <code>benchmark/vision/visual-buttons/flow-result.json</code>; dev khôi phục bằng một script Python qua Bash (trái luật chỉ Write/Edit). Kết quả sạch (<code>git status -- benchmark</code> rỗng), leader xác nhận không chặn. QA khôi phục bằng <code>git checkout</code>.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Nợ và rủi ro</h3>
+    <ul>
+      <li><code>finish(lease, "agent_done")</code> đặt session ở <code>state="unavailable"</code> với <code>safe_failure_reason="agent_done"</code> (cơ chế có sẵn, đúng chữ plan AC6, hơi lạ về ngữ nghĩa). <b>Phase 5</b> phải map reason <code>agent_*</code> từ <code>safe_failure_reason</code>.</li>
+      <li>Chưa dựng handoff khi kết thúc (<code>build_vision_handoff</code>/generation request) cho agent loop: plan không nêu, cần quyết định riêng (phase 6).</li>
+      <li>Worker giữ tối đa <code>max_states=200</code> checkpoint: session có hơn ~200 op click/type/back/navigate thành công sẽ gặp <code>state_limit</code> (lý thuyết). Sau op thất bại đổi URL, origin "không rõ" nên model chỉ được <code>back</code>/<code>close_popup</code> tới checkpoint kế (fail closed).</li>
+      <li>Lặp <code>primitive()</code>/<code>_recover</code> của v4 (ADR-038, phase 6); file 665 dòng (có thể tách ở phase 6).</li>
+      <li>Chưa có QA với worker, model và bridge thật: dồn <b>phase 6</b>.</li>
+    </ul>
+  </div>
+
+  <div class="verdict"><b>Kết luận leader: PASS r1 và PASS r2</b> (không có mục BLOCKING). <b>QA VERDICT: PASS</b> (133 test QA, 385 nhóm phase 4, hồi quy 141 + 50 + page_batch 81/81, ruff sạch, 0 fail).<br>
+    Phase kế: <b>Phase 5 — Dashboard</b> (fe-developer-junior, QA required), phụ thuộc phase 1, 4, đã sẵn sàng; cần map reason <code>agent_*</code> từ <code>safe_failure_reason</code>.</div>
+</section>
+
+<section id="phase-5" class="phase">
+  <div class="phase-head">
+    <h2>Phase 5 — Dashboard</h2>
+    <span class="pill ok">completed</span>
+    <span class="pill ok">leader: PASS (r1)</span>
+    <span class="pill ok">QA: PASS (r1)</span>
+  </div>
+
+  <dl class="kv">
+    <dt>Mục tiêu</dt><dd>Dashboard cho phép chọn engine <code>Planner</code> / <code>Agent loop</code> (select <code>#vision-engine</code> chỉ hiện khi <code>savedPolicy.agent_loop_enabled === true</code>; planner không gửi key <code>engine</code>), hiện khối <code>Agent step</code> trong ledger (3 trường: Đánh giá bước trước / Memory / Mục tiêu kế, cộng dòng <code>Blocked</code> liệt kê <code>skipped_actions</code>), và map 10 mã lỗi mới từ <code>safe_failure_reason</code>/<code>skipped_reason</code> sang thông báo. Gating <code>trace_version === "v4"</code> giữ nguyên.</dd>
+    <dt>Ai làm</dt><dd>fe-developer-junior r1 (implement). Leader review r1. QA r1.</dd>
+    <dt>Báo cáo</dt><dd><code>reports/phase-05/</code>: <code>fe-developer-junior-r1.md</code>, <code>leader-r1.md</code>, <code>qa-r1.md</code> và các file <code>.log</code>.</dd>
+    <dt>Tài liệu QA</dt><dd><a href="qa/phase-05/test-cases.md">test-cases.md</a> · <a href="qa/phase-05/test-report.md">test-report.md</a></dd>
+    <dt>Convention</dt><dd>Theo báo cáo: <code>AGENTS.md</code> và <code>docs/code-standards.md</code> (chỉ mục) khớp (TypeScript chỉ ở dashboard + worker, test <code>node:test</code> cạnh code, không file mới, không dependency mới). Repo không có convention UI riêng nên bám pattern <code>vision-dashboard.tsx</code> / ledger sẵn có. Lệch nhỏ (cosmetic): <code>generation-api.ts</code> mất khoảng trắng sau dấu phẩy ở <code>"/api/v1/vision/explorations",{</code>.</dd>
+  </dl>
+
+  <div class="blk">
+    <h3>Diff thật</h3>
+    <p class="ins">Nguồn: <code>git diff --stat -- apps/dashboard workers/playwright/src/vision-dashboard.spec.ts</code> và <code>git status --short -- apps/dashboard workers/playwright</code>. HEAD <code>f85091a</code> chưa có thay đổi dashboard nào trước phase này, nên số liệu diff so với HEAD chính là phần phase 5. Không tạo file mới, không xoá file nào.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>File</th><th>Tạo/sửa</th><th class="num">+/−</th><th>Tóm tắt</th></tr></thead>
+      <tbody>
+        <tr><td><code>apps/dashboard/app/vision-dashboard.tsx</code></td><td>sửa</td><td class="num">+8 / −3</td><td>State <code>engine</code> (mặc định planner); select <code>#vision-engine</code> chỉ khi flag bật; hint theo engine; request gắn <code>engine</code> chỉ khi Agent loop.</td></tr>
+        <tr><td><code>apps/dashboard/app/components/vision-operation-ledger.tsx</code></td><td>sửa</td><td class="num">+8 / −1</td><td>Khối <code>aria-label="Agent step"</code> trong "Selected operation", chỉ render khi có <code>agent_step</code>; <code>overflowWrap: anywhere</code> inline.</td></tr>
+        <tr><td><code>apps/dashboard/app/components/vision-provider-model.ts</code></td><td>sửa</td><td class="num">+57 / −1</td><td>+10 mã vào <code>failureMessages</code>; helper <code>explorationEngine</code>, <code>engineRequestFields</code>, <code>blockedReasonMessage</code>, <code>agentStepView</code>.</td></tr>
+        <tr><td><code>apps/dashboard/app/components/vision-provider-model.test.ts</code></td><td>sửa</td><td class="num">+57 / −1</td><td>4 test của dev (mapping mã, fallback, agent step view, engine) và 1 test QA (dữ liệu sai kiểu).</td></tr>
+        <tr><td><code>apps/dashboard/app/generation-types.ts</code></td><td>sửa</td><td class="num">+6 / −1</td><td><code>VisionPolicy.agent_loop_enabled?</code>, <code>VisualExploration.engine?</code>, type <code>VisualAgentStep</code>, <code>VisualOperation.agent_step?</code>.</td></tr>
+        <tr><td><code>apps/dashboard/app/generation-api.ts</code></td><td>sửa</td><td class="num">+2 / −2</td><td><code>submitVisualExploration</code> payload nhận <code>engine?</code>; endpoint không đổi.</td></tr>
+        <tr><td><code>workers/playwright/src/vision-dashboard.spec.ts</code></td><td>sửa</td><td class="num">+57 / −3</td><td>Fixture <code>agentStep</code>, <code>engine</code> của sessionB, <code>agent_step</code> ở op 2; 3 e2e mới (gating + payload, ledger agent step + planner không có khối, viewport 400px không tràn).</td></tr>
+        <tr><td><code>docs/graphs/vision-dashboard.md</code></td><td>sửa</td><td class="num">+57 / −45</td><td>Diff tích luỹ so với HEAD; phase 5 thêm 2 file (<code>vision-provider-model.test.ts</code>, <code>vision-dashboard.spec.ts</code>) và <code>hgraph sync --apply</code> (import ledger → <code>vision-provider-model</code>).</td></tr>
+        <tr><td><code>plan/…/qa/phase-05/*</code></td><td>tạo</td><td class="num">2 file</td><td><code>test-cases.md</code> (26 dòng), <code>test-report.md</code> (28 dòng).</td></tr>
+        <tr><td><code>plan/…/reports/phase-05/*</code></td><td>tạo</td><td class="num">nhiều file</td><td>3 báo cáo (dev, leader, qa) và các file <code>.log</code> (chưa tính báo cáo artifact này).</td></tr>
+        <tr><td colspan="4" class="ins">Ghi chú: <code>git status</code> còn liệt kê <code>workers/playwright/src/vision-contract.generated.ts</code>, <code>vision-operations.ts</code> và 3 file untracked (<code>fixtures/agent-loop-target.ts</code>, <code>vision-agent-mode.qa.spec.ts</code>, <code>vision-agent-mode.spec.ts</code>) — theo báo cáo phase 5 không đụng các file này, thuộc phase 2. Tổng 7 file (<code>git diff --numstat</code>): +195 / −12. Không đụng <code>globals.css</code>, <code>vision-conclusion.tsx</code>, contract, BE.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="blk">
+    <h3>Database</h3>
+    <p>Không đụng: không schema, migration, backfill hay index. Phase chỉ sửa client (dashboard + spec e2e).</p>
+  </div>
+
+  <div class="blk">
+    <h3>Test</h3>
+    <p class="ins">Môi trường: <code>pnpm</code> không có trong PATH, nên chạy trực tiếp đúng nội dung script (<code>node --experimental-strip-types --test</code>, <code>tsc --noEmit</code>, <code>eslint .</code>). E2E: <code>next build</code> + <code>next start</code> cổng 3107, <code>playwright test src/vision-dashboard.spec.ts --workers=1</code>.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Bộ</th><th>Kết quả</th><th>Nguồn</th></tr></thead>
+      <tbody>
+        <tr><td>Unit (dashboard)</td><td><b>49/49</b> (48 của dev + 1 của QA), 0 fail</td><td><code>test-report.md</code></td></tr>
+        <tr><td>typecheck / lint / build (dashboard)</td><td>exit 0 cả ba</td><td><code>fe-developer-junior-r1.md</code>, <code>test-report.md</code></td></tr>
+        <tr><td>E2E <code>vision-dashboard.spec.ts</code></td><td><b>55 passed, 2 failed</b> (57 test); 3 e2e mới của phase đều xanh</td><td><code>test-report.md</code></td></tr>
+        <tr><td>2 e2e đỏ</td><td>spec:238 "Vision cards align on desktop…" và spec:336 "a saved session focuses the website…", cùng lỗi <code>toBeInViewport</code> (viewport ratio 0). <b>QA đã xác minh đỏ sẵn ở baseline HEAD</b> (git worktree ở <code>f85091a</code>, build riêng, chỉ chạy 2 test đó: spec:236 và spec:334, lệch 2 dòng vì fixture phase thêm), không phải hồi quy của phase 5.</td><td><code>test-report.md</code></td></tr>
+        <tr><td>Worker playwright typecheck</td><td>exit 0; worker lint có 22 lỗi <code>no-explicit-any</code> ở file ngoài phase (<code>vision-dashboard.spec.ts</code> không lỗi)</td><td><code>fe-developer-junior-r1.md</code></td></tr>
+      </tbody>
+    </table></div>
+    <p class="ins">QA ghi 18 case: 16 PASS, 2 đỏ sẵn có ở baseline. Chưa test được: <code>/trace</code> end-to-end thật (chỉ API mock, chuyển phase 6). Tài liệu QA: <a href="qa/phase-05/test-cases.md">test-cases.md</a>, <a href="qa/phase-05/test-report.md">test-report.md</a>.</p>
+  </div>
+
+  <div class="blk">
+    <h3>Graph</h3>
+    <ul>
+      <li><code>hgraph which</code>: cả 6 file dashboard của phase thuộc graph <code>vision-dashboard</code>; <code>hgraph check &lt;6 file&gt;</code>: không có vấn đề.</li>
+      <li><code>hgraph sync vision-dashboard</code> (không <code>--apply</code>): không lệch import (chỉ cảnh báo 22 file ngoài gọi vào graph, có từ trước, không liên quan phase).</li>
+      <li><code>hgraph check --changed</code>: exit 1 do <b>lỗi công cụ</b>, so đường dẫn git-root <code>auto-at-ui/...</code> với đường dẫn graph tương đối theo project, nên cả file đã có graph cũng bị báo <code>uncovered-changed</code> (48 file). <b>Ghi là nợ công cụ</b>, không phải thiếu graph của phase 5. Nếu áp cổng nghiêm ngặt thì QA verdict thành FAIL vì lý do này, không vì hành vi.</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Ponytail</h3>
+    <ul>
+      <li>Không có comment <code>ponytail:</code> trong 3 file nguồn phase 5 (grep rỗng); báo cáo không có dòng <code>net:</code>; không có mục <code>delete:</code>/<code>yagni:</code>/<code>stdlib:</code>/<code>native:</code>; không thêm dependency.</li>
+      <li>Shrink của leader (không chặn) 1: <code>vision-operation-ledger.tsx:32</code> style inline <code>overflowWrap: "anywhere", minWidth: 0</code>, nên dùng class sẵn có nếu có (<code>globals.css</code> ngoài phạm vi).</li>
+      <li>Shrink của leader (không chặn) 2: <code>vision-provider-model.ts</code> hai helper <code>engineRequestFields</code>/<code>explorationEngine</code> rất nhỏ, chấp nhận được vì cần test được (file <code>.tsx</code> ledger không import được từ node test).</li>
+    </ul>
+  </div>
+
+  <div class="blk">
+    <h3>Lưu ý</h3>
+    <ul>
+      <li><b>Đính chính:</b> dev và QA ghi "<code>/trace</code> chưa trả <code>agent_step</code> ở production" là <b>SAI</b>. Leader xác minh chuỗi đã nối: <code>repositories.py:1273</code> <code>agent_steps</code> + <code>vision_results.py:29-31,90,112</code> (route truyền <code>SqlAlchemyVisualTraceRepository</code>), chỉ gán khi <code>exploration_engine == "agent_loop"</code>. Khối agent sẽ hiện ở production khi engine đúng (phase 4 r2 đã sửa).</li>
+      <li>Nhãn UI trộn Anh/Việt ("Đánh giá bước trước", "Memory", "Mục tiêu kế", "Blocked", "Planner"/"Agent loop"): <b>chờ user chốt</b>, không chặn.</li>
+      <li>Hint theo engine đổi theo lựa chọn ở form, không đổi nhãn theo session đã lưu; không có nhãn advisory nào khác theo session. Leader chấp nhận.</li>
+      <li>Quy trình: dev chạy e2e bằng một script Node foreground có giới hạn thời gian (không nền) vì repo không có <code>webServer</code> trong playwright config; server tắt bằng <code>taskkill /T</code>, cổng 3107 sạch.</li>
+    </ul>
+  </div>
+
+  <div class="verdict"><b>Kết luận leader: PASS r1</b> (không có mục BLOCKING). <b>QA VERDICT: PASS</b> (unit 49/49, typecheck/lint/build xanh, e2e 55/57 với 2 đỏ sẵn có ở baseline, 3 e2e mới xanh).<br>
+    Phase kế: <b>Phase 6 — End-to-end + benchmark + docs</b> (be-developer, QA required): chạy task mongchiton trên <code>agent_loop</code>, collect/evaluate, ADR-038, hồi quy toàn bộ, đo Codex instructions bằng model thật.</div>
+</section>
+
+</div>

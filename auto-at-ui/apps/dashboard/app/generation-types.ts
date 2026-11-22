@@ -59,6 +59,8 @@ export type VisionPolicy = {
   max_session_seconds: number;
   max_cost_usd: number;
   max_requests_per_minute: number;
+  /** Server-owned deployment flag; the client only reads it to offer the Agent loop engine. */
+  agent_loop_enabled?: boolean;
 };
 export type ProjectExecutionPolicy = {
   allowed_origins: string[];
@@ -81,6 +83,7 @@ export type VisualExploration = {
   max_screenshot_bytes: number;
   max_session_seconds: number;
   safe_failure_reason: string | null;
+  engine?: "planner" | "agent_loop";
 };
 export type VisualAction = {
   sequence: number;
@@ -152,7 +155,9 @@ export type VisionExplorationReport = {
 
 export type ExecutedClick = { x: number; y: number; viewport_width: number; viewport_height: number; before_frame_id: string; confirmed_at: string };
 export type OperationFrame = { id: string | null; availability: "retained" | "deleted" | "missing"; reason_code: string | null; captured_at?: string };
-export type VisualOperation = { executed_click?: ExecutedClick | null; id: string; sequence: number; purpose: "setup" | "explore" | "restore" | "replay"; action_kind: string; status: string; started_at: string; outcome_code: string | null; state_id: string | null; locator_id: string | null; before: OperationFrame; after: OperationFrame };
+/** Agent-loop reasoning for the step that produced an operation; present only in agent_loop sessions. */
+export type VisualAgentStep = { step_index: number; evaluation_previous_goal: string; memory: string; next_goal: string; skipped_actions: { index?: number; kind?: string; ref?: string; skipped_reason?: string; stop_cause?: string }[] };
+export type VisualOperation = { agent_step?: VisualAgentStep | null; executed_click?: ExecutedClick | null; id: string; sequence: number; purpose: "setup" | "explore" | "restore" | "replay"; action_kind: string; status: string; started_at: string; outcome_code: string | null; state_id: string | null; locator_id: string | null; before: OperationFrame; after: OperationFrame };
 export type VisualLocator = { originating_frame_id?: string | null; id: string; operation_id: string; status: string; reason_code: string | null; verified_at: string | null; descriptor: { strategy: string; role: string | null; value: string; scope: { kind: string; selector: string }[] } | null; bounding_box: { x: number; y: number; width: number; height: number } | null };
 export type VisualPageInventory = { state_id: string; checkpoint_id: string; page_url: string | null; url_fingerprint: string; interaction_scope?: "all" | "buttons" | "visual_buttons"; truncated: boolean; scrollable: boolean; skipped_count: number; controls: { key: string; button_kind?: "native" | "styled_link" | "custom" | null; role: string; name: string; status: "pending" | "queued" | "completed" | "failed" | "rejected"; proposal_id: string | null; operation_id: string | null }[] };
 export type VisualTrace = { schema_version: string; session_id: string; revision: string; trace_version: string; items: VisualOperation[]; locators: VisualLocator[]; pages?: VisualPageInventory[]; next_sequence: number; has_more: boolean };

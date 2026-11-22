@@ -1,0 +1,702 @@
+{
+  "schema_version": "vision-accuracy-inventory-v1",
+  "session_id": "22187cc7-4247-426b-83ec-446de3682f5c",
+  "pages": [
+    {
+      "state_id": "88150f8b-04f6-4e33-80fd-2a5ddc1d5ac0",
+      "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "faf741e970d91253bf4737342322548f65ccdfcdd9d2716205ad3235dd0a9ab0",
+          "role": "link",
+          "name": "TRÊN WINDOW"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 9
+    },
+    {
+      "state_id": "df80f3f2-305b-416e-8e17-9d52046b095e",
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "982802d71f9c1c140fc79fa771f748298d1510ef915c0c62195062a48602cf34",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S13 Tài Long - 14/11 đến 28/11 | VLCM Origin"
+        },
+        {
+          "key": "805335f352b90805f07849f502fa4af0b811b5e2e7a490057eaf398c9b1e48de",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S11 Đến S12 - 14/11 đến 28/11 | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "e2c126cb-6def-4319-9316-33cfe7faa65a",
+      "url_fingerprint": "8b80c6e058bb4882dcf5da96088b56237fa32f20a42a3a91683f83f09ee9cbf7",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "e645440c25f84dd47e8b925d9f4e709121af71bb2436038e488cd3cd053ae679",
+          "role": "link",
+          "name": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin"
+        },
+        {
+          "key": "03ebd7cf55bab07ab3b3e06f80f747056d64b8eb1009594ebbf68884ea30066c",
+          "role": "link",
+          "name": "[Công Bố Kết Quả] Vinh Danh Bảng Vàng Đua Top Máy Chủ S12 | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "4e9272aa-9c7a-4ede-ad76-d411993d835b",
+      "url_fingerprint": "ec7ff30b06b0e115dcf72ae633ae1809ac4f9625870546f5da4131091bbff454",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "97f32edac9acb1209cd00ccb32d71a52f31bffc4401842bf0abb77c7d1839070",
+          "role": "link",
+          "name": "Cẩm nang tân thủ: Phó bản Vạn Thú Trận | VLCM Origin"
+        },
+        {
+          "key": "59072a98d60a0a8f3d99b6b861ff9a7c14a3777f1b740c7806e4db8155b4587e",
+          "role": "link",
+          "name": "Chiến Hồn - Thỉnh Hồn Cao Nhân, Cường Hóa Trang Bị | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "5f47520b-6f2a-43d0-8ea2-18d91fde171f",
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "982802d71f9c1c140fc79fa771f748298d1510ef915c0c62195062a48602cf34",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S13 Tài Long - 14/11 đến 28/11 | VLCM Origin"
+        },
+        {
+          "key": "805335f352b90805f07849f502fa4af0b811b5e2e7a490057eaf398c9b1e48de",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S11 Đến S12 - 14/11 đến 28/11 | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "6fc85d6b-5b14-433a-a0f1-92e95d84bec7",
+      "url_fingerprint": "1e6375920f7d7ffa7650b6f9b5414cddbf6e17c54ab0894073b1fee20d806949",
+      "controls": [
+        {
+          "key": "ed12792ab8559004a3409ae2b4a36874ca54ff93a919ff4e465bfacad9613ca8",
+          "role": "link",
+          "name": "Account"
+        },
+        {
+          "key": "8a1922531f0a7a7bbef90336a01788447d01a41b54d124f566b666f02c7f2c58",
+          "role": "link",
+          "name": "Support"
+        },
+        {
+          "key": "8712b2a75798fab96684191d343925e29bef71428e4a94d4efef3f536adc32bf",
+          "role": "button",
+          "name": "Select language"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 0
+    },
+    {
+      "state_id": "d5f89f45-1e54-4b5c-b5c9-54a269b70c13",
+      "url_fingerprint": "1e6375920f7d7ffa7650b6f9b5414cddbf6e17c54ab0894073b1fee20d806949",
+      "controls": [
+        {
+          "key": "ed12792ab8559004a3409ae2b4a36874ca54ff93a919ff4e465bfacad9613ca8",
+          "role": "link",
+          "name": "Account"
+        },
+        {
+          "key": "8a1922531f0a7a7bbef90336a01788447d01a41b54d124f566b666f02c7f2c58",
+          "role": "link",
+          "name": "Support"
+        },
+        {
+          "key": "8712b2a75798fab96684191d343925e29bef71428e4a94d4efef3f536adc32bf",
+          "role": "button",
+          "name": "Select language"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 0
+    },
+    {
+      "state_id": "805246a8-9a60-4cb9-8184-918a476efc63",
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "982802d71f9c1c140fc79fa771f748298d1510ef915c0c62195062a48602cf34",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S13 Tài Long - 14/11 đến 28/11 | VLCM Origin"
+        },
+        {
+          "key": "805335f352b90805f07849f502fa4af0b811b5e2e7a490057eaf398c9b1e48de",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S11 Đến S12 - 14/11 đến 28/11 | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "8788dc6c-07dc-4844-af82-02f13ad57cea",
+      "url_fingerprint": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "controls": [
+        {
+          "key": "c3bf91505ae26dc17abbb744c477762f7c9c783085963e3f6d615d76304de07f",
+          "role": "textbox",
+          "name": "Email hoặc số điện thoại"
+        },
+        {
+          "key": "730a07653b23ae28a0850313149e7c24678882b3c611959499151fb8e204e1c1",
+          "role": "button",
+          "name": "Đóng"
+        },
+        {
+          "key": "5160b11ac5f5ddf74039ab3d3309fa9c0cdfa6a4d7c39652f15950aaf05913a3",
+          "role": "button",
+          "name": "Đăng nhập vào Facebook"
+        },
+        {
+          "key": "fa03a0fd32b4da9bf753b1af68f6da149f68608aabee872a58f1310385f331e5",
+          "role": "link",
+          "name": "Quên mật khẩu?"
+        },
+        {
+          "key": "5db35f3a778349407b8951d6f05380e94eee200ee6b58a17f0531ca90d997e7c",
+          "role": "button",
+          "name": "Tạo tài khoản mới"
+        }
+      ],
+      "truncated": false,
+      "scrollable": false,
+      "skipped_count": 17
+    },
+    {
+      "state_id": "f86a7803-68b3-40fe-8274-8984bb5941d8",
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "982802d71f9c1c140fc79fa771f748298d1510ef915c0c62195062a48602cf34",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S13 Tài Long - 14/11 đến 28/11 | VLCM Origin"
+        },
+        {
+          "key": "805335f352b90805f07849f502fa4af0b811b5e2e7a490057eaf398c9b1e48de",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S11 Đến S12 - 14/11 đến 28/11 | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "ab0940a9-048b-4345-91ea-a94836b0ab47",
+      "url_fingerprint": "cc9dbb0d91892e1fbc04c64599714f9ccab0ae7638fad25043262a2d78541bce",
+      "controls": [
+        {
+          "key": "6328aaa285f9572a67e563b3d915df1275817dcdac82b4fa93bfe44fd795fdf0",
+          "role": "button",
+          "name": "Tiếng Việt"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 3
+    },
+    {
+      "state_id": "da3fea0a-ea2c-4fb6-9812-8cef5ec57c4d",
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "982802d71f9c1c140fc79fa771f748298d1510ef915c0c62195062a48602cf34",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S13 Tài Long - 14/11 đến 28/11 | VLCM Origin"
+        },
+        {
+          "key": "805335f352b90805f07849f502fa4af0b811b5e2e7a490057eaf398c9b1e48de",
+          "role": "link",
+          "name": "Chuỗi Sự Kiện Tiểu Tuyết Tranh Hùng - S11 Đến S12 - 14/11 đến 28/11 | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "84d73c98-d083-4dc2-af57-bc478d6c2647",
+      "url_fingerprint": "ec7ff30b06b0e115dcf72ae633ae1809ac4f9625870546f5da4131091bbff454",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "d08fb9f17a8100848307f582f0e829031b5265be586c9615008ecfd330348ec7",
+          "role": "button",
+          "name": "Tin Tức"
+        },
+        {
+          "key": "9cfc734bda1b4762648993eb441f5c0c187f8e290128e4278252d3625536f3de",
+          "role": "button",
+          "name": "Sự Kiện"
+        },
+        {
+          "key": "fca9dca903ba2374ec4d792d58539986f8364291459addd844667a47a4f0c797",
+          "role": "button",
+          "name": "Cẩm Nang"
+        },
+        {
+          "key": "97f32edac9acb1209cd00ccb32d71a52f31bffc4401842bf0abb77c7d1839070",
+          "role": "link",
+          "name": "Cẩm nang tân thủ: Phó bản Vạn Thú Trận | VLCM Origin"
+        },
+        {
+          "key": "59072a98d60a0a8f3d99b6b861ff9a7c14a3777f1b740c7806e4db8155b4587e",
+          "role": "link",
+          "name": "Chiến Hồn - Thỉnh Hồn Cao Nhân, Cường Hóa Trang Bị | VLCM Origin"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 2
+    },
+    {
+      "state_id": "57c5b502-1fb0-4b93-952d-d27521d0b8f7",
+      "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+      "controls": [
+        {
+          "key": "166da7a41606a7bf4635dd78c72f3655003c533220d2282a031ce41eceb91999",
+          "role": "link",
+          "name": "TRANG CHỦ"
+        },
+        {
+          "key": "678715d4faff6c6fc272ebe433f3b9ea0fc622237de89fc33ac65f555bbf21f5",
+          "role": "link",
+          "name": "SỰ KIỆN"
+        },
+        {
+          "key": "207d71f4d26f8edf4f194e1f1f5e27008a7643dbe5898cd8484a6711f0856b20",
+          "role": "link",
+          "name": "CẨM NANG"
+        },
+        {
+          "key": "62f1904c5c2b293c0b748406cd1cd174f59ee1c97dbb947dca555274f3f9f2b0",
+          "role": "link",
+          "name": "ĐIỀU KHOẢN"
+        },
+        {
+          "key": "0f4f472f29e28382240b943e1dc0d19499ead1c674b85bb21cf6791e4b35b9d0",
+          "role": "link",
+          "name": "CỘNG ĐỒNG"
+        },
+        {
+          "key": "1ce748ec29e72a5c01f4e26a4b3b4ddf224013b01c8503477f71d40e89867754",
+          "role": "link",
+          "name": "HỖ TRỢ"
+        },
+        {
+          "key": "faf741e970d91253bf4737342322548f65ccdfcdd9d2716205ad3235dd0a9ab0",
+          "role": "link",
+          "name": "TRÊN WINDOW"
+        }
+      ],
+      "truncated": false,
+      "scrollable": true,
+      "skipped_count": 9
+    }
+  ]
+}

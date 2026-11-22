@@ -58,7 +58,10 @@ class BridgeService:
                 result = BridgeProcessResult(failure_code=stop)
             else:
                 dom, schema = self.spool.verify_inputs(request)
-                prompt = with_response_schema(self.prompt(request, dom), schema)
+                prompt = self.prompt(request, dom)
+                if request.agent_context is None:
+                    # The agent builder embeds its own schema at block 2 (cache order).
+                    prompt = with_response_schema(prompt, schema)
                 self.spool.claim(request)
                 self.spool.record_stage(request, "claimed")
                 self.spool.record_stage(request, "running")

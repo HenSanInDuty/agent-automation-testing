@@ -6,7 +6,7 @@ import json
 import signal
 from pathlib import Path
 
-from agents.prompts.codex_exploration import build_prompt
+from agents.prompts import agent_loop, codex_exploration
 from application.codex_bridge import BridgeService
 from application.codex_generation_bridge import GenerationBridgeService
 from config import Settings
@@ -17,6 +17,19 @@ from infrastructure.codex_bridge.generation_spool import GenerationSpool
 from infrastructure.codex_bridge.process import CodexProcess
 from infrastructure.codex_bridge.spool import FileSpool
 from infrastructure.observability.logging import configure_logging
+
+PROMPT_BUILDERS = {
+    codex_exploration.PROMPT_VERSION: codex_exploration.build_prompt,
+    agent_loop.PROMPT_VERSION: agent_loop.build_prompt,
+}
+
+
+def build_prompt(request, dom: bytes) -> bytes:
+    try:
+        builder = PROMPT_BUILDERS[request.prompt_version]
+    except KeyError:
+        raise ValueError("unsupported bridge prompt version") from None
+    return builder(request, dom)
 
 
 async def run(settings, readiness):

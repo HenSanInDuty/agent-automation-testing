@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "33be44c3-5b33-4876-881b-832e8c77242d",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "navigation_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "after_checksum": "2cd3bdb05271a272e84334893e094d284af8d481642b805ff16164e0309d3a18",
+  "finding": "Header SU KIEN link (box 488,11 145x37 equals oracle mct-02) opened the Su Kien page: SU KIEN title and highlighted nav item; matches declared mongchiton.vn/su-kien (HEAD 200)."
+}

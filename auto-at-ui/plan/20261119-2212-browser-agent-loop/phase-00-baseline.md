@@ -1,8 +1,7 @@
 ---
 phase: 0
 title: "Ổn định nền"
-status: in_progress
-cook_step: B1
+status: completed
 priority: P1
 owner: be-developer-junior
 qa: skip

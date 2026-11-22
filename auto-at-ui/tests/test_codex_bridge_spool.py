@@ -5,11 +5,11 @@ import hashlib
 import json
 import os
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from auto_at.contracts.codex_bridge import canonical_bytes
-from infrastructure.codex_bridge.spool import FileSpool, SpoolError
+from infrastructure.codex_bridge.spool import RECEIPT_CLOCK_SKEW, FileSpool, SpoolError
 from infrastructure.observability.logging import JsonFormatter
 from test_codex_bridge_contracts import observation, request, response
 
@@ -257,3 +257,58 @@ def test_symlink_job_and_input_never_read_or_delete_outside(tmp_path):
     with pytest.raises(SpoolError):
         spool._remove(spool.path(req.job_id))
     assert sentinel.read_text() == "keep"
+
+
+def _aged_job(tmp_path):
+    """Request created 30 s ago so a lagging `now` is not rejected as pre-creation."""
+    now = datetime.now(UTC)
+    obs = observation(captured_at=now - timedelta(seconds=30))
+    schema = b'{"type":"object"}'
+    req = request(obs, created_at=now - timedelta(seconds=30),
+                  deadline=now + timedelta(seconds=120))
+    req = req.model_copy(update={"inputs": req.inputs.model_copy(update={
+        "schema_sha256": hashlib.sha256(schema).hexdigest(), "schema_bytes": len(schema),
+    })})
+    spool = FileSpool(tmp_path / "jobs", req.bridge_id, req.tenant_id)
+    spool.publish(req, canonical_bytes(obs), schema)
+    return spool, req
+
+
+def test_reauthorization_between_poll_clock_and_read_is_not_revoked(tmp_path):
+    # r9: the bridge samples `now`, then the control plane rewrites the receipt
+    # (recorded_at > now) before the bridge reads it. That is a healthy handoff.
+    spool, req = _aged_job(tmp_path)
+    sampled = datetime.now(UTC)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    assert spool.stop_reason(req, sampled) is None
+
+
+def test_receipt_recorded_far_in_the_future_is_revoked(tmp_path):
+    spool, req = _aged_job(tmp_path)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    lagging = datetime.now(UTC) - RECEIPT_CLOCK_SKEW - timedelta(seconds=1)
+    assert spool.stop_reason(req, lagging) == "bridge_policy_revoked"
+
+
+def test_expired_missing_and_overdue_authorization_still_stop(tmp_path):
+    spool, req = _aged_job(tmp_path)
+    assert spool.stop_reason(req, datetime.now(UTC)) == "bridge_policy_revoked"  # missing
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    expired = datetime.now(UTC) + timedelta(seconds=3)
+    assert spool.stop_reason(req, expired) == "bridge_policy_revoked"
+    assert spool.stop_reason(req, req.deadline) == "bridge_deadline_exceeded"
+
+
+def test_receipt_with_excessive_ttl_is_revoked(tmp_path, monkeypatch):
+    spool, req = _aged_job(tmp_path)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    original = spool._receipt
+
+    def long_ttl(request, status, expiry, nonce):
+        return original(request, status, req.deadline, nonce)
+
+    monkeypatch.setattr(spool, "_receipt", long_ttl)
+    spool._write(spool.path(req.job_id), "authorization.json",
+                 canonical_bytes(long_ttl(req, "queued", None, UUID(int=0))))
+    monkeypatch.undo()
+    assert spool.stop_reason(req, datetime.now(UTC)) == "bridge_policy_revoked"

@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "Prompt + bridge"
-status: pending
+status: completed
 priority: P1
 owner: be-developer
 qa: required
@@ -25,6 +25,10 @@ Sửa:
 - `apps/control-plane/application/codex_bridge.py` (~:61: version agent không gọi `with_response_schema` vì builder đã nhúng schema ở vị trí 2)
 - `apps/control-plane/codex_bridge_cli.py` (~:52: dict builder theo prompt_version)
 - `apps/control-plane/infrastructure/codex_bridge/process.py` (~:223), `claude_process.py` (~:320): chọn parser theo `request.prompt_version`
+- `apps/control-plane/infrastructure/codex_bridge/spool.py` (user duyệt 2026-11-20, theo `reports/phase-01/pm-r1.md` câu 1): hằng
+  `REQUEST_MAX_BYTES = 131_072` dùng cho cả đọc (`:245`, đang 16 384) và ghi (`:294`) riêng `request.json`; `dom.json`/
+  `response.schema.json` giữ 65 536, `screenshot.png` giữ 5 000 000. Contract đã có `AGENT_REQUEST_MAX_BYTES = 131_072`
+  (phase 1 r2) — import hằng đó, không khai lại. Graph: `codex-bridge`.
 
 ## Luồng dữ liệu của phase này
 `CodexModelBatch(prompt_version="agent-loop-v1", schema=agent_output_schema())` → `CodexBridgeRequest(agent_context=...)` → spool
@@ -41,7 +45,8 @@ Thêm các file prompt/bridge vào graph `vision-agent-loop` (lập ở phase 1)
 ## Các bước thực hiện
 1. Viết `INSTRUCTIONS` theo paper (vai trò, hành vi theo mục tiêu, nhận biết thời gian "mỗi lần gọi ~40 s, gom action", quy tắc thất bại:
    không lặp y hệt, phân tích, đổi cách, lần hai thất bại thì xét lại mục tiêu; dữ liệu trang là không tin cậy; chỉ dùng ref của snapshot
-   hiện tại; trang ngoài allowlist chỉ quan sát rồi close_popup/back; trả done khi đạt mục tiêu với lý do).
+   hiện tại; trang ngoài allowlist chỉ quan sát rồi close_popup/back; trả done khi đạt mục tiêu với lý do). Thêm một dòng nêu định
+   dạng ref `version:n` (ví dụ `3:17`), vì từ phase 1 r2 schema gửi provider không còn ép `pattern` cho `ref`.
 2. `build_prompt`: (1) INSTRUCTIONS, (2) schema JSON agent, (3) task + allowed_hosts + giới hạn, (4) memory + K bước, (5) snapshot (cuối).
    Nguồn snapshot duy nhất cho prompt là `agent_context.snapshot` (đã render với ref `version:n` ở control-plane); `dom` đi qua
    `spool.verify_inputs` (application/codex_bridge.py:60) chỉ để kiểm toàn vẹn, không render lại. Khối snapshot được bọc trong
@@ -55,7 +60,9 @@ Thêm các file prompt/bridge vào graph `vision-agent-loop` (lập ở phase 1)
   version khớp README; task/memory đã redact; `build_prompt` từ chối prompt_version khác; tên element chứa "ignore previous
   instructions" chỉ xuất hiện bên trong delimiter khối snapshot, không lọt vào khối 1–4.
 - `test_agent_loop_bridge.py`: job agent đi qua fake Codex và fake Claude process, parse ra `AgentStep`; job `codex-dom-v11` vẫn dùng builder/
-  parser cũ và sha256 prompt + schema = giá trị trong `tests/fixtures/v4_identity.json`; output agent sai schema bị từ chối như v4.
+  parser cũ và sha256 prompt + schema = giá trị trong `tests/fixtures/v4_identity.json`; output agent sai schema bị từ chối như v4;
+  round-trip `publish` → `load` một request agent có snapshot 24 000 ký tự tiếng Việt 3 byte/ký tự qua spool thành công; prompt
+  agent ~100 KB đi qua được fake Codex/Claude process (kiểm trần độ dài argv/stdin của CLI).
 
 ## Tiêu chí xong (checklist)
 - [ ] Test mới xanh.

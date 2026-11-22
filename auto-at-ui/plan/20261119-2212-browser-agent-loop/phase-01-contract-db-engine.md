@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: "Contract + DB + chọn engine"
-status: pending
+status: completed
 priority: P1
 owner: be-developer
 qa: required
@@ -102,3 +102,8 @@ application/vision, vision_reload, models, vision_unit_of_work, migration) — h
 - Đổi union output làm đổi schema v4 → test sha256 đỏ.
 - `enforceable_schema` hợp nhất `properties` sai (round 21 attempt 2) → test jsonschema mẫu hợp lệ bị từ chối.
 - Regenerate TS đổi field v4 ngoài ý muốn → diff với bản sao ở `reports/phase-00/` có dòng ngoài `agent_mode`/`blocked_action_terms`.
+
+## Vòng sửa r2 (user duyệt 2026-11-20)
+Theo `reports/phase-01/pm-r1.md`: `AgentRef` nới thành `str` max 24 ký tự (bỏ `pattern`), xuất `AGENT_REF_PATTERN` cho phase 4;
+`CodexBridgeRequest.valid_job` từ chối request có `agent_context` vượt `AGENT_REQUEST_MAX_BYTES = 131_072`. Chỉ đụng
+`contracts/codex_bridge.py` + `tests/test_agent_loop_contracts.py`. Báo cáo: `reports/phase-01/be-developer-junior-r2.md`.

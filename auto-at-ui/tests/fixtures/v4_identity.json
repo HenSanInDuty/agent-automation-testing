@@ -1,0 +1,20 @@
+{
+  "_comment": "Hash đối chứng v4 (phase 0 của plan browser-agent-loop). Tạo bởi plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py, chạy từ gốc repo: uv run python -I plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py. Chạy 2 lần cho cùng kết quả. Baseline đo trên HEAD f85091a.",
+  "prompt_version": "codex-dom-v11",
+  "codex_output_schema": {
+    "sha256": "572143fe7414be16b23706eeb7b666cd1c2dc73108dc46a36763d27a26f93ef9",
+    "bytes": 3797,
+    "source": "TypeAdapter(CodexOutput).json_schema() từ packages/contracts/src/auto_at/contracts/codex_bridge.py (CodexOutput)",
+    "canonical": "json.dumps(schema, sort_keys=True, separators=(',',':')).encode() (ensure_ascii mặc định)"
+  },
+  "codex_dom_v11_prompt_plus_schema": {
+    "sha256": "cc45b11674650ed8232f4cdbb643524de8ec08a760738aeacd36ff6519f29259",
+    "bytes": 9269,
+    "prompt_sha256": "b1ef50be24b5f4f95063a512e900e93d7fc7cfd1a59e71b4de6e2ac3b93259a7",
+    "bridge_schema_sha256": "6ef40dd1f7c5e26c8bc04b03859a02a893969eea19845cf33cf5ef55f7a60368",
+    "stage": "dom",
+    "candidate_limit": 3,
+    "source": "Request mẫu dựng trong v4_identity.py (sample_request/sample_observation) với UUID và thời điểm cố định; dựa trên helper observation()/request() trong tests/test_codex_bridge_contracts.py và task_context()/prompt test trong tests/test_codex_candidate_service.py. Task intent: 'Check buttons on the fixture page'.",
+    "computation": "sha256(with_response_schema(build_prompt(req, canonical_bytes(obs)), output_schema(3)))"
+  }
+}

@@ -37,6 +37,8 @@ files:
     role: model
   - path: apps/dashboard/app/components/vision-progress-timeline.tsx
     role: ui
+  - path: apps/dashboard/app/components/vision-provider-model.test.ts
+    role: test
   - path: apps/dashboard/app/components/vision-provider-model.ts
     role: model
   - path: apps/dashboard/app/components/vision-provider-settings.tsx
@@ -59,7 +61,9 @@ files:
     role: other
   - path: apps/dashboard/app/vision-dashboard.tsx
     role: other
-updated: 2026-11-19
+  - path: workers/playwright/src/vision-dashboard.spec.ts
+    role: test
+updated: 2026-11-20
 generated_by: hgraph 1.0.0
 ---
 
@@ -94,7 +98,7 @@ Actor là người dùng tenant (xem session, tạo exploration) và `tenant_adm
 
 ## Quan hệ file — hgraph tự sinh, ĐỪNG sửa tay
 
-Cập nhật: 2026-11-19 · `hgraph sync vision-dashboard --apply` để tạo lại.
+Cập nhật: 2026-11-20 · `hgraph sync vision-dashboard --apply` để tạo lại.
 
 | File | Vai trò | Import (trong graph) | Bị import bởi (trong graph) |
 |---|---|---|---|
@@ -107,12 +111,13 @@ Cập nhật: 2026-11-19 · `hgraph sync vision-dashboard --apply` để tạo l
 | `apps/dashboard/app/components/status-model.ts` | model | — | `apps/dashboard/app/components/status-badge.tsx` |
 | `apps/dashboard/app/components/vision-live-screen.tsx` | ui | `apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/vision-provider-model.ts`<br>`apps/dashboard/app/components/vision-operation-model.ts`<br>`apps/dashboard/app/components/vision-progress-timeline-model.ts` | `apps/dashboard/app/components/vision-session-detail.tsx` |
 | `apps/dashboard/app/components/vision-locator-catalog.tsx` | ui | `apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-session-detail.tsx` |
-| `apps/dashboard/app/components/vision-operation-ledger.tsx` | ui | `apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/vision-operation-model.ts` | `apps/dashboard/app/components/vision-session-detail.tsx` |
+| `apps/dashboard/app/components/vision-operation-ledger.tsx` | ui | `apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/vision-operation-model.ts`<br>`apps/dashboard/app/components/vision-provider-model.ts` | `apps/dashboard/app/components/vision-session-detail.tsx` |
 | `apps/dashboard/app/components/vision-operation-model.ts` | model | `apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-live-screen.tsx`<br>`apps/dashboard/app/components/vision-operation-ledger.tsx`<br>`apps/dashboard/app/components/vision-result-summary.tsx`<br>`apps/dashboard/app/components/vision-session-detail.tsx` |
 | `apps/dashboard/app/components/vision-page-inventory.tsx` | ui | `apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-session-detail.tsx` |
 | `apps/dashboard/app/components/vision-progress-timeline-model.ts` | model | `apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-live-screen.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline.tsx` |
 | `apps/dashboard/app/components/vision-progress-timeline.tsx` | ui | `apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/status-badge.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline-model.ts`<br>`apps/dashboard/app/components/vision-provider-model.ts` | `apps/dashboard/app/components/vision-session-detail.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx` |
-| `apps/dashboard/app/components/vision-provider-model.ts` | model | `apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-live-screen.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline.tsx`<br>`apps/dashboard/app/components/vision-provider-settings.tsx`<br>`apps/dashboard/app/components/vision-result-summary.tsx`<br>`apps/dashboard/app/components/vision-session-detail.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx` |
+| `apps/dashboard/app/components/vision-provider-model.test.ts` | test | `apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/vision-provider-model.ts` | — |
+| `apps/dashboard/app/components/vision-provider-model.ts` | model | `apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-live-screen.tsx`<br>`apps/dashboard/app/components/vision-operation-ledger.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline.tsx`<br>`apps/dashboard/app/components/vision-provider-model.test.ts`<br>`apps/dashboard/app/components/vision-provider-settings.tsx`<br>`apps/dashboard/app/components/vision-result-summary.tsx`<br>`apps/dashboard/app/components/vision-session-detail.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx` |
 | `apps/dashboard/app/components/vision-provider-settings.tsx` | ui | `apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/vision-provider-model.ts` | `apps/dashboard/app/vision-dashboard.tsx` |
 | `apps/dashboard/app/components/vision-replay-model.ts` | model | `apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-trajectory.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx` |
 | `apps/dashboard/app/components/vision-result-summary.tsx` | ui | `apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/components/vision-operation-model.ts`<br>`apps/dashboard/app/components/vision-provider-model.ts` | `apps/dashboard/app/components/vision-session-detail.tsx` |
@@ -120,13 +125,14 @@ Cập nhật: 2026-11-19 · `hgraph sync vision-dashboard --apply` để tạo l
 | `apps/dashboard/app/components/vision-trajectory.tsx` | ui | `apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/vision-replay-model.ts` | `apps/dashboard/app/vision-dashboard.tsx` |
 | `apps/dashboard/app/generation-api.ts` | other | `apps/dashboard/app/api-client.ts`<br>`apps/dashboard/app/generation-types.ts` | `apps/dashboard/app/components/vision-live-screen.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline.tsx`<br>`apps/dashboard/app/components/vision-result-summary.tsx`<br>`apps/dashboard/app/components/vision-session-detail.tsx`<br>`apps/dashboard/app/components/vision-trajectory.tsx`<br>`apps/dashboard/app/generation-dashboard.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx` |
 | `apps/dashboard/app/generation-dashboard.tsx` | other | `apps/dashboard/app/components/confirm-dialog.tsx`<br>`apps/dashboard/app/components/states.tsx`<br>`apps/dashboard/app/components/status-badge.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx`<br>`apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/run-api.ts` | — |
-| `apps/dashboard/app/generation-types.ts` | other | — | `apps/dashboard/app/components/vision-live-screen.tsx`<br>`apps/dashboard/app/components/vision-locator-catalog.tsx`<br>`apps/dashboard/app/components/vision-operation-ledger.tsx`<br>`apps/dashboard/app/components/vision-operation-model.ts`<br>`apps/dashboard/app/components/vision-page-inventory.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline-model.ts`<br>`apps/dashboard/app/components/vision-progress-timeline.tsx`<br>`apps/dashboard/app/components/vision-provider-model.ts`<br>`apps/dashboard/app/components/vision-provider-settings.tsx`<br>`apps/dashboard/app/components/vision-replay-model.ts`<br>`apps/dashboard/app/components/vision-result-summary.tsx`<br>`apps/dashboard/app/components/vision-session-detail.tsx`<br>`apps/dashboard/app/components/vision-trajectory.tsx`<br>`apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/generation-dashboard.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx` |
+| `apps/dashboard/app/generation-types.ts` | other | — | `apps/dashboard/app/components/vision-live-screen.tsx`<br>`apps/dashboard/app/components/vision-locator-catalog.tsx`<br>`apps/dashboard/app/components/vision-operation-ledger.tsx`<br>`apps/dashboard/app/components/vision-operation-model.ts`<br>`apps/dashboard/app/components/vision-page-inventory.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline-model.ts`<br>`apps/dashboard/app/components/vision-progress-timeline.tsx`<br>`apps/dashboard/app/components/vision-provider-model.test.ts`<br>`apps/dashboard/app/components/vision-provider-model.ts`<br>`apps/dashboard/app/components/vision-provider-settings.tsx`<br>`apps/dashboard/app/components/vision-replay-model.ts`<br>`apps/dashboard/app/components/vision-result-summary.tsx`<br>`apps/dashboard/app/components/vision-session-detail.tsx`<br>`apps/dashboard/app/components/vision-trajectory.tsx`<br>`apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/generation-dashboard.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx`<br>`workers/playwright/src/vision-dashboard.spec.ts` |
 | `apps/dashboard/app/run-api.ts` | other | `apps/dashboard/app/api-client.ts` | `apps/dashboard/app/generation-dashboard.tsx`<br>`apps/dashboard/app/vision-dashboard.tsx` |
 | `apps/dashboard/app/vision-dashboard.tsx` | other | `apps/dashboard/app/components/vision-session-detail.tsx`<br>`apps/dashboard/app/components/vision-provider-settings.tsx`<br>`apps/dashboard/app/components/vision-provider-model.ts`<br>`apps/dashboard/app/generation-api.ts`<br>`apps/dashboard/app/generation-types.ts`<br>`apps/dashboard/app/components/confirm-dialog.tsx`<br>`apps/dashboard/app/components/states.tsx`<br>`apps/dashboard/app/components/status-badge.tsx`<br>`apps/dashboard/app/components/vision-progress-timeline.tsx`<br>`apps/dashboard/app/components/vision-trajectory.tsx`<br>`apps/dashboard/app/components/vision-replay-model.ts`<br>`apps/dashboard/app/run-api.ts` | `apps/dashboard/app/generation-dashboard.tsx` |
+| `workers/playwright/src/vision-dashboard.spec.ts` | test | `apps/dashboard/app/generation-types.ts` | — |
 
 ### Ranh giới (blast radius ra ngoài graph)
 
-- **File ngoài graph đang gọi vào** (24): `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/agent/page.tsx`, `apps/dashboard/app/components/activity-timeline-model.ts`, `apps/dashboard/app/components/activity-timeline.tsx`, `apps/dashboard/app/components/app-shell.test.ts`, `apps/dashboard/app/components/fixtures/vision-trajectory.ts`, `apps/dashboard/app/components/generation-provider-settings.tsx`, `apps/dashboard/app/components/vision-click-model.test.ts`, `apps/dashboard/app/components/vision-click-model.ts`, `apps/dashboard/app/components/vision-click-overlay.tsx`, `apps/dashboard/app/components/vision-conclusion.tsx`, `apps/dashboard/app/components/vision-operation-model.test.ts`, `apps/dashboard/app/components/vision-progress-timeline-model.test.ts`, `apps/dashboard/app/components/vision-provider-model.test.ts`, `apps/dashboard/app/components/vision-replay-model.test.ts`, `apps/dashboard/app/generation-api.test.ts`, `apps/dashboard/app/generation-polling.ts`, `apps/dashboard/app/page.tsx`, `apps/dashboard/app/projects/page.tsx`, `apps/dashboard/app/reviews/reviews-dashboard.tsx`, `apps/dashboard/app/run-api.test.ts`, `apps/dashboard/app/runs/[id]/page.tsx`, `apps/dashboard/app/runs/page.tsx`, `workers/playwright/src/vision-dashboard.spec.ts`
+- **File ngoài graph đang gọi vào** (22): `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/agent/page.tsx`, `apps/dashboard/app/components/activity-timeline-model.ts`, `apps/dashboard/app/components/activity-timeline.tsx`, `apps/dashboard/app/components/app-shell.test.ts`, `apps/dashboard/app/components/fixtures/vision-trajectory.ts`, `apps/dashboard/app/components/generation-provider-settings.tsx`, `apps/dashboard/app/components/vision-click-model.test.ts`, `apps/dashboard/app/components/vision-click-model.ts`, `apps/dashboard/app/components/vision-click-overlay.tsx`, `apps/dashboard/app/components/vision-conclusion.tsx`, `apps/dashboard/app/components/vision-operation-model.test.ts`, `apps/dashboard/app/components/vision-progress-timeline-model.test.ts`, `apps/dashboard/app/components/vision-replay-model.test.ts`, `apps/dashboard/app/generation-api.test.ts`, `apps/dashboard/app/generation-polling.ts`, `apps/dashboard/app/page.tsx`, `apps/dashboard/app/projects/page.tsx`, `apps/dashboard/app/reviews/reviews-dashboard.tsx`, `apps/dashboard/app/run-api.test.ts`, `apps/dashboard/app/runs/[id]/page.tsx`, `apps/dashboard/app/runs/page.tsx`
 - **File ngoài graph bị graph này gọi** (9): `apps/dashboard/app/components/activity-timeline.tsx`, `apps/dashboard/app/components/agent-workspace-model.ts`, `apps/dashboard/app/components/code-block.tsx`, `apps/dashboard/app/components/generation-provider-settings.tsx`, `apps/dashboard/app/components/page-header.tsx`, `apps/dashboard/app/components/vision-click-model.ts`, `apps/dashboard/app/components/vision-click-overlay.tsx`, `apps/dashboard/app/components/vision-conclusion.tsx`, `apps/dashboard/app/generation-polling.ts`
 
 ```mermaid
@@ -147,15 +153,17 @@ graph LR
   n13["vision-operation-ledger.tsx<br/><small>apps/dashboard/app/components</small>"]
   n14["vision-page-inventory.tsx<br/><small>apps/dashboard/app/components</small>"]
   n15["vision-progress-timeline.tsx<br/><small>apps/dashboard/app/components</small>"]
-  n16["vision-provider-settings.tsx<br/><small>apps/dashboard/app/components</small>"]
-  n17["vision-replay-model.ts<br/><small>apps/dashboard/app/components</small>"]
-  n18["vision-result-summary.tsx<br/><small>apps/dashboard/app/components</small>"]
-  n19["vision-session-detail.tsx<br/><small>apps/dashboard/app/components</small>"]
-  n20["vision-trajectory.tsx<br/><small>apps/dashboard/app/components</small>"]
-  n21["api-client.ts<br/><small>apps/dashboard/app</small>"]
-  n22["generation-dashboard.tsx<br/><small>apps/dashboard/app</small>"]
-  n23["vision-dashboard.tsx<br/><small>apps/dashboard/app</small>"]
-  n24["run-api.ts<br/><small>apps/dashboard/app</small>"]
+  n16["vision-provider-model.test.ts<br/><small>apps/dashboard/app/components</small>"]
+  n17["vision-provider-settings.tsx<br/><small>apps/dashboard/app/components</small>"]
+  n18["vision-replay-model.ts<br/><small>apps/dashboard/app/components</small>"]
+  n19["vision-result-summary.tsx<br/><small>apps/dashboard/app/components</small>"]
+  n20["vision-session-detail.tsx<br/><small>apps/dashboard/app/components</small>"]
+  n21["vision-trajectory.tsx<br/><small>apps/dashboard/app/components</small>"]
+  n22["api-client.ts<br/><small>apps/dashboard/app</small>"]
+  n23["generation-dashboard.tsx<br/><small>apps/dashboard/app</small>"]
+  n24["vision-dashboard.tsx<br/><small>apps/dashboard/app</small>"]
+  n25["run-api.ts<br/><small>apps/dashboard/app</small>"]
+  n26["vision-dashboard.spec.ts<br/><small>workers/playwright/src</small>"]
   n0 --> n1
   n2 --> n3
   n4 --> n5
@@ -167,6 +175,7 @@ graph LR
   n12 --> n8
   n13 --> n8
   n13 --> n10
+  n13 --> n9
   n10 --> n8
   n14 --> n8
   n11 --> n8
@@ -175,50 +184,53 @@ graph LR
   n15 --> n4
   n15 --> n11
   n15 --> n9
-  n9 --> n8
   n16 --> n8
   n16 --> n9
+  n9 --> n8
   n17 --> n8
+  n17 --> n9
   n18 --> n8
-  n18 --> n7
-  n18 --> n10
-  n18 --> n9
-  n19 --> n7
   n19 --> n8
-  n19 --> n0
-  n19 --> n12
+  n19 --> n7
   n19 --> n10
-  n19 --> n13
-  n19 --> n18
   n19 --> n9
-  n19 --> n6
-  n19 --> n15
-  n19 --> n14
   n20 --> n7
   n20 --> n8
-  n20 --> n17
-  n7 --> n21
+  n20 --> n0
+  n20 --> n12
+  n20 --> n10
+  n20 --> n13
+  n20 --> n19
+  n20 --> n9
+  n20 --> n6
+  n20 --> n15
+  n20 --> n14
+  n21 --> n7
+  n21 --> n8
+  n21 --> n18
+  n7 --> n22
   n7 --> n8
-  n22 --> n0
-  n22 --> n2
-  n22 --> n4
-  n22 --> n23
-  n22 --> n7
-  n22 --> n8
-  n22 --> n24
-  n24 --> n21
-  n23 --> n19
-  n23 --> n16
-  n23 --> n9
-  n23 --> n7
-  n23 --> n8
   n23 --> n0
   n23 --> n2
   n23 --> n4
-  n23 --> n15
-  n23 --> n20
-  n23 --> n17
   n23 --> n24
+  n23 --> n7
+  n23 --> n8
+  n23 --> n25
+  n25 --> n22
+  n24 --> n20
+  n24 --> n17
+  n24 --> n9
+  n24 --> n7
+  n24 --> n8
+  n24 --> n0
+  n24 --> n2
+  n24 --> n4
+  n24 --> n15
+  n24 --> n21
+  n24 --> n18
+  n24 --> n25
+  n26 --> n8
 ```
 
 <!-- hgraph:end auto -->

@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Dashboard"
-status: pending
+status: completed
 priority: P2
 owner: fe-developer-junior
 qa: required

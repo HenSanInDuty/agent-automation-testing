@@ -47,6 +47,8 @@ for (const condition of ["completed", "partial", "cancelled", "in_progress", "le
   });
 }
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1kAAAAASUVORK5CYII=", "base64");
+const agentStep = { step_index: 1, evaluation_previous_goal: "Đã mở trang sản phẩm", memory: "Đã thử nút chi tiết; " + "SyntheticLongToken".repeat(40), next_goal: "Mở chi tiết sản phẩm",
+  skipped_actions: [{ index: 2, kind: "click", ref: "1:9", skipped_reason: "stale_ref" }] };
 
 let clickBefore: Buffer, clickAfter: Buffer;
 test.beforeAll(async ({ browser }) => {
@@ -60,11 +62,11 @@ test.beforeAll(async ({ browser }) => {
 
 async function fixture(page: Page, legacy = false) {
   page.on("pageerror", (error) => { console.log("Fixture dashboard error:", error.message); });
-  const state = { highlight: false, progressStage: null as string | null, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
+  const state = { highlight: false, agentStep: false, progressStage: null as string | null, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
     codexReadiness: { configured: true, online: true, authenticated: true, capabilities_qualified: true, model_access: "unverified", failure_code: null, busy: false } as NonNullable<VisionProvider["bridge_readiness"]>,
     progressEvents: null as VisionProgressActivity[] | null,
     policy: { enabled: false, provider: "huggingface", model: "custom/hf-model", raw_screenshot_transfer_accepted: true, raw_screenshot_transfer_provider: "huggingface", max_steps: 3, max_screenshot_bytes: 1000, max_session_seconds: 120, max_cost_usd: 0, max_requests_per_minute: 5 } as VisionPolicy };
-  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60 });
+  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60, ...(id === sessionB && state.agentStep ? { engine: "agent_loop" } : {}) });
   const frame = (id: string) => ({ id, availability: "retained", reason_code: null });
   const operation = (number: number, id: string) => ({ id: `${id}-op${number}`, sequence: number, purpose: number === 1 ? "setup" : number === 3 ? "restore" : "explore", action_kind: number === 1 ? "navigate" : number === 3 ? "back" : "click", status: "completed", started_at: "2026-09-08T12:00:00Z", outcome_code: "observed", state_id: "root", locator_id: `${id}-locator${number}`, executed_click: state.highlight && number !== 1 && number !== 3 ? { x: 320 / 1279, y: 240 / 719, viewport_width: 1280, viewport_height: 720, before_frame_id: id + "-before" + number, confirmed_at: "2026-09-08T12:00:01Z" } : null, before: frame(`${id}-before${number}`), after: state.missingCapture ? { id: null, availability: "missing", reason_code: "capture_failed" } : frame(`${id}-after${number}`) });
   const locators = (id: string) => [2, 4].map((n) => ({ id: `${id}-locator${n}`, operation_id: `${id}-op${n}`, status: "verified", reason_code: null, verified_at: "2026-09-08T12:00:00Z", descriptor: { strategy: "role", role: "button", value: n === 2 ? "Branch A" : "Branch B", scope: [] }, bounding_box: state.highlight ? { x: 280 / 1280, y: 220 / 720, width: 180 / 1280, height: 48 / 720 } : { x: .2, y: .2, width: .2, height: .1 } }));
@@ -110,7 +112,7 @@ async function fixture(page: Page, legacy = false) {
     if (path.endsWith("/trace")) {
       state.calls++;
       if (state.delay && id === sessionA) { state.delay = false; await new Promise<void>((resolve) => { state.release = resolve; }); }
-      return json({ session_id: id, schema_version: "v1", revision: String(state.extra), trace_version: legacy ? "legacy" : "v4", items: Array.from({ length: 4 + state.extra }, (_, n) => operation(n + 1, id)), locators: locators(id), next_sequence: 4 + state.extra, has_more: false });
+      return json({ session_id: id, schema_version: "v1", revision: String(state.extra), trace_version: legacy ? "legacy" : "v4", items: Array.from({ length: 4 + state.extra }, (_, n) => ({ ...operation(n + 1, id), ...(state.agentStep && id === sessionB && n === 1 ? { agent_step: agentStep } : {}) })), locators: locators(id), next_sequence: 4 + state.extra, has_more: false });
     }
     if (path.endsWith("/result")) return json({ exploration_report: state.report ?? undefined, schema_version: "v1", session_id: id, project_id: project, revision: String(state.extra), exploration_state: state.exploration, completion_reason: state.completionReason, evidence_status: legacy ? "legacy_evidence_only" : "available", counts: { operations: 4 + state.extra, verified_locators: 2 }, branches: [], handoffs: [{ id: "handoff", branches: [2, 4].map((n, i) => ({ id: `branch${i}`, status: "ready", reason_code: null, steps: [{ operation_id: `${id}-op1` }, { operation_id: `${id}-op${n}` }] })) }], links: { handoff: { state: "ready" }, generation: { state: "failed" }, draft: { state: "not_started" }, run: { state: "failed", id: "run-fixture", href: "/runs/run-fixture" }, report: { state: "unavailable" } }, limitations: ["Business outcome unverified."] });
     if (path.endsWith("/locators") && state.evidenceFails) return route.fulfill({ status: 503, headers });
@@ -425,6 +427,58 @@ test("legacy seven-frame gallery can select the sixth sibling", async ({ page })
   await expect(trajectory.getByRole("heading", { name: /After/ })).toContainText("7");
   await trajectory.getByRole("button", { name: "View this frame", exact: true }).click();
   await expect(trajectory.getByText("Current gallery selection: state 7.")).toBeVisible();
+});
+
+test("Agent loop engine is offered only when enabled and is sent only when chosen", async ({ page }) => {
+  const state = await fixture(page);
+  state.policy.enabled = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await prepareExploration(page);
+  await expect(page.locator("#vision-engine")).toHaveCount(0);
+  state.policy.agent_loop_enabled = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const form = await prepareExploration(page);
+  await expect(page.locator("#vision-engine")).toHaveValue("planner");
+  await form.getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await expect.poll(() => state.submissions.length).toBe(1);
+  expect(state.submissions[0]).not.toHaveProperty("engine");
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const agentForm = await prepareExploration(page);
+  await page.locator("#vision-engine").selectOption("agent_loop");
+  await expect(agentForm).toContainText("Agent loop: the model proposes actions step by step");
+  await agentForm.getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await expect.poll(() => state.submissions.length).toBe(2);
+  expect(state.submissions[1]).toEqual({ project_id: project, target_url: "https://fixture.test/", task_intent: "Explore synthetic controls", use_vision: true, expected_provider: "huggingface", expected_model: "custom/hf-model", engine: "agent_loop" });
+});
+
+test("agent step shows reasoning and a blocked action for its operation; planner sessions show no agent block", async ({ page }) => {
+  const state = await fixture(page);
+  state.agentStep = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionB}`);
+  await page.getByRole("button", { name: "View operation 2 click", exact: true }).click();
+  const step = page.locator('[aria-label="Agent step"]');
+  await expect(step).toContainText("Đánh giá bước trước");
+  await expect(step).toContainText("Đã mở trang sản phẩm");
+  await expect(step).toContainText("Memory");
+  await expect(step).toContainText("Mục tiêu kế");
+  await expect(step).toContainText("Mở chi tiết sản phẩm");
+  await expect(step).toContainText("click: The page changed after the agent chose this element");
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await page.getByRole("button", { name: "View operation 2 click", exact: true }).click();
+  await expect(page.getByRole("button", { name: "View operation 2 click", exact: true })).toHaveAttribute("aria-current", "step");
+  await expect(page.locator('[aria-label="Agent step"]')).toHaveCount(0);
+});
+
+test("agent step text wraps at phone width without horizontal page overflow", async ({ page }) => {
+  const state = await fixture(page);
+  state.agentStep = true;
+  await page.setViewportSize({ width: 400, height: 800 });
+  await page.goto(`${dashboard}/agent?vision=${sessionB}`);
+  await page.getByRole("button", { name: "View operation 2 click", exact: true }).click();
+  await expect(page.locator('[aria-label="Agent step"]')).toContainText("SyntheticLongToken");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 async function openSettings(page: Page) {

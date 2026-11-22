@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "f2b1260d-a455-404e-82e5-7ad1b0f09c10",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "eafb63ec3a9e0976533cc963c74c6d9b7dca4c56bfe21296f7ecca538292ad3a",
+  "after_checksum": "d6ffe21f83b4407dcc8a39c874cdec7b054af0dc7e484af7db286e3267febb05",
+  "finding": "Header CONG DONG link (box equals oracle mct-05) rendered the Facebook group VLCM Origin (mongchiton.vn) behind a login dialog; matches declared facebook.com/groups/mongchiton.vn. No login performed."
+}

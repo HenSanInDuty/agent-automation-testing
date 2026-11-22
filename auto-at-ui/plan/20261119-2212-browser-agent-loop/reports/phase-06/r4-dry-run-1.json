@@ -1,0 +1,20 @@
+{
+ "outcome": "unavailable",
+ "state": "unavailable",
+ "reason": "initial_capture_failed",
+ "seconds": 10.41127,
+ "model_calls": 0,
+ "script": [],
+ "operations": [
+  {
+   "seq": 1,
+   "purpose": "setup",
+   "kind": "navigate",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "changed",
+   "parent": "None"
+  }
+ ],
+ "steps": []
+}

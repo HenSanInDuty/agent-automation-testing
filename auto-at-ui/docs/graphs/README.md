@@ -7,7 +7,9 @@ File này do `hgraph` tự sinh — đừng sửa tay.
 
 | Graph | Chức năng | Owner | Số file | Cập nhật |
 |---|---|---|---|---|
-| [`codex-bridge`](codex-bridge.md) | Bridge Codex/Claude local | be | 18 | 2026-11-19 |
-| [`playwright-vision-worker`](playwright-vision-worker.md) | Worker Playwright Vision | be | 25 | 2026-11-19 |
-| [`vision-dashboard`](vision-dashboard.md) | Dashboard Vision | fe | 25 | 2026-11-19 |
-| [`vision-exploration`](vision-exploration.md) | Khám phá Vision (control-plane) | be | 46 | 2026-11-19 |
+| [`codex-bridge`](codex-bridge.md) | Bridge Codex/Claude local | be | 26 | 2026-11-21 |
+| [`playwright-vision-worker`](playwright-vision-worker.md) | Worker Playwright Vision | be | 38 | 2026-11-21 |
+| [`vision-accuracy-harness`](vision-accuracy-harness.md) | Harness chấm điểm benchmark độ chính xác Vision (collect, ground, evaluate) | be | 7 | 2026-11-21 |
+| [`vision-agent-loop`](vision-agent-loop.md) | Vòng agent loop Vision | be | 27 | 2026-11-21 |
+| [`vision-dashboard`](vision-dashboard.md) | Dashboard Vision | fe | 27 | 2026-11-20 |
+| [`vision-exploration`](vision-exploration.md) | Khám phá Vision (control-plane) | be | 55 | 2026-11-21 |

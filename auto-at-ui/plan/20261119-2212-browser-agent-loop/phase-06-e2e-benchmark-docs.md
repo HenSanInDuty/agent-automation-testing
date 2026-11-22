@@ -1,7 +1,8 @@
 ---
 phase: 6
 title: "End-to-end + benchmark + docs"
-status: pending
+status: in_progress
+cook_step: B3
 priority: P1
 owner: be-developer
 qa: required
@@ -19,6 +20,7 @@ Tạo:
 - `docs/adr/038-vision-agent-loop-engine.md`
 - `benchmark/vision/accuracy/AGENT-LOOP-01-<date>.md` (báo cáo vòng)
 Sửa:
+- `apps/control-plane/application/vision_agent_loop.py` + unit test của nó (user duyệt 2026-11-20 sau live r1: sửa deadline mở worker)
 - `docs/vision-agent-operations.md` (mục agent loop: bật cờ, chọn engine, mã lỗi, giới hạn 20 lần gọi, allowlist observe-only)
 - `plan/09112026103202-vision-accuracy-loop/README.md` (handoff ngắn trỏ tới báo cáo vòng)
 Không sửa `benchmark/vision/accuracy/run.py`: session agent loop được tạo bằng helper chạy vòng local (`.pytest-artifacts/`, không track)

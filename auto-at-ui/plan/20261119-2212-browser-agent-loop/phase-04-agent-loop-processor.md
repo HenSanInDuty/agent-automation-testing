@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Agent loop processor + safety"
-status: pending
+status: completed
 priority: P1
 owner: be-developer
 qa: required
@@ -26,6 +26,9 @@ Sửa:
 - `apps/control-plane/application/vision_results.py` (trace payload: mỗi operation có thêm `agent_step` tuỳ chọn = {step_index,
   evaluation_previous_goal, memory, next_goal} của bước chứa nó, và danh sách action bị chặn/bỏ qua của bước; đọc qua
   `agent_steps(session_id)` của unit of work (phase 1); session planner không có field này)
+- (user duyệt sau leader-r1) `apps/control-plane/infrastructure/persistence/repositories.py` (thêm `agent_steps(scope)` vào
+  `SqlAlchemyVisualTraceRepository`) và `apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` (gọi lại repo, bỏ query trùng);
+  test với repo SQL thật đặt trong `tests/test_vision_agent_loop.py`.
 - `apps/control-plane/api/v1/routes/vision.py` KHÔNG sửa ở phase này (phase 1 sở hữu); nếu schema response trace là model Pydantic
   ở route thì field `agent_step` optional được thêm trong phase 1 — kiểm khi bắt đầu, báo leader nếu thiếu.
 
@@ -97,6 +100,13 @@ chạy `check_action` trên toàn bộ `label` của `benchmark/vision/accuracy/
       `test_vision_operation_failure_stage.py`, `test_vision_page_batch.py`, `test_vision_provider_integration.py`, `test_vision_target_preflight.py`,
       `test_vision_viewport_scan.py`, `test_vision_progress.py`, `test_vision_results.py`, `test_vision_conclusion.py`, `test_vision_accuracy_loop.py`.
 - [ ] `uv run ruff check .` sạch.
+
+## Ghi chú từ phase 2 (leader-r1, QA-r1)
+- Worker khớp `blocked_action_terms` kiểu "chứa" sau NFC + chữ thường, **không bỏ dấu**: danh sách từ khoá ở domain Python phải có cả
+  dạng có dấu và không dấu (VD "nạp thẻ" và "nap the"), và có test cho cả hai dạng.
+- Worker agent mode chặn `type` có `\r`/`\n` (`sensitive_action_blocked`): control-plane không sinh/gửi text có xuống dòng.
+- Worker chỉ cho phép đúng ngân sách operation theo công thức `1 + max_states*(2*max_hops+3)`: phase 4 chọn `max_states`/`max_hops` để budget ≥ 401 như plan.
+  Nguồn: `reports/phase-02/leader-r1.md`, `reports/phase-02/qa-r1.md`.
 
 ## Rủi ro & tín hiệu nhận biết hỏng
 - FK proposal/state sai ⇒ `repositories.py:1008-1016` từ chối operation (lỗi integrity trong test).

@@ -10,11 +10,12 @@ import logging
 import os
 import stat
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
 from auto_at.contracts.codex_bridge import (
+    AGENT_REQUEST_MAX_BYTES,
     BRIDGE_PROVIDER_MODELS,
     CodexBridgeEvent,
     CodexBridgeReceipt,
@@ -33,6 +34,13 @@ from domain.codex_bridge import (
 
 from infrastructure.codex_bridge.diagnostics import exception_details
 from infrastructure.observability.logging import log_event
+
+# Only request.json may be this large (agent snapshots); dom/schema keep 65_536, the image 5 MB.
+REQUEST_MAX_BYTES = AGENT_REQUEST_MAX_BYTES
+# The control plane re-signs authorization.json every ~2 s while the bridge polls with a
+# `now` sampled before the read, so a fresh receipt can be a few ms "newer" than `now`.
+# Allow that race (and sub-second container clock drift) but nothing near the 10 s ttl.
+RECEIPT_CLOCK_SKEW = timedelta(seconds=1)
 
 FILES = frozenset(
     {
@@ -242,7 +250,7 @@ class FileSpool:
                 if item.name != "raw-output.json" and not item.name.startswith(".atomic-"):
                     raise
         request = CodexBridgeRequest.model_validate_json(
-            self.read_file(directory, "request.json", 16_384),
+            self.read_file(directory, "request.json", REQUEST_MAX_BYTES),
         )
         self._scope(request)
         if request.job_id != job_id:
@@ -291,7 +299,8 @@ class FileSpool:
                     ("screenshot.png", screenshot),
                 ):
                     if data is not None:
-                        if len(data) > (5_000_000 if name == "screenshot.png" else 65_536):
+                        limit = {"screenshot.png": 5_000_000, "request.json": REQUEST_MAX_BYTES}
+                        if len(data) > limit.get(name, 65_536):  # dom/schema: 65_536
                             raise SpoolError("bridge input exceeds limit")
                         self._write(staging, name, data, exclusive=True)
                 # Validate everything before publication, using the exact eventual job inputs.
@@ -388,7 +397,8 @@ class FileSpool:
         self._matches(request, receipt)
         ttl = (receipt.authorization_expires_at - receipt.recorded_at).total_seconds()
         if (
-            not receipt.recorded_at <= now < receipt.authorization_expires_at <= request.deadline
+            not receipt.recorded_at - RECEIPT_CLOCK_SKEW <= now
+            or not now < receipt.authorization_expires_at <= request.deadline
             or not 0 < ttl <= 10
             or receipt.status != "queued"
         ):

@@ -12,8 +12,13 @@ from uuid import uuid4
 import httpx
 from evidence import (
     STATES,
+    binding_error,
+    derive_detection,
     diagnose,
+    export_contexts,
     export_diagnostic,
+    export_grounding,
+    export_inventory,
     export_locator,
     export_operation,
     safe_code,
@@ -23,6 +28,26 @@ from metrics import Assessment, Detection, OutcomeReview, content_hash, score, v
 
 TERMINAL = {"completed", "cancelled", "unavailable"}
 ROOT = Path(__file__).resolve().parents[3]
+# Optional evidence a stored session may carry (ADR-040). `none` scores as if neither existed, so
+# each flag combination of a session captured with all of them can be re-scored from stored data.
+SOURCES = ("click_context", "inventory")
+
+
+def parse_sources(value):
+    """`all` (default), `none` or a comma list of SOURCES; anything else is an error."""
+    if value in (None, "all"):
+        return set(SOURCES)
+    chosen = set() if value == "none" else set(value.split(","))
+    if not chosen <= set(SOURCES):
+        raise ValueError("unknown evidence source")
+    return chosen
+
+
+def artifact(folder, stem, label=None):
+    """`<stem>.json`, or `<stem>.<label>.json` so combinations never collide with retained files."""
+    if label is not None and not label.replace("-", "").replace("_", "").isalnum():
+        raise ValueError("invalid label")
+    return Path(folder) / (f"{stem}.json" if label is None else f"{stem}.{label}.json")
 
 
 def read_json(path):
@@ -65,6 +90,35 @@ def source_hash():
     ) if (ROOT / name).exists())
     return content_hash({p.relative_to(ROOT).as_posix(): hashlib.sha256(
         p.read_text(encoding="utf-8").encode()).hexdigest() for p in sorted(files)})
+
+
+def grounding_document(session_id, revision, rows, locators):
+    document = {"schema_version": "vision-accuracy-grounding-v1", "session_id": session_id,
+                "trace_revision": revision, "locators": export_grounding(rows, locators)}
+    contexts = export_contexts(rows)
+    if contexts:  # absent for sessions without `click-context-v1`: their file stays unchanged
+        document["contexts"] = contexts
+    return document
+
+
+def inventory_document(session_id, pages):
+    return {"schema_version": "vision-accuracy-inventory-v1", "session_id": session_id,
+            "pages": export_inventory(pages)}
+
+
+def check_grounding(document, evidence):
+    """Grounding must describe the same trace and locators as the retained evidence."""
+    known = {row["id"]: row for row in evidence["locators"]}
+    if (document.get("schema_version") != "vision-accuracy-grounding-v1"
+            or document.get("session_id") != evidence["session_id"]
+            or document.get("trace_revision") != evidence["trace_revision"]
+            or any(key not in known or known[key]["operation_id"] != row["operation_id"]
+                   or known[key]["status"] != row["status"]
+                   for key, row in document["locators"].items())
+            or any(key not in {row["id"] for row in evidence["operations"]}
+                   for key in document.get("contexts", {}))):
+        raise ValueError("grounding does not match evidence")
+    return document["locators"]
 
 
 class Loop:
@@ -191,25 +245,12 @@ class Loop:
             destination = path.parent / "evidence.json"
             if destination.exists():
                 return read_json(destination)
-            items, locators, cursor, revision = [], {}, 0, None
-            while True:
-                params = {"after_sequence": cursor, "limit": 100}
-                if revision:
-                    params["revision"] = revision
-                trace = self.get(base + "/trace", params=params)
-                if (trace.get("schema_version") != "v1" or trace.get("session_id") != session_id
-                        or (revision and trace["revision"] != revision)):
-                    raise ValueError("trace schema/scope/revision mismatch")
-                revision = trace["revision"]
-                items.extend(export_operation(row) for row in trace["items"])
-                for locator in trace["locators"]:
-                    exported = export_locator(locator)
-                    locators[exported["id"]] = exported
-                if not trace["has_more"]:
-                    break
-                if trace["next_sequence"] <= cursor:
-                    raise ValueError("trace pagination did not advance")
-                cursor = trace["next_sequence"]
+            rows, raw_locators, revision = self.trace(base, session_id)
+            items = [export_operation(row) for row in rows]
+            locators = {}
+            for locator in raw_locators:
+                exported = export_locator(locator)
+                locators[exported["id"]] = exported
             if len({row["id"] for row in items}) != len(items):
                 raise ValueError("duplicate trace operation")
             safe_diagnostics = [record for row in diagnostics
@@ -234,11 +275,78 @@ class Loop:
                         "diagnostics": safe_diagnostics, "runtime_conclusion": conclusion,
                         "diagnosis": diagnose(result.get("completion_reason"), items,
                                               safe_diagnostics)}
+            retain_json(path.parent / "grounding.json", grounding_document(
+                session_id, revision, rows, raw_locators))
+            if result.get("pages"):  # only sessions with a persisted inventory (ADR-040 A3)
+                retain_json(path.parent / "inventory.json",
+                            inventory_document(session_id, result["pages"]))
             write_json(destination, evidence)
             data["state"] = state
             data["reason"] = safe_code(result.get("completion_reason"))
             write_json(path, data, replace=True)
             return evidence
+
+    def trace(self, base, session_id):
+        """Raw trace rows and locators of a terminal session (read-only GET, paginated)."""
+        rows, locators, cursor, revision = [], {}, 0, None
+        while True:
+            params = {"after_sequence": cursor, "limit": 100}
+            if revision:
+                params["revision"] = revision
+            trace = self.get(base + "/trace", params=params)
+            if (trace.get("schema_version") != "v1" or trace.get("session_id") != session_id
+                    or (revision and trace["revision"] != revision)):
+                raise ValueError("trace schema/scope/revision mismatch")
+            revision = trace["revision"]
+            rows.extend(trace["items"])
+            for locator in trace["locators"]:
+                locators[locator.get("id")] = locator
+            if not trace["has_more"]:
+                return rows, list(locators.values()), revision
+            if trace["next_sequence"] <= cursor:
+                raise ValueError("trace pagination did not advance")
+            cursor = trace["next_sequence"]
+
+    def ground(self, iteration):
+        """Add role-locator grounding to evidence collected before it was exported."""
+        with self.locked():
+            path, data = self.manifest(iteration)
+            evidence = read_json(path.parent / "evidence.json")
+            rows, locators, revision = self.trace(
+                f"/api/v1/vision/explorations/{data['session_id']}", data["session_id"])
+            document = grounding_document(data["session_id"], revision, rows, locators)
+            check_grounding(document, evidence)
+            retain_json(path.parent / "grounding.json", document)
+            result = self.get(f"/api/v1/vision/explorations/{data['session_id']}/result")
+            if result.get("pages"):
+                retain_json(path.parent / "inventory.json",
+                            inventory_document(data["session_id"], result["pages"]))
+            return document
+
+    def detect(self, iteration, *, sources=None, label=None):
+        """Detection facts from the retained inventory, or the old empty ones without it."""
+        chosen = parse_sources(sources)
+        with self.locked():
+            path, data = self.manifest(iteration)
+            oracle = read_json(path.parent / "oracle.json")
+            if content_hash(oracle) != data["oracle_hash"]:
+                raise ValueError("oracle changed after start")
+            stored = path.parent / "inventory.json"
+            facts = {"identified_ids": [], "unexpected_paths": [], "inventory_complete": False,
+                     "ambiguous_controls": 0, "pages_on_oracle_url": 0}
+            if "inventory" in chosen and stored.exists():
+                document = read_json(stored)
+                if (document.get("schema_version") != "vision-accuracy-inventory-v1"
+                        or document.get("session_id") != data["session_id"]):
+                    raise ValueError("inventory does not match session")
+                facts = derive_detection(oracle, document["pages"])
+            detection = {"oracle_hash": data["oracle_hash"],
+                         **{key: facts[key] for key in (
+                             "identified_ids", "unexpected_paths", "inventory_complete")}}
+            retain_json(artifact(path.parent, "detection.derived", label), detection)
+            retain_json(artifact(path.parent, "detection.facts", label),
+                        {key: facts[key] for key in ("ambiguous_controls", "pages_on_oracle_url")})
+            return detection
 
     def frame(self, iteration, metadata):
         _, data = self.manifest(iteration)
@@ -262,7 +370,8 @@ class Loop:
             retain_json(path.parent / f"review-{digest}.json", body)
             return digest
 
-    def evaluate(self, iteration, assessments, detection):
+    def evaluate(self, iteration, assessments, detection, *, sources=None, label=None):
+        chosen = parse_sources(sources)
         with self.locked():
             path, data = self.manifest(iteration)
             evidence = read_json(path.parent / "evidence.json")
@@ -273,6 +382,15 @@ class Loop:
             if set(operations) != {row.operation_id for row in assessments}:
                 raise ValueError("every operation requires an assessment; no omitted failures")
             locators = {row["id"]: row for row in evidence["locators"]}
+            grounded = path.parent / "grounding.json"
+            grounding = check_grounding(read_json(grounded), evidence) if grounded.exists() else {}
+            contexts = (read_json(grounded).get("contexts", {})
+                        if grounded.exists() and "click_context" in chosen else {})
+            setup = [row for row in evidence["operations"] if row["purpose"] == "setup"
+                     and row["action_kind"] == "navigate" and row["status"] == "completed"]
+            root_page = (min(setup, key=lambda row: row["sequence"])["after_page_id"]
+                         if setup else None)
+            role_targets = {}
             for row in assessments:
                 operation = operations[row.operation_id]
                 if any(getattr(row, key) != operation[key]
@@ -281,10 +399,16 @@ class Loop:
                 if row.target_verdict == row.outcome_verdict == "correct":
                     binding = locators.get(operation["locator_id"])
                     target = next((e for e in oracle["examples"] if e["id"] == row.target_id), None)
-                    if (not target or not binding or binding["status"] != "verified"
-                            or binding["path"] != target["reference_path"]
-                            or row.binding_reference != binding["id"]):
-                        raise ValueError("assessment binding does not match oracle")
+                    reason = binding_error(
+                        oracle, target, binding, grounding.get(binding["id"]) if binding else None,
+                        operation, root_page, row.binding_reference, contexts.get(operation["id"]))
+                    if reason:
+                        raise ValueError(f"assessment binding does not match oracle ({reason})")
+                    # Role-bound credit is stricter than the historical path rule: one operation
+                    # per target, so a repeated or mis-bound click cannot inflate accuracy.
+                    if binding["path"] is None and role_targets.setdefault(
+                            target["id"], row.operation_id) != row.operation_id:
+                        raise ValueError("oracle target already credited by another operation")
                     for role in ("before", "after"):
                         if getattr(row, role + "_checksum") != operation[role]["checksum"]:
                             raise ValueError("assessment frame mismatch")
@@ -306,16 +430,18 @@ class Loop:
                             or review.after_checksum != row.after_checksum):
                         raise ValueError("outcome review does not match operation/oracle")
             result = score(oracle, assessments, detection)
-            retain_json(path.parent / "assessments.json",
+            retain_json(artifact(path.parent, "assessments", label),
                         [row.model_dump(mode="json") for row in assessments])
-            retain_json(path.parent / "detection.json", detection.model_dump(mode="json"))
-            retain_json(path.parent / "score.json", result)
+            retain_json(artifact(path.parent, "detection", label),
+                        detection.model_dump(mode="json"))
+            retain_json(artifact(path.parent, "score", label), result)
             return result
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["start", "import", "resume", "collect", "evaluate"])
+    parser.add_argument("command", choices=["start", "import", "resume", "collect", "ground",
+                                            "detect", "evaluate"])
     parser.add_argument("--directory", type=Path, default=Path(__file__).parent / "runs")
     parser.add_argument("--api", default="http://127.0.0.1:7000")
     parser.add_argument("--headers-file", type=Path, required=True,
@@ -328,6 +454,11 @@ def main():
     parser.add_argument("--assessments", type=Path)
     parser.add_argument("--detection", type=Path)
     parser.add_argument("--reviews", type=Path)
+    parser.add_argument("--sources", help="evaluate/detect: all (default), none, or a comma list "
+                        "of click_context, inventory; scores a stored session as if only those "
+                        "optional evidence sources existed")
+    parser.add_argument("--label", help="evaluate/detect: write <name>.<label>.json artifacts, so "
+                        "several source combinations of one iteration can be kept")
     args = parser.parse_args()
     headers = read_json(args.headers_file)
     with httpx.Client(base_url=args.api, headers=headers, timeout=30) as client:
@@ -348,12 +479,23 @@ def main():
                                       if args.diagnostics else ())
                 print(json.dumps({"session_id": result["session_id"], "state": result["state"],
                                   "diagnosis": result["diagnosis"]}))
+            elif args.command == "ground":
+                result = loop.ground(args.iteration)
+                print(json.dumps({"session_id": result["session_id"],
+                                  "role_locators": len(result["locators"]),
+                                  "click_contexts": len(result.get("contexts", {}))}))
+            elif args.command == "detect":
+                result = loop.detect(args.iteration, sources=args.sources, label=args.label)
+                print(json.dumps({"identified": len(result["identified_ids"]),
+                                  "unexpected": len(result["unexpected_paths"]),
+                                  "inventory_complete": result["inventory_complete"]}))
             else:
                 for review in read_json(args.reviews) if args.reviews else []:
                     loop.record_review(args.iteration, OutcomeReview.model_validate(review))
                 result = loop.evaluate(args.iteration, [
                     Assessment.model_validate(row) for row in read_json(args.assessments)
-                ], Detection.model_validate(read_json(args.detection)))
+                ], Detection.model_validate(read_json(args.detection)),
+                    sources=args.sources, label=args.label)
                 print(json.dumps({key: result[key] for key in ("coverage", "accuracy", "passed")}))
         except httpx.HTTPError as error:
             status = (error.response.status_code

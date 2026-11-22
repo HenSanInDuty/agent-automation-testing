@@ -93,6 +93,43 @@ their bytes/length/checksums verified before positive scoring. Outcome reviews
 are content-addressed, operation/oracle/frame-bound artifacts, not arbitrary labels.
 An OS file lock prevents concurrent writers and is released on process death.
 
+### Binding `agent_loop` (role) locators
+
+Decision record: [ADR-039](../../../docs/adr/039-agent-loop-role-binding-in-accuracy-harness.md).
+A credited click must bind to its oracle target. Locators with a DOM path keep the original
+rule (`path == reference_path`). Path-less `role` locators (the agent loop) bind only when all hold:
+root tab (no popup or new tab), oracle viewport, same role (`a` link, `button` button), same
+normalized name (case/accent/space insensitive, non-empty), box IoU >= 0.8, exactly one oracle
+candidate equal to the reviewer's `target_id`, click point inside the oracle box, and no other
+credited operation for that target. Anything else raises
+`assessment binding does not match oracle (<reason>)` or earns no credit. The oracle, thresholds and
+C/A/P/R definitions are unchanged.
+
+`collect` writes `grounding.json` (role, name, box, viewport, click point; allowlisted) beside
+`evidence.json`. For evidence collected before that, `run.py ground --iteration <id>` re-reads the
+stored trace (read-only GET) and adds it, refusing a trace whose revision differs. Without
+grounding a role locator earns nothing. `agent_loop` keeps no page inventory, so detection stays
+`inventory_complete=false` with no identified IDs; it is never inferred from clicks.
+Known limits: no scroll offset or page URL is exported, so only targets inside the first viewport
+can bind (16 of 47 positives) and 15 positives have no accessible name or are not link/button.
+
+### Optional agent evidence (click context, inventory), ADR-040
+
+Sessions run with the opt-in flags carry more facts; the harness reads them when present and behaves as
+before when absent (retained runs are byte-identical, partial or corrupt data counts as absent).
+
+- Click context (`executed_click.scroll_x/scroll_y/url_fingerprint`): `collect`/`ground` store it under a
+  `contexts` key of `grounding.json`. Both binding rules then require the click on the oracle page
+  (`url_fingerprint == sha256(oracle.source_url)`), and the role rule may match an in-flow control at the
+  click's scroll offset (fixed controls still match at offset 0; ambiguity across offsets earns nothing).
+- Inventory (`/result` `pages`): `collect`/`ground` store `inventory.json` (allowlist: state, URL
+  fingerprint, flags, control key/role/name). `run.py detect --iteration <id>` derives `detection.derived.json`
+  for the oracle page only (descriptor key, else unique role+name; other controls are unexpected; complete
+  only if unscrollable, untruncated and nothing skipped). Pass it to `evaluate --detection`.
+- Combinations: `detect|evaluate --sources all|none|click_context,inventory --label <name>` re-score
+  the same stored session as if only those sources existed and write `<artifact>.<label>.json` next to
+  the retained default files. The dom_path source (A2) is a property of the live session, not selectable.
+
 ### Quiet monitoring and fresh-session handoff
 
 After submission, monitor the existing session in one process:

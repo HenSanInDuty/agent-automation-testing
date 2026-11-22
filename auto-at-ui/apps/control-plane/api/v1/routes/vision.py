@@ -90,6 +90,9 @@ class VisionPolicyResponse(BaseModel):
     max_requests_per_minute: int
     # Read projection may be echoed by older clients; it never authorizes a policy write.
     input_policy_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    # Server-owned deployment flag. Clients that echo a read response back must not fail,
+    # but the value is never stored or applied from a write.
+    agent_loop_enabled: bool = False
 
 
 class VisionPolicyReadResponse(VisionPolicyResponse):
@@ -106,6 +109,7 @@ class SubmitExplorationRequest(BaseModel):
     expected_provider: VisionProviderId | None = None
     expected_model: str | None = Field(default=None, min_length=1, max_length=200)
     expected_input_policy_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    engine: Literal["planner", "agent_loop"] = "planner"
 
     @model_validator(mode="after")
     def expected_pair(self):
@@ -155,6 +159,7 @@ class ExplorationResponse(BaseModel):
     max_session_seconds: int
     safe_failure_reason: str | None
     trace_version: str = "legacy"
+    engine: Literal["planner", "agent_loop"] = "planner"
 
 
 class VisualActionResponse(BaseModel):
@@ -270,6 +275,7 @@ def _response(record: object) -> ExplorationResponse:
         step_timeout_seconds=getattr(record, "step_timeout_seconds", None),
         safe_failure_reason=record.safe_failure_reason,
         trace_version=getattr(record, "trace_version", "legacy"),
+        engine=getattr(record, "exploration_engine", "planner"),
     )
 
 
@@ -278,11 +284,13 @@ def get_policy(
     tenant_id: Annotated[str, Depends(current_tenant)],
     principal: Annotated[Principal, Depends(current_principal)],
     policies: Annotated[VisionPolicies, Depends(vision_policies)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> VisionPolicyResponse:
     try:
         policy = policies.read(tenant_id, principal)
         return VisionPolicyReadResponse(**policy.model_dump(),
-                                        input_policy_fingerprint=input_fingerprint(policy))
+                                        input_policy_fingerprint=input_fingerprint(policy),
+                                        agent_loop_enabled=settings.vision_agent_loop_enabled)
     except AuthorizationError as error:
         raise HTTPException(status_code=403, detail="Tenant access denied.") from error
     except VisionPolicyError as error:
@@ -312,14 +320,17 @@ def set_policy(
     principal: Annotated[Principal, Depends(current_principal)],
     policies: Annotated[VisionPolicies, Depends(vision_policies, scope="function")],
     correlation_id: Annotated[UUID, Depends(vision_policy_correlation_id)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> VisionPolicyResponse:
     try:
         updated = policies.update(
-            tenant_id, principal, payload.model_dump(exclude={"input_policy_fingerprint"}),
+            tenant_id, principal,
+            payload.model_dump(exclude={"input_policy_fingerprint", "agent_loop_enabled"}),
             correlation_id,
         )
         return VisionPolicyReadResponse(**updated.model_dump(),
-                                        input_policy_fingerprint=input_fingerprint(updated))
+                                        input_policy_fingerprint=input_fingerprint(updated),
+                                        agent_loop_enabled=settings.vision_agent_loop_enabled)
     except AuthorizationError as error:
         raise HTTPException(status_code=403, detail="Tenant access denied.") from error
     except VisionPolicyError as error:
@@ -349,6 +360,7 @@ def submit_exploration(
             idempotency_key=idempotency_key, expected_provider=payload.expected_provider,
             expected_model=payload.expected_model,
             expected_input_policy_fingerprint=payload.expected_input_policy_fingerprint,
+            engine=payload.engine,
         )
         return _response(record)
     except AuthorizationError as error:

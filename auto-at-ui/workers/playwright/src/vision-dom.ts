@@ -17,7 +17,12 @@ export type DomSnapshot = { data: CodexBoundObservation; state: RuntimeState; pa
 
 // Browser traversal is deliberately separate from inspectState's private form capture.
 // Only bounded candidate geometry and already-filtered labels leave this callback.
-export async function observeDom(page: Page, request: VisualWorkerObserveDom): Promise<DomSnapshot> {
+// `agentDomPath` (capability `agent-dom-path-v1`, agent mode only): controls without an accessible name
+// get a main-document `dom_path` locator (any button/link/custom control), so they can be bound and
+// clicked. Named controls keep their role/label locators and are unchanged; off = old behaviour.
+export async function observeDom(page: Page, request: VisualWorkerObserveDom,
+  options: { agentDomPath?: boolean; held?: RuntimeState } = {}): Promise<DomSnapshot> {
+  const agentPaths = options.agentDomPath === true;
   const before = await inspectState(page);
   const documentRoot = await page.locator("html").elementHandle();
   requireVision(documentRoot, "state_changed_during_observation");
@@ -25,11 +30,15 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
   let completed = false;
   try {
   const context = await contextSignature(page);
-  requireVision(before.fingerprint === request.expected_state_fingerprint, "state_mismatch");
+  // ADR 042: the expected hash must be the state the worker holds (the one it published); the fresh inspection
+  // may only differ from it by tolerated presentation drift. Without a held state (direct callers) the hash is exact.
+  const held = options.held;
+  if (held) requireVision(held.fingerprint === request.expected_state_fingerprint && equivalentState(held, before), "state_mismatch");
+  else requireVision(before.fingerprint === request.expected_state_fingerprint, "state_mismatch");
   const viewport = page.viewportSize(); requireVision(viewport, "viewport_unavailable");
   const capturedAt = new Date().toISOString();
-  const visualButtons = interactionScope(page) === "visual_buttons" ? await page.evaluate(visualButtonSemantics) : [];
-  const found = await page.evaluate(({ limit, sensitive, scope, visualButtons }) => {
+  const visualButtons = interactionScope(page) === "visual_buttons" || agentPaths ? await page.evaluate(visualButtonSemantics) : [];
+  const found = await page.evaluate(({ limit, sensitive, scope, visualButtons, agentPaths }) => {
     const buttonMap = new Map(visualButtons.map(item => [document.querySelector(item.path), item]));
     // Keep overlap, but do not step over a control clipped by the lower edge.
     // This geometry-only hint stays in the private worker projection, not model input.
@@ -41,7 +50,9 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
         nextScrollDelta = Math.min(nextScrollDelta, Math.max(1, Math.floor(rect.top)));
     }
     const candidates: Array<{ x: number; y: number; name: string; role: string; input_type: string | null;
-      editable: boolean; button_path: string | null; button_kind: "native" | "styled_link" | "custom" | null }> = [];
+      editable: boolean; button_path: string | null; button_kind: "native" | "styled_link" | "custom" | null;
+      path_version?: "v2" | "v3" }> = [];
+    const standard = 'button,a[href],input,textarea,select,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="textbox"],[contenteditable="true"]';
     // Closed roots are not discoverable through standard DOM APIs: report this coverage
     // limitation conservatively, even when no custom host exposes their presence.
     const unsupported = new Set<"iframe" | "closed_shadow" | "canvas" | "unbound_target">(["closed_shadow"]);
@@ -71,7 +82,7 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
           if (frame.contentDocument) this.visit(frame.contentDocument, dx + rect.left + frame.clientLeft, dy + rect.top + frame.clientTop, depth + 1);
           else unsupported.add("iframe");
         }
-        if (!visible || (!buttonMap.has(el) && !el.matches('button,a[href],input,textarea,select,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="textbox"],[contenteditable="true"]'))) continue;
+        if (!visible || (!buttonMap.has(el) && !el.matches(standard))) continue;
         let transparent = false;
         for (let ancestor: Element | null = el; ancestor;) {
           if (Number(doc.defaultView!.getComputedStyle(ancestor).opacity) === 0) transparent = true;
@@ -98,7 +109,10 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
         const role = el.getAttribute("role") ?? ({ button: "button", a: "link", textarea: "textbox", select: "combobox" }[tag] ||
           (tag === "input" ? ({ checkbox: "checkbox", radio: "radio", button: "button", submit: "button", number: "spinbutton" }[type] || "textbox") : "textbox"));
         if (!/^[a-z]{1,32}$/.test(role)) { this.skip("unsupported_role"); continue; }
-        let buttonPath: string | null = buttonMap.get(el)?.path ?? null;
+        // Agent paths: a visual-only candidate (div/span) with a name is not an agent control today.
+        if (agentPaths && scope === "all" && name && buttonMap.has(el) && !el.matches(standard)) continue;
+        let buttonPath: string | null = scope === "all" && agentPaths && name ? null : buttonMap.get(el)?.path ?? null;
+        let pathVersion: "v2" | "v3" | undefined;
         if (scope === "buttons" && tag === "button" && !name && doc === document &&
             el.getRootNode() === document && !["id", "data-testid", "name"].some(key => el.getAttribute(key))) {
           const parts: string[] = [];
@@ -113,9 +127,25 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
           const path = `html > ${parts.join(" > ")}`;
           if (node?.tagName === "HTML" && parts.length <= 24 && path.length <= 1024) buttonPath = path;
         }
+        if (agentPaths && scope === "all" && !name && !buttonPath && doc === document && el.getRootNode() === document &&
+            ["button", "a", "div", "span", "input"].includes(tag)) {
+          const parts: string[] = [];
+          let node: Element | null = el;
+          while (node && node.tagName !== "HTML" && parts.length < 25) {
+            const parent: Element | null = node.parentElement;
+            if (!parent) break;
+            const siblings = Array.from(parent.children).filter(other => other.tagName === node!.tagName);
+            parts.unshift(`${node.tagName.toLowerCase()}:nth-of-type(${siblings.indexOf(node) + 1})`);
+            node = parent;
+          }
+          const path = `html > ${parts.join(" > ")}`;
+          if (node?.tagName === "HTML" && parts.length >= 2 && parts.length <= 24 && path.length <= 1024) buttonPath = path;
+        }
+        if (agentPaths && scope === "all" && buttonPath) pathVersion = tag === "button" ? "v2" : "v3";
         const types = ["text", "search", "email", "tel", "url", "number", "checkbox", "radio", "button", "submit", "reset", "range", "date", "time"];
         candidates.push({ x: rect.left + dx + rect.width / 2, y: rect.top + dy + rect.height / 2,
-          role: buttonMap.get(el)?.kind === "custom" ? "generic" : role, name, button_path: buttonPath, button_kind: buttonMap.get(el)?.kind ?? null, input_type: tag === "input" ? types.includes(type) ? type : "other" : null,
+          role: buttonMap.get(el)?.kind === "custom" ? "generic" : role, name, button_path: buttonPath,
+          button_kind: scope === "all" && agentPaths && name ? null : buttonMap.get(el)?.kind ?? null, path_version: pathVersion, input_type: tag === "input" ? types.includes(type) ? type : "other" : null,
           editable: (el.matches('input:not([readonly]),textarea:not([readonly]),[contenteditable="true"]') && !input.readOnly) });
       }
     } };
@@ -123,7 +153,7 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
     return { candidates, unsupported: [...unsupported], truncated, skipped, skipReasons, nextScrollDelta,
       // This transport flag means there is another vertical viewport to inspect.
       scrollable: Math.ceil(scrollY + innerHeight) < document.documentElement.scrollHeight - 1 };
-  }, { limit: request.max_elements, scope: interactionScope(page), visualButtons, sensitive: String.raw`\b(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{7,}\b|https?:\/\/|\[redacted\]` });
+  }, { limit: request.max_elements, scope: interactionScope(page), visualButtons, agentPaths, sensitive: String.raw`\b(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{7,}\b|https?:\/\/|\[redacted\]` });
   const elements: CodexDomElement[] = [], bindings: CodexElementBinding[] = [];
   const targetSignatures = new Map<string, string>();
   const actionSignatures = new Map<string, string>();
@@ -133,7 +163,7 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
   const skip = (reason: string) => { skipped++; skipReasons[reason] = (skipReasons[reason] ?? 0) + 1; };
   const base = { schema_version: "v1", tenant_id: request.tenant_id, project_id: request.project_id,
     session_id: request.session_id, fencing_token: request.fencing_token, observation_id: randomUUID(),
-    snapshot_id: request.snapshot_id, state_fingerprint: before.fingerprint, captured_at: capturedAt, viewport,
+    snapshot_id: request.snapshot_id, state_fingerprint: held?.fingerprint ?? before.fingerprint, captured_at: capturedAt, viewport,
     elements, truncated, unsupported: [], scrollable: found.scrollable, skipped_count: skipped };
   const ground = async (candidate: typeof found.candidates[number]) => {
     if (candidate.name && !safeLocatorValue(candidate.name)) return { candidate, grounded: null };
@@ -142,7 +172,7 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom): P
       let expected: VisualLocatorDescriptor | undefined;
       if (candidate.button_path) {
         expected = validateVision<VisualLocatorDescriptor>("VisualLocatorDescriptor", {
-          schema_version: candidate.button_kind ? 'v3' : 'v2', strategy: 'dom_path', value: candidate.button_path,
+          schema_version: candidate.path_version ?? (candidate.button_kind ? 'v3' : 'v2'), strategy: 'dom_path', value: candidate.button_path,
         });
         const box = await resolveDescriptor(page, expected).boundingBox();
         if (box) { x = box.x + box.width / 2; y = box.y + box.height / 2; }

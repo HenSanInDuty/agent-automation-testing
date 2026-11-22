@@ -44,7 +44,8 @@ class RequestVisualExploration:
             tenant_id=tenant_id, project_id=project_id, actor=principal.subject, runtime=runtime,
             intent_encryption_key=self.settings.vision_intent_encryption_key,
             intent_retention_days=self.settings.vision_intent_retention_days,
-            trace_v4_enabled=self.settings.vision_trace_v4_enabled, **request,
+            trace_v4_enabled=self.settings.vision_trace_v4_enabled,
+            agent_loop_enabled=self.settings.vision_agent_loop_enabled, **request,
         )
 
 
@@ -74,6 +75,8 @@ class SubmitVisualExploration:
         intent_encryption_key: str | None,
         intent_retention_days: int,
         trace_v4_enabled: bool = False,
+        engine: str = "planner",
+        agent_loop_enabled: bool = False,
         expected_provider: str | None = None,
         expected_model: str | None = None,
         expected_input_policy_fingerprint: str | None = None,
@@ -95,6 +98,7 @@ class SubmitVisualExploration:
                 or (correlation_id is not None and existing.correlation_id != correlation_id)
                 or existing.target_url != target_url
                 or existing.intent_hash != intent_hash
+                or existing.exploration_engine != engine
             ):
                 raise VisionStateError("idempotency key belongs to a different exploration")
             if expected_provider is not None and (expected_provider, expected_model) != (
@@ -117,6 +121,13 @@ class SubmitVisualExploration:
             raise VisionStateError(
                 "expected_provider and expected_model are required for this provider"
             )
+        if engine not in {"planner", "agent_loop"}:
+            raise VisionStateError("unknown exploration engine")
+        if engine == "agent_loop":
+            if not agent_loop_enabled:
+                raise VisionStateError("agent_loop engine is disabled")
+            if not is_bridge_provider(policy.provider):
+                raise VisionStateError("agent_loop engine requires a Codex or Claude bridge")
         if is_bridge_provider(policy.provider):
             if not trace_v4_enabled:
                 raise VisionStateError("Codex requires v4 exploration")
@@ -140,8 +151,10 @@ class SubmitVisualExploration:
             raise VisionStateError("target URL must be HTTP(S) without credentials") from None
         if project_policy is None:
             raise VisionStateError("project exploration limits are not configured")
+        # v4 planner sessions enforce the allowlist in the worker; the agent browses freely
+        # between pages, so its starting target must already be inside it.
         if (
-            not trace_v4_enabled and (not project_policy.allowed_origins
+            (engine == "agent_loop" or not trace_v4_enabled) and (not project_policy.allowed_origins
             or not ProjectExecutionPolicy(
                 project_id=project_id, allowed_origins=project_policy.allowed_origins
             ).allows(target_url))
@@ -173,6 +186,7 @@ class SubmitVisualExploration:
             model_input_policy=(input_snapshot(policy).model_dump(mode="json")
                                 if is_bridge_provider(policy.provider) else None),
             trace_version="v4" if trace_v4_enabled else "legacy",
+            exploration_engine=engine,
             max_steps=policy.max_steps,
             max_hops=project_policy.vision_max_hops,
             max_states=project_policy.vision_max_states,

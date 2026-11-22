@@ -41,6 +41,8 @@ files:
     role: other
   - path: apps/control-plane/agents/shared/openrouter.py
     role: entry
+  - path: apps/control-plane/agents/shared/redaction.py
+    role: other
   - path: apps/control-plane/agents/shared/runtime.py
     role: other
   - path: apps/control-plane/agents/shared/vision_providers.py
@@ -56,6 +58,8 @@ files:
   - path: apps/control-plane/api/v1/routes/vision.py
     role: entry
   - path: apps/control-plane/application/vision.py
+    role: other
+  - path: apps/control-plane/application/vision_agent_loop.py
     role: other
   - path: apps/control-plane/application/vision_debug_evidence.py
     role: other
@@ -95,6 +99,8 @@ files:
     role: other
   - path: apps/control-plane/infrastructure/persistence/codex_bridge_repository.py
     role: repository
+  - path: apps/control-plane/infrastructure/persistence/models.py
+    role: model
   - path: apps/control-plane/infrastructure/persistence/repositories.py
     role: repository
   - path: apps/control-plane/infrastructure/persistence/session.py
@@ -107,11 +113,23 @@ files:
     role: other
   - path: apps/control-plane/infrastructure/workflows/vision_publisher.py
     role: other
+  - path: migrations/versions/b7c9d1e3f5a7_add_agent_loop_engine.py
+    role: migration
   - path: packages/contracts/src/auto_at/contracts/agent.py
+    role: other
+  - path: packages/contracts/src/auto_at/contracts/codex_bridge.py
     role: other
   - path: packages/contracts/src/auto_at/contracts/execution.py
     role: other
+  - path: tests/test_agent_loop_contracts.py
+    role: test
   - path: tests/test_codex_bridge_repository.py
+    role: test
+  - path: tests/test_qa_phase01_edges.py
+    role: test
+  - path: tests/test_vision_agent_engine_selection.py
+    role: test
+  - path: tests/test_vision_agent_loop.py
     role: test
   - path: tests/test_vision_event_processor.py
     role: test
@@ -127,7 +145,7 @@ files:
     role: test
   - path: tests/vision_trace_fixtures.py
     role: test
-updated: 2026-11-19
+updated: 2026-11-21
 generated_by: hgraph 1.0.0
 ---
 
@@ -160,61 +178,70 @@ Người dùng có quyền `SUBMIT_GENERATION` gửi URL của dự án `web_ui`
 
 ## Quan hệ file — hgraph tự sinh, ĐỪNG sửa tay
 
-Cập nhật: 2026-11-19 · `hgraph sync vision-exploration --apply` để tạo lại.
+Cập nhật: 2026-11-21 · `hgraph sync vision-exploration --apply` để tạo lại.
 
 | File | Vai trò | Import (trong graph) | Bị import bởi (trong graph) |
 |---|---|---|---|
-| `apps/control-plane/agents/prompts/codex_exploration.py` | other | — | `apps/control-plane/application/vision.py` |
+| `apps/control-plane/agents/prompts/codex_exploration.py` | other | — | `tests/test_agent_loop_contracts.py`<br>`apps/control-plane/application/vision.py` |
 | `apps/control-plane/agents/shared/gemini.py` | other | `apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/agents/shared/openrouter.py`<br>`tests/test_vision_provider_integration.py` |
 | `apps/control-plane/agents/shared/openrouter.py` | entry | `apps/control-plane/config.py`<br>`apps/control-plane/agents/shared/gemini.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/shared/vision_providers.py` | `apps/control-plane/infrastructure/vision/model_batch.py`<br>`tests/test_vision_model_batch.py` |
-| `apps/control-plane/agents/shared/runtime.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/agents/shared/vision_providers.py` | `apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/application/vision.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_model_batch.py`<br>`apps/control-plane/application/vision_policy.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`tests/test_vision_event_processor.py`<br>`tests/test_vision_model_batch.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py` |
-| `apps/control-plane/agents/shared/vision_providers.py` | other | — | `apps/control-plane/agents/shared/gemini.py`<br>`apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/application/vision.py`<br>`apps/control-plane/application/vision_policy.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py` |
+| `apps/control-plane/agents/shared/redaction.py` | other | — | `apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` |
+| `apps/control-plane/agents/shared/runtime.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/agents/shared/vision_providers.py` | `apps/control-plane/application/vision_agent_loop.py`<br>`tests/test_vision_agent_loop.py`<br>`apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/application/vision.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_model_batch.py`<br>`apps/control-plane/application/vision_policy.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`tests/test_vision_event_processor.py`<br>`tests/test_vision_model_batch.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py` |
+| `apps/control-plane/agents/shared/vision_providers.py` | other | — | `apps/control-plane/application/vision_agent_loop.py`<br>`apps/control-plane/agents/shared/gemini.py`<br>`apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/application/vision.py`<br>`apps/control-plane/application/vision_policy.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py` |
 | `apps/control-plane/agents/vision/debug_evidence.py` | other | — | `apps/control-plane/application/vision_debug_evidence.py`<br>`apps/control-plane/application/vision_events.py` |
-| `apps/control-plane/agents/vision/intent.py` | other | — | `apps/control-plane/application/vision.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`tests/test_vision_provider_integration.py` |
+| `apps/control-plane/agents/vision/intent.py` | other | — | `apps/control-plane/application/vision_agent_loop.py`<br>`apps/control-plane/application/vision.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`tests/test_vision_provider_integration.py` |
 | `apps/control-plane/agents/vision/temporary_images.py` | other | — | `apps/control-plane/infrastructure/vision/model_batch.py`<br>`tests/test_vision_model_batch.py` |
 | `apps/control-plane/api/v1/routes/activities.py` | entry | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py` | `apps/control-plane/api/v1/routes/vision.py` |
 | `apps/control-plane/api/v1/routes/vision.py` | entry | `apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/application/vision_debug_evidence.py`<br>`apps/control-plane/application/vision_policy.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/application/vision_replay.py`<br>`apps/control-plane/application/vision_results.py`<br>`apps/control-plane/application/vision_screen.py`<br>`apps/control-plane/application/vision_trajectory.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py`<br>`apps/control-plane/api/v1/routes/activities.py` | — |
 | `apps/control-plane/application/vision.py` | other | `apps/control-plane/agents/prompts/codex_exploration.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/agents/vision/intent.py`<br>`apps/control-plane/domain/activity.py` | — |
+| `apps/control-plane/application/vision_agent_loop.py` | other | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/agents/vision/intent.py`<br>`apps/control-plane/domain/entities.py`<br>`apps/control-plane/application/vision_model_batch.py`<br>`apps/control-plane/application/vision_operations.py` | `tests/test_vision_agent_loop.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py` |
 | `apps/control-plane/application/vision_debug_evidence.py` | other | `apps/control-plane/agents/vision/debug_evidence.py` | `apps/control-plane/api/v1/routes/vision.py` |
 | `apps/control-plane/application/vision_events.py` | other | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/vision/debug_evidence.py`<br>`apps/control-plane/agents/vision/intent.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/domain/activity.py`<br>`apps/control-plane/domain/entities.py`<br>`apps/control-plane/application/vision_model_batch.py`<br>`apps/control-plane/application/vision_operations.py` | `apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`tests/test_vision_event_processor.py`<br>`tests/test_vision_provider_integration.py` |
-| `apps/control-plane/application/vision_model_batch.py` | model | `apps/control-plane/agents/shared/runtime.py` | `apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`tests/test_vision_model_batch.py` |
-| `apps/control-plane/application/vision_operations.py` | other | `apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `tests/test_vision_operation_failure_stage.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`tests/test_vision_live_persistence.py` |
+| `apps/control-plane/application/vision_model_batch.py` | model | `apps/control-plane/agents/shared/runtime.py` | `apps/control-plane/application/vision_agent_loop.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`tests/test_vision_model_batch.py` |
+| `apps/control-plane/application/vision_operations.py` | other | `apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/application/vision_agent_loop.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`tests/test_vision_live_persistence.py`<br>`tests/test_vision_operation_failure_stage.py` |
 | `apps/control-plane/application/vision_policy.py` | other | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/config.py` | `apps/control-plane/api/v1/routes/vision.py` |
 | `apps/control-plane/application/vision_reload.py` | other | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/agents/vision/intent.py`<br>`apps/control-plane/config.py` | `apps/control-plane/api/v1/routes/vision.py` |
 | `apps/control-plane/application/vision_replay.py` | other | — | `apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/application/vision_results.py`<br>`apps/control-plane/application/vision_screen.py` |
-| `apps/control-plane/application/vision_results.py` | other | `apps/control-plane/domain/vision_conclusion.py`<br>`apps/control-plane/application/vision_replay.py` | `apps/control-plane/api/v1/routes/vision.py` |
+| `apps/control-plane/application/vision_results.py` | other | `apps/control-plane/domain/vision_conclusion.py`<br>`apps/control-plane/application/vision_replay.py` | `tests/test_vision_agent_loop.py`<br>`apps/control-plane/api/v1/routes/vision.py` |
 | `apps/control-plane/application/vision_screen.py` | other | `apps/control-plane/application/vision_replay.py` | `apps/control-plane/api/v1/routes/vision.py` |
 | `apps/control-plane/application/vision_trace_events.py` | other | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/agents/vision/intent.py`<br>`apps/control-plane/domain/entities.py`<br>`apps/control-plane/application/vision_model_batch.py`<br>`apps/control-plane/application/vision_operations.py` | `apps/control-plane/infrastructure/workflows/vision_publisher.py`<br>`tests/test_vision_live_persistence.py`<br>`tests/test_vision_provider_integration.py` |
 | `apps/control-plane/application/vision_trajectory.py` | other | — | `apps/control-plane/api/v1/routes/vision.py` |
-| `apps/control-plane/config.py` | other | — | `apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/api/v1/routes/activities.py`<br>`apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_policy.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/observability/logging.py`<br>`apps/control-plane/infrastructure/persistence/session.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`tests/test_codex_bridge_repository.py`<br>`tests/test_vision_event_processor.py`<br>`tests/test_vision_live_persistence.py`<br>`tests/test_vision_model_batch.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py` |
+| `apps/control-plane/config.py` | other | — | `tests/test_vision_agent_engine_selection.py`<br>`tests/test_vision_agent_loop.py`<br>`apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/api/v1/routes/activities.py`<br>`apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_policy.py`<br>`apps/control-plane/application/vision_reload.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/observability/logging.py`<br>`apps/control-plane/infrastructure/persistence/session.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`tests/test_codex_bridge_repository.py`<br>`tests/test_vision_event_processor.py`<br>`tests/test_vision_live_persistence.py`<br>`tests/test_vision_model_batch.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py` |
 | `apps/control-plane/domain/activity.py` | service | — | `apps/control-plane/application/vision.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` |
-| `apps/control-plane/domain/entities.py` | service | `packages/contracts/src/auto_at/contracts/agent.py`<br>`packages/contracts/src/auto_at/contracts/execution.py` | `apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_operations.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`tests/vision_trace_fixtures.py` |
+| `apps/control-plane/domain/entities.py` | service | `packages/contracts/src/auto_at/contracts/agent.py`<br>`packages/contracts/src/auto_at/contracts/execution.py` | `apps/control-plane/application/vision_agent_loop.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_operations.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`tests/vision_trace_fixtures.py` |
 | `apps/control-plane/domain/vision_conclusion.py` | service | — | `apps/control-plane/application/vision_results.py` |
 | `apps/control-plane/infrastructure/artifacts/rustfs.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/domain/entities.py` | `apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py` |
-| `apps/control-plane/infrastructure/observability/logging.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/observability/telemetry.py` | `tests/test_vision_operation_failure_stage.py`<br>`apps/control-plane/agents/shared/gemini.py`<br>`apps/control-plane/application/vision_operations.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`tests/test_codex_bridge_repository.py` |
+| `apps/control-plane/infrastructure/observability/logging.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/observability/telemetry.py` | `tests/test_vision_agent_engine_selection.py`<br>`apps/control-plane/agents/shared/gemini.py`<br>`apps/control-plane/application/vision_operations.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`tests/test_codex_bridge_repository.py`<br>`tests/test_vision_operation_failure_stage.py` |
 | `apps/control-plane/infrastructure/observability/telemetry.py` | other | — | `apps/control-plane/infrastructure/observability/logging.py` |
 | `apps/control-plane/infrastructure/persistence/codex_bridge_repository.py` | repository | `apps/control-plane/domain/activity.py`<br>`apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py` | `apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`tests/test_codex_bridge_repository.py` |
-| `apps/control-plane/infrastructure/persistence/repositories.py` | repository | `packages/contracts/src/auto_at/contracts/agent.py`<br>`packages/contracts/src/auto_at/contracts/execution.py`<br>`apps/control-plane/domain/activity.py`<br>`apps/control-plane/domain/entities.py` | `apps/control-plane/api/v1/routes/activities.py`<br>`apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py`<br>`tests/test_vision_live_persistence.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py` |
+| `apps/control-plane/infrastructure/persistence/models.py` | model | — | — |
+| `apps/control-plane/infrastructure/persistence/repositories.py` | repository | `packages/contracts/src/auto_at/contracts/agent.py`<br>`packages/contracts/src/auto_at/contracts/execution.py`<br>`apps/control-plane/domain/activity.py`<br>`apps/control-plane/domain/entities.py` | `tests/test_vision_agent_loop.py`<br>`apps/control-plane/api/v1/routes/activities.py`<br>`apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py`<br>`tests/test_vision_live_persistence.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py` |
 | `apps/control-plane/infrastructure/persistence/session.py` | other | `apps/control-plane/config.py` | `apps/control-plane/api/v1/routes/activities.py`<br>`apps/control-plane/api/v1/routes/vision.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py` |
-| `apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` | other | `apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/domain/activity.py`<br>`apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py` | `tests/test_vision_operation_failure_stage.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py`<br>`tests/test_codex_bridge_repository.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py`<br>`tests/vision_trace_fixtures.py` |
+| `apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` | other | `apps/control-plane/agents/shared/redaction.py`<br>`apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/domain/activity.py`<br>`apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py` | `tests/test_vision_agent_loop.py`<br>`apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py`<br>`tests/test_codex_bridge_repository.py`<br>`tests/test_vision_operation_failure_stage.py`<br>`tests/test_vision_provider_integration.py`<br>`tests/test_vision_provider_submission.py`<br>`tests/vision_trace_fixtures.py` |
 | `apps/control-plane/infrastructure/vision/model_batch.py` | model | `apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/shared/vision_providers.py`<br>`apps/control-plane/agents/vision/temporary_images.py`<br>`apps/control-plane/application/vision_model_batch.py`<br>`apps/control-plane/config.py` | `apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py`<br>`tests/test_vision_event_processor.py`<br>`tests/test_vision_model_batch.py`<br>`tests/test_vision_provider_integration.py` |
 | `apps/control-plane/infrastructure/workflows/temporal_worker.py` | other | `apps/control-plane/application/vision_events.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | — |
-| `apps/control-plane/infrastructure/workflows/vision_publisher.py` | other | `apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py` | `apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`tests/test_vision_live_persistence.py` |
+| `apps/control-plane/infrastructure/workflows/vision_publisher.py` | other | `apps/control-plane/application/vision_agent_loop.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/infrastructure/artifacts/rustfs.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/session.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py` | `apps/control-plane/infrastructure/workflows/temporal_worker.py`<br>`tests/test_vision_live_persistence.py` |
+| `migrations/versions/b7c9d1e3f5a7_add_agent_loop_engine.py` | migration | — | — |
 | `packages/contracts/src/auto_at/contracts/agent.py` | other | — | `apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py` |
+| `packages/contracts/src/auto_at/contracts/codex_bridge.py` | other | — | — |
 | `packages/contracts/src/auto_at/contracts/execution.py` | other | — | `apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py` |
+| `tests/test_agent_loop_contracts.py` | test | `apps/control-plane/agents/prompts/codex_exploration.py` | — |
 | `tests/test_codex_bridge_repository.py` | test | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/persistence/codex_bridge_repository.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`tests/vision_trace_fixtures.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | — |
+| `tests/test_qa_phase01_edges.py` | test | `tests/test_vision_provider_submission.py`<br>`tests/vision_trace_fixtures.py` | — |
+| `tests/test_vision_agent_engine_selection.py` | test | `apps/control-plane/config.py`<br>`tests/test_vision_provider_submission.py`<br>`tests/vision_trace_fixtures.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | — |
+| `tests/test_vision_agent_loop.py` | test | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/application/vision_agent_loop.py`<br>`apps/control-plane/application/vision_results.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`tests/vision_trace_fixtures.py` | — |
 | `tests/test_vision_event_processor.py` | test | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py` | — |
 | `tests/test_vision_live_persistence.py` | test | `apps/control-plane/application/vision_operations.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`tests/vision_trace_fixtures.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/workflows/vision_publisher.py` | `tests/test_vision_provider_integration.py` |
 | `tests/test_vision_model_batch.py` | test | `apps/control-plane/agents/shared/openrouter.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/vision/temporary_images.py`<br>`apps/control-plane/application/vision_model_batch.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py` | — |
 | `tests/test_vision_operation_failure_stage.py` | test | `apps/control-plane/application/vision_operations.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`tests/vision_trace_fixtures.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | — |
 | `tests/test_vision_provider_integration.py` | test | `apps/control-plane/agents/shared/gemini.py`<br>`apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/agents/vision/intent.py`<br>`apps/control-plane/application/vision_events.py`<br>`apps/control-plane/application/vision_trace_events.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py`<br>`apps/control-plane/infrastructure/vision/model_batch.py`<br>`tests/test_vision_live_persistence.py` | — |
-| `tests/test_vision_provider_submission.py` | test | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` | — |
-| `tests/vision_trace_fixtures.py` | test | `apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` | `tests/test_vision_operation_failure_stage.py`<br>`tests/test_codex_bridge_repository.py`<br>`tests/test_vision_live_persistence.py` |
+| `tests/test_vision_provider_submission.py` | test | `apps/control-plane/agents/shared/runtime.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/persistence/repositories.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` | `tests/test_qa_phase01_edges.py`<br>`tests/test_vision_agent_engine_selection.py` |
+| `tests/vision_trace_fixtures.py` | test | `apps/control-plane/domain/entities.py`<br>`apps/control-plane/infrastructure/persistence/vision_unit_of_work.py` | `tests/test_qa_phase01_edges.py`<br>`tests/test_vision_agent_engine_selection.py`<br>`tests/test_vision_agent_loop.py`<br>`tests/test_codex_bridge_repository.py`<br>`tests/test_vision_live_persistence.py`<br>`tests/test_vision_operation_failure_stage.py` |
 
 ### Ranh giới (blast radius ra ngoài graph)
 
-- **File ngoài graph đang gọi vào** (142): `apps/control-plane/agents/healing/service.py`, `apps/control-plane/agents/reporting/executor.py`, `apps/control-plane/agents/reporting/service.py`, `apps/control-plane/agents/shared/evidence.py`, `apps/control-plane/agents/triage/executor.py`, `apps/control-plane/agents/triage/service.py`, `apps/control-plane/agents/vision/evidence.py`, `apps/control-plane/agents/vision/executor.py`, `apps/control-plane/api/v1/dependencies/authorization.py`, `apps/control-plane/api/v1/dependencies/generation_policy.py`, `apps/control-plane/api/v1/dependencies/vision.py`, `apps/control-plane/api/v1/router.py`, `apps/control-plane/api/v1/routes/auth.py`, `apps/control-plane/api/v1/routes/catalog.py`, `apps/control-plane/api/v1/routes/demo.py`, `apps/control-plane/api/v1/routes/generation.py`, `apps/control-plane/api/v1/routes/operations.py`, `apps/control-plane/api/v1/routes/proposals.py`, `apps/control-plane/api/v1/routes/runs.py`, `apps/control-plane/api/v1/routes/worker_progress.py`, `apps/control-plane/application/codex_bridge.py`, `apps/control-plane/application/codex_candidates.py`, `apps/control-plane/application/generation.py`, `apps/control-plane/application/generation_events.py`, `apps/control-plane/application/generation_policy.py`, `apps/control-plane/application/proposals.py`, `apps/control-plane/application/reporting.py`, `apps/control-plane/application/reporting_events.py`, `apps/control-plane/application/runs.py`, `apps/control-plane/application/triage.py`, `apps/control-plane/application/triage_events.py`, `apps/control-plane/application/vision_source_renderer.py`, `apps/control-plane/benchmark/models.py`, `apps/control-plane/cli.py`, `apps/control-plane/codex_bridge_cli.py`, `apps/control-plane/domain/knowledge.py`, `apps/control-plane/domain/ports.py`, `apps/control-plane/domain/proposals.py`, `apps/control-plane/domain/runs.py`, `apps/control-plane/infrastructure/codex_bridge/catalogue.py`, `apps/control-plane/infrastructure/codex_bridge/claude_process.py`, `apps/control-plane/infrastructure/codex_bridge/doctor.py`, `apps/control-plane/infrastructure/codex_bridge/generation_model.py`, `apps/control-plane/infrastructure/codex_bridge/process.py`, `apps/control-plane/infrastructure/codex_bridge/spool.py`, `apps/control-plane/infrastructure/observability/__init__.py`, `apps/control-plane/infrastructure/runners.py`, `apps/control-plane/infrastructure/vision/codex_batch.py`, `apps/control-plane/infrastructure/vision/codex_composition.py`, `apps/control-plane/infrastructure/vision_worker.py`, `apps/control-plane/infrastructure/workflows/temporal.py`, `apps/control-plane/main.py`, `apps/control-plane/runners/ports.py`, `benchmark/vision/codex/live_canary.py`, `benchmark/vision/codex/offline_suite.py`, `benchmark/vision/gehihi/run_offline.py`, `migrations/env.py`, `packages/contracts/src/auto_at/contracts/generation.py`, `scripts/migrate_minio_to_rustfs.py`, `tests/fixtures/codex_bridge_mount_probe.py`, `tests/fixtures/codex_bridge_tool_probe.py`, `tests/test_activity.py`, `tests/test_agent_boundaries.py`, `tests/test_agent_runtime.py`, `tests/test_artifact_retention.py`, `tests/test_catalog_routes.py`, `tests/test_claude_bridge.py`, `tests/test_codex_bridge_benchmark.py`, `tests/test_codex_bridge_end_to_end.py`, `tests/test_codex_bridge_migrations.py`, `tests/test_codex_bridge_qualification.py`, `tests/test_codex_bridge_service.py`, `tests/test_codex_bridge_spool.py`, `tests/test_codex_candidate_service.py`, `tests/test_codex_exploration_integration.py`, `tests/test_codex_generation.py`, `tests/test_codex_generation_reservation.py`, `tests/test_codex_model_batch.py`, `tests/test_config.py`, `tests/test_execution_contract_fixtures.py`, `tests/test_gemini_vision_model.py`, `tests/test_generation_contracts.py`, `tests/test_generation_event_processor.py`, `tests/test_generation_planner.py`, `tests/test_generation_preflight.py`, `tests/test_generation_provider_routes.py`, `tests/test_google_drive_temporary_images.py`, `tests/test_healing_proposals.py`, `tests/test_knowledge_promotion.py`, `tests/test_playwright_worker_compose.py`, `tests/test_proposal_domain.py`, `tests/test_proposal_use_cases.py`, `tests/test_reporting_event_processor.py`, `tests/test_reporting_executor.py`, `tests/test_reporting_routes.py`, `tests/test_run_domain.py`, `tests/test_run_report_contract.py`, `tests/test_run_report_repository.py`, `tests/test_run_repository.py`, `tests/test_run_routes.py`, `tests/test_run_use_cases.py`, `tests/test_runner_transport.py`, `tests/test_rustfs_artifacts.py`, `tests/test_rustfs_operation_storage.py`, `tests/test_rustfs_read_after_write.py`, `tests/test_telemetry.py`, `tests/test_temporal_cancellation.py`, `tests/test_transaction_boundary.py`, `tests/test_triage_event_processor.py`, `tests/test_triage_executor.py`, `tests/test_verified_artifacts.py`, `tests/test_vision_benchmark.py`, `tests/test_vision_conclusion.py`, `tests/test_vision_debug_access.py`, `tests/test_vision_debug_evidence.py`, `tests/test_vision_evidence.py`, `tests/test_vision_executor.py`, `tests/test_vision_handoff.py`, `tests/test_vision_handoff_repository.py`, `tests/test_vision_intent.py`, `tests/test_vision_locator_pipeline.py`, `tests/test_vision_migration_compatibility.py`, `tests/test_vision_operation_repository.py`, `tests/test_vision_operation_transport.py`, `tests/test_vision_origins.py`, `tests/test_vision_page_batch.py`, `tests/test_vision_policy.py`, `tests/test_vision_policy_persistence.py`, `tests/test_vision_policy_routes.py`, `tests/test_vision_progress.py`, `tests/test_vision_reload.py`, `tests/test_vision_replay.py`, `tests/test_vision_results.py`, `tests/test_vision_routes.py`, `tests/test_vision_screen.py`, `tests/test_vision_source_renderer.py`, `tests/test_vision_target_preflight.py`, `tests/test_vision_trajectory_repository.py`, `tests/test_vision_tree_capacity.py`, `tests/test_vision_viewport_scan.py`, `tests/test_vision_worker_observability.py`, `tests/test_worker_progress.py`
-- **File ngoài graph bị graph này gọi** (18): `apps/control-plane/application/artifact_retention.py`, `apps/control-plane/application/codex_candidates.py`, `apps/control-plane/application/generation_events.py`, `apps/control-plane/application/reporting_events.py`, `apps/control-plane/application/triage_events.py`, `apps/control-plane/application/vision_debug_retention.py`, `apps/control-plane/application/vision_handoff.py`, `apps/control-plane/application/vision_origins.py`, `apps/control-plane/domain/vision_restoration.py`, `apps/control-plane/domain/vision_scope.py`, `apps/control-plane/infrastructure/codex_bridge/generation_model.py`, `apps/control-plane/infrastructure/vision/codex_composition.py`, `apps/control-plane/infrastructure/workflows/temporal.py`, `apps/control-plane/main.py`, `tests/test_codex_bridge_contracts.py`, `tests/test_codex_candidate_service.py`, `tests/test_codex_model_batch.py`, `workers/playwright/src/observability.ts`
+- **File ngoài graph đang gọi vào** (150): `apps/control-plane/agents/healing/service.py`, `apps/control-plane/agents/prompts/agent_loop.py`, `apps/control-plane/agents/reporting/executor.py`, `apps/control-plane/agents/reporting/service.py`, `apps/control-plane/agents/shared/evidence.py`, `apps/control-plane/agents/triage/executor.py`, `apps/control-plane/agents/triage/service.py`, `apps/control-plane/agents/vision/codex_service.py`, `apps/control-plane/agents/vision/evidence.py`, `apps/control-plane/agents/vision/executor.py`, `apps/control-plane/api/v1/dependencies/authorization.py`, `apps/control-plane/api/v1/dependencies/generation_policy.py`, `apps/control-plane/api/v1/dependencies/vision.py`, `apps/control-plane/api/v1/router.py`, `apps/control-plane/api/v1/routes/auth.py`, `apps/control-plane/api/v1/routes/catalog.py`, `apps/control-plane/api/v1/routes/demo.py`, `apps/control-plane/api/v1/routes/generation.py`, `apps/control-plane/api/v1/routes/operations.py`, `apps/control-plane/api/v1/routes/proposals.py`, `apps/control-plane/api/v1/routes/runs.py`, `apps/control-plane/api/v1/routes/worker_progress.py`, `apps/control-plane/application/codex_bridge.py`, `apps/control-plane/application/codex_candidates.py`, `apps/control-plane/application/generation.py`, `apps/control-plane/application/generation_events.py`, `apps/control-plane/application/generation_policy.py`, `apps/control-plane/application/proposals.py`, `apps/control-plane/application/reporting.py`, `apps/control-plane/application/reporting_events.py`, `apps/control-plane/application/runs.py`, `apps/control-plane/application/triage.py`, `apps/control-plane/application/triage_events.py`, `apps/control-plane/application/vision_source_renderer.py`, `apps/control-plane/benchmark/models.py`, `apps/control-plane/cli.py`, `apps/control-plane/codex_bridge_cli.py`, `apps/control-plane/domain/knowledge.py`, `apps/control-plane/domain/ports.py`, `apps/control-plane/domain/proposals.py`, `apps/control-plane/domain/runs.py`, `apps/control-plane/infrastructure/codex_bridge/catalogue.py`, `apps/control-plane/infrastructure/codex_bridge/claude_process.py`, `apps/control-plane/infrastructure/codex_bridge/doctor.py`, `apps/control-plane/infrastructure/codex_bridge/generation_model.py`, `apps/control-plane/infrastructure/codex_bridge/process.py`, `apps/control-plane/infrastructure/codex_bridge/spool.py`, `apps/control-plane/infrastructure/observability/__init__.py`, `apps/control-plane/infrastructure/runners.py`, `apps/control-plane/infrastructure/vision/codex_batch.py`, `apps/control-plane/infrastructure/vision/codex_composition.py`, `apps/control-plane/infrastructure/vision_worker.py`, `apps/control-plane/infrastructure/workflows/temporal.py`, `apps/control-plane/main.py`, `apps/control-plane/runners/ports.py`, `benchmark/vision/codex/live_canary.py`, `benchmark/vision/codex/offline_suite.py`, `benchmark/vision/gehihi/run_offline.py`, `migrations/env.py`, `packages/contracts/src/auto_at/contracts/generation.py`, `plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py`, `scripts/migrate_minio_to_rustfs.py`, `tests/fixtures/codex_bridge_mount_probe.py`, `tests/fixtures/codex_bridge_tool_probe.py`, `tests/test_activity.py`, `tests/test_agent_boundaries.py`, `tests/test_agent_loop_bridge.py`, `tests/test_agent_runtime.py`, `tests/test_artifact_retention.py`, `tests/test_catalog_routes.py`, `tests/test_claude_bridge.py`, `tests/test_codex_bridge_benchmark.py`, `tests/test_codex_bridge_end_to_end.py`, `tests/test_codex_bridge_migrations.py`, `tests/test_codex_bridge_qualification.py`, `tests/test_codex_bridge_service.py`, `tests/test_codex_bridge_spool.py`, `tests/test_codex_candidate_service.py`, `tests/test_codex_exploration_integration.py`, `tests/test_codex_generation.py`, `tests/test_codex_generation_reservation.py`, `tests/test_codex_model_batch.py`, `tests/test_config.py`, `tests/test_execution_contract_fixtures.py`, `tests/test_gemini_vision_model.py`, `tests/test_generation_contracts.py`, `tests/test_generation_event_processor.py`, `tests/test_generation_planner.py`, `tests/test_generation_preflight.py`, `tests/test_generation_provider_routes.py`, `tests/test_google_drive_temporary_images.py`, `tests/test_healing_proposals.py`, `tests/test_knowledge_promotion.py`, `tests/test_playwright_worker_compose.py`, `tests/test_proposal_domain.py`, `tests/test_proposal_use_cases.py`, `tests/test_qa_r11_agent_loop_prompt.py`, `tests/test_qa_r8_agent_evidence.py`, `tests/test_reporting_event_processor.py`, `tests/test_reporting_executor.py`, `tests/test_reporting_routes.py`, `tests/test_run_domain.py`, `tests/test_run_report_contract.py`, `tests/test_run_report_repository.py`, `tests/test_run_repository.py`, `tests/test_run_routes.py`, `tests/test_run_use_cases.py`, `tests/test_runner_transport.py`, `tests/test_rustfs_artifacts.py`, `tests/test_rustfs_operation_storage.py`, `tests/test_rustfs_read_after_write.py`, `tests/test_telemetry.py`, `tests/test_temporal_cancellation.py`, `tests/test_transaction_boundary.py`, `tests/test_triage_event_processor.py`, `tests/test_triage_executor.py`, `tests/test_verified_artifacts.py`, `tests/test_vision_agent_evidence_flags.py`, `tests/test_vision_agent_loop_qa.py`, `tests/test_vision_benchmark.py`, `tests/test_vision_conclusion.py`, `tests/test_vision_debug_access.py`, `tests/test_vision_debug_evidence.py`, `tests/test_vision_evidence.py`, `tests/test_vision_executor.py`, `tests/test_vision_handoff.py`, `tests/test_vision_handoff_repository.py`, `tests/test_vision_intent.py`, `tests/test_vision_locator_pipeline.py`, `tests/test_vision_migration_compatibility.py`, `tests/test_vision_operation_repository.py`, `tests/test_vision_operation_transport.py`, `tests/test_vision_origins.py`, `tests/test_vision_page_batch.py`, `tests/test_vision_policy.py`, `tests/test_vision_policy_persistence.py`, `tests/test_vision_policy_routes.py`, `tests/test_vision_progress.py`, `tests/test_vision_reload.py`, `tests/test_vision_replay.py`, `tests/test_vision_results.py`, `tests/test_vision_routes.py`, `tests/test_vision_screen.py`, `tests/test_vision_source_renderer.py`, `tests/test_vision_target_preflight.py`, `tests/test_vision_trajectory_repository.py`, `tests/test_vision_tree_capacity.py`, `tests/test_vision_viewport_scan.py`, `tests/test_vision_worker_observability.py`, `tests/test_worker_progress.py`
+- **File ngoài graph bị graph này gọi** (22): `apps/control-plane/agents/prompts/agent_loop.py`, `apps/control-plane/agents/vision/codex_service.py`, `apps/control-plane/application/artifact_retention.py`, `apps/control-plane/application/codex_candidates.py`, `apps/control-plane/application/generation_events.py`, `apps/control-plane/application/reporting_events.py`, `apps/control-plane/application/triage_events.py`, `apps/control-plane/application/vision_debug_retention.py`, `apps/control-plane/application/vision_handoff.py`, `apps/control-plane/application/vision_origins.py`, `apps/control-plane/domain/vision_agent_safety.py`, `apps/control-plane/domain/vision_restoration.py`, `apps/control-plane/domain/vision_scope.py`, `apps/control-plane/infrastructure/codex_bridge/claude_process.py`, `apps/control-plane/infrastructure/codex_bridge/generation_model.py`, `apps/control-plane/infrastructure/vision/codex_composition.py`, `apps/control-plane/infrastructure/workflows/temporal.py`, `apps/control-plane/main.py`, `tests/test_codex_bridge_contracts.py`, `tests/test_codex_candidate_service.py`, `tests/test_codex_model_batch.py`, `workers/playwright/src/observability.ts`
 
 ```mermaid
 graph LR
@@ -240,30 +267,39 @@ graph LR
   n19["codex_exploration.py<br/><small>apps/control-plane/agents/prompts</small>"]
   n20["intent.py<br/><small>apps/control-plane/agents/vision</small>"]
   n21["activity.py<br/><small>apps/control-plane/domain</small>"]
-  n22["debug_evidence.py<br/><small>apps/control-plane/agents/vision</small>"]
-  n23["vision_events.py<br/><small>apps/control-plane/application</small>"]
-  n24["entities.py<br/><small>apps/control-plane/domain</small>"]
-  n25["vision_model_batch.py<br/><small>apps/control-plane/application</small>"]
-  n26["vision_operations.py<br/><small>apps/control-plane/application</small>"]
-  n27["vision_conclusion.py<br/><small>apps/control-plane/domain</small>"]
-  n28["vision_trace_events.py<br/><small>apps/control-plane/application</small>"]
-  n29["agent.py<br/><small>packages/contracts/src/auto_at/contracts</small>"]
-  n30["execution.py<br/><small>packages/contracts/src/auto_at/contracts</small>"]
-  n31["telemetry.py<br/><small>apps/control-plane/infrastructure/observability</small>"]
-  n32["codex_bridge_repository.py<br/><small>apps/control-plane/infrastructure/persistence</small>"]
-  n33["vision_unit_of_work.py<br/><small>apps/control-plane/infrastructure/persistence</small>"]
-  n34["model_batch.py<br/><small>apps/control-plane/infrastructure/vision</small>"]
-  n35["temporary_images.py<br/><small>apps/control-plane/agents/vision</small>"]
-  n36["temporal_worker.py<br/><small>apps/control-plane/infrastructure/workflows</small>"]
-  n37["vision_publisher.py<br/><small>apps/control-plane/infrastructure/workflows</small>"]
-  n38["test_codex_bridge_repository.py<br/><small>tests</small>"]
-  n39["vision_trace_fixtures.py<br/><small>tests</small>"]
-  n40["test_vision_event_processor.py<br/><small>tests</small>"]
-  n41["test_vision_live_persistence.py<br/><small>tests</small>"]
-  n42["test_vision_model_batch.py<br/><small>tests</small>"]
-  n43["test_vision_operation_failure_stage.py<br/><small>tests</small>"]
-  n44["test_vision_provider_integration.py<br/><small>tests</small>"]
-  n45["test_vision_provider_submission.py<br/><small>tests</small>"]
+  n22["vision_agent_loop.py<br/><small>apps/control-plane/application</small>"]
+  n23["entities.py<br/><small>apps/control-plane/domain</small>"]
+  n24["vision_model_batch.py<br/><small>apps/control-plane/application</small>"]
+  n25["vision_operations.py<br/><small>apps/control-plane/application</small>"]
+  n26["debug_evidence.py<br/><small>apps/control-plane/agents/vision</small>"]
+  n27["vision_events.py<br/><small>apps/control-plane/application</small>"]
+  n28["vision_conclusion.py<br/><small>apps/control-plane/domain</small>"]
+  n29["vision_trace_events.py<br/><small>apps/control-plane/application</small>"]
+  n30["agent.py<br/><small>packages/contracts/src/auto_at/contracts</small>"]
+  n31["execution.py<br/><small>packages/contracts/src/auto_at/contracts</small>"]
+  n32["telemetry.py<br/><small>apps/control-plane/infrastructure/observability</small>"]
+  n33["codex_bridge_repository.py<br/><small>apps/control-plane/infrastructure/persistence</small>"]
+  n34["vision_unit_of_work.py<br/><small>apps/control-plane/infrastructure/persistence</small>"]
+  n35["redaction.py<br/><small>apps/control-plane/agents/shared</small>"]
+  n36["model_batch.py<br/><small>apps/control-plane/infrastructure/vision</small>"]
+  n37["temporary_images.py<br/><small>apps/control-plane/agents/vision</small>"]
+  n38["temporal_worker.py<br/><small>apps/control-plane/infrastructure/workflows</small>"]
+  n39["vision_publisher.py<br/><small>apps/control-plane/infrastructure/workflows</small>"]
+  n40["test_agent_loop_contracts.py<br/><small>tests</small>"]
+  n41["test_codex_bridge_repository.py<br/><small>tests</small>"]
+  n42["vision_trace_fixtures.py<br/><small>tests</small>"]
+  n43["test_qa_phase01_edges.py<br/><small>tests</small>"]
+  n44["test_vision_provider_submission.py<br/><small>tests</small>"]
+  n45["test_vision_agent_engine_selection.py<br/><small>tests</small>"]
+  n46["test_vision_agent_loop.py<br/><small>tests</small>"]
+  n47["test_vision_event_processor.py<br/><small>tests</small>"]
+  n48["test_vision_live_persistence.py<br/><small>tests</small>"]
+  n49["test_vision_model_batch.py<br/><small>tests</small>"]
+  n50["test_vision_operation_failure_stage.py<br/><small>tests</small>"]
+  n51["test_vision_provider_integration.py<br/><small>tests</small>"]
+  n52["models.py<br/><small>apps/control-plane/infrastructure/persistence</small>"]
+  n53["b7c9d1e3f5a7_add_agent_loop_engine.py<br/><small>migrations/versions</small>"]
+  n54["codex_bridge.py<br/><small>packages/contracts/src/auto_at/contracts</small>"]
   n0 --> n1
   n0 --> n2
   n3 --> n4
@@ -293,18 +329,24 @@ graph LR
   n18 --> n1
   n18 --> n20
   n18 --> n21
-  n10 --> n22
-  n23 --> n5
-  n23 --> n22
-  n23 --> n20
-  n23 --> n4
-  n23 --> n21
-  n23 --> n24
-  n23 --> n25
-  n23 --> n26
-  n25 --> n5
-  n26 --> n24
-  n26 --> n2
+  n22 --> n5
+  n22 --> n1
+  n22 --> n20
+  n22 --> n23
+  n22 --> n24
+  n22 --> n25
+  n10 --> n26
+  n27 --> n5
+  n27 --> n26
+  n27 --> n20
+  n27 --> n4
+  n27 --> n21
+  n27 --> n23
+  n27 --> n24
+  n27 --> n25
+  n24 --> n5
+  n25 --> n23
+  n25 --> n2
   n11 --> n5
   n11 --> n1
   n11 --> n4
@@ -312,98 +354,114 @@ graph LR
   n12 --> n1
   n12 --> n20
   n12 --> n4
-  n14 --> n27
+  n14 --> n28
   n14 --> n13
   n15 --> n13
-  n28 --> n5
-  n28 --> n1
-  n28 --> n20
-  n28 --> n24
-  n28 --> n25
-  n28 --> n26
-  n24 --> n29
-  n24 --> n30
+  n29 --> n5
+  n29 --> n1
+  n29 --> n20
+  n29 --> n23
+  n29 --> n24
+  n29 --> n25
+  n23 --> n30
+  n23 --> n31
   n17 --> n4
-  n17 --> n24
+  n17 --> n23
   n2 --> n4
-  n2 --> n31
-  n32 --> n21
-  n32 --> n24
-  n32 --> n7
-  n32 --> n8
-  n7 --> n29
-  n7 --> n30
-  n7 --> n21
-  n7 --> n24
-  n8 --> n4
-  n33 --> n1
+  n2 --> n32
   n33 --> n21
-  n33 --> n24
-  n33 --> n32
+  n33 --> n23
   n33 --> n7
   n33 --> n8
-  n34 --> n3
-  n34 --> n5
-  n34 --> n1
+  n7 --> n30
+  n7 --> n31
+  n7 --> n21
+  n7 --> n23
+  n8 --> n4
   n34 --> n35
-  n34 --> n25
-  n34 --> n4
-  n36 --> n23
-  n36 --> n4
-  n36 --> n17
-  n36 --> n7
-  n36 --> n8
-  n36 --> n33
-  n36 --> n34
+  n34 --> n1
+  n34 --> n21
+  n34 --> n23
+  n34 --> n33
+  n34 --> n7
+  n34 --> n8
+  n36 --> n3
+  n36 --> n5
+  n36 --> n1
   n36 --> n37
-  n36 --> n2
-  n37 --> n28
-  n37 --> n17
-  n37 --> n7
-  n37 --> n8
-  n37 --> n33
-  n37 --> n34
+  n36 --> n24
+  n36 --> n4
+  n38 --> n27
   n38 --> n4
-  n38 --> n32
-  n38 --> n33
+  n38 --> n17
+  n38 --> n7
+  n38 --> n8
+  n38 --> n34
+  n38 --> n36
   n38 --> n39
   n38 --> n2
-  n40 --> n5
-  n40 --> n23
-  n40 --> n4
-  n40 --> n34
-  n41 --> n26
-  n41 --> n7
-  n41 --> n39
-  n41 --> n28
+  n39 --> n22
+  n39 --> n29
+  n39 --> n17
+  n39 --> n7
+  n39 --> n8
+  n39 --> n34
+  n39 --> n36
+  n40 --> n19
   n41 --> n4
-  n41 --> n37
-  n42 --> n3
-  n42 --> n5
-  n42 --> n35
-  n42 --> n25
-  n42 --> n4
-  n42 --> n34
-  n43 --> n26
-  n43 --> n33
-  n43 --> n39
-  n43 --> n2
-  n44 --> n0
+  n41 --> n33
+  n41 --> n34
+  n41 --> n42
+  n41 --> n2
+  n43 --> n44
+  n43 --> n42
+  n45 --> n4
+  n45 --> n44
+  n45 --> n42
+  n45 --> n2
+  n46 --> n5
+  n46 --> n22
+  n46 --> n14
+  n46 --> n4
+  n46 --> n7
+  n46 --> n34
+  n46 --> n42
+  n47 --> n5
+  n47 --> n27
+  n47 --> n4
+  n47 --> n36
+  n48 --> n25
+  n48 --> n7
+  n48 --> n42
+  n48 --> n29
+  n48 --> n4
+  n48 --> n39
+  n49 --> n3
+  n49 --> n5
+  n49 --> n37
+  n49 --> n24
+  n49 --> n4
+  n49 --> n36
+  n50 --> n25
+  n50 --> n34
+  n50 --> n42
+  n50 --> n2
+  n51 --> n0
+  n51 --> n5
+  n51 --> n20
+  n51 --> n27
+  n51 --> n29
+  n51 --> n4
+  n51 --> n7
+  n51 --> n34
+  n51 --> n36
+  n51 --> n48
   n44 --> n5
-  n44 --> n20
-  n44 --> n23
-  n44 --> n28
   n44 --> n4
   n44 --> n7
-  n44 --> n33
   n44 --> n34
-  n44 --> n41
-  n45 --> n5
-  n45 --> n4
-  n45 --> n7
-  n45 --> n33
-  n39 --> n24
-  n39 --> n33
+  n42 --> n23
+  n42 --> n34
 ```
 
 <!-- hgraph:end auto -->

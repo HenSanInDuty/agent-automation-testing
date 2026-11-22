@@ -133,6 +133,12 @@ _VISION_PROGRESS = {
     "unavailable": (
         "unavailable", "Visual exploration is unavailable.", frozenset({"reason_code"}),
     ),
+    # Agent-loop engine: one event per model step; never carries goals, memory or typed text.
+    "agent.step": (
+        "running", "Agent loop step was recorded.",
+        frozenset({"step_index", "snapshot_version", "action_count", "executed_count",
+                   "reason_code"}),
+    ),
 }
 
 for _stage, _summary in {
@@ -267,6 +273,8 @@ class ActivityEvent:
             "stale_dom_context", "stale_dom_target", "stale_dom_snapshot",
             "state_mismatch", "state_changed_during_observation", "dom_snapshot_limit",
             "unattributed_popup", "dom_observation_unavailable",
+            "agent_done", "agent_stopped", "agent_step_limit", "invalid_ref", "stale_ref",
+            "origin_blocked", "sensitive_action_blocked",
             *VISION_MODEL_FAILURE_REASONS,
         }:
             raise ValueError("vision progress reason is invalid")
@@ -283,6 +291,12 @@ class ActivityEvent:
                 if name in safe_metadata and (type(safe_metadata[name]) is not int
                                               or not 0 <= safe_metadata[name] <= upper):
                     raise ValueError("invalid Codex count")
+        if stage == "agent.step":
+            for name, upper in (("step_index", 20), ("snapshot_version", 1_000_000),
+                                ("action_count", 10), ("executed_count", 10)):
+                if name in safe_metadata and (type(safe_metadata[name]) is not int
+                                              or not 0 <= safe_metadata[name] <= upper):
+                    raise ValueError("invalid agent step count")
         if "purpose" in safe_metadata and safe_metadata["purpose"] not in {
             "setup", "explore", "restore", "replay",
         }:

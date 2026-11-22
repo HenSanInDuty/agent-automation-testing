@@ -2,6 +2,7 @@
 
 Ngày lập: 2026-11-09, Asia/Saigon. Trạng thái: in progress — phase 04 reopened after round 17 qualification failure; 3/5 phase completed.
 Đây là hồ sơ tiến độ chuẩn; mọi vòng chạy cập nhật ở đây và trong nhật ký benchmark.
+progress_url: https://claude.ai/artifact/7Wpg2znWAUaQAPGrx6PQxP (`progress.html`, h-cook) · auto_continue: false
 
 ## Mục tiêu và quyết định
 
@@ -99,7 +100,7 @@ tạo tài khoản, cài/chạy file tải về hoặc mục tiêu production m�
 | 01 | [Đóng băng oracle và bộ chấm](phase-01-metrics-oracle.md) | completed | Không | 37 Python + 6 worker tests; audit 1280×720 |
 | 02 | [Harness vòng chạy và chẩn đoán](phase-02-loop-evidence.md) | completed | 01 | 35 Python tests; historical API import |
 | 03 | [Tái hiện và sửa lỗi restoration](phase-03-restoration.md) | completed | 01, 02 | 177 regression + 6 recovery; 102 worker tests |
-| 04 | [Chạy vòng cải thiện liên tục](phase-04-iterate.md) | in progress | 01–03 | Reopened: round 17 carousel outcome evidence fails; round 16 pass retained |
+| 04 | [Chạy vòng cải thiện liên tục](phase-04-iterate.md) | in progress | 01–03 | Reopened: round 17 carousel outcome evidence fails; round 16 pass retained. r8 (2026-11-21): A1–A3 flags offline, leader PASS, QA PASS; live not run |
 | 05 | [Qualification và bàn giao](phase-05-qualification.md) | in progress; awaiting phase 04 | 04 | Offline 1151 passed, 2 explained skips; first fresh attempt failed, streak 0/3 |
 
 Trong phase 04, quay lại công việc phase 02/03 khi nguyên nhân mới cần thêm
@@ -889,3 +890,223 @@ Get-Content benchmark/vision/accuracy/ROUND21-20261119.md
 - Open: mct-57 previous-arrow outcome, mct-47 video copy, the 3 unmatched inventory
   keys (precision), restoration terminal. No code changes, no commit/push.
 - Next command (fresh session): `Get-Content benchmark/vision/accuracy/ROUND21-20261119.md`
+
+### Agent loop round 01 handoff - 2026-11-20
+
+- Plan `plan/20261119-2212-browser-agent-loop` phase 6. One live session (`engine=agent_loop`, claude_cli) created:
+  `552a906a-9044-4440-b4b0-fbaea0eabcc3`; no iteration was imported. It ended in 0.94 s, 0 model calls, 0 operations: the worker
+  refused session open with `invalid_deadline` (control-plane sends the whole-session deadline with the per-step
+  `max_session_seconds`; `application/vision_agent_loop.py:296-353` vs `workers/playwright/src/vision-operations.ts:140`).
+  **Not scored.** Record: `benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md`; ADR-038; runbook section "Agent loop engine".
+- Source: working tree on HEAD `f85091a`, uncommitted; containers byte-identical (0 mismatches over 163 + 48 files);
+  oracle `9242b33d...` and `metrics.py` unchanged. Migration `b7c9d1e3f5a7` applied locally.
+- Regression: ruff clean; pytest 1771 passed, 1 failed (baseline manifest-hash test), 33 skipped; worker operations 99 passed,
+  agent-mode 40 passed + 1 timing-flaky (QA-W08 passes alone); dashboard 49 passed, typecheck/lint clean.
+- Active: stack still up with `VISION_AGENT_LOOP_ENABLED=true` via a scratchpad compose override (not in `.env`); claude-bridge
+  token had about 7 hours left at 2026-11-20 20:30 +7 (rerun `scripts/export_claude_bridge_token.py`). No active session. No commit.
+- Next: a small phase to fix the open deadline in `vision_agent_loop.py` with a test that applies the worker rule; then one fresh round
+  creating a new session with `.pytest-artifacts/agent_loop_round.py submit` (delete `.pytest-artifacts/agent-loop-session.json` first),
+  `run.py import`, `collect`, review, `evaluate`.
+
+### Agent loop round 01 r2 handoff - 2026-11-20
+
+- Phase 6 r2: fixed the worker-open deadline in `application/vision_agent_loop.py` (open with `now + step_timeout`), tests with a
+  fake worker applying the worker rule (red old, green new); ruff clean; agent-loop tests 53 + 160 passed.
+- Live session `84fc0fa8-8c5a-48fc-9ab6-4a4e1faa8525` (the one approved): worker open OK, setup navigate OK, then
+  `bridge_offline`: container `auto-at-ui-claude-bridge-1` runs a stale image (2026-11-19, before phase 3 bridge code) and exited 1 on
+  the first agent job. 1 operation, 1 cancelled bridge job, 0 steps. **Not scored.** Evidence: `plan/20261119-2212-browser-agent-loop/reports/phase-06/live-session-r2-evidence.log`.
+- Active: control-plane and temporal-worker rebuilt from the tree (flag on via the scratchpad override); `claude-bridge` container is
+  EXITED (not running). No active session. No commit.
+- Next: rebuild and recreate `claude-bridge` (`CLAUDE_BRIDGE_TOKEN_DIR=C:/Users/hen/.auto-at/claude-bridge-secrets`,
+  `docker compose -f docker-compose.yml -f docker-compose.codex.yml build claude-bridge`, then `up -d --no-deps claude-bridge`), compare its
+  files with the tree, refresh the token if needed, then one new session (move `.pytest-artifacts/agent-loop-session.json` aside first),
+  `run.py import`, `collect`, review, `evaluate`.
+
+### Agent loop round 01 r3 handoff - 2026-11-20
+
+- Bridge rebuilt by the coordinator (container files equal the tree; heartbeat online before submit). Session `685f76a7-404d-49bf-acb5-1ff6c72d66c6`
+  (third and last approved): 2 bridge jobs completed (agent schema parsed live, 9636 in / 805 out tokens), 3 operations, then
+  `worker_result_mismatch` at operation 3. **Not scored; nothing imported.**
+- Cause: `application/vision_agent_loop.py:232` sets `browser_parent` after every completed op; the worker (agent mode, `purpose=explore`) never extends
+  its ancestry (`vision-operations.ts:559,869-873`), so its `parent_operation_id` stays the root navigate. Fake worker in tests echoes the parent.
+- Next: a small phase to fix the parent tracking in `vision_agent_loop.py` (advance only for operations the worker pushes: navigate, setup refresh/scroll)
+  and make `FakeWorker` apply the same rule; then, with a user decision, a fourth session. Stack: bridge Up, flag on via scratchpad override. No commit.
+
+### Agent loop round 01 r4 handoff - 2026-11-20
+
+- Fixed `parent_operation_id` tracking and the per-step lease renewal in `application/vision_agent_loop.py`; `FakeWorker` applies the real worker rules (parent, fingerprint, stale snapshot, origin, purpose,
+  refresh). Tests: agent loop + QA 188 passed, live persistence 27 passed, ruff clean. Dry run (real worker through a local TCP forwarder, scripted model, in-process, disposable database): `agent_done`
+  (`reports/phase-06/r4-dry-run-3.json`, helper `.pytest-artifacts/agent_loop_dry_run.py`).
+- Live session 4 `9e21e389-8145-4870-824e-8a38013ea86e`: 6 model steps (30,672 in / 2,495 out tokens), 4 clicks, ended `worker_state_unavailable` because the session lease lapsed during two all-blocked
+  steps (fixed after the run; the deployed control-plane and temporal-worker contain the fix). **Not scored.** Record: `benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md`.
+- Active: stack up with the fix and the flag (scratchpad override); claude-bridge Up; no forwarder or other temporary container. No commit.
+- Next (needs a user decision, the approved sessions are used): one more live session with `.pytest-artifacts/agent_loop_round.py submit` (move `.pytest-artifacts/agent-loop-session.json` aside),
+  then `run.py import`, `collect`, review, `evaluate`. Consider a prompt hint for off-origin pages (the model kept proposing clicks that are blocked there).
+
+### Agent loop round 01 r5 handoff - 2026-11-21
+
+- Container sources verified byte-identical before submit (`check` 0 mismatches after the coordinator rebuilt `claude-bridge`). Live session 5 `b77691e6-90ee-4676-884c-8d6547af2d4e`: 11 model steps
+  (56,686 in / 4,668 out tokens), 12 completed browser operations (8 clicks, back, 2 close_popup, setup navigate), ended `origin_blocked` (not an agent reason). **Not scored, nothing imported.**
+  Record: `benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md` (section r5); evidence `.pytest-artifacts/agent-loop-r5-evidence.log`.
+- Cause: after a click that left the allowed origin, `_observe` got `state_mismatch` and issued a read-only refresh `wait` (`purpose=setup`); the worker rejects any action except `close_popup`/`back`
+  off-origin, so the loop stopped with `origin_blocked`. A race between redirect and the first DOM observation (earlier off-origin pages did not trigger it). Small fix proposed in the record
+  (retry `observe_dom` read-only for off-origin pages instead of a `wait`, plus a FakeWorker test); no code changed in this round.
+- Active: stack up (control-plane, temporal-worker, claude-bridge rebuilt, playwright-worker, dashboard, rustfs, temporal, postgres, redis) with the flag via the scratchpad override; no forwarder or temporary container.
+  Session file moved: `.pytest-artifacts/agent-loop-session.r4.json`; the r5 file `.pytest-artifacts/agent-loop-session.json` holds the new id. No commit.
+- Next (needs a user decision; the approved sessions are used): fix `_observe` off-origin refresh (small phase, test red then green, rebuild control-plane and temporal-worker), then one more live session
+  (`mv .pytest-artifacts/agent-loop-session.json .pytest-artifacts/agent-loop-session.r5.json`, `uv run python .pytest-artifacts/agent_loop_round.py submit`), then `run.py import`, `collect`, review, `evaluate`.
+
+### Agent loop round 01 r6 handoff - 2026-11-21
+
+- Live session 6 `fa802b9c-3a3f-4de9-be54-08824014fe08` reached the first valid agent terminal: `agent_stopped` (`unsupported_state`) after 20 model steps (20 bridge jobs, 107,235 in / 8,976 out tokens, about 4 min 37 s,
+  30 operations: 24 completed, 6 `state_mismatch` rejected). Imported as iteration `1c56623e-8f37-4705-946b-5f1a6752f81c`, collected, reviewed, evaluated. **Official score C 0/47, A 0/12, detection R 0/47 (P n/a), inventory incomplete,
+  unsafe 0, unsettled 0: failed.** Zero because the harness binds only `dom_path` locators and agent_loop emits `role` locators and no page inventory (`pages=[]`); manual review of the 5 header-link clicks that map to the oracle
+  (mct-01, 02, 04, 05, 06) found 5/5 outcomes correct (manual ceiling C 5/47 = 10.64%, A 5/12). Record: `benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md` (section r6); evidence `.pytest-artifacts/agent-loop-r6-evidence.log`;
+  scoring script `.pytest-artifacts/score_r6.py`.
+- Source/fix of r6: working tree on HEAD `f85091a`, uncommitted; containers byte-identical (`check` 0 mismatches, 163/163/163/48). Worker fix `workers/playwright/src/vision-operations.ts:521-529` (read-only `wait`
+  `purpose=setup` + `refresh_observation` runs off-origin) plus `_observe` in `application/vision_agent_loop.py`. Leader PASS (`reports/phase-04/leader-r1.md`), QA PASS (`reports/phase-04/qa-r1.md`). **The fix ran for real:**
+  10 setup refresh waits, all completed; seq 12 is the r5 scenario (HO TRO click left the origin, `state_mismatch`, refresh wait off-origin accepted, `close_popup` recovered) with 0 `origin_blocked`. Oracle `9242b33d...`,
+  `metrics.py`, `run.py`, policy unchanged.
+- New blocker (not a fix of this round): after a scroll on the homepage every action was rejected with `state_mismatch` (6 in a row, `interaction_changed` + `visual_semantics_changed`, `scroll_changed=false`), so the model
+  stopped with `unsupported_state` having touched 5/47 oracle targets plus 3 tab buttons outside the oracle scope; 4 of its 20 calls went to external-page recovery.
+- Active: stack up (control-plane, temporal-worker, claude-bridge, playwright-worker, dashboard, rustfs, temporal, postgres, redis) with the flag via the scratchpad override; no forwarder, temporary container or session.
+  Session files: `.pytest-artifacts/agent-loop-session.r5.json` (r5), `.pytest-artifacts/agent-loop-session.json` (r6). Bridge token refreshed 06:35 +07, a few hours left. No commit.
+- Next (needs a user decision; the approved sessions are used): (1) decide how agent_loop operations are credited by the harness without changing the oracle or rules (role-locator binding by label/box, and a source of detection/inventory
+  for agent_loop, since `pages=[]`); (2) investigate the homepage `state_mismatch` drift after scroll (worker prepare fingerprint vs animated hero/news area) and, if wanted, a prompt hint on `state_mismatch`; then one more live session
+  (`mv .pytest-artifacts/agent-loop-session.json .pytest-artifacts/agent-loop-session.r6.json`, `uv run python .pytest-artifacts/agent_loop_round.py check`, `submit`, `run.py import`, `collect`, review, `evaluate`).
+
+### Agent loop round 01 r7 handoff - 2026-11-21
+
+- Two offline directions, no deploy, no live session, no commit, no rebuild; stack unchanged from r6 (same containers, flag override, session files).
+- A (harness): `benchmark/vision/accuracy/{evidence.py,run.py}` bind path-less `role` locators to the oracle (root tab, oracle viewport, role, normalized name, IoU>=0.8, unique candidate, click in box, one credit per target); path rule, oracle, `metrics.py` untouched; ADR-039; graph `vision-accuracy-harness`; new `run.py ground`. Leader PASS.
+- A result: r6 re-evaluated from the stored trace, harness derived mct-01,02,04,05,06 itself = manual review. C 5/47, A 5/12, R 0/47, inventory incomplete, passed=false. Ceiling today 16/47 bindable (15 unnamed/div never bindable by role+name).
+- B (worker): `vision.state.mismatch` diag only (`state_age_ms`, `interaction_*`, `failure_stage=observe_start`) in `vision-checkpoints.ts` / `vision-operations.ts`; gate, caps, prompt, control-plane unchanged. Proven: 6/6 rejections are the scope `all` interaction fingerprint drifting in the 6-10 s idle window (not stale refs, not ms races). Not isolated: which element changed. Leader PASS.
+- Checks: ruff clean; accuracy tests 57 passed; agent_loop/safety 73 passed 38 skipped; worker suite 293 passed 1 timing-flaky (solo 2/2 pass); tsc exit 0; `hgraph check` exit 0 (`--changed` exit 1 = git root vs hgraph root prefix, tooling issue).
+- Rebuild needed before any live session: only `playwright-worker`.
+- Next (needs user decision): (1) ESCALATE for A: export scroll/url fingerprint in `/trace` (unlocks 32/47), dom_path for unnamed controls, persist inventory or accept the audit as detection source; (2) short live session after rebuilding `playwright-worker`, read `vision.state.mismatch` before touching the gate.
+- Reports: `reports/phase-04/{be-developer-r6a,be-developer-r6b,leader-r2a,leader-r2b}.md`.
+- User decision 2026-11-21 (after r7): (B) approved rebuild `playwright-worker` + exactly one live agent_loop session to read `vision.state.mismatch` (no gate change yet).
+  (A) approved all three ESCALATE items, each behind its own config flag (default off): A1 export per-operation scroll offset + page URL fingerprint in `/trace`;
+  A2 `dom_path` locators for unnamed controls in agent mode; A3 persist per-observation page inventory. Then benchmark the flag combinations and keep only what scores better; oracle/thresholds unchanged.
+
+### Agent loop round 01 r8 handoff - 2026-11-21
+
+- Offline implementation of the three user-approved ESCALATE items (r7 decision 2026-11-21), no deploy, no live session, no bridge/model call, no migration, no commit. ADR-040. Reports: `reports/phase-04/be-developer-r7.md`.
+- **Flags (all default `false`, read only by `temporal-worker`, independent):** A1 `VISION_AGENT_CLICK_CONTEXT_ENABLED` (worker capability `click-context-v1`: `/trace` `executed_click` gains `scroll_x`, `scroll_y`, `url_fingerprint`);
+  A2 `VISION_AGENT_DOM_PATH_ENABLED` (`agent-dom-path-v1`: unnamed buttons/links/custom controls get `dom_path` locators and are listed to the model as `role ""`; named controls unchanged);
+  A3 `VISION_AGENT_INVENTORY_ENABLED` (control plane only: each DOM observation is merged into the state's `page_inventory`, shown in `/result` `pages`; JSON column, no migration).
+  Off = worker request, worker behaviour, stored payload, `/trace`, `/result` and harness output unchanged (absent keys are never serialized, so trace revisions of old sessions are identical). Needs a rebuilt `playwright-worker` for A1/A2.
+- **Harness** (`benchmark/vision/accuracy/{evidence.py,run.py}`; oracle `9242b33d...`, `metrics.py`, thresholds untouched): reads click context and inventory when present, falls back to the old rules when not. With a context both binding rules require the click on the oracle page (`url_fingerprint == sha256(source_url)`),
+  the role rule may match an in-flow control at the click's scroll offset (fixed controls still at offset 0, ambiguity earns nothing). `collect`/`ground` store `inventory.json` (only when `/result` has pages) and `contexts` in `grounding.json` (only when a click has one). New `run.py detect` derives detection for the oracle page from the inventory (dom_path key, else unique role+name; other controls unexpected).
+  `detect|evaluate --sources all|none|click_context,inventory --label <name>` re-score a stored session per combination into `<artifact>.<label>.json` (default artifacts untouched); A2 is a live-session property, compare sessions run with it on and off.
+- **Checks (offline):** ruff clean; new python tests 20 (`tests/test_vision_agent_evidence_flags.py`) + 23 (`tests/test_vision_accuracy_agent_evidence.py`); focused python regression 509 passed 81 skipped and 75 passed 153 skipped (skips = no isolated PostgreSQL); worker `tsc --noEmit` and eslint exit 0; worker specs 6 new (`vision-agent-evidence.spec.ts`) + 111 passed 1 skipped + 123 passed regression; `hgraph check` exit 0 (`--changed` exit 1 = git-root prefix tooling issue).
+- **Not verified live:** negotiation against the rebuilt worker container, dom_path stability on the real carousel (v3 paths wait for `stable`), real inventory size/truncation, the agent's behaviour once it sees unnamed controls (it cannot tell them apart except by order), and any score. DB-gated agent-loop tests skip here (no PostgreSQL on 55437); the processor behaviour was covered with stubs. No claim that C, A, P or R improved.
+- **Next (needs a user decision, the approved live sessions are used):** rebuild `playwright-worker`, `control-plane`, `temporal-worker` with the flags set in the scratchpad compose override (A1+A3 first, then A1+A2+A3), run one session each with `.pytest-artifacts/agent_loop_round.py submit`, then `run.py import`, `collect`, `detect`, review, `evaluate --sources ... --label ...`, keep only what scores better. The r7 (B) session to read `vision.state.mismatch` is a separate approval already recorded above.
+
+### Agent loop round 01 r9 handoff - 2026-11-21
+
+- The single approved live session (A1+A3 on, A2 off) `79b90323-e05f-474e-9ca7-6f66993995f2` ended `unavailable` / `bridge_policy_revoked` after 40 s: 1 completed model step, 2 bridge jobs (job 1 completed 4,655 in / 289 out tokens; job 2 stopped by the bridge itself 2.2 s after it
+  started, no usage), 2 operations (setup navigate, one SU KIEN click), 1 step-log row. **Not a valid agent terminal (AC6), not scored, not imported into `runs/`.** No source, oracle, `metrics.py`, policy or prompt change. Full record: `benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md` (section r9); report `reports/phase-04/be-developer-r8.md`.
+- Cause (hypothesis from timing and code, unproven): race in `FileSpool.stop_reason` (`spool.py:371-400`): the bridge takes `now` before reading `authorization.json`; the control plane rewrites it every 2 s (`recorded_at = now()`), a receipt written in between has `recorded_at > now` and is read as `bridge_policy_revoked`. Failure time = first re-authorization of job 2. Not seen in r5/r6 (31 jobs).
+- **A1 and A3 worked live (first time).** A1: `click-context-v1` negotiated, the click carries `scroll_x=0, scroll_y=0, url_fingerprint=a21c4cf7...` = `sha256(oracle.source_url)`. A3: `/result` `pages` = 2 states, homepage 7 controls (`scrollable`, `skipped_count=9` `multiple_matches`, not truncated), `/su-kien` 11 controls (`skipped_count=2`); far from the 100-control cap.
+- Diagnostic harness evaluation (scratch directory, **not an official score**, one reviewed click; SU KIEN = mct-02 correct): every `--sources` combination gives C 1/47, A 1/1, passed=false; detection P 7/7, R 7/47 (mct-01 to 06 and 11) with `inventory`/`all`, 0/0 and 0/47 with `none`/`click_context`; inventory incomplete (scrollable, skipped). The click credit needs no context (first viewport), so
+  A1 value is only visible for below-the-fold clicks, none reached. No claim that C, A, P or R improved versus r6 (C 5/47, A 5/12, R 0/47): different run length.
+- `vision.state.mismatch`: 0 in the worker log for this session; the r7 (B) question (which element drifts) stays unanswered.
+- Active: stack up (control-plane, temporal-worker, claude-bridge, playwright-worker, dashboard, rustfs, temporal, postgres, redis); no temporary container or process of this round. Session files: `.pytest-artifacts/agent-loop-session.r6.json`, `.pytest-artifacts/agent-loop-session.json` (r9). Read-only dumps `.pytest-artifacts/agent-loop-r9-{trace,result,locators}.json`. Bridge token refreshed earlier today (about 6 h left at start). No commit.
+- Next (needs a user decision; the approved live session is used): (1) small fix for the `stop_reason` race (take `now` after reading the receipt or allow a small skew) with a test that rewrites the receipt during polling, rebuild `control-plane`, `temporal-worker`, `claude-bridge`; (2) one new live session with the same A1+A3 flags
+  (`mv .pytest-artifacts/agent-loop-session.json .pytest-artifacts/agent-loop-session.r9.json`, `agent_loop_round.py check`, `submit`), then `run.py import`, `collect`, `detect --sources inventory`, review, `evaluate --sources ... --label ...`; (3) A2 only after A1+A3 yields a valid terminal to compare against, because A2 changes what the model can click and cannot be toggled after the fact.
+
+### Agent loop round 01 r10 offline fix handoff - 2026-11-21
+
+- Cause: `FileSpool.stop_reason` (`spool.py`) treated a receipt with `recorded_at > now` as `bridge_policy_revoked`; the bridge samples `now` before reading `authorization.json` and the control plane re-signs it every ~2 s, so a receipt written in between killed r9 session `79b90323…`. Proven offline with a lagged poll; not proven live.
+- Fix: `RECEIPT_CLOCK_SKEW = 1 s`, condition `recorded_at - RECEIPT_CLOCK_SKEW <= now`; expiry, deadline, ttl (0, 10 s], status and cancel unchanged. ADR `docs/adr/041-bridge-receipt-clock-skew-tolerance.md`.
+- Tests: dev red then green (1 failed before, 134 passed / 29 skipped after); QA `tests/test_qa_r9_bridge_receipt.py` 28 passed; regression 253 passed, 46 skipped, 1 failed (pre-existing `test_codex_bridge_benchmark.py` manifest hash drift, not r9); `test_codex_bridge_end_to_end.py` does not collect (machine `.env`).
+- Verdicts: leader r4 PASS, QA r3 PASS. Optional: ADR wording (lease ceiling can be ~11 s relative to bridge `now`), simplify the excessive-ttl test.
+- Not rebuilt, not run live; no commit. Stack still on the r9 images.
+- Next: rebuild `control-plane`, `temporal-worker`, `claude-bridge`, then one new live A1+A3 session (needs user approval), watch bridge log for `bridge_policy_revoked` from job 2 on.
+- Separate round: regenerate `benchmark/vision/codex/manifest.json` (17 source hashes drifted).
+
+### Agent loop round 01 r10 live handoff - 2026-11-21
+
+- The one approved live session (A1+A3 on, A2 off, ADR-041 images) `22187cc7-4247-426b-83ec-446de3682f5c` ended `agent_done` after about 3 min 19 s: a **valid terminal**, imported as iteration `396af7e4-11f9-4983-adea-180d37c768db`, scored. ADR-041 worked live: 14 bridge jobs (all `completed`), 0 `bridge_policy_revoked`.
+- Model steps 14, tokens 72,096 in / 5,136 out (cached 24,233). Operations 16, all completed: setup navigate 1, setup wait 1, click 10, back 1, close_popup 3. `vision.state.mismatch` 1 (lazy `IMG` added on support.tpl.vn after the HO TRO click; recovered by the setup refresh wait; gate untouched; the homepage-after-scroll drift of r6 did not recur because the model never scrolled).
+- Official score (`run.py evaluate --sources <x> --label r10_<x>`, default artifacts untouched, oracle `9242b33d...`/`metrics.py`/policy/prompt unchanged): `all` and `inventory` and `click_context,inventory` C 1/47 (2.13%), A 1/10, P 7/7, R 7/47; `none` and `click_context` C 1/47, A 1/10, P n/a, R 0/47; inventory incomplete (homepage scrollable, 9 skipped), unsafe 0, passed=false in all five.
+- Why C is 1/47: after click 1 (SU KIEN, the only click on the oracle page) the agent stayed on `/su-kien`, `/tin-tuc`, `/cam-nang`, tested the shared header links there (off-page), never scrolled and stopped with `complete`. With A1 the harness refuses those clicks (`off_page_url`); a label+box-only reviewer (diagnostic in scratch, not official) would credit C 5/47 / A 5/10 under `--sources none`. So A1 prevents a false 5/47; the r6 5/47 was not page-checked. Not an improvement over r6; detection R 0 to 7/47 is the only gain (from A3).
+- A3 inventory real size: 14 pages, about 30 KB, 1-11 controls per page, never truncated (cap 100); homepage 7 controls + 9 skipped (below the fold).
+- Active: stack up, no new process; images from the coordinator rebuild (control-plane, temporal-worker, claude-bridge with ADR-041). Session files `.pytest-artifacts/agent-loop-session.r9.json`, `.pytest-artifacts/agent-loop-session.json` (r10). Dumps `.pytest-artifacts/agent-loop-r10-{trace,result,locators}.json`. Report `reports/phase-04/be-developer-r10.md`. No source change, no commit.
+- Next (needs a user decision; the approved session is used): the blockers are now agent behaviour, not the harness: (1) the agent leaves the oracle page and quits without scrolling, so 31 below-the-fold and 15 unnamed targets are not attempted; a prompt/policy change (return to the homepage, scroll on `scrollable`/`skipped_count>0`, do not stop while the oracle page has skipped controls) is a prompt-version change and needs approval; (2) A2 (`VISION_AGENT_DOM_PATH_ENABLED`) only addresses the 15 unnamed targets, and only helps if the agent reaches them, so run it after (1) or together as the single A1+A2+A3 run ADR-040 describes; (3) K1 (20 calls) is already unlikely: 10 clicks and 14 calls reached 1 target.
+- User decision 2026-11-21 (after r10): approved a prompt change for agent_loop (new prompt version) so the agent returns to the oracle page and scrolls while
+  below-the-fold controls remain skipped (`skipped_count > 0`), instead of ending `complete`; policy caps, gate, oracle, metrics unchanged. Then one live A1+A3 session. A2 later.
+
+### Agent loop round 01 r12 live handoff - 2026-11-21
+
+- The one approved live session (prompt `agent-loop-v2`, A1+A3 on, A2 off) `e0de6697-ed86-4418-8d8d-f3bc4922e36a` ended `unavailable` / `settle_timeout` after about 1 min 33 s: a worker page-readiness outcome, **not a valid agent terminal** (no `agent_done`/`agent_stopped`). Not imported into `runs/`; no official score. 5 bridge jobs (all `completed`, 0 `bridge_policy_revoked`), 27,976 in / 2,598 out tokens, 5 of 20 calls.
+- Prompt v2 changed behaviour: the agent stayed on the oracle homepage, scrolled (`scroll_y=600`) and clicked 5 below-the-fold controls (Su Kien, Cam Nang, NHAN VAT, THU CUOI, Tin Tuc), all with A1 context bound to the oracle page. Then scroll op 8 failed `settle_timeout` (`state_kept_changing`, 53 state changes in 10 s) and the recovery `wait` was rejected with the same code; one `vision.state.mismatch` in between (1 control moved, geometry-only, 18 controls). Homepage drift after scroll/tab clicks, the r6-type cap, now confirmed to be in the worker settle rule, not the model.
+- Diagnostic only (scratch run dir, not `runs/`): the 5 clicks bind to oracle mct-19, 20, 30, 31, 18; outcome correct for 3 (mct-19, 20, 18), 2 (mct-30, 31) lack visible matching content in the frame. `--sources all`: C 3/47 (strict) or 5/47 (lenient), A 3/5 or 5/5, P 14/35, R 14/47, inventory incomplete, passed=false. `none`/`inventory` refuse (`no_oracle_match`: a scrolled box cannot bind without scroll offset), so A1 is required for scrolled clicks.
+- No improvement is claimed over r10 (1/47 official) or r6 (5/47, no page check): different terminal validity. Behaviourally: 5 calls for 5 oracle targets versus 14 calls for 1.
+- Active: stack up, no process of this round. Session files `.pytest-artifacts/agent-loop-session.r10.json`, `.pytest-artifacts/agent-loop-session.json` (r12). Dumps `.pytest-artifacts/agent-loop-r12-{trace,result,locators}.json`. Report `reports/phase-04/be-developer-r12.md`. No source change, no commit.
+- Next (needs a user decision; the approved session is used): (1) the blocker is the worker settle rule on the homepage after scroll/click (`state_kept_changing`), a worker/policy change (e.g. what counts as a state change when only geometry/animation moves, or a bounded retry/recovery for `settle_timeout`) that must not loosen the gate silently; (2) then one new live A1+A3 run to get a valid terminal; (3) A2 (`VISION_AGENT_DOM_PATH_ENABLED`) addresses the 15 unnamed targets and only matters once the agent can keep scrolling past the first below-the-fold panels; run it as its own session after (2).
+- User decision 2026-11-21 (after r12): diagnose the homepage `settle_timeout` (state keeps changing after scroll/click) offline first; no gate change, no live session in this step.
+
+### Agent loop round 01 r13 diagnosis handoff - 2026-11-21
+
+- Offline only (no live session, no bridge/model, stack not rebuilt, no commit). Cause of the r12 `settle_timeout` isolated: infinite CSS pulse (`play-now-pulse`) on the viewport-visible play-now link `a.absolute.inset-0`; the scope-`all` interaction fingerprint hashes clipped bounds/hit tests of every visible control, so no 800 ms quiet window exists (probe: 79-85 changes in 15 s, longest quiet 341-431 ms, 78/79 geometry-only). Swiper autoplay only adds the discrete r6b drift.
+- Probe: `.pytest-artifacts/r13-settle-probe.{mts,json}` (+ `r13-swiper-peek.mts`, `r13-link-series.mts`). New worker spec `workers/playwright/src/vision-settle-animation.spec.ts` + fixture `fixtures/settle-animated-control.ts` (graph playwright-vision-worker): `7 passed` with the "should settle" case as `test.fail()`.
+- Proposals A (bounded geometry tolerance), B (layout-box for infinite-animation ancestors), C (content-only settle plus geometry check at prepare); tab-outcome options for mct-30/31 (panel below the frame). Report: `reports/phase-04/be-developer-r13.md`.
+- Next (needs a user decision on the settle rule and an ADR; then rebuild playwright-worker and one new live A1+A3 session): pick A/B/C; decide the tab-outcome rule before scoring a valid run.
+- User decision 2026-11-21 (after r13 diagnosis): settle fix = option **A + limited B** from `reports/phase-04/be-developer-r13.md` §4 (bounded geometry tolerance when control identity/content is unchanged, plus layout-box bounds only for controls under an identified infinite CSS animation), with a new ADR; hit test and exact-node verify at dispatch stay. Tab outcome (mct-30/31): keep the oracle rule wording, add evidence instead (an extra after-frame scrolled to the selected panel). Continue in the same conversation (user override of the fresh-session preference). Order: r14 settle fix, then r15 tab evidence, then one live session.
+
+### Agent loop round 01 r13-r14 handoff - 2026-11-21
+
+- Cause of the r12 `settle_timeout`: infinite CSS pulse (`play-now-pulse`) on the viewport-visible play-now link; the scope-`all` interaction fingerprint hashes clipped bounds and hit tests, so no 800 ms quiet window exists (r13 probe: 79-85 changes in 15 s, 78/79 geometry-only). Report `reports/phase-04/be-developer-r13.md`.
+- ADR-042 (`docs/adr/042-settle-geometry-tolerance.md`), option A + limited B: `equivalentState` tolerates 3 px centre shift and IoU 0.8 when content is identical (centre hit must match); layout box only for controls under an eligible infinite CSS animation (scale/rotate/opacity); settle compares against the quiet-window reference. Fingerprint hashes, policy and contract unchanged; no database change.
+- r14b: observe/prepare compare against the held state (`held.fingerprint === expected && equivalentState`), and `force` click only for an eligible infinite-animation target after hit test and exact-node verify.
+- Files: `workers/playwright/src/{vision-checkpoints,vision-dom,vision-operations}.ts`, specs `vision-settle-animation.spec.ts` (14) and `.qa.spec.ts` (24), fixture `fixtures/settle-animated-control.ts`, `docs/vision-agent-operations.md`, `docs/graphs/playwright-vision-worker.md`.
+- Tests (offline, fixtures): settle dev + QA `34 passed`, QA `24 passed` x3, regression `145 passed`, `vision-operations.spec.ts` `99 passed`, `tsc` exit 0, `hgraph check` clean. Not verified live (real widget hit-test stability, iframe/shadow, Element.animate/transition).
+- Review: round 1 FAIL (leader: direct hash compare in dom/prepare; QA-P1: click on pulsing target `action_outcome_unknown`), round 2 PASS (leader r7, QA r6). Details: `progress.html`.
+- Debt: DOM mode grounds clicks by coordinates, so a visible control covering the target takes the click and the operation is `completed` (pre-existing, not from r14; conflicts with the "wrong target click = 0" invariant). Suggested guard: compare `dom_element_id` with the node's descriptor at the point (`dom_descriptor_mismatch`) in `groundLocator`/prepare.
+- Needs rebuild of `playwright-worker` (not rebuilt; no control-plane change); no live session, no commit.
+- Next r15: add an after-frame scrolled to the selected panel for tab clicks (mct-30/31), keep the oracle rule; then rebuild playwright-worker and one live A1+A3 session (expect no `settle_timeout`, no geometry-only `state_mismatch`).
+- User decision 2026-11-21 (after r15): **shelve r15** (tab panel frame, ADR-043, unapproved migration `c8d0e2f4a6b8` + 5 control-plane files outside scope; ARIA-only detection would not fire on the real mct-30/31 buttons). Save it as a restorable patch, remove it from the tree, then rebuild `playwright-worker` and run one live A1+A3 session to verify ADR-042. Tab evidence revisited later.
+
+### Agent loop round 01 r16 live handoff - 2026-11-21
+
+- Result: **FAIL, not scored, not imported.** The one approved live session `82e22289-b52a-4fd3-b74f-633a31147214` (correlation `8cf2d7c9-ca0b-4c0b-ae46-b80778d83b75`) ended `unavailable` / `visual_exploration_unavailable` at worker `session_open` (HTTP 422 `visual_request_rejected`, `error_type=unexpected_error`, 3,787 ms, 13:09:15 UTC), before any operation or bridge call: 0 operations, 0 of 20 calls. ADR-042 and prompt v2 were NOT exercised; no claim about them.
+- Identity: `agent_loop_round.py check` 0 mismatches (163/163/163/52) at 20:07; flags loop + A1 + A3 on, A2 off; oracle, `metrics.py`, thresholds, policy, prompt untouched; no source change.
+- Cause not established: the worker logs only the category `unexpected_error` (messages deliberately not logged). Container healthy (no OOM, 0 restarts, target reachable); the same tree passes locally (`vision-agent-mode.spec.ts` + `vision-settle-animation.spec.ts`: 45 passed). Hypothesis only: cold-start Chromium launch in the freshly recreated, read-only worker. Provider `claude_cli` showed `online=false` for about the first minute after recreate.
+- Comparison: r6 5/47 official, r10 1/47 official, r12 diagnostic only, r16 none.
+- Artifacts: `.pytest-artifacts/agent-loop-r16-{trace,result,locators}.json`, `agent-loop-session.json` (r16), `agent-loop-session.r12.json`; `benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md` (r16 section); report `reports/phase-04/be-developer-r16.md`. `runs/` untouched. Stack up unchanged, no process left.
+- Next (needs a new user approval, one session): first verify the worker open path without the LLM (or add a log of the error class for `unexpected_error`), hold until provider `online=true` for 60 s, then one live A1+A3 session to test ADR-042 + prompt v2; A2 stays off.
+- r16/r17 (2026-11-21): live session `82e22289-...` failed at worker `session_open` (`unexpected_error`). r17 root cause: r14's named nested closure inside a `page.evaluate` callback in `vision-checkpoints.ts` gets an esbuild `__name(...)` call under tsx (worker runtime), which the browser lacks: every session breaks at open since r14; Playwright specs did not catch it. User decision: fix at the root (no named functions in evaluate callbacks) + `__name` init-script shim as defence + a test running open under tsx + safe error-name logging; review; rebuild worker; one no-LLM open/close check; then one live A1+A3 session.
+
+### Agent loop round 01 r19 live handoff - 2026-11-21
+
+- Result: **not scored, not imported** (invalid terminal). The one approved live session `6eef105a-ae98-44cf-9b09-e5a6d0ad1262` (correlation `5075d594-b471-49d7-8366-4583bb4fc797`, prompt v2, A1+A3 on, A2 off) opened (r18 `__name` fix confirmed live, 0 `unexpected_error`), ran 14 operations and ended `unavailable` / `settle_timeout` at 13:55:38 UTC. 8 of 20 model calls, 0 `bridge_policy_revoked`.
+- Behaviour: scroll to y=600, then 6 clicks on the oracle page (Su Kien, Cam Nang, Tin Tuc, NHAN VAT, THU CUOI = oracle mct-19, 20, 18, 30, 31; plus TOP, not an oracle target). All settled (ADR-042 effective live for these; r12 failed here). No force click; all 6 clicks hit the intended control (name + box + after frame); the r14 covered-control debt was not exercised. The agent never left the oracle page.
+- Blocker remains: after TOP scrolled the page back to the top, scroll seq 9 failed `settle_timeout` (52 state changes in 10 s, longest stable 240 ms), then wait / scroll hit geometry-only `state_mismatch` (18 controls, 1-3 moved, held state aged 7-20 s) and the setup wait `settle_timeout` ended the session.
+- Diagnostic only (scratch dir): strict 3/47 (6.38%), lenient 5/47 (10.64%), A 3/6 or 5/6, P 14/35, R 14/47, inventory incomplete, passed=false; `none`/`inventory` refuse (`no_oracle_match`). Same C/P/R as r12; no improvement claimed over r6 (5/47, no page check) or r10 (1/47 official).
+- Artifacts: `.pytest-artifacts/agent-loop-r19-{trace,result,locators}.json`, `agent-loop-session.json` (r19), `agent-loop-session.r16.json`; `AGENT-LOOP-01-20261120.md` (r19 section); report `reports/phase-04/be-developer-r19.md`. `runs/` untouched. Stack up unchanged, no process left, no source change, no commit.
+- Next (needs a user decision; the approved session is used): diagnose offline why the page top after scroll back / TOP never settles (not isolated; extend ADR-042 or a bounded recovery), consider steering the agent away from the back-to-top control, then one new live run. A2 stays a separate session.
+- User decision 2026-11-21 (after r19): diagnose offline why the homepage does not settle on the scroll after the TOP button returns to the top (r19 seq 9); read-only probe, no gate change, no live session in this step.
+
+### Agent loop round 01 r20 diagnosis handoff - 2026-11-21
+
+- Scope: offline, read-only (phase-04 step 1-2). No live session, no bridge/model call, no docker action, no source or gate change, no commit.
+- Result: the TOP click is not the cause (instant scroll, settles in about 1 s; TOP then +600 is calm in 4 replicas, incl. the r19 wall-clock timeline with 5 tab clicks). r12 (no TOP) fails with the same signature. Mechanism reproduced: at y about 1200 with the NHAN VAT / THU CUOI tabs active, the `mount-switcher` widget produces hit-test/box churn every sample in 25.5 s bursts (period about 36 s); finite timer-restarted animations, so ADR-042 A (3 px / IoU 0.8) and B (infinite scale/rotate/opacity) do not absorb it. A scroll whose 10 s window lands in a burst ends `state_kept_changing`.
+- Open: the `delta_y` of r19 seq 9 (operation `cb145ad0`) is not in the dumps (+600 from y=0 lands on a calm y=600); a full local 10 s timeout was not reproduced (worst local settle 4.2 s, throttled 6.6 s, r19-timeline replicas 8.4-8.6 s).
+- Spec: `workers/playwright/src/vision-settle-switcher.spec.ts` (3 passed, one `test.fail()` documenting the defect); `npx tsc --noEmit` exit 0; `hgraph check` clean (graph `playwright-vision-worker`, +1 file).
+- Proposals (not implemented, need your choice): A longer settle budget for scroll ops and recovery (gate unchanged, does not fix the later `prepare` mismatch inside a burst); B scoped equivalence / ambient-motion class (relaxes the gate, ADR-043 candidate); C calm the page during settle (needs a live-site probe first, may not help). Prompt steering away from TOP is not useful.
+- Artifacts: `.pytest-artifacts/r20-*` (probes `r20-top-probe.mts`, `r20-phase-sweep.mts`, JSON outputs); `AGENT-LOOP-01-20261120.md` (r20 section); report `reports/phase-04/be-developer-r20.md`. No process left.
+- Next (needs a user decision): first read the r19 seq 9 `delta_y` (read-only), then choose A or B (B needs an ADR) or an offline probe of C; one new approved live run only after a worker fix. A2 stays a separate session.
+- User decision 2026-11-21 (after r20): option **C** — first probe the real site read-only to see whether suppressing/pausing animations during settle makes the `mount-switcher` hit-test and boxes stable (z-index may still change); no source change in this step.
+
+### Agent loop round 01 r21 probe handoff - 2026-11-21
+
+- Scope: offline, read-only probe of option C (user decision after r20). No live session, no bridge/model call, no docker action, no source or gate change, no commit.
+- Result: on the real site, in one burst at y=1200, a page-wide rule `animation/transition-duration:1ms` (`b2`, 2 runs) stabilises the `mount-switcher` (1-2 changes per 5 s versus 22-30, `settleState` ok about 0.9 s versus fail). `transition:none` + paused (`b`) and a looping `pause()` (`a2`) also stabilise but swallow `transitionend`/freeze a mid-frame. One-shot pause, `finish()`, scoped subtree pause/CSS and CDP playback rate do not help.
+- Limits: page JS timers still change the DOM (carousel hops, 1-2 changes per 5 s), so a hop between settle and prepare still gives `state_mismatch`; the churn returns at baseline as soon as the rule is removed, so the calm must last through prepare, dispatch and the after-capture. The r19 seq 9 `delta_y` is still unread.
+- Spec: `workers/playwright/src/vision-settle-suppression.spec.ts` (6 passed, local fixture); `npx tsc --noEmit` and eslint clean; `hgraph check` clean (graph `playwright-vision-worker`, +1 file).
+- Design (not implemented): new `workers/playwright/src/vision-calm.ts` (enable/disable/withCalm), called at `vision-operations.ts` about lines 887 and 552, kept session-level through prepare/dispatch, restored in `finally`, worker flag default off; ADR 043 proposed; combine with A-lite (one re-settle on a single-hop `state_mismatch`) or B (scoped equivalence ADR).
+- Artifacts: `.pytest-artifacts/r21-*` (probe `r21-suppress-probe.mts`, JSON, paused screenshots); `AGENT-LOOP-01-20261120.md` (r21 section); report `reports/phase-04/be-developer-r21.md`. No process left.
+- Next (needs a user decision): approve B2 implementation (flag, ADR 043) plus A-lite or B for the residual hop, then one approved live run; or read the r19 seq 9 `delta_y` first.
+- User decision 2026-11-21 (after r21): implement **calm mode** in a fresh session: `vision-calm.ts` page-wide 1 ms animation/transition style held through settle → prepare → dispatch → after-capture, restored in `finally`, behind a worker flag (default off), new ADR-043; residual JS-timer carousel hops handled by a bounded re-settle (no scoped-equivalence gate change). Then leader + QA, refresh the bridge token (`scripts/export_claude_bridge_token.py`, expired ~22:10), rebuild `playwright-worker` (+ temporal-worker if the flag is read there), no-LLM open/close check, one live A1+A3 session. Next command: `/clear` then `/h-cook auto-at-ui/plan/09112026103202-vision-accuracy-loop`.

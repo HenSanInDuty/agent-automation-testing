@@ -1,4 +1,4 @@
-import type { VisionPolicy, VisionProvider } from "../generation-types";
+import type { VisionPolicy, VisionProvider, VisualAgentStep } from "../generation-types";
 
 const bridgeVendors: Record<string, string> = { codex_cli: "OpenAI", claude_cli: "Anthropic" };
 
@@ -121,8 +121,64 @@ const failureMessages: Record<string, string> = {
   vision_policy_changed: "Vision settings changed. Review the refreshed settings and confirm a new exploration.",
   invalid_vision_policy: "Vision settings are invalid. Check the model and provider consent before saving.",
   image_delivery_auth_required: "Exploration stopped because Google Drive authorization must be renewed. An administrator must reconnect image delivery, then start a new exploration. Button coverage is incomplete.",
+  stale_ref: "The page changed after the agent chose this element, so that action was skipped. No browser action was taken from it.",
+  invalid_ref: "The agent referred to an element that is not in the current page snapshot. That action was skipped.",
+  origin_blocked: "The action would leave the project's allowed origins, so it was skipped.",
+  sensitive_action_blocked: "The action could submit a form or send restricted input, so it was skipped. No text was typed.",
+  action_kind_blocked: "The agent proposed an action type this exploration does not allow. It was skipped.",
+  ineligible_target: "The target element cannot take this action, for example because it is disabled or not editable. It was skipped.",
+  batch_stopped: "An earlier action in this step changed the page, so the remaining actions were not run.",
+  agent_step_limit: "The agent reached its step limit. Retained steps remain available; this is not a test verdict.",
+  agent_done: "The agent finished its exploration goal. Retained steps remain available; this is not a test verdict.",
+  agent_stopped: "The agent stopped because it found no safe action to continue. Retained steps remain available.",
 };
 
 export function visionFailureMessage(reason: string | null | undefined): string | undefined {
   return reason && Object.hasOwn(failureMessages, reason) ? failureMessages[reason] : undefined;
+}
+
+export type ExplorationEngine = "planner" | "agent_loop";
+
+/** Unknown or missing engine values behave exactly like the Planner. */
+export function explorationEngine(value: unknown): ExplorationEngine {
+  return value === "agent_loop" ? "agent_loop" : "planner";
+}
+
+/** Planner requests omit `engine` so their payload is unchanged from before the Agent loop existed. */
+export function engineRequestFields(engine: ExplorationEngine): { engine?: "agent_loop" } {
+  return engine === "agent_loop" ? { engine: "agent_loop" } : {};
+}
+
+/** Safe, bounded copy for one skipped agent action; never shows an unmapped code as a generic message. */
+export function blockedReasonMessage(reason: unknown): string {
+  if (typeof reason !== "string" || !reason) return "Skipped before it was sent to the browser.";
+  return visionFailureMessage(reason) ?? `Skipped (${reason.replaceAll("_", " ").slice(0, 80)}).`;
+}
+
+const agentTextLimit = 600;
+const agentKindLimit = 40;
+const agentBlockedLimit = 20;
+
+export type AgentStepView = { previous: string; memory: string; next: string; blocked: string[] };
+
+function agentText(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "Not recorded";
+  const text = value.trim();
+  return text.length > agentTextLimit ? `${text.slice(0, agentTextLimit)}…` : text;
+}
+
+/** Display model for the agent-step block of the ledger; null when the operation has no agent step. */
+export function agentStepView(item: { agent_step?: VisualAgentStep | null }): AgentStepView | null {
+  const step = item.agent_step;
+  if (!step || typeof step !== "object") return null;
+  const skipped = Array.isArray(step.skipped_actions) ? step.skipped_actions.slice(0, agentBlockedLimit) : [];
+  return {
+    previous: agentText(step.evaluation_previous_goal),
+    memory: agentText(step.memory),
+    next: agentText(step.next_goal),
+    blocked: skipped.map((action) => {
+      const kind = typeof action?.kind === "string" && action.kind.trim() ? action.kind.trim().slice(0, agentKindLimit) : "Action";
+      return `${kind}: ${blockedReasonMessage(action?.skipped_reason)}`;
+    }),
+  };
 }

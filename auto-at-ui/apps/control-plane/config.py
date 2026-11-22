@@ -56,6 +56,17 @@ class Settings(BaseSettings):
     agent_generation_redaction_policy_version: str = "generation-redaction-v1"
     vision_enabled: bool = False
     vision_trace_v4_enabled: bool = False
+    # Opt-in browser-agent engine (`engine=agent_loop`); the planner stays the default.
+    vision_agent_loop_enabled: bool = False
+    vision_agent_snapshot_chars: int = Field(default=24_000, ge=4_000, le=24_000)
+    # Opt-in agent evidence for the accuracy benchmark (ADR-040); each is independent and read only
+    # by the processor (`temporal-worker`). Off keeps worker requests, traces and results unchanged.
+    # A1: scroll offset and URL fingerprint on every confirmed click in `/trace`.
+    vision_agent_click_context_enabled: bool = False
+    # A2: `dom_path` locators for controls without an accessible name.
+    vision_agent_dom_path_enabled: bool = False
+    # A3: per-state page inventory of what the agent observed (`/result` `pages`).
+    vision_agent_inventory_enabled: bool = False
     codex_bridge_enabled: bool = False
     codex_bridge_id: UUID | None = None
     codex_bridge_allowed_tenant: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,200}$")

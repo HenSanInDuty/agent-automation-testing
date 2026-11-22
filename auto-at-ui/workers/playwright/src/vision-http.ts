@@ -3,7 +3,7 @@ import { applyVisualAction, closeVisualSession, observeVisualTreeState, openVisu
 import { requireVision, uuid, VisionWorkerError, type VisualOperation } from "./vision-contract.js";
 import { VisualOperationWorker } from "./vision-operations.js";
 import { traceContext } from "./observability.js";
-import { logVisionEvent, visionErrorType, visionLogScope } from "./vision-observability.js";
+import { logVisionEvent, visionErrorDetails, visionErrorType, visionLogScope } from "./vision-observability.js";
 
 const MAX_BODY_BYTES = 64 * 1024;
 export function visualHttpHandler(root: string, secret: () => string | undefined) {
@@ -25,6 +25,7 @@ export function visualHttpHandler(root: string, secret: () => string | undefined
     };
     let failureCode: string | undefined;
     let errorType: string | undefined;
+    let errorDetails: Record<string, string> = {};
     response.once("finish", () => {
       const rejected = response.statusCode >= 400;
       const failedOperation = ["rejected", "failed", "unknown"].includes(String(fields.operation_status));
@@ -39,7 +40,7 @@ export function visualHttpHandler(root: string, secret: () => string | undefined
           : "Vision worker request completed.";
       logVisionEvent(newFailure ? "error" : rejected ? "warn" : "info", event, summary, context,
         { ...fields, status_code: response.statusCode, duration_ms: Math.round(performance.now() - started),
-          ...(failureCode ? { code: failureCode, error_type: errorType } : {}) });
+          ...(failureCode ? { code: failureCode, error_type: errorType, ...errorDetails } : {}) });
     });
     return visionLogScope.run({ context, fields }, async () => {
       const configuredSecret = secret();
@@ -137,6 +138,7 @@ export function visualHttpHandler(root: string, secret: () => string | undefined
         const code = error instanceof VisionWorkerError ? error.code : "visual_request_rejected";
         failureCode = code;
         errorType = visionErrorType(error);
+        errorDetails = visionErrorDetails(error, errorType);
         response.writeHead(code === "payload_too_large" ? 413 : 422, { "content-type": "application/json" }).end(JSON.stringify({ detail: code }));
       }
     });

@@ -78,6 +78,8 @@ class ReloadVisualExploration:
             intent_encryption_key=self.settings.vision_intent_encryption_key,
             intent_retention_days=self.settings.vision_intent_retention_days,
             trace_v4_enabled=self.settings.vision_trace_v4_enabled,
+            engine=original.exploration_engine,
+            agent_loop_enabled=self.settings.vision_agent_loop_enabled,
             expected_provider=expected_provider, expected_model=expected_model,
             expected_input_policy_fingerprint=expected_input_policy_fingerprint,
         )

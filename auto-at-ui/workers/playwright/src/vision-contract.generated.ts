@@ -6,7 +6,7 @@ export type CodexElementBinding = { element_id: string; descriptor: VisualLocato
 export type CodexViewport = { width: number; height: number };
 export type VisualBoundingBox = { x: number; y: number; width: number; height: number };
 export type VisualCheckpoint = { id: string; state_id: string; ancestor_operation_ids: Array<string>; url_fingerprint: string; semantic_fingerprint: string; scroll_x: number; scroll_y: number; form_presence_fingerprint: string | null; page_url: string | null; url_restore_allowed: boolean };
-export type VisualExecutedClick = { x: number; y: number; viewport_width: number; viewport_height: number; before_frame_id: string; confirmed_at: string };
+export type VisualExecutedClick = { x: number; y: number; viewport_width: number; viewport_height: number; before_frame_id: string; confirmed_at: string; scroll_x: number | null; scroll_y: number | null; url_fingerprint: string | null };
 export type VisualExternalOrigin = { origin: string; request_kind: "navigation" | "popup" | "resource" | "websocket"; observed_at: string };
 export type VisualHandoffBranch = { id: string; steps: Array<VisualHandoffStep>; status: "ready" | "blocked"; reason_code: string | null };
 export type VisualHandoffStep = { operation_id: string; locator_id: string | null; input_reference: string | null; observation_codes: Array<string> };
@@ -24,7 +24,7 @@ export type VisualWorkerDomObservation = { contract_version: "v4"; tenant_id: st
 export type VisualWorkerExecute = { contract_version: "v4"; tenant_id: string; project_id: string; session_id: string; fencing_token: number; operation_id: string; prepared_handle: string; before_frame_id: string; before_checksum: string; before_persisted: true };
 export type VisualWorkerIdentity = { contract_version: "v4"; tenant_id: string; project_id: string; session_id: string; fencing_token: number };
 export type VisualWorkerObserveDom = { contract_version: "v4"; tenant_id: string; project_id: string; session_id: string; fencing_token: number; capability: "dom-observation-v1"; expected_state_fingerprint: string; snapshot_id: string; max_elements: number; max_bytes: number; revalidate_snapshot_id: string | null; revalidate_element_ids: Array<string>; revalidate_context_only: boolean };
-export type VisualWorkerOpen = { contract_version: "v4"; tenant_id: string; project_id: string; session_id: string; fencing_token: number; target_url: string; allowed_origins: Array<string>; deadline: string; max_session_seconds: number; step_timeout_seconds: number | null; max_states: number; max_hops: number; max_screenshot_bytes: number; interaction_scope: "all" | "buttons" | "visual_buttons"; required_capabilities: Array<"dom-observation-v1" | "step-timeout-v1" | "button-scope-v1" | "anonymous-button-v1" | "visual-button-scope-v1" | "viewport-context-v1" | "target-preflight-v1"> };
+export type VisualWorkerOpen = { contract_version: "v4"; tenant_id: string; project_id: string; session_id: string; fencing_token: number; target_url: string; allowed_origins: Array<string>; deadline: string; max_session_seconds: number; step_timeout_seconds: number | null; max_states: number; max_hops: number; max_screenshot_bytes: number; interaction_scope: "all" | "buttons" | "visual_buttons"; required_capabilities: Array<"dom-observation-v1" | "step-timeout-v1" | "button-scope-v1" | "anonymous-button-v1" | "visual-button-scope-v1" | "viewport-context-v1" | "target-preflight-v1" | "click-context-v1" | "agent-dom-path-v1">; agent_mode: boolean; blocked_action_terms: Array<string> };
 export type VisualWorkerOperationResult = { history_restore_available: boolean; operation: VisualOperation; frames: Array<VisualOperationFrame>; locator: VisualLocatorEvidence | null; prepared_handle: string; state_fingerprint: string | null; checkpoint: VisualCheckpoint | null; semantic_change: "changed" | "unchanged" | "unavailable"; duration_ms: number; acknowledged: boolean; replayable: boolean; dispatch_started: boolean | null; failure_stage: "prepare" | "before_dispatch" | null };
 export type VisualWorkerOriginObservations = { contract_version: "v4"; tenant_id: string; project_id: string; session_id: string; fencing_token: number; items: Array<VisualExternalOrigin>; truncated: boolean };
 export type VisualWorkerPrepare = { contract_version: "v4"; tenant_id: string; project_id: string; session_id: string; fencing_token: number; step_deadline: string | null; operation_id: string; refresh_observation: boolean; purpose: "explore" | "restore" | "replay" | "setup"; action: VisualWorkerAction; expected_state_fingerprint: string; state_id: string | null; proposal_id: string | null; model_confidence: number; checkpoint_id: string | null; checkpoint_state_id: string | null; restore_checkpoint_id: string | null; history_checkpoint_id: string | null; replay_operation_id: string | null; expected_locator: VisualLocatorDescriptor | null; dom_snapshot_id: string | null; dom_element_id: string | null };
@@ -344,6 +344,47 @@ export const visionSchemas: Record<string, unknown> = {
         "format": "date-time",
         "title": "Confirmed At",
         "type": "string"
+      },
+      "scroll_x": {
+        "anyOf": [
+          {
+            "maximum": 10000000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Scroll X"
+      },
+      "scroll_y": {
+        "anyOf": [
+          {
+            "maximum": 10000000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Scroll Y"
+      },
+      "url_fingerprint": {
+        "anyOf": [
+          {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Url Fingerprint"
       }
     },
     "required": [
@@ -1254,12 +1295,30 @@ export const visionSchemas: Record<string, unknown> = {
             "anonymous-button-v1",
             "visual-button-scope-v1",
             "viewport-context-v1",
-            "target-preflight-v1"
+            "target-preflight-v1",
+            "click-context-v1",
+            "agent-dom-path-v1"
           ],
           "type": "string"
         },
-        "maxItems": 7,
+        "maxItems": 9,
         "title": "Required Capabilities",
+        "type": "array"
+      },
+      "agent_mode": {
+        "default": false,
+        "title": "Agent Mode",
+        "type": "boolean"
+      },
+      "blocked_action_terms": {
+        "default": [],
+        "items": {
+          "maxLength": 40,
+          "minLength": 1,
+          "type": "string"
+        },
+        "maxItems": 40,
+        "title": "Blocked Action Terms",
         "type": "array"
       }
     },

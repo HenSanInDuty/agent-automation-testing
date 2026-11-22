@@ -21,6 +21,7 @@ from auto_at.contracts.codex_bridge import (
     BRIDGE_PROVIDER_MODELS,
     CodexBridgeRequest,
     CodexUsage,
+    parse_agent_output,
     parse_codex_output,
 )
 from domain.codex_bridge import CLAUDE_CLI_VERSION as CLAUDE_CLI_VERSION
@@ -252,7 +253,7 @@ class ClaudeProcess:
     async def run(
         self, request: CodexBridgeRequest, directory: Path, prompt: bytes,
         stop_reason: Callable[[], str | None], *, argv: list[str] | None = None,
-        output_parser: Callable = parse_codex_output,
+        output_parser: Callable | None = None,
     ) -> BridgeProcessResult:
         if os.name != "posix":
             return BridgeProcessResult(failure_code="bridge_cli_unsupported")
@@ -317,7 +318,11 @@ class ClaudeProcess:
             data = json.dumps(reader.output, separators=(",", ":")).encode()
             if len(data) > request.max_output_bytes:
                 raise ProcessRejected("bridge_output_limit")
-            output = output_parser(data)
+            # Agent jobs (prompt agent-loop-vN, which carries agent_context) use their own family.
+            parse = output_parser or (
+                parse_agent_output if request.agent_context is not None else parse_codex_output
+            )
+            output = parse(data)
             logging.getLogger(__name__).info("Claude proposal: %s", json.dumps({
                 "job_id": str(request.job_id), "stage": request.stage,
                 "outcome": output.outcome, "reason": getattr(output, "reason", None),
