@@ -14,3 +14,14 @@ Lịch sử trước 2026-11-22: `history/README-rounds-01-21-until-20261121.md`
 - Phát hiện: ADR-042 áp dụng cả v4 → lượt live đầu ngày 2 là lượt thử cho source mới.
 - Người dùng: cho commit, tiêu chí 4/5, cho live ngày 2. Commit `d351561` (agent loop trước sprint);
   `qualify_batch` 4/5 + 9 test (104 accuracy tests passed, Ruff sạch).
+
+## 2026-11-22 — ngày 2 (chuẩn bị)
+
+- Runner có theo dõi `benchmark/vision/accuracy/round_v4.py`: `preflight` (smoke gate: không session active,
+  bridge Claude ready, cờ agent loop tắt, checksum image = tree, worker 401, token ≥3 h + export, worker
+  open/close không LLM) → `start` (chặn nếu không có preflight pass ≤20 phút cùng source) → `wait` →
+  `collect` (evidence, frame verify, inventory, state page_url, download, usage) → `auto` → `score`.
+- Chấm tự động: quy tắc page_url (bỏ query) = URL khai báo hoặc chuỗi redirect đã review; download chain
+  bắt đầu đúng hash khai báo; mct-47 `#true`. Trên r21: 28 machine credit, 0 lệch với review tay; 19 lượt
+  hiển thị (tab/nhân vật/carousel/TOP/search) vẫn review ảnh. Test `tests/test_vision_accuracy_round_v4.py`.
+- Recreate `control-plane` + `temporal-worker` không dùng override agent loop → `VISION_AGENT_*` unset.
