@@ -3,6 +3,14 @@
 import { FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { History, Plus, RotateCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { Code, CodeBlock, Disclosure, FormField, Hint, ItemList, Notice } from "./components/agent-ui";
+import { Section } from "./components/section";
 import { VisionSessionDetail } from "./components/vision-session-detail";
 import { VisionProviderSettings } from "./components/vision-provider-settings";
 import { hasUnsavedVisionPolicy, hasVisionConsent, visionDisclosure, visionConfirmation, visionFailureMessage, visionProviderLabel } from "./components/vision-provider-model";
@@ -33,7 +41,7 @@ function SafeAction({ item }: { item: VisualAction }) {
     typeof action.delta_y === "number" ? `scroll ${action.delta_y}` : null,
     typeof action.duration_ms === "number" ? `wait ${action.duration_ms}ms` : null,
   ].filter(Boolean).join(" · ");
-  return <li><strong>{item.sequence}. {action.kind}</strong>{detail && ` — ${detail}`}{item.evidence_checksum && <><br />Screenshot checksum: <code>{item.evidence_checksum}</code></>}</li>;
+  return <li className="rounded-lg border bg-muted/30 px-3 py-2 text-sm"><strong className="font-medium">{item.sequence}. {action.kind}</strong>{detail && ` — ${detail}`}{item.evidence_checksum && <><br /><span className="text-xs text-muted-foreground">Screenshot checksum: </span><Code>{item.evidence_checksum}</Code></>}</li>;
 }
 
 export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { apiUrl: string; projectPolicy?: ReactNode; onProjectChange?: (projectId: string) => void }) {
@@ -226,48 +234,68 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
   }
   const canDeleteReplay = role === "tenant_admin";
 
-  const visionSettings = <section className="workspace-section" aria-label="Vision settings"><h2>Vision settings</h2>{settingsError
-    ? <><p role="alert">Vision settings could not be loaded.</p><button type="button" className="button button--secondary" onClick={() => setSettingsRefresh((value) => value + 1)}>Retry Vision settings</button></>
+  const visionSettings = <section aria-label="Vision settings"><h2 className="sr-only">Vision settings</h2>{settingsError
+    ? <div className="grid justify-items-start gap-3"><Notice tone="danger" role="alert" className="w-full">Vision settings could not be loaded.</Notice><Button type="button" variant="outline" size="sm" onClick={() => setSettingsRefresh((value) => value + 1)}>Retry Vision settings</Button></div>
     : draftPolicy ? <VisionProviderSettings policy={draftPolicy} providers={providers} canManage={role === "tenant_admin"} saving={saving || submitting || confirmation !== null} dirty={dirty} onChange={setDraftPolicy} onSave={saveVisionPolicy} onDiscard={() => setDraftPolicy(savedPolicy)} />
     : <LoadingState title="Loading vision policy" />}</section>;
+  const showHistory = (session: VisualExploration) => { setSelected(session); setNewOpen(false); setHistoryOpen(false); const url = new URL(window.location.href); url.searchParams.set("vision", session.id); window.history.replaceState(null, "", url); };
+  const noticeTone = notice.includes("unavailable") || notice.includes("disabled") ? "danger" : notice.includes("saved") || notice.includes("queued") || notice.includes("deleted") ? "success" : "info";
 
-  return <div className="vision-workspace">
-    {selected && <div className="vision-session-toolbar" aria-label="Session controls">
-      <div><strong>{options.find((project) => project.id === selected.project_id)?.name ?? "Website exploration"}</strong> <StatusBadge status={selected.state} /></div>
-      <div className="button-row">
-        <button type="button" className="button button--secondary" aria-expanded={historyOpen} onClick={() => { setHistoryOpen(true); historyRef.current?.scrollIntoView({ block: "nearest" }); }}>History</button>
-        <button type="button" className="button button--secondary" aria-expanded={newOpen} aria-controls="vision-new" onClick={() => setNewOpen((open) => !open)}>New exploration</button>
-        <button type="button" className="button button--secondary" onClick={requestReload} disabled={active || !enabled || dirty || saving || submitting || confirmation !== null}>Reload</button>
+  return <div className="grid min-w-0 gap-6 [overflow-wrap:anywhere]">
+    {selected && <div role="group" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border bg-card px-4 py-2.5 shadow-xs" aria-label="Session controls">
+      <div className="flex min-w-0 items-center gap-2.5"><strong className="truncate text-sm font-semibold">{options.find((project) => project.id === selected.project_id)?.name ?? "Website exploration"}</strong> <StatusBadge status={selected.state} /></div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" aria-expanded={historyOpen} onClick={() => { setHistoryOpen(true); historyRef.current?.scrollIntoView({ block: "nearest" }); }}><History aria-hidden="true" />History</Button>
+        <Button type="button" variant="outline" size="sm" aria-expanded={newOpen} aria-controls="vision-new" onClick={() => setNewOpen((open) => !open)}><Plus aria-hidden="true" />New exploration</Button>
+        <Button type="button" variant="outline" size="sm" onClick={requestReload} disabled={active || !enabled || dirty || saving || submitting || confirmation !== null}><RotateCw aria-hidden="true" />Reload</Button>
       </div>
     </div>}
-    <section id="vision-new" hidden={Boolean(selected) && !newOpen} className="workspace-section" aria-label="Vision exploration">
-      <h2>Start a new Vision exploration</h2>
-      <p>Choose a target and describe what to explore. Previous sessions remain available below.</p>
-      <form onSubmit={requestExploration} className="form-grid">
-        <label className="field">Project<select required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Choose a project</option>{options.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-        <label className="field">Target URL<input required type="url" value={targetUrl} onChange={(event) => setTargetUrl(event.target.value)} /></label>
-        <label className="field form-grid--full">Exploration intent<textarea required value={taskIntent} onChange={(event) => setTaskIntent(event.target.value)} /></label>
-        {!enabled && <p className="form-grid--full">Vision is unavailable until a tenant administrator enables an available provider and accepts its required data-transfer disclosure in Vision settings below.</p>}
-        <div className="form-actions form-grid--full"><button className="button" disabled={!projectId || !enabled || dirty || saving || submitting}>Start advisory exploration</button></div>
+    <Section id="vision-new" hidden={Boolean(selected) && !newOpen} aria-label="Vision exploration" title="Start a new Vision exploration" description="Choose a target and describe what to explore. Previous sessions remain available below." contentClassName="grid gap-4">
+      <form onSubmit={requestExploration} className="grid gap-4 min-[720px]:grid-cols-2">
+        <FormField id="vision-project" label="Project"><NativeSelect id="vision-project" required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Choose a project</option>{options.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</NativeSelect></FormField>
+        <FormField id="vision-target-url" label="Target URL"><Input id="vision-target-url" required type="url" placeholder="https://example.com" value={targetUrl} onChange={(event) => setTargetUrl(event.target.value)} /></FormField>
+        <FormField id="vision-intent" label="Exploration intent" className="min-[720px]:col-span-2"><Textarea id="vision-intent" required className="min-h-24" value={taskIntent} onChange={(event) => setTaskIntent(event.target.value)} /></FormField>
+        {!enabled && <Notice tone="warning" className="min-[720px]:col-span-2">Vision is unavailable until a tenant administrator enables an available provider and accepts its required data-transfer disclosure in Vision settings below.</Notice>}
+        <div className="min-[720px]:col-span-2"><Button disabled={!projectId || !enabled || dirty || saving || submitting}>Start advisory exploration</Button></div>
       </form>
-      {dirty && <p role="status">Save or discard your Vision settings changes before starting an exploration.</p>}
-      {savedPolicy && <p>{visionDisclosure(savedPolicy)} Any resulting test draft requires your approval before execution.</p>}
-    </section>
-    {notice && <p className={`notice ${notice.includes("unavailable") || notice.includes("disabled") ? "notice--error" : ""}`} role="alert">{notice}</p>}
+      {dirty && <Notice tone="info" role="status">Save or discard your Vision settings changes before starting an exploration.</Notice>}
+      {savedPolicy && <Hint>{visionDisclosure(savedPolicy)} Any resulting test draft requires your approval before execution.</Hint>}
+    </Section>
+    {notice && <Notice tone={noticeTone} role="alert">{notice}</Notice>}
     {selected && <VisionSessionDetail key={`${apiUrl}:${projectId}:${selected.id}`} apiUrl={apiUrl} session={selected} canDelete={canDeleteReplay} onActivity={() => refreshSelected(selected.id)} />}
-    {selected && selected.trace_version !== "v4" && trajectory && <section className="workspace-section" aria-label="Exploration evidence"><VisionTrajectory apiUrl={apiUrl} sessionId={selected.id} trajectory={trajectory} frames={frames} selectedFrame={selectedFrame} onSelectFrame={setSelectedFrame} /></section>}
-    {(!enabled || dirty || settingsError) && <p className="vision-settings-notice" role="status">
-      {dirty ? "Save or discard your settings changes before starting a session." : settingsError ? "Vision settings could not be loaded." : "Starting a session requires an available provider, enabled Vision settings and its required transfer consent."}{" "}
-      <button type="button" className="button button--secondary" onClick={() => { if (settingsRef.current) { settingsRef.current.open = true; settingsRef.current.scrollIntoView({ block: "nearest" }); } }}>Open settings</button>
-    </p>}
-    <details ref={settingsRef} className="workspace-section"><summary>Vision settings</summary>{visionSettings}</details>
-    <details className="workspace-section"><summary>Project settings</summary>{projectPolicy}</details>
-    <details ref={historyRef} open={historyOpen} onToggle={(event) => setHistoryOpen(event.currentTarget.open)} className="workspace-section">
-      <summary>Session history</summary>
-      <section aria-label="Visual exploration sessions"><h2>Visual exploration sessions</h2>{sessions.length ? <ul className="stack-list">{sessions.map((session, index) => <li key={session.id}><button type="button" className="button button--secondary" onClick={() => { setSelected(session); setNewOpen(false); setHistoryOpen(false); const url = new URL(window.location.href); url.searchParams.set("vision", session.id); window.history.replaceState(null, "", url); }}>View</button> Exploration {sessions.length - index} <StatusBadge status={session.state} /> <details><summary>Session ID</summary><code>{session.id}</code></details></li>)}</ul> : <EmptyState title="No visual explorations">Start one only after confirming the privacy disclosure above.</EmptyState>}</section>
-    </details>
-    {selected && selected.trace_version !== "v4" && <><section className="workspace-section" aria-label="Selected visual exploration"><div className="section-heading"><h2>Advisory session</h2><StatusBadge status={selected.state} /></div><ul className="detail-list"><li>Correlation: <code>{selected.correlation_id}</code></li><li>Bounded to {selected.max_hops} hops, {selected.max_states} states, and {selected.max_session_seconds} seconds.</li><li>Stop condition: state/depth limit, time limit, policy guard, provider failure, or model stop.</li>{selected.safe_failure_reason && <li>Safe failure: {selected.safe_failure_reason}</li>}</ul>{active && <LoadingState title="Visual exploration is in progress" />}<VisionProgressTimeline apiUrl={apiUrl} sessionId={selected.id} live={active} onActivity={() => refreshSelected(selected.id)} /><h3>Visual replay</h3><p>Frames may contain target-page data. They are private evidence retained until an authorized deletion, visible only to project readers, and never change a deterministic verdict.</p>{frames.length ? <><div className="stack-list" role="list">{frames.map((frame) => <button type="button" key={frame.id} className="button button--secondary" onClick={() => setSelectedFrame(frame)}>State {frame.sequence} · {frame.checksum.slice(0, 12)} · retained</button>)}</div>{selectedFrame && <><p>State {selectedFrame.sequence}, captured {new Date(selectedFrame.captured_at).toLocaleString()}: model proposals only; these were not executed test steps.</p>{frameUrl ? <div className="vision-replay-image">{frameImageSize && selectedFrame.actions.map((item) => { const position = replayMarkerPosition(item.action, frameImageSize); return position ? <span key={item.sequence} className="vision-replay-marker" style={position}>model proposal</span> : null; })}<img src={frameUrl} alt={`Captured visual exploration state ${selectedFrame.sequence}`} onLoad={(event) => setFrameImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} /></div> : frameError ? <p role="status">Replay frame unavailable.</p> : <LoadingState title="Loading replay frame" />}<ul className="stack-list">{selectedFrame.actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ul></>}</> : <p>No replay frame was retained for this exploration.</p>}<h3>Safe action candidates</h3>{actions.length ? <ul className="stack-list">{actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ul> : <p>No action candidate has been recorded.</p>}{draftId && <p><Link href={`/agent?draft=${encodeURIComponent(draftId)}`}>Review the resulting Playwright draft</Link></p>}<h3>Tenant-admin diagnostic evidence</h3><p>Available only to tenant administrators. Open it only when needed; do not copy sensitive content.</p><button type="button" className="button button--secondary" onClick={() => void inspectDebugEvidence()}>Inspect diagnostic evidence</button>{debugEvidence && <><p>Expires: {debugEvidence.retention_until}</p><pre>{debugEvidence.payload}</pre></>}</section></>}
-    {selected && canDeleteReplay && frames.length > 0 && <section className="workspace-section" aria-label="Replay deletion"><h2>Delete replay evidence</h2><p>Only tenant administrators can permanently delete these private frames.</p>{selectedFrame && <button type="button" className="button button--danger" onClick={() => setReplayDeletion("frame")}>Delete selected frame</button>} <button type="button" className="button button--danger" onClick={() => setReplayDeletion("all")}>Delete all replay frames</button></section>}
+    {selected && selected.trace_version !== "v4" && trajectory && <Section aria-label="Exploration evidence"><VisionTrajectory apiUrl={apiUrl} sessionId={selected.id} trajectory={trajectory} frames={frames} selectedFrame={selectedFrame} onSelectFrame={setSelectedFrame} /></Section>}
+    {(!enabled || dirty || settingsError) && <Notice tone="info" role="status" className="flex flex-wrap items-center justify-between gap-3 text-muted-foreground">
+      <span>{dirty ? "Save or discard your settings changes before starting a session." : settingsError ? "Vision settings could not be loaded." : "Starting a session requires an available provider, enabled Vision settings and its required transfer consent."}</span>
+      <Button type="button" variant="outline" size="sm" onClick={() => { if (settingsRef.current) { settingsRef.current.open = true; settingsRef.current.scrollIntoView({ block: "nearest" }); } }}>Open settings</Button>
+    </Notice>}
+    <Disclosure ref={settingsRef} title="Vision settings">{visionSettings}</Disclosure>
+    <Disclosure title="Project settings" bodyClassName="p-0">{projectPolicy}</Disclosure>
+    <Disclosure ref={historyRef} open={historyOpen} onToggle={(event) => setHistoryOpen(event.currentTarget.open)} title="Session history">
+      <section aria-label="Visual exploration sessions" className="grid gap-3"><h2 className="text-sm font-semibold">Visual exploration sessions</h2>{sessions.length ? <ul className="grid gap-2">{sessions.map((session, index) => <li key={session.id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2", session.id === selected?.id && "border-primary/40 bg-accent/50")}><Button type="button" variant="outline" size="sm" onClick={() => showHistory(session)}>View</Button> <span className="text-sm font-medium">Exploration {sessions.length - index}</span> <StatusBadge status={session.state} /> <Disclosure variant="plain" title="Session ID" className="ml-auto"><Code>{session.id}</Code></Disclosure></li>)}</ul> : <EmptyState title="No visual explorations">Start one only after confirming the privacy disclosure above.</EmptyState>}</section>
+    </Disclosure>
+    {selected && selected.trace_version !== "v4" && <Section aria-label="Selected visual exploration" title="Advisory session" actions={<StatusBadge status={selected.state} />} contentClassName="grid gap-5">
+      <ItemList className="text-muted-foreground"><li>Correlation: <Code>{selected.correlation_id}</Code></li><li>Bounded to {selected.max_hops} hops, {selected.max_states} states, and {selected.max_session_seconds} seconds.</li><li>Stop condition: state/depth limit, time limit, policy guard, provider failure, or model stop.</li>{selected.safe_failure_reason && <li>Safe failure: {selected.safe_failure_reason}</li>}</ItemList>
+      {active && <LoadingState title="Visual exploration is in progress" />}
+      <VisionProgressTimeline apiUrl={apiUrl} sessionId={selected.id} live={active} onActivity={() => refreshSelected(selected.id)} />
+      <h3 className="text-sm font-semibold">Visual replay</h3>
+      <Hint>Frames may contain target-page data. They are private evidence retained until an authorized deletion, visible only to project readers, and never change a deterministic verdict.</Hint>
+      {frames.length ? <>
+        <div className="flex flex-wrap gap-2" role="list">{frames.map((frame) => <Button type="button" key={frame.id} variant={frame.id === selectedFrame?.id ? "secondary" : "outline"} size="sm" onClick={() => setSelectedFrame(frame)}>State {frame.sequence} · {frame.checksum.slice(0, 12)} · retained</Button>)}</div>
+        {selectedFrame && <>
+          <Hint>State {selectedFrame.sequence}, captured {new Date(selectedFrame.captured_at).toLocaleString()}: model proposals only; these were not executed test steps.</Hint>
+          {frameUrl ? <div className="relative inline-block max-w-full justify-self-start overflow-hidden rounded-lg border bg-muted/40">{frameImageSize && selectedFrame.actions.map((item) => { const position = replayMarkerPosition(item.action, frameImageSize); return position ? <span key={item.sequence} className="pointer-events-none absolute z-[1] -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-[#f4c542] bg-black/70 px-1.5 py-0.5 text-[11px] text-white" style={position}>model proposal</span> : null; })}<img className="block h-auto max-w-full" src={frameUrl} alt={`Captured visual exploration state ${selectedFrame.sequence}`} onLoad={(event) => setFrameImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} /></div> : frameError ? <Notice tone="warning" role="status">Replay frame unavailable.</Notice> : <LoadingState title="Loading replay frame" />}
+          <ItemList>{selectedFrame.actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ItemList>
+        </>}
+      </> : <Hint>No replay frame was retained for this exploration.</Hint>}
+      <h3 className="text-sm font-semibold">Safe action candidates</h3>
+      {actions.length ? <ItemList>{actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ItemList> : <Hint>No action candidate has been recorded.</Hint>}
+      {draftId && <p><Link className="text-sm font-medium text-primary underline-offset-4 hover:underline" href={`/agent?draft=${encodeURIComponent(draftId)}`}>Review the resulting Playwright draft</Link></p>}
+      <h3 className="text-sm font-semibold">Tenant-admin diagnostic evidence</h3>
+      <Hint>Available only to tenant administrators. Open it only when needed; do not copy sensitive content.</Hint>
+      <div><Button type="button" variant="outline" size="sm" onClick={() => void inspectDebugEvidence()}>Inspect diagnostic evidence</Button></div>
+      {debugEvidence && <><Hint>Expires: {debugEvidence.retention_until}</Hint><CodeBlock label="Diagnostic evidence">{debugEvidence.payload}</CodeBlock></>}
+    </Section>}
+    {selected && canDeleteReplay && frames.length > 0 && <Section aria-label="Replay deletion" title="Delete replay evidence" description="Only tenant administrators can permanently delete these private frames." contentClassName="flex flex-wrap gap-2">{selectedFrame && <Button type="button" variant="destructive" size="sm" onClick={() => setReplayDeletion("frame")}>Delete selected frame</Button>} <Button type="button" variant="destructive" size="sm" onClick={() => setReplayDeletion("all")}>Delete all replay frames</Button></Section>}
     <ConfirmDialog open={confirmation !== null} title={confirmation?.expected_provider === "codex_cli" ? "Send page elements to OpenAI?" : `Send screenshots to ${visionProviderLabel(confirmation?.expected_provider ?? "")}?`} description={`${confirmation?.disclosure ?? ""} Model: ${confirmation?.expected_model ?? ""}. ${confirmation?.kind === "reload" ? "Reload starts a new session with the saved target and intent; the previous session stays in history." : "This starts an advisory exploration."} Any resulting test draft requires approval before execution.`} confirmLabel={confirmation?.kind === "reload" ? "Start new session" : "Start advisory exploration"} onConfirm={() => void submitExploration()} onCancel={() => setConfirmation(null)} busy={submitting} />
     <ConfirmDialog open={replayDeletion !== null} title={replayDeletion === "all" ? "Delete all replay frames?" : "Delete this replay frame?"} description="This permanently removes private replay evidence. It does not change the advisory session, generated draft, or deterministic test verdict." confirmLabel="Delete replay evidence" onConfirm={() => void deleteReplay()} onCancel={() => setReplayDeletion(null)} busy={deletingReplay} />
   </div>;

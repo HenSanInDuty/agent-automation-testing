@@ -70,10 +70,18 @@ class Account:
 
 
 @dataclass(frozen=True)
+class TenantGrant:
+    tenant_id: str
+    role: Role
+
+
+@dataclass(frozen=True)
 class IssuedSession:
     token: str
     csrf_token: str
     account: Account
+    tenant_id: str
+    tenants: tuple[TenantGrant, ...]
 
 
 class AccountService:
@@ -92,22 +100,60 @@ class AccountService:
             return self._account(existing, membership)
         return self._create(tenant_id, email, temporary_password, Role.TENANT_ADMIN, True)
 
-    def login(self, tenant_id: str, email: str, password: str, ttl_seconds: int) -> IssuedSession:
+    def login(
+        self, tenant_id: str | None, email: str, password: str, ttl_seconds: int
+    ) -> IssuedSession:
+        """Verify credentials and open a session.
+
+        Without ``tenant_id`` the session starts in the user's first tenant (ordered by id);
+        the caller lets the user pick another one through :meth:`switch_tenant`.
+        """
         user = self._user_by_email(email)
-        membership = self._membership(user.id, tenant_id) if user else None
+        memberships = self._memberships(user.id) if user else []
+        if tenant_id is not None:
+            memberships_for_tenant = [item for item in memberships if item.tenant_id == tenant_id]
+        else:
+            memberships_for_tenant = memberships[:1]
         if (
             user is None
-            or membership is None
+            or not memberships_for_tenant
             or not user.enabled
             or not self._passwords.verify(user.password_hash, password)
         ):
             raise AuthenticationError("Invalid email or password.")
+        return self._issue(user, memberships_for_tenant[0], memberships, ttl_seconds)
+
+    def tenants(self, user_id: UUID) -> tuple[TenantGrant, ...]:
+        return tuple(self._grant(item) for item in self._memberships(user_id))
+
+    def switch_tenant(self, token: str, tenant_id: str, ttl_seconds: int) -> IssuedSession:
+        """Replace a live session with one for another tenant the same user belongs to."""
+        record = self._session.scalar(
+            select(SessionModel).where(SessionModel.token_hash == digest(token))
+        )
+        if record is None or record.revoked_at is not None or record.expires_at <= utcnow():
+            raise AuthenticationError("Authentication required.")
+        user = self._session.get(UserModel, record.user_id)
+        memberships = self._memberships(record.user_id)
+        target = next((item for item in memberships if item.tenant_id == tenant_id), None)
+        if user is None or not user.enabled or target is None:
+            raise AuthenticationError("Tenant not available.")
+        record.revoked_at = utcnow()
+        return self._issue(user, target, memberships, ttl_seconds)
+
+    def _issue(
+        self,
+        user: UserModel,
+        membership: TenantMembershipModel,
+        memberships: list[TenantMembershipModel],
+        ttl_seconds: int,
+    ) -> IssuedSession:
         token, csrf_token = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
         self._session.add(
             SessionModel(
                 token_hash=digest(token),
                 user_id=user.id,
-                tenant_id=tenant_id,
+                tenant_id=membership.tenant_id,
                 csrf_token_hash=digest(csrf_token),
                 expires_at=utcnow() + timedelta(seconds=ttl_seconds),
                 revoked_at=None,
@@ -115,7 +161,13 @@ class AccountService:
             )
         )
         self._session.flush()
-        return IssuedSession(token, csrf_token, self._account(user, membership))
+        return IssuedSession(
+            token,
+            csrf_token,
+            self._account(user, membership),
+            membership.tenant_id,
+            tuple(self._grant(item) for item in memberships),
+        )
 
     def principal(self, token: str) -> Account | None:
         record = self._session.scalar(
@@ -227,6 +279,19 @@ class AccountService:
                 TenantMembershipModel.tenant_id == tenant_id,
             )
         )
+
+    def _memberships(self, user_id: UUID) -> list[TenantMembershipModel]:
+        return list(
+            self._session.scalars(
+                select(TenantMembershipModel)
+                .where(TenantMembershipModel.user_id == user_id)
+                .order_by(TenantMembershipModel.tenant_id)
+            )
+        )
+
+    @staticmethod
+    def _grant(membership: TenantMembershipModel) -> TenantGrant:
+        return TenantGrant(membership.tenant_id, Role(membership.role))
 
     @staticmethod
     def _account(user: UserModel, membership: TenantMembershipModel) -> Account:

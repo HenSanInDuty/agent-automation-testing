@@ -18,12 +18,19 @@ for (const base of urls.length ? urls : ["http://127.0.0.1:3000"]) {
       if (url.pathname.startsWith("/api/")) apiOrigins.add(url.origin);
     });
     await page.goto(`${base}/login`);
-    await page.getByLabel("Tenant", { exact: true }).fill(account!.tenant);
+    // The tenant is chosen after signing in, and only when the account belongs to several.
+    await expect(page.getByLabel("Tenant", { exact: true })).toHaveCount(0);
     await page.getByLabel("Email", { exact: true }).fill(account!.email);
     await page.getByLabel("Password", { exact: true }).fill(account!.password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page.waitForURL((url) => url.pathname === "/" || url.pathname === "/select-tenant");
+    if (new URL(page.url()).pathname === "/select-tenant") {
+      const tenantName = new RegExp(`^${account!.tenant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+      await page.getByRole("list", { name: "Your tenants" }).getByRole("button", { name: tenantName }).click();
+    }
     await expect(page).toHaveURL(`${base}/`);
     await expect(page.getByLabel("Current user menu")).toContainText(account!.email);
+    expect(await page.evaluate(async () => (await (await fetch("/api/v1/auth/me")).json()).tenant_id)).toBe(account!.tenant);
     const cookies = await page.context().cookies(base);
     const session = cookies.find((cookie) => cookie.name === "auto_at_session");
     expect(session?.httpOnly).toBe(true);

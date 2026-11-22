@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { activities, type Activity } from "../run-api";
+import { cn } from "@/lib/utils";
+import { Section } from "./section";
 import { StatusBadge } from "./status-badge";
 import {
   orderedActivities,
@@ -57,8 +59,50 @@ export function ActivityTimeline({ apiUrl, runId, correlationId, live }: {
   }, [apiUrl, correlationId, live, runId]);
 
   const stateLabel = timelineConnectionLabel(connection);
-  return <section className="workspace-section" aria-label="Pipeline timeline">
-    <div className="section-heading"><h2>Pipeline timeline</h2><small aria-live="polite">{stateLabel}</small></div>
-    {timeline.length ? <ol className="stack-list">{timeline.map((event) => <li key={event.id}><StatusBadge status={event.status} /> {event.safe_summary} <small>{event.source} / {event.stage} / {new Date(event.occurred_at).toLocaleTimeString()}</small></li>)}</ol> : <p>Waiting for safe activity events.</p>}
-  </section>;
+  return (
+    <Section
+      aria-label="Pipeline timeline"
+      title="Pipeline timeline"
+      actions={
+        <span aria-live="polite" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-1.5 rounded-full",
+              connection === "live" ? "animate-pulse bg-success" : "bg-muted-foreground/60",
+            )}
+          />
+          {stateLabel}
+        </span>
+      }
+    >
+      {timeline.length ? (
+        <ol className="relative space-y-5 border-l border-border pl-6">
+          {timeline.map((event) => (
+            <li key={event.id} className="relative">
+              <span
+                aria-hidden="true"
+                className="absolute -left-[29px] top-1.5 size-2.5 rounded-full border-2 border-card bg-primary ring-1 ring-border"
+              />
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <StatusBadge status={event.status} />
+                <time
+                  dateTime={event.occurred_at}
+                  className="text-xs tabular-nums text-muted-foreground"
+                >
+                  {new Date(event.occurred_at).toLocaleTimeString()}
+                </time>
+              </div>
+              <p className="mt-1 text-sm break-words">{event.safe_summary}</p>
+              <p className="text-xs text-muted-foreground">
+                {event.source} / {event.stage}
+              </p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-sm text-muted-foreground">Waiting for safe activity events.</p>
+      )}
+    </Section>
+  );
 }

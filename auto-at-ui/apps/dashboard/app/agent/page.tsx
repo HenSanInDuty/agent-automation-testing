@@ -1,4 +1,5 @@
 import { GenerationDashboard } from "../generation-dashboard";
+import "../vision.css";
 
 export const dynamic = "force-dynamic";
 
