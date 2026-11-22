@@ -1,0 +1,59 @@
+{
+  "schema_version": "vision-accuracy-evidence-v1",
+  "session_id": "712f4d9d-0e2c-4203-a25b-3dc2fd690639",
+  "state": "unavailable",
+  "trace_revision": "be2536de3c08bc94a73523a19aa66f505ac16e1cf65856ff13febe0301a1e6a5",
+  "operations": [
+    {
+      "id": "aaefce23-ce8a-44e0-b40c-82d569bdc4ca",
+      "sequence": 1,
+      "status": "completed",
+      "action_kind": "navigate",
+      "purpose": "setup",
+      "outcome_code": "observed",
+      "state_id": null,
+      "checkpoint_id": null,
+      "locator_id": null,
+      "proposal_id": null,
+      "parent_operation_id": null,
+      "before_page_id": "3578a7fa-b2fe-400d-8307-dccccb904f35",
+      "after_page_id": null,
+      "url_change": "changed",
+      "visual_change": "unavailable",
+      "before": {
+        "id": "094a44b3-a4fb-42db-9435-2f3bc3d8de9d",
+        "checksum": "c4b3344c0140948b69d89b18ffd9f7f3c7517d71415595458dc3a82eb4f89b78",
+        "availability": "retained",
+        "byte_count": 4331
+      },
+      "after": {
+        "id": null,
+        "checksum": null,
+        "availability": "missing",
+        "byte_count": null
+      }
+    }
+  ],
+  "locators": [],
+  "diagnostics": [],
+  "runtime_conclusion": {
+    "status": "partial",
+    "coverage": "not_established",
+    "inventory_limited": false,
+    "operations_completed": 1,
+    "operations_failed": 0,
+    "operations_rejected": 0,
+    "operations_unknown": 0,
+    "operations_pending": 0,
+    "candidates_not_attempted": 0,
+    "business_outcome": "unverified"
+  },
+  "diagnosis": {
+    "categories": [],
+    "missing_evidence_operations": [
+      "aaefce23-ce8a-44e0-b40c-82d569bdc4ca"
+    ],
+    "reason": "initial_capture_failed",
+    "physical_retry_authorized": false
+  }
+}

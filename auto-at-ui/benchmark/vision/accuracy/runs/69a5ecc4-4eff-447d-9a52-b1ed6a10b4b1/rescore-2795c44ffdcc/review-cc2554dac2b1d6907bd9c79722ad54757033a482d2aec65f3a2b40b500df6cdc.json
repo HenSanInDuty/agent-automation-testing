@@ -1,0 +1,11 @@
+{
+  "after_checksum": "384893e8466b8bb6eeabf60c27b6107126cc16c782f33c25f202476d2342a7bc",
+  "before_checksum": "a87d06d983174dd7a51cb55356bc3532eff6c2f49c589feac324d38b89c24502",
+  "finding": "mct-30: NHAN VAT tab already active stays active with the character panel (Thieu Lam); already-active selection permitted.",
+  "operation_id": "d722e585-c9c5-401c-b9e3-c2c04acf2d0c",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

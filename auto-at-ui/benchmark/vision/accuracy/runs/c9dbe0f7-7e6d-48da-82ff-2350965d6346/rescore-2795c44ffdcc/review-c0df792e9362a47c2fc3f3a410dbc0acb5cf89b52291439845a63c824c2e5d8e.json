@@ -1,0 +1,11 @@
+{
+  "after_checksum": "7de2cbdde9310215333d2b28f2ae5a367635816eb095698325097ef9763ea2e4",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "mct-56: indicator 6 with matching slide Hoi Sinh Tinh Hoa Vo Lam before (footer, scroll 2181) and after (page now at scroll 1663, carousel in view, indicator 6 active); already-active selection is the declared state.",
+  "operation_id": "ae1474ac-5129-4834-b356-a816b57bb3b9",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

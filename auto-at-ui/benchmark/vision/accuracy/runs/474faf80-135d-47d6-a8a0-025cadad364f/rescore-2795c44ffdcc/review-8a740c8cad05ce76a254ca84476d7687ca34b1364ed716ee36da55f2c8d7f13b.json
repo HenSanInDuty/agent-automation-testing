@@ -1,0 +1,11 @@
+{
+  "after_checksum": "057cab0506b2f63debaa1aa5a662c5768eaac1f9ddcfa4288657919f1f980700",
+  "before_checksum": "44109d3eb36f2cbc6582ef21e3db12409acb14a6ff7cf0f7b637eb2b80a69b09",
+  "finding": "mct-47: Machine rule: after-state URL is https://mongchiton.vn/#true, the embedded player state of the declared video (video-copies-probe-20261122.json). No playback claim.",
+  "operation_id": "960f0129-acb3-471d-9cc3-8586b1495d60",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "video_destination_or_dialog",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

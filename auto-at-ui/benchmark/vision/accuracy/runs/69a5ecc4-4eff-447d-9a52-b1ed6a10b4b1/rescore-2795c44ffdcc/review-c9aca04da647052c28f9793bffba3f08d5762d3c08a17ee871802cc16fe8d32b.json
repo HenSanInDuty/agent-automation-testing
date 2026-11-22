@@ -1,0 +1,11 @@
+{
+  "after_checksum": "ae6a4b85202237f6ad60a337be37bbf123344411381559b65e306ccba1fbccbc",
+  "before_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+  "finding": "mct-34: Machine rule: after-state page URL https://id.tpl.vn/register equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "cfc4f730-5131-45c3-988e-a1023bad7f57",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

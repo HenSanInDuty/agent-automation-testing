@@ -1,0 +1,11 @@
+{
+  "after_checksum": "e9c64deb6986f24d3cfd469f1e5c649981c0d325b0571a925c88b732e39add44",
+  "before_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "finding": "mct-52: after frame shows indicator 2 selected with matching slide Bang Chien Nay Lua (before: indicator 1).",
+  "operation_id": "8cf2e0a2-a4e4-48f0-83a0-a929d75bcf51",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

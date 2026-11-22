@@ -1,0 +1,24 @@
+{
+  "_reviewer": "Claude (orchestrating session, claude-opus-5-5) from before|after composites; same model family as the proposer, different role, no access to its reasoning",
+  "_no_credit": {
+    "128": "mct-58: next arrow; before frame indicator 6 (Hoi Sinh Tinh Hoa), after frame indicator 2 (Bang Chien Nay Lua): two steps with wraparound, the declared outcome is one step (1). Autoplay moved during the capture window; same treatment as round 17 op 26 and Q1 op 137. No credit."
+  },
+  "31": "mct-51: after frame shows indicator 1 selected with matching slide Chuoi Nhiem Vu (before: indicator 5, Vo Lam Chan Menh).",
+  "33": "mct-43: before frame is the footer; after frame shows the homepage header and hero; state evidence scroll_y 0 on https://mongchiton.vn/ (url unchanged).",
+  "43": "mct-52: after frame shows indicator 2 selected with matching slide Bang Chien Nay Lua (before: indicator 3).",
+  "45": "mct-53: indicator 3 with matching slide Chinh Phuc PvE before (mid-fade) and after the bound click (already-active selection is the declared state).",
+  "47": "mct-54: indicator 4 with matching slide Thu Cuoi Kinh Dien before and after (already-active selection is the declared state).",
+  "49": "mct-55: indicator 5 with matching slide Vo Lam Chan Menh before and after (already-active selection is the declared state).",
+  "51": "mct-56: after frame shows indicator 6 selected with matching slide Hoi Sinh Tinh Hoa Vo Lam (before: indicator 1).",
+  "105": "mct-18: Tin Tuc tab already active stays visibly active with the news list; already-active selection permitted.",
+  "112": "mct-19: Su Kien tab becomes visibly active and its event list replaces the news list.",
+  "113": "mct-20: Cam Nang tab becomes visibly active and its guide list replaces the event list.",
+  "114": "mct-21: empty search input; before and after frames show the identical unfiltered Cam Nang list, same URL https://mongchiton.vn/ (url_change unchanged, scroll 576), no error, no form mutation.",
+  "116": "mct-32: first character control becomes active and the Thieu Lam panel is shown (before: Co Mo).",
+  "118": "mct-44: second character control becomes active and the Dao Hoa panel is shown (before: Co Mo).",
+  "120": "mct-45: third character control becomes active and the Toan Chan panel is shown (before: Thieu Lam).",
+  "122": "mct-46: fourth character control becomes active and the Co Mo panel is shown (before: Dao Hoa).",
+  "126": "mct-57: previous arrow; before frame indicator 6 Hoi Sinh Tinh Hoa, after frame indicator 5 Vo Lam Chan Menh: one step backwards. Autoplay only advances forwards, so the backward step is the click result.",
+  "146": "mct-30: NHAN VAT tab already active stays active with the character panel (Thieu Lam); already-active selection permitted.",
+  "151": "mct-31: THU CUOI tab becomes active and the mount panel (Dich Lo) replaces the character panel."
+}

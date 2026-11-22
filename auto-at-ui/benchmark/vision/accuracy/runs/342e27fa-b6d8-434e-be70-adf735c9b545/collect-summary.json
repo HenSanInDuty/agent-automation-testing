@@ -1,0 +1,20 @@
+{
+  "operations": 66,
+  "frames_verified": 132,
+  "frames_unavailable": 0,
+  "model_jobs": 4,
+  "downloads": 1,
+  "diagnosis": {
+    "categories": [
+      {
+        "category": "model_or_provider",
+        "code": "bridge_io_error"
+      }
+    ],
+    "missing_evidence_operations": [],
+    "reason": "bridge_io_error",
+    "physical_retry_authorized": false
+  },
+  "state": "unavailable",
+  "reason": "bridge_io_error"
+}

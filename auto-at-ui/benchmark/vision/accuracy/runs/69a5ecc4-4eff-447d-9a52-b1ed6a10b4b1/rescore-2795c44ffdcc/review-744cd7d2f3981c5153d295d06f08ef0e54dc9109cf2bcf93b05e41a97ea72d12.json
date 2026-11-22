@@ -1,0 +1,11 @@
+{
+  "after_checksum": "b1723c7f18737870b3da09bf13d361c6406376932ee21f3138e39bdda28183d7",
+  "before_checksum": "64358a88a27090681ab68ba752b482a200611fc2539bae5888621b7e67851613",
+  "finding": "mct-46: fourth character control becomes active and the Co Mo panel is shown (before: Dao Hoa).",
+  "operation_id": "bd03cac5-c798-4d13-8291-0c310b41746b",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

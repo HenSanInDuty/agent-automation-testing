@@ -1,0 +1,11 @@
+{
+  "after_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "before_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+  "finding": "mct-51: after frame shows indicator 1 selected with matching slide Chuoi Nhiem Vu (before: indicator 5, Vo Lam Chan Menh).",
+  "operation_id": "dfd8c6cb-adb1-41a4-90bc-2f0d68fa721d",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

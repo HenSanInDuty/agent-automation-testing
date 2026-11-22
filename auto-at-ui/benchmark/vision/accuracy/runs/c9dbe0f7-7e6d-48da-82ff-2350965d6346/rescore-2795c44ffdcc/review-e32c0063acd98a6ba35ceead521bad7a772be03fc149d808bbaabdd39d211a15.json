@@ -1,0 +1,11 @@
+{
+  "after_checksum": "d66aef23d9a0bfaff4b5ac23969bbe6913233fd6969302bdd8c36d73cc30f8d0",
+  "before_checksum": "86c83b4144ed7c0a1e9d17205419081f6e212e6c39a7c9d6081d8c9a2fdf6be8",
+  "finding": "mct-58: next arrow; before frame slide Chuoi Nhiem Vu (1), after frame slide Bang Chien Nay Lua (2): one step forwards, same paired-frame standard as round 21 op 130 and live 2.",
+  "operation_id": "af86c74c-41ff-4451-a9b1-72451b318e31",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_step",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

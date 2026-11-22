@@ -1,0 +1,11 @@
+{
+  "after_checksum": "5de6521b1e59e73754f2f56a93674488ae693138a1e16f06fb647c5feee69fca",
+  "before_checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+  "finding": "mct-18: Tin Tuc tab already active stays visibly active with the news list; already-active selection permitted.",
+  "operation_id": "2c172c04-cebe-4308-854e-4f9462b915b9",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

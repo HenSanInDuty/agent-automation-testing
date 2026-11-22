@@ -1,0 +1,11 @@
+{
+  "after_checksum": "05bd482d8ee0b62d09624e1dec2bfc03c2df8aefddf24ee48167c09b3f70da93",
+  "before_checksum": "d99aca9b93f1f6a166d8aa90e742537736084d29deb2b7dfb0d8df258ffee6d9",
+  "finding": "mct-32: first character control becomes active and the Thieu Lam panel is shown (before: Co Mo).",
+  "operation_id": "3cd521d4-2941-4edc-a5a5-e781372cab82",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

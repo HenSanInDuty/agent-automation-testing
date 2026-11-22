@@ -1,0 +1,11 @@
+{
+  "after_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "before_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "finding": "mct-52: indicator 2 with matching slide Bang Chien Nay Lua before and after (already-active selection is the declared state).",
+  "operation_id": "7a4797c4-9aa0-45d9-9664-d32889a06e88",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

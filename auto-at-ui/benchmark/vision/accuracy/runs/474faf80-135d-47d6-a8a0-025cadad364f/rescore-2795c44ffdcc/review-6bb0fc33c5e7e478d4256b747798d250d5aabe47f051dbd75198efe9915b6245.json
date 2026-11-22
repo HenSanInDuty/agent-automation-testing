@@ -1,0 +1,11 @@
+{
+  "after_checksum": "03193c494681990a04b0b9a9eb61c93f664aa93fea0f5e7667e2b6a71c0fadbd",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "finding": "mct-07: Machine rule: after-state page URL https://pay.tpl.vn equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "c2c5fcc3-08af-42c1-8190-e89b4abb1c28",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

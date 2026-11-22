@@ -1,7 +1,7 @@
 # Vòng lặp cải thiện Vision đến >95%
 
 Lập: 2026-11-09. Viết lại: 2026-11-22 sau đánh giá lại (plan cũ chạy 13 ngày, tuần cuối không có kết quả).
-Trạng thái: **in progress, phase 06 (sprint 3 ngày)**. Phase 01–03 completed; phase 04/05 superseded bởi phase 06.
+Trạng thái: **dừng, phase 06 — qualification 2026-11-22 không đạt (0/5, safety 0), 7/8 live run; chờ người dùng quyết định**. Phase 01–03 completed; phase 04/05 superseded bởi phase 06.
 progress_url: https://claude.ai/artifact/7Wpg2znWAUaQAPGrx6PQxP (`progress.html`, chưa cập nhật cho sprint) · auto_continue: false
 
 Lịch sử đầy đủ round 1–21 và agent loop r1–r21 (120KB, không sửa):
@@ -67,7 +67,7 @@ Business outcome vẫn `unverified`. Runtime conclusion không bị benchmark gh
 | 03 | [Restoration](phase-03-restoration.md) | completed 2026-11-09 |
 | 04 | [Vòng cải thiện mở](phase-04-iterate.md) | superseded 2026-11-22 (r16 đạt; agent loop đóng băng) |
 | 05 | [Qualification cũ](phase-05-qualification.md) | superseded; attempt 1 (r17) fail giữ nguyên |
-| 06 | [Sprint 3 ngày: đóng lỗi r21 + qualification](phase-06-sprint.md) | in progress — ngày 1 xong |
+| 06 | [Sprint 3 ngày: đóng lỗi r21 + qualification](phase-06-sprint.md) | stopped — qualification 0/5 ([báo cáo](../../benchmark/vision/accuracy/QUALIFICATION-20261122-sprint.md)) |
 
 ## Ràng buộc giữ nguyên
 

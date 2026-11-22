@@ -1,0 +1,11 @@
+{
+  "after_checksum": "3d8fe0da5686de1e23e534bd6413ee2fd139436efe33aa753259a32a14222489",
+  "before_checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+  "finding": "mct-29: Machine rule: after-state page URL https://mongchiton.vn/tin-tuc equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "7bfe2b0c-b782-48a0-a83f-1c39b9ded570",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "navigation_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

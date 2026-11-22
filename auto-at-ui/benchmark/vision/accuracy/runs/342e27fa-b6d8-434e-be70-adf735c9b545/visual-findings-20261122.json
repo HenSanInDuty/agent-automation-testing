@@ -1,0 +1,13 @@
+{
+  "_reviewer": "Claude (orchestrating session, claude-opus-5-5) from before|after composites; same model family as the proposer, different role, no access to its reasoning",
+  "_no_credit": {
+    "27": "mct-56: before frame indicator 6 (Hoi Sinh Tinh Hoa), after frame indicator 1 (Chuoi Nhiem Vu): the declared state (indicator 6 active) is not in the after frame; autoplay wrapped during the capture window. Same treatment as round 17 op 26. No credit.",
+    "47": "mct-40: after-state is https://www.facebook.com/login/ (login wall), not the declared group URL and not in any reviewed redirect chain; same treatment as round 10, Q1 and Q3. Correct target, outcome not verified."
+  },
+  "15": "mct-51: after frame shows indicator 1 selected with matching slide Chuoi Nhiem Vu (before: indicator 4, Thu Cuoi Kinh Dien).",
+  "19": "mct-52: after frame shows indicator 2 selected with matching slide Bang Chien Nay Lua (before: indicator 3/4 mid-transition).",
+  "21": "mct-53: indicator 3 with matching slide Chinh Phuc PvE before and after (already-active selection is the declared state).",
+  "23": "mct-54: indicator 4 with matching slide Thu Cuoi Kinh Dien before and after (already-active selection is the declared state).",
+  "25": "mct-55: indicator 5 with matching slide Vo Lam Chan Menh before and after (already-active selection is the declared state).",
+  "29": "mct-43: before frame is the footer; after frame shows the homepage header and hero; state evidence scroll_y 0 on https://mongchiton.vn/ (url unchanged)."
+}

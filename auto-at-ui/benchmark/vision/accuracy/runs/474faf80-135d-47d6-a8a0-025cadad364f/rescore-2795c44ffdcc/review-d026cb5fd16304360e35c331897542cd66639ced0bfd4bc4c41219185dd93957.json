@@ -1,0 +1,11 @@
+{
+  "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "before_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "finding": "mct-43: before frame is the footer; after frame shows the homepage header and hero; state evidence scroll_y 0 on https://mongchiton.vn/ (url unchanged).",
+  "operation_id": "13aa8e91-aea3-4a55-a649-9499579d4d4b",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "scroll_top",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

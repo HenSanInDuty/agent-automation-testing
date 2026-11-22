@@ -68,3 +68,52 @@ Lịch sử trước 2026-11-22: `history/README-rounds-01-21-until-20261121.md`
 - Lưu ý phương pháp: 19 kết quả hiển thị do Claude (phiên điều phối) review — cùng họ model với model đề xuất
   `claude-opus-5-5`, dù khác vai trò/không thấy lập luận của nó. 28 kết quả còn lại chấm bằng luật máy.
   Đề xuất người dùng soát lại ngẫu nhiên các ảnh ghép trước khi chốt qualification.
+
+## Qualification (ngày 3, người dùng duyệt cả loạt 2026-11-22) — khai báo trước
+
+- Khai báo: `benchmark/vision/accuracy/qualification-sprint-20261122-declaration.json` — candidate = lượt 2
+  (source `53c575f6…`, config `e3039b74…`, oracle v2 `2795c44f…`, 3 image digest), luật `qualify_batch` 4/5.
+- Driver `.pytest-artifacts/s3_qual_batch.py`: preflight → start → wait → collect → auto cho 5 lượt liên tiếp;
+  dừng nếu preflight trượt 2 lần hoặc hash lệch khai báo. Trang ảnh ghép: https://claude.ai/artifact/PrBkAREq2f93MNM9pfh725
+
+### Q1/5 (live 3/8) — iteration `474faf80-135d-47d6-a8a0-025cadad364f`, session `9ea507ff-7de9-4634-8700-b59c0d63cf76`
+
+- `unavailable / exploration_coverage_incomplete`; 176 operations, 47/47 mục tiêu khác nhau có click completed, 19 model jobs,
+  348/352 frames, 2 download. 26 luật máy + 21 review ảnh (`visual-findings-20261122.json`).
+- **TRƯỢT**: C=A=44/47 (93,6%), P=R=47/47, unsafe 0, unsettled 0, inventory_complete=false (state `bbeddbbc`, skipped_count 1).
+- Thiếu: mct-05, mct-15 — Facebook trả `facebook.com/login/` (cùng checksum ảnh với vòng 10, chấm unverified như vòng 10);
+  mct-58 — mũi tên tới, ảnh sau ở chỉ báo 6 thay vì 5 (autoplay chen; chấm như r17 op 26).
+
+### Q2/5 (live 4/8) — iteration `69a5ecc4-4eff-447d-9a52-b1ed6a10b4b1`, session `1eecc684-a049-4165-9b5e-d3f1a91e9856`
+
+- `unavailable / exploration_coverage_incomplete`; 169 operations, 47/47 mục tiêu có click completed, 18 model jobs, 336/338 frames.
+- **TRƯỢT (chỉ do inventory)**: C=A=46/47 (97,9%), P=R=47/47, unsafe 0, unsettled 0, inventory_complete=false
+  (state `81878709`, 1 control `unbound_target`). Facebook lần này đúng group (luật máy). Thiếu: mct-58 (6 → 2, autoplay).
+- Log worker `vision.dom.coverage_limited`: live 1, Q1, Q2 và Q3 (đang chạy) đều có đúng 1 control không ground được trong một
+  lần quét `visual_buttons` (17 quan sát); live 2 không có → lượt thử đạt một phần nhờ may. Sau Q3 loạt không thể đạt 4/5.
+  Vẫn chạy đủ 5 lượt như đã duyệt: ngân sách còn lại (8 − 7) không đủ cho loạt mới, dừng sớm không đổi được gì.
+
+### Q3/5 (live 5/8) — iteration `c9dbe0f7-7e6d-48da-82ff-2350965d6346`, session `abaeab9c-051c-476c-bbdf-0b59118781a7`
+
+- `unavailable / exploration_coverage_incomplete`; 148 operations, 47/47 mục tiêu có click completed, 16 model jobs, 291/296 frames.
+- **TRƯỢT (inventory)**: C=A=45/47 (95,7%), P=R=47/47, unsafe 0, unsettled 0, inventory_complete=false (state `5a467b59`,
+  `unsupported_target`). Thiếu: mct-05, mct-15 (Facebook lại trả trang login). mct-58 lần này đúng 1 bước.
+- Ca biên: op 29 mct-46 (Cổ Mộ đã active, panel chỉ lộ phần chân) — tính credit, đánh dấu để người dùng soát.
+- Sau Q3: 3/5 trượt → loạt **không đạt** `qualify_batch` bất kể Q4–Q5.
+
+### Q4/5 (live 6/8) — iteration `342e27fa-b6d8-434e-be70-adf735c9b545`, session `bbea4d22-0544-4c15-a114-fab90154d1cd`
+
+- `unavailable / bridge_io_error` sau 66 operations, 4 model jobs: temporal-worker đọc spool `events.jsonl` gặp `ENODATA`
+  (errno 61) ngay khi bridge vừa ghi đề xuất (job 4). Chưa từng gặp trong lịch sử. Từ 07:24:00 worker bắt đầu screenshot timeout.
+- C=20/47, A=20/22, P=R=47/47, inventory đủ, safety 0. Không credit: mct-56 (6 → 1, autoplay), mct-40 (Facebook login).
+
+### Q5/5 (live 7/8) — iteration `a775347c-e57f-46d5-a6bb-9361a23f823d`, session `712f4d9d-0e2c-4203-a25b-3dc2fd690639`
+
+- Preflight 9/9 nhưng `unavailable / initial_capture_failed` sau 22 s (CDP session timeout, after capture contract_rejection).
+  C=0/47. Smoke gate không có bước chụp ảnh nên không bắt được lỗi này. Preflight sau loạt vẫn 9/9.
+
+### Kết quả loạt — KHÔNG ĐẠT
+
+- `qualify_batch`: 0/5 lượt đạt, cùng candidate, safety 0 cả 5 lượt, 163 attempts. `qualify` (3 liên tiếp) không đạt.
+- Báo cáo `benchmark/vision/accuracy/QUALIFICATION-20261122-sprint.md` + `qualification-sprint-20261122.json`.
+- Ngân sách 7/8 đã dùng → không còn đủ cho loạt mới; sprint dừng theo điểm dừng, chờ người dùng quyết định.

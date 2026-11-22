@@ -1,10 +1,10 @@
 ---
-status: in_progress
-day: 1-done
+status: stopped
+day: 3-qualification-failed
 started: 2026-11-22
 deadline: 2026-11-24 (3 ngày làm việc)
 live_run_budget: 8
-live_runs_used: 2
+live_runs_used: 7
 ---
 # Phase 06 — Sprint 3 ngày: đóng lỗi round 21 rồi qualification (engine v4 + Claude)
 
@@ -58,6 +58,12 @@ fix `__name`, RustFS read-after-write đã có ở r21. Vì vậy lượt đầu
   attempts tổng (`metrics.qualify_batch`); báo thêm "3 lượt liên tiếp" để tham chiếu.
 - Report `benchmark/vision/accuracy/QUALIFICATION-<date>-sprint.md` + JSON (hashes, run IDs, raw counts,
   missing/wrong targets, calls/tokens).
+
+## Kết quả qualification (2026-11-22)
+
+Loạt 5 lượt khai báo trước **không đạt** (0/5; safety 0; 163 attempts). Trượt vì inventory skip 1 control (Q1–Q3), lỗi hạ tầng
+(Q4 spool `ENODATA`, Q5 chụp ảnh đầu tiên), Facebook trả trang login, autoplay carousel. Chi tiết:
+`benchmark/vision/accuracy/QUALIFICATION-20261122-sprint.md`. Đã dùng 7/8 live run → dừng, chờ người dùng quyết định.
 
 ## Điểm dừng
 

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "mct-38: Machine rule: click-bound download chain starts with the exact declared URL hash and completes; no installation or execution claimed.",
+  "operation_id": "d011f928-cd58-4031-bbbd-bcf0206212b5",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

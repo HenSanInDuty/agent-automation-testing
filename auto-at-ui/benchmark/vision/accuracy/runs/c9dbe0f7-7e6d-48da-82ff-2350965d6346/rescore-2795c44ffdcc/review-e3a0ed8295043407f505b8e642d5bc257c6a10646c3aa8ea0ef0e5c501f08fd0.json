@@ -1,0 +1,11 @@
+{
+  "after_checksum": "e3df7fd14b9490598cf2057925778f60c6f09b7a8440bbd8f658ee3fb904ba22",
+  "before_checksum": "fb0da16e4526db1653500057fb81bce1563b3cc6cd48e8852e423924fd1faa21",
+  "finding": "mct-57: previous arrow; before frame slide Chinh Phuc PvE (3), after frame slide Bang Chien Nay Lua (2): one step backwards. Autoplay only advances forwards, so the backward step is the click result.",
+  "operation_id": "94fdac20-a1c8-4333-b216-bb4b1a5de81f",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_step",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

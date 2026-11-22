@@ -1,0 +1,38 @@
+{
+  "operations": 176,
+  "frames_verified": 348,
+  "frames_unavailable": 4,
+  "model_jobs": 19,
+  "downloads": 2,
+  "diagnosis": {
+    "categories": [
+      {
+        "operation_id": "8eed214d-74ec-44b4-9d94-0757bfbac908",
+        "category": "operation_failure",
+        "code": "state_changed_during_prepare",
+        "purpose": "setup"
+      },
+      {
+        "operation_id": "e742e116-62cd-42bf-ab16-f7f99d6d5531",
+        "category": "operation_failure",
+        "code": "state_changed_during_prepare",
+        "purpose": "setup"
+      },
+      {
+        "operation_id": "94a5f1b0-3504-4b99-a341-a71259dc8c13",
+        "category": "operation_failure",
+        "code": "history_checkpoint_unavailable",
+        "purpose": "restore"
+      }
+    ],
+    "missing_evidence_operations": [
+      "8eed214d-74ec-44b4-9d94-0757bfbac908",
+      "e742e116-62cd-42bf-ab16-f7f99d6d5531",
+      "94a5f1b0-3504-4b99-a341-a71259dc8c13"
+    ],
+    "reason": "exploration_coverage_incomplete",
+    "physical_retry_authorized": false
+  },
+  "state": "unavailable",
+  "reason": "exploration_coverage_incomplete"
+}

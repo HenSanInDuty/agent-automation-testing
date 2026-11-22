@@ -1,0 +1,11 @@
+{
+  "after_checksum": "23f8a83618444422f7a15134cdbc46a702328a17885fc2662799fedc14e0f3ca",
+  "before_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "finding": "mct-35: Machine rule: after-state page URL https://testflight.apple.com/join/f86aG3mh equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "2f540f54-136e-4879-88ac-aec5b5326cb5",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

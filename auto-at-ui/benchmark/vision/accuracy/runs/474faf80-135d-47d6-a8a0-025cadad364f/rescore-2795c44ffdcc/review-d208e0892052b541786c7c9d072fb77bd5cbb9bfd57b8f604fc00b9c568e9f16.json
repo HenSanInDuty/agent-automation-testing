@@ -1,0 +1,11 @@
+{
+  "after_checksum": "4f0d45747bc453d976b1ca0820dbb1d41f2387f6da8fd72efe0b4b5cddefd732",
+  "before_checksum": "6b27dbfba0363d6110493ae72bc7faa860fb35142cc52e20aa303af3978081b8",
+  "finding": "mct-31: THU CUOI tab becomes active and the mount panel (Kim Nguu) replaces the character panel.",
+  "operation_id": "bc45a5a4-4b6f-4771-acaa-5b6b80dafd83",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}
