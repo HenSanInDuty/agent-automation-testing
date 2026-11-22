@@ -23,3 +23,27 @@ artifacts/
 auto-at-backup/
 secret/
 codex-spool/
+
+# Moved from the former repo-root .gitignore
+.pytest-tmp*/
+tsconfig.tsbuildinfo
+next-env.d.ts
+build/
+out/
+coverage/
+.nyc_output/
+.turbo/
+.cache/
+*.log
+nul
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*.example copy*
+.screenshots/
+graphify-out/
+.claude/
+.codegraph/

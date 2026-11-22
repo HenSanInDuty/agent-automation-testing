@@ -64,5 +64,49 @@ services:
     entrypoint: [uv]
     command: [run, --project, /app, --no-sync, python, /app/apps/control-plane/codex_bridge_cli.py, run]
 
+  # Same bridge protocol, `claude -p` engine. Run either codex-bridge or claude-bridge,
+  # never both: they share one bridge ID and spool. See docs/claude-local-bridge.md.
+  claude-bridge:
+    profiles: [claude]
+    image: auto-at-claude-bridge:2.1.328
+    build:
+      context: .
+      dockerfile: docker/claude-bridge/Dockerfile
+    init: true
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:docker/codex-bridge/seccomp.json
+    pids_limit: 128
+    mem_limit: 1g
+    cpus: 1.0
+    stop_grace_period: 10s
+    restart: "no"
+    networks: [codex-egress]
+    environment:
+      <<: *codex-producer
+      CODEX_BRIDGE_ENGINE: claude
+      CODEX_BRIDGE_EXECUTABLE: /usr/local/bin/claude
+      CLAUDE_BRIDGE_TOKEN_FILE: /bridge-secrets/claude-oauth-token
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+      - /bridge-home:rw,nosuid,nodev,uid=1000,gid=1000,mode=700,size=64m
+    volumes:
+      - type: bind
+        source: ${CLAUDE_BRIDGE_TOKEN_DIR:?Set the private directory holding claude-oauth-token}
+        target: /bridge-secrets
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${CODEX_BRIDGE_HOST_SPOOL:?Set an existing private absolute spool path}
+        target: /codex-jobs
+        bind:
+          create_host_path: false
+    entrypoint: [uv]
+    command: [run, --project, /app, --no-sync, python, /app/apps/control-plane/codex_bridge_cli.py, run]
+
 networks:
   codex-egress: {}

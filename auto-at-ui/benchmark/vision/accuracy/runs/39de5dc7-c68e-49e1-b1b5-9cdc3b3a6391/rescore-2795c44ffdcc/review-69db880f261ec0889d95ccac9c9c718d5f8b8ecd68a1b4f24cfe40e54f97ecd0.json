@@ -1,0 +1,11 @@
+{
+  "after_checksum": "ea64a5d5c2272ff7632be19eb7e75d510f132c9e1a8061a9f282ba6ca5db4de3",
+  "before_checksum": "07a51556346e35e3892bb24b97d3f00bfe5912f7b60b504b72b08b8ac3da154c",
+  "finding": "Final page renders mongchiton.vn article Huong Dan Tai Va Cai Dat Vo Lam Chan Menh Origin PC at the exact path of the independently reviewed 307 from declared vlcm-pc shortlink.",
+  "operation_id": "cdab4ddc-8f33-4dee-89b5-4201deb13a31",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

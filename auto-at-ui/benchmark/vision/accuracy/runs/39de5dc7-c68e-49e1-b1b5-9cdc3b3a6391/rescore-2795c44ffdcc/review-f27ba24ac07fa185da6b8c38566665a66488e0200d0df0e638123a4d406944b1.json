@@ -1,0 +1,11 @@
+{
+  "after_checksum": "59571b4eb4276098ecdf3f47ab47b4b47d96d4700b240addbefe747430b0a1a2",
+  "before_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+  "finding": "After URL hash exactly matches declared Facebook group; public group VLCM: Mong Chi Ton (Nhom cua VLCM Origin) visible behind login gate. No membership or login action.",
+  "operation_id": "0310dcb3-7dbf-4cf1-bb9b-21f708c6a2a7",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

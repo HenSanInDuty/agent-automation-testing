@@ -1,7 +1,7 @@
 """Private v4 worker transport. Browser input values exist only in request/session RAM."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -43,8 +43,15 @@ class VisualWorkerOpen(VisualWorkerIdentity):
     required_capabilities: tuple[Literal[
         "dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1",
         "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1",
+        "click-context-v1", "agent-dom-path-v1",
     ], ...] = Field(
-        default=(), max_length=7,
+        default=(), max_length=9,
+    )
+    # Agent-loop engine only: relaxes worker guards behind one flag and carries the single
+    # source of sensitive-control terms (owned by the control plane).
+    agent_mode: bool = False
+    blocked_action_terms: tuple[Annotated[str, Field(min_length=1, max_length=40)], ...] = Field(
+        default=(), max_length=40,
     )
 
 

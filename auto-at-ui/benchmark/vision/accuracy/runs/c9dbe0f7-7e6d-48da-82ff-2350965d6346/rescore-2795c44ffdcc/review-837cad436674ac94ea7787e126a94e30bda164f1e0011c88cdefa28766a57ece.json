@@ -1,0 +1,11 @@
+{
+  "after_checksum": "1d0880904dbc41c200d12d19470b341eb2383b6626be851582c01e7fa788e667",
+  "before_checksum": "df257742a54c8edc9681f628f6221f78562288aa687271259b7a50044f394ee2",
+  "finding": "mct-31: THU CUOI tab becomes active and the mount panel (Hac Ma) replaces the character panel.",
+  "operation_id": "2e6674e6-1602-4132-98cf-a86611b7bda4",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

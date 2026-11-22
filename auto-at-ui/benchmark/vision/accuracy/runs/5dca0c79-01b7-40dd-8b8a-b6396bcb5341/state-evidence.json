@@ -1,0 +1,882 @@
+[
+  {
+    "state_id": "8b0454f8-84a7-4791-96cd-109172a06930",
+    "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+    "operation_id": "46e12394-8f5a-4ac0-b619-ad59283b63f1",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 0
+  },
+  {
+    "state_id": "9733af5b-4733-4624-9e3d-d58622a24d28",
+    "after_checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+    "operation_id": "11799951-137d-48a4-bf76-bb590686b649",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 1
+  },
+  {
+    "state_id": "2551f021-fc64-454d-8fad-678cd0614134",
+    "after_checksum": "761c8f17c3580eacddeb2b17c3ac6a6ef07c661e4f1eba0ab9b1a42c545e7111",
+    "operation_id": "2c29facb-72fa-4764-9ec8-f6d7bb40d3d1",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 2
+  },
+  {
+    "state_id": "e0b17f31-f1ab-46a6-ae65-0bd7be03102c",
+    "after_checksum": "7a34da8513a7eb3bc956eceef2dd3acff040f09d8a3daed0cae953f1698dfabe",
+    "operation_id": "77de579e-b6c6-4eca-bd8b-2af10e8156b0",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 3
+  },
+  {
+    "state_id": "bed931d0-625d-49c0-9fb8-a813210cf8e1",
+    "after_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+    "operation_id": "12f02633-8047-490f-ae50-e10fae5bc66c",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 4
+  },
+  {
+    "state_id": "185fa24f-d8f8-4859-b396-d45c0a2e168a",
+    "after_checksum": "22d3b663925de61d4c3f171233d36c388cd8d426f5b486f5d6a9f2e0fe1611a1",
+    "operation_id": "d9d32df2-8719-451f-85b8-727d601e0fd8",
+    "url_fingerprint": "47de1f5e70b35ea8620e83db1d781dc11ca235ef4da277ecfa0c1da2a0e7abd0",
+    "page_url": "https://pay.tpl.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 5
+  },
+  {
+    "state_id": "a829bac3-f754-4fe7-9263-433dff756401",
+    "after_checksum": "ae6a4b85202237f6ad60a337be37bbf123344411381559b65e306ccba1fbccbc",
+    "operation_id": "6d716dbf-d5c2-4e39-9c86-f57fe95e4cb3",
+    "url_fingerprint": "28307bc3b89641885aa4cef68d32bff2f8ebaa8e6fc8eee8586877bd7781ddfb",
+    "page_url": "https://id.tpl.vn/register",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 5
+  },
+  {
+    "state_id": "1bdd5ddf-f508-463c-9e0b-6e22570218af",
+    "after_checksum": "38b6c812496413381dc14555ef172aac2d0c352f82035beb69365a50d07a9658",
+    "operation_id": "0f7f5719-a56d-4013-810a-d2807d563db3",
+    "url_fingerprint": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+    "page_url": "https://h5.mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 5
+  },
+  {
+    "state_id": "6f339546-935c-4408-96d4-7b79f62d71d0",
+    "after_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+    "operation_id": "6ef8dbe0-71a0-4dca-af89-a8f7207f8758",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 5
+  },
+  {
+    "state_id": "1009e252-059a-4619-afa1-0c867c608639",
+    "after_checksum": "23f8a83618444422f7a15134cdbc46a702328a17885fc2662799fedc14e0f3ca",
+    "operation_id": "a19dfe13-ab19-41a7-a384-c15be196d550",
+    "url_fingerprint": "931d63e854bd67f47dce9c0c5ccc8ad0662601fefb80c9145a2c1feadb046f5d",
+    "page_url": "https://testflight.apple.com/join/f86aG3mh",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "2f45634a-edfe-4bcc-be6a-c4edee34cddb",
+    "after_checksum": "525729fabab19e6d7738f43bfc2c260f461439936d52a4e78fddfa7719cb961a",
+    "operation_id": "d7f8f1f7-8b81-4706-ab78-8689f8351d5c",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 5
+  },
+  {
+    "state_id": "de22bddd-a98b-4eeb-809d-17320995fa7f",
+    "after_checksum": "541a6da8f5e05a5831ee30749841a5208271675ba1ea74bcc240be8939b8d027",
+    "operation_id": "cb73832e-5c48-42ef-9454-d4e6a72aa899",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 5
+  },
+  {
+    "state_id": "1ccd898c-65fc-4d40-be58-0304e2941f5e",
+    "after_checksum": "428c0a948349981112f6c5d286aadc69cd7f591da82c1a06bb1aaab9ba4e1e49",
+    "operation_id": "08d0419e-c12e-4c9a-8c3b-9bf2a0fb3ff2",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 5
+  },
+  {
+    "state_id": "e1b0cbc3-b859-4e59-a6d4-06694095735c",
+    "after_checksum": "9c5412145e0d3398bfae40819588d52ca877f0535fc59e10c2007cd0c81b49a9",
+    "operation_id": "3db48351-a5af-4ff6-b606-d7db9e910f49",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 5
+  },
+  {
+    "state_id": "6b1e4870-829e-4cb7-a30e-25b82abea126",
+    "after_checksum": "dbdd7e8ae5c0f62545e2dec653ed1e5c91ec4931ffddc0a5b3a1d44e3e3d865b",
+    "operation_id": "77f32b7c-0894-4264-b292-f46b8ce395ec",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 5
+  },
+  {
+    "state_id": "d89a22a8-e289-4d86-9062-963cc6fdab89",
+    "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+    "operation_id": "9b736329-5232-4f0b-b27d-956b47e9ebdb",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 5
+  },
+  {
+    "state_id": "b45399c9-5566-4147-87fc-ad327c030ccb",
+    "after_checksum": "03193c494681990a04b0b9a9eb61c93f664aa93fea0f5e7667e2b6a71c0fadbd",
+    "operation_id": "b16a17be-8889-4e59-a29a-004b68eb1e65",
+    "url_fingerprint": "47de1f5e70b35ea8620e83db1d781dc11ca235ef4da277ecfa0c1da2a0e7abd0",
+    "page_url": "https://pay.tpl.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "6d69dd45-c418-4785-9189-f7c3089aaf18",
+    "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+    "operation_id": "bc5580f0-b605-4849-b435-45b4fecf468b",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 7
+  },
+  {
+    "state_id": "b9eb109a-1b2a-4007-9a60-6425de36d09b",
+    "after_checksum": "7c61f42bd77b082e99cde3a50813f5350178b37f00d9c8097d06b314ec734802",
+    "operation_id": "4ab5f336-f69c-40a6-b5ae-66697869b342",
+    "url_fingerprint": "89a20ea60925fe4592036d909d4491fcf6016206c5503c15a35218ddd5cc72a5",
+    "page_url": "https://play.google.com/store/apps/details",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "ed478c93-c6a6-4bcd-9b1f-733f6c55baaf",
+    "after_checksum": "ea64a5d5c2272ff7632be19eb7e75d510f132c9e1a8061a9f282ba6ca5db4de3",
+    "operation_id": "ee635f62-cba7-4980-a2b4-2ca713cd2da9",
+    "url_fingerprint": "39f79a4eb73a3ca9b96ba236f8aed032332558c5dc1c0abdb1ab02d097f3ca37",
+    "page_url": "https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "d3642f7f-6ee1-489b-8a58-962efc4254ff",
+    "after_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+    "operation_id": "96491054-d2e0-4e76-98d6-b8980a7716c8",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 6
+  },
+  {
+    "state_id": "e7d162a7-04a3-4385-ad1c-fea97c0a0522",
+    "after_checksum": "db76b99aa506bf3545d88c0940a2e444a0b26a94f283f643272a52a76137a727",
+    "operation_id": "349a2017-1b7c-4214-b36f-f749e406856b",
+    "url_fingerprint": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+    "page_url": "https://www.facebook.com/mongchiton.vn",
+    "scroll_x": 0,
+    "scroll_y": 61,
+    "hop": 6
+  },
+  {
+    "state_id": "904eb4b4-d0dc-48e9-ada0-261d2e33d0fd",
+    "after_checksum": "9d3b0fb0dece9632cf27d30f5d1a2225d65360208d6b32330af601ab4429ff46",
+    "operation_id": "f9f1b518-4d9f-482e-9a8b-f30e85239d75",
+    "url_fingerprint": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+    "page_url": "https://www.facebook.com/groups/mongchiton.vn",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "60390baf-b7ed-4b38-8e16-759f2fbb2027",
+    "after_checksum": "8c759ba2a48403dc83a41e0936b930a9d064e4633e134630cdea200d4586de45",
+    "operation_id": "5c38113f-0151-4b35-8d8d-0c56e000f061",
+    "url_fingerprint": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+    "page_url": "https://www.youtube.com/playlist",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "c8512f21-bfd0-4f92-880e-4bd7a5dab903",
+    "after_checksum": "1f813a581dc4bcc398cbff62ae606cba1ce711d5fa6957e8a59a9d8ec3f163c4",
+    "operation_id": "9373267a-505e-4d04-bee1-80900235ccb9",
+    "url_fingerprint": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+    "page_url": "https://www.youtube.com/playlist",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 7
+  },
+  {
+    "state_id": "9419008a-8b5d-4479-8f4f-9df6cfc90729",
+    "after_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+    "operation_id": "c70b07f7-d725-47c0-b901-6c5807985804",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 8
+  },
+  {
+    "state_id": "06df7b05-db70-4b45-b318-262f305ce970",
+    "after_checksum": "ae6a4b85202237f6ad60a337be37bbf123344411381559b65e306ccba1fbccbc",
+    "operation_id": "3692ba1f-3b3b-496a-97ce-08d443762758",
+    "url_fingerprint": "28307bc3b89641885aa4cef68d32bff2f8ebaa8e6fc8eee8586877bd7781ddfb",
+    "page_url": "https://id.tpl.vn/register",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "2b64b27e-28fb-4d15-8210-061792a69460",
+    "after_checksum": "b28d19829eadffc8eaa1c6969f25c2c809bf1bcf401bb4a520a4e46864fcca46",
+    "operation_id": "466e34ab-d317-4de4-bf79-823290775586",
+    "url_fingerprint": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+    "page_url": "https://h5.mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "d9753e34-4c4a-4861-96aa-9fdd41d32596",
+    "after_checksum": "23f8a83618444422f7a15134cdbc46a702328a17885fc2662799fedc14e0f3ca",
+    "operation_id": "566a705e-dd60-46b8-9068-0ab9ad94fd60",
+    "url_fingerprint": "61b4d5492a4dedc1e9b01380b469c4663dbd8bfd1c5a7ece539fae68b99ce36b",
+    "page_url": "https://testflight.apple.com/join/f86aG3mh",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "ab5a5da4-4704-47ff-891d-6155206b6dad",
+    "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+    "operation_id": "2e162c22-5374-4b77-8043-fa3c7935165d",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "b3984a73-3e80-4bf6-8067-88e396faaa08",
+    "after_checksum": "be962869e674ec7fe308cec814cfc0029b67ad4bad2f55ac5a90f016e9607165",
+    "operation_id": "b5f47aac-7246-4ba7-a94e-4187cdfe4b7f",
+    "url_fingerprint": "7498f011391706f0d13c0e3cb6b3fb9bbbee3ff991a73c9a6642763a039cc9ed",
+    "page_url": "https://play.google.com/store/apps/details",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 7
+  },
+  {
+    "state_id": "22369b9f-fde7-4969-8bba-b07fd346abf7",
+    "after_checksum": "2cd3bdb05271a272e84334893e094d284af8d481642b805ff16164e0309d3a18",
+    "operation_id": "7e4302d7-47d2-4efc-80c7-26cc10ddb7db",
+    "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+    "page_url": "https://mongchiton.vn/su-kien",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "03c8cf71-8d9c-4b8f-94f6-ed11449c284c",
+    "after_checksum": "eafb63ec3a9e0976533cc963c74c6d9b7dca4c56bfe21296f7ecca538292ad3a",
+    "operation_id": "1e6a73d4-a477-476c-a6c8-42d34cbfe302",
+    "url_fingerprint": "ec7ff30b06b0e115dcf72ae633ae1809ac4f9625870546f5da4131091bbff454",
+    "page_url": "https://mongchiton.vn/cam-nang",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "46ef8990-1cdb-4800-9402-0fc3a2ef4e72",
+    "after_checksum": "a6155dda6902712554232c5ed0e9bd79f44bf2908324fbd03c146888634e6e0b",
+    "operation_id": "9bb61ea0-6fca-4870-86fe-5a57ffaf360b",
+    "url_fingerprint": "1e6375920f7d7ffa7650b6f9b5414cddbf6e17c54ab0894073b1fee20d806949",
+    "page_url": "https://id.tpl.vn/rules",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "588353ad-5a76-46fe-b795-4fe9352fa0e4",
+    "after_checksum": "f7e05f9326ae96b8b329f806392a047e58dc97755151e4ece5c3e553e3930675",
+    "operation_id": "cf0424eb-49e9-4ff1-9215-322f4cd5352c",
+    "url_fingerprint": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+    "page_url": "https://www.facebook.com/groups/mongchiton.vn",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "c16382a3-5372-45e4-9522-d3d554c164b0",
+    "after_checksum": "4165266df947b1857fac9d83c563b398be8f3bb4960c3aaa892bf624a83694e0",
+    "operation_id": "9f185317-967d-4764-bd84-536044b66e23",
+    "url_fingerprint": "cc9dbb0d91892e1fbc04c64599714f9ccab0ae7638fad25043262a2d78541bce",
+    "page_url": "https://support.tpl.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 6
+  },
+  {
+    "state_id": "38657cbc-97af-46ad-b22c-227a1eb7799e",
+    "after_checksum": "ea64a5d5c2272ff7632be19eb7e75d510f132c9e1a8061a9f282ba6ca5db4de3",
+    "operation_id": "3b12fb3e-3cc7-4d58-9980-82f16d2c07ab",
+    "url_fingerprint": "e06de6961e500d9f0c59114c00f5194e8cd44cd75703f5b16bdda1ac3e2d1424",
+    "page_url": "https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 7
+  },
+  {
+    "state_id": "2f6cfeec-74bb-413b-868e-11dabc6ab6c7",
+    "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+    "operation_id": "590f1df6-64ec-484b-b792-9193ac504eec",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 7
+  },
+  {
+    "state_id": "cc2142a5-9b87-4958-926d-c3b715d7b5a6",
+    "after_checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+    "operation_id": "5f7c42db-eaef-4115-8269-828f7634bde2",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 8
+  },
+  {
+    "state_id": "60f9bd1c-e144-4339-ae9e-b1108ca65cf1",
+    "after_checksum": "3d8fe0da5686de1e23e534bd6413ee2fd139436efe33aa753259a32a14222489",
+    "operation_id": "f3eb8ebf-cfaa-4928-ab72-81052df8004b",
+    "url_fingerprint": "8b80c6e058bb4882dcf5da96088b56237fa32f20a42a3a91683f83f09ee9cbf7",
+    "page_url": "https://mongchiton.vn/tin-tuc",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 9
+  },
+  {
+    "state_id": "bf363bb8-b7c5-49a5-a703-2de765e83d28",
+    "after_checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+    "operation_id": "89782f13-021a-4bea-8609-28271b84414a",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 10
+  },
+  {
+    "state_id": "8d888a5d-c6c4-46bb-ab3e-fc9a6e05e373",
+    "after_checksum": "3d3c94e8cb6d897f8308e9e118eb072a81d41b1108fdd8a3b03282aaf429e77f",
+    "operation_id": "f900a263-5d00-4a8a-aca9-47bd67b1bc95",
+    "url_fingerprint": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+    "page_url": "https://www.facebook.com/mongchiton.vn",
+    "scroll_x": 0,
+    "scroll_y": 61,
+    "hop": 7
+  },
+  {
+    "state_id": "195f8b1d-ab49-411c-811a-2c4726c820c3",
+    "after_checksum": "9d3b0fb0dece9632cf27d30f5d1a2225d65360208d6b32330af601ab4429ff46",
+    "operation_id": "ebec5b99-f980-4804-bfe1-436d0d9d89f5",
+    "url_fingerprint": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+    "page_url": "https://www.facebook.com/groups/mongchiton.vn",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 7
+  },
+  {
+    "state_id": "22f096a0-608e-4265-88f3-f71b22a88176",
+    "after_checksum": "48dd180c8b2eb5e2338658b96c164692377df933ae622d79d26dee0d7e935247",
+    "operation_id": "49e9791a-1987-4c7a-9ed5-3e3024447e01",
+    "url_fingerprint": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+    "page_url": "https://www.youtube.com/playlist",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 7
+  },
+  {
+    "state_id": "6aadce70-6cbf-43bd-8c97-a381f5586e41",
+    "after_checksum": "063880aac39aefe9f7f9fba43be7663782b89b738b1c9da5ac69893f45fed214",
+    "operation_id": "0b81ccfb-6535-4971-8900-af3cc9afadb3",
+    "url_fingerprint": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+    "page_url": "https://www.youtube.com/playlist",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 8
+  },
+  {
+    "state_id": "a3eb3eea-e780-4726-94df-11f6016a220a",
+    "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+    "operation_id": "07ac3f4b-997c-4c1e-b62a-9876daf8d3c2",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 0,
+    "hop": 9
+  },
+  {
+    "state_id": "a84e4d04-d6be-4f62-8dc7-9f59f287928f",
+    "after_checksum": "5de6521b1e59e73754f2f56a93674488ae693138a1e16f06fb647c5feee69fca",
+    "operation_id": "f799773b-8724-4b09-93f8-242b37c8155b",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 9
+  },
+  {
+    "state_id": "f37164f3-f556-4b1a-b817-1e1c92e441db",
+    "after_checksum": "8ef1061a2dfa9f6fffd9fa2e8143c2c078f5130e46dc253191610b0d98bc64aa",
+    "operation_id": "f8be57b2-ed94-45ea-a779-cdad92626a5a",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 10
+  },
+  {
+    "state_id": "08d0e636-d8e4-4cb8-8813-790416ff3e4c",
+    "after_checksum": "85c7ca5cad762cfae7ceca79cef4edc026fa1d49228484086d7cafb0fc6c6570",
+    "operation_id": "a830c96b-a06b-496d-ac51-065749f83e52",
+    "url_fingerprint": "970aa2d81c60c13d135870a48e9748cd1b5233098351d02876ce9e9188843fda",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 11
+  },
+  {
+    "state_id": "275d7f36-be67-4c4a-87fc-26530ee53965",
+    "after_checksum": "c6f9ec019636f3137ec76f0e39b52ce7cfaef85a3f755384ff668fd1fc9a54bb",
+    "operation_id": "e5692669-5e60-437e-ba10-2296d8c4433e",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 12
+  },
+  {
+    "state_id": "166eb8d4-2d42-4ebe-b6d2-6c4727b75df8",
+    "after_checksum": "72656d2f2d0d62244ce5571d4d9c9a13ab6a1c8264840ebe2954a6da07bf1adb",
+    "operation_id": "1f242c43-91f7-47b6-a138-632cc6bd391a",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 9
+  },
+  {
+    "state_id": "f1c2863b-cccd-41ff-a23b-562aed565e57",
+    "after_checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+    "operation_id": "91de9429-bf8a-4095-93f7-463005214731",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 10
+  },
+  {
+    "state_id": "561ed2c7-2489-4160-b473-18a139e44dff",
+    "after_checksum": "f8eab092597efb48232c3badd0754546fee8239a33d81c486073b00af10fafc4",
+    "operation_id": "247eb51f-c497-46c7-94d9-02b02a15bc9a",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 11
+  },
+  {
+    "state_id": "95013929-65d6-4b5c-86bf-2b5455dcb473",
+    "after_checksum": "c60fbb98bb6cadb51cf34ba6af14b15d30699d34cd955b3f8f988e2b50f0afe2",
+    "operation_id": "a1019468-0547-419c-a19b-474fe755499c",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 12
+  },
+  {
+    "state_id": "2649e66a-3862-4538-b7af-7a8a28d2e4ef",
+    "after_checksum": "fea1e9de2d9fe6693319ea27df267a99696047da69922775bbe7bbdc73ec2162",
+    "operation_id": "cea11295-c4c4-45ef-8623-37aa8f56af91",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 13
+  },
+  {
+    "state_id": "6e23b59d-6ba7-4808-858c-02ae5feda5ef",
+    "after_checksum": "c9a4dc5470c13127065e3a731e753471d36cea0bed9c905176efca76bec20e71",
+    "operation_id": "16f78c06-eba0-4857-a39d-64d04634a04c",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 14
+  },
+  {
+    "state_id": "0a6c2d69-7779-4b96-a84a-f6ecfd9d1d46",
+    "after_checksum": "11c2586ad9672536dbf4f5ab7804aa7640e638b58d6de34c06a017d370e2e3cf",
+    "operation_id": "b316a78c-9d55-4149-ae6a-258ea770b62d",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 15
+  },
+  {
+    "state_id": "b62a1727-d18e-4658-b294-113a3ab6adbc",
+    "after_checksum": "038d7d2b2cdedf9e24b3e0310d393611a9cb6204255e807f737d4c994993b334",
+    "operation_id": "82696708-a077-4792-8366-2da5075aacd9",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 16
+  },
+  {
+    "state_id": "267c8a77-bfdf-4791-9287-400b3cf57aec",
+    "after_checksum": "3da57be6f9324788a6e6bff777efce5343198fafaf37dec4a78d2d18b3cfd6dd",
+    "operation_id": "2263d1ad-8bff-481e-b9d6-f0ba0caae551",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 17
+  },
+  {
+    "state_id": "28646dea-f1b6-4a72-b5cc-5cb161d3a62c",
+    "after_checksum": "6a89abc20a13fdf27be3973eee454738a14ee452946ea509815c165532be904a",
+    "operation_id": "55cf5ae6-1a6f-424e-8621-d0a5d7544a4a",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 18
+  },
+  {
+    "state_id": "c2ce581d-ad12-4a7c-bf1b-d2902f2854bf",
+    "after_checksum": "00d8f37a9ddceca103f444f49220f684042b0ba814a8ad5d7339b6d8a6e8ec0e",
+    "operation_id": "d71b266e-e10a-472b-9517-3cb884355b13",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 19
+  },
+  {
+    "state_id": "e44c39a7-f675-464e-8f57-a58d2515f492",
+    "after_checksum": "69231b53938ce4327649deee8d3b62ffd2c36442e9f7a89f80e936976e001569",
+    "operation_id": "72cc7b39-5aa7-4894-b215-152029729c7d",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 20
+  },
+  {
+    "state_id": "aa3f3c0b-274b-4c05-8166-a71bae5c909e",
+    "after_checksum": "47047f7f70b0fb2b835cc2ca47df22fbdf4513e7b6fd2062263117839f667bf3",
+    "operation_id": "d6f2997f-6a2f-4fb8-adc1-2f815949e106",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 19
+  },
+  {
+    "state_id": "f12d3c91-bed2-421b-aa5e-f485f6a1fae1",
+    "after_checksum": "cd0820ef60a0abab3e98b02ab1cb96fd5819288e7be4e045ec018521ef9aabe3",
+    "operation_id": "34c06810-39dd-42e6-835a-4060a5792fa7",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 20
+  },
+  {
+    "state_id": "10903a3a-92bc-4545-9648-e1ffeadfa8b4",
+    "after_checksum": "370be89e4467f2ca0becfac8355ce9332ddf711dc571641c43ac1b1f06ba208e",
+    "operation_id": "3975e9e8-50f3-44fc-9f7f-ad010e243f1f",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 20
+  },
+  {
+    "state_id": "8acea872-bba5-4460-ad48-1684fba49e27",
+    "after_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+    "operation_id": "948c8e64-27c4-442b-923b-2f8687adc051",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 20
+  },
+  {
+    "state_id": "977d29a2-1fdc-41c1-96e3-24cc7861f6b9",
+    "after_checksum": "80a13cdc0fbcef8ab221a80ca49c52018ed2bf7b71b55ae16f143f19622cb8f3",
+    "operation_id": "7879f42a-feac-465a-8a11-6b7a8fe25ce3",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 17
+  },
+  {
+    "state_id": "fba39db9-4cef-4f3e-9ec9-b0d300879c1a",
+    "after_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+    "operation_id": "04c80a0d-9541-4988-a11e-833bcb68888c",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 18
+  },
+  {
+    "state_id": "f641cae7-6ec7-48b8-b996-75fe2f87a227",
+    "after_checksum": "da15a7b1e0f19def248b938f2aaa706efd22ab98e6388cd27590e4b092dcc068",
+    "operation_id": "2405fa4e-1621-4d07-afb8-24d09a6b020b",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 15
+  },
+  {
+    "state_id": "487806c5-21bd-4035-99c8-ce0749109541",
+    "after_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+    "operation_id": "c814a963-6f4a-406a-bb1c-69510ebc72b6",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 16
+  },
+  {
+    "state_id": "40634a70-08eb-424f-87c3-7a37dff3b9f3",
+    "after_checksum": "8691d7ac7c8b57db8c5cebf094a6d26dea8404ea25bd8a8405dc09f2c953ad51",
+    "operation_id": "349c007c-7173-4aca-8dcc-e581873b0336",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 13
+  },
+  {
+    "state_id": "790e63ec-31f1-4ec7-b9a4-b7d6dbe0efac",
+    "after_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+    "operation_id": "85e5ba9f-fb48-49f3-9450-0046a3af5d1c",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 14
+  },
+  {
+    "state_id": "cd686863-1011-430b-a507-404ab9feff96",
+    "after_checksum": "206d7e5fd22ad5debd4d076affa599aebb35c00bd333704cb36b4e161c6bf40a",
+    "operation_id": "32abfdc9-f57e-43c1-938e-4247f74ebe22",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 11
+  },
+  {
+    "state_id": "a9779cb5-3491-46fb-a8e5-8df3d2f36457",
+    "after_checksum": "9f72e57efd2ed6b1fe7819acfff54abc43424141dec4c28eb400866826cb1e09",
+    "operation_id": "063556b9-5f34-4966-87eb-f10138949971",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 12
+  },
+  {
+    "state_id": "3525faf8-794c-4e19-b2de-fded8f439498",
+    "after_checksum": "d0386b71333175dba902151c4577374f357d59710ad763c4fcb25bc8af44ff01",
+    "operation_id": "215f6245-d684-41e1-b788-2243a23a0a0d",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 13
+  },
+  {
+    "state_id": "07b76958-e507-4370-a631-4daaa4e7f458",
+    "after_checksum": "ee83a133f8eb99396734734b3fee14f8af44996f8f1051525ddd362f34bc0d93",
+    "operation_id": "1bc6285c-82f9-4ede-b8f5-02e5fb3669e9",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 14
+  },
+  {
+    "state_id": "952ac3a6-ac65-46a1-b093-43b600cb84dc",
+    "after_checksum": "3d95876f80f3a796d56eba3c5e502ed805e27a3e9e2ea04cb01d3c9e3aeeb365",
+    "operation_id": "df5c8e2f-fcce-40bc-baa2-e9f33ea5a376",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 15
+  },
+  {
+    "state_id": "6d4758fb-b1d0-4cd7-8f06-2bae5be9d018",
+    "after_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+    "operation_id": "5ada884d-3424-442f-9eca-dcb3a4d3dfcc",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 16
+  },
+  {
+    "state_id": "e11bc080-7e64-42a7-836c-965bbd46d384",
+    "after_checksum": "f0c215f9465b954ba7a6e5d2ed1f3365828e600c2cc1e6b595b34467cda7b74a",
+    "operation_id": "7f1bcfa0-eef7-4d38-96c2-70927a8e7a10",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 17
+  },
+  {
+    "state_id": "1a69cca5-2522-479e-9407-a0b6a77f11a9",
+    "after_checksum": "fe0d92db2b8a38699c477d189775fa2daed10eb3d97b5e825277be397f89e0a5",
+    "operation_id": "c824b963-7fad-48ee-915e-4e00aced7d2d",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 18
+  },
+  {
+    "state_id": "01fb6479-9b2b-4fb8-bd20-eb170973e0cc",
+    "after_checksum": "f735c94bbe0fed77796b414f805f625abb979c6c0fb7c388ed94a302b0f9a8aa",
+    "operation_id": "ed81a40e-9024-417d-9c84-d4b6252e2d0c",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 7
+  },
+  {
+    "state_id": "0c2ee2e3-1a67-4ac7-b353-f69259b304c5",
+    "after_checksum": "23a12092afc250a19c23c988d921dd426799e3259680550fd857b685570f9342",
+    "operation_id": "a3ea27e9-5221-4004-a6d9-b9d9c0f5c202",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 8
+  },
+  {
+    "state_id": "fea4cf72-41b3-446a-8a15-0242efe36029",
+    "after_checksum": "1d9217e64803097dfc7c16aa293cfbbbbeef28c1d8e124540fc2f59a60c1c826",
+    "operation_id": "e9df70e3-81f2-466c-80c0-fad161c93cc7",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 9
+  },
+  {
+    "state_id": "2ad8970d-7d16-47ed-a196-a6398dd7bb6c",
+    "after_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+    "operation_id": "e7621ef7-8925-4a27-b21e-a09fe4fe4482",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 10
+  },
+  {
+    "state_id": "5c57007a-8a42-4f55-b0c8-1eb1eea92509",
+    "after_checksum": "f735c94bbe0fed77796b414f805f625abb979c6c0fb7c388ed94a302b0f9a8aa",
+    "operation_id": "bbba0573-5e92-4530-ac1e-4a698bff1c14",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 576,
+    "hop": 6
+  },
+  {
+    "state_id": "8d001784-be56-4653-ad4f-a73a74a4c314",
+    "after_checksum": "9dbedf1b4764083974a01b2f82876b696df82bc2986687841205d71495ad7702",
+    "operation_id": "f5032c2c-2289-44c3-acb5-771803f47abc",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1152,
+    "hop": 7
+  },
+  {
+    "state_id": "faad8112-a467-48ea-a737-512ab5c64fbe",
+    "after_checksum": "8e3ea4076eb00d4070cc38c1c84d81157d4c231bbd71a289685e822f4aa66eb1",
+    "operation_id": "19d9bc65-3436-4f10-9859-75689ab179c5",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 1728,
+    "hop": 8
+  },
+  {
+    "state_id": "fdae4cb8-4634-4a4d-bb3c-2d71ca85c8bf",
+    "after_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+    "operation_id": "d7745722-be0c-463c-bdfc-56ba794e3039",
+    "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+    "page_url": "https://mongchiton.vn/",
+    "scroll_x": 0,
+    "scroll_y": 2181,
+    "hop": 9
+  }
+]

@@ -26,6 +26,23 @@ class VisionResults:
     def __init__(self, sessions, trace, store=None, audits=None):
         self.sessions, self.trace, self.store, self.audits = sessions, trace, store, audits
 
+    def _agent_steps(self, record, scope):
+        """Agent-loop step log keyed by operation id; planner sessions never carry one."""
+        reader = getattr(self.trace, "agent_steps", None)
+        if getattr(record, "exploration_engine", "planner") != "agent_loop" or reader is None:
+            return {}
+        by_operation = {}
+        for step in reader(scope):
+            skipped = [action for action in step.actions if action.get("skipped_reason")]
+            summary = dict(
+                step_index=step.step_index,
+                evaluation_previous_goal=step.evaluation_previous_goal,
+                memory=step.memory, next_goal=step.next_goal, skipped_actions=skipped,
+            )
+            for operation_id in step.operation_ids:
+                by_operation[str(operation_id)] = summary
+        return by_operation
+
     def _load(self, tenant_id, principal, session_id, permission=Permission.READ):
         record = VisionReplay(self.sessions, self.store, self.audits)._session(
             tenant_id, principal, session_id, permission
@@ -66,10 +83,11 @@ class VisionResults:
     ):
         if not 1 <= limit <= 100 or after_sequence < 0:
             raise ValueError("invalid trace page")
-        record, _, snapshot = self._load(tenant_id, principal, session_id)
+        record, scope, snapshot = self._load(tenant_id, principal, session_id)
         current = self._revision(record, snapshot)
         if revision is not None and revision != current:
             raise VisionRevisionChanged
+        agent_steps = self._agent_steps(record, scope)
         all_items = [o for o in snapshot["operations"] if o.sequence > after_sequence]
         page = all_items[:limit]
         frames = {item.metadata.id: item for item in snapshot["frames"]}
@@ -91,6 +109,7 @@ class VisionResults:
                         o.actual_after_frame_id, frames, o.after_unavailable_reason
                     ),
                 }
+                | ({"agent_step": agent_steps[str(o.id)]} if str(o.id) in agent_steps else {})
                 for o in page
             ],
             locators=[

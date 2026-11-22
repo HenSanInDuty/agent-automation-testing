@@ -13,7 +13,7 @@ import { Code, CodeBlock, Disclosure, FormField, Hint, ItemList, Notice } from "
 import { Section } from "./components/section";
 import { VisionSessionDetail } from "./components/vision-session-detail";
 import { VisionProviderSettings } from "./components/vision-provider-settings";
-import { hasUnsavedVisionPolicy, hasVisionConsent, visionDisclosure, visionConfirmation, visionFailureMessage, visionProviderLabel } from "./components/vision-provider-model";
+import { bridgeVendor, engineRequestFields, explorationEngine, hasUnsavedVisionPolicy, hasVisionConsent, isBridgeProvider, visionDisclosure, visionConfirmation, visionFailureMessage, visionProviderLabel, type ExplorationEngine } from "./components/vision-provider-model";
 import { getVisionProviders, reloadVisualExploration } from "./generation-api";
 import type { VisionProvider } from "./generation-types";
 import { ConfirmDialog } from "./components/confirm-dialog";
@@ -28,7 +28,7 @@ import { projects, type Project } from "./run-api";
 
 const terminal = new Set(["completed", "unavailable", "cancelled"]);
 type ExplorationConfirmation = ReturnType<typeof visionConfirmation> & { disclosure: string } & (
-  | { kind: "new"; request: { project_id: string; target_url: string; task_intent: string } }
+  | { kind: "new"; request: { project_id: string; target_url: string; task_intent: string; engine?: "agent_loop" } }
   | { kind: "reload"; sessionId: string }
 );
 const message = (error: unknown) => error instanceof ControlPlaneError ? visionFailureMessage(error.code) ?? error.message : "The control plane is unavailable. Try again later.";
@@ -56,6 +56,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
   const [projectId, setProjectId] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
   const [taskIntent, setTaskIntent] = useState("");
+  const [engine, setEngine] = useState<ExplorationEngine>("planner");
   const [sessions, setSessions] = useState<VisualExploration[]>([]);
   const [selected, setSelected] = useState<VisualExploration | null>(null);
   const [actions, setActions] = useState<VisualAction[]>([]);
@@ -82,7 +83,9 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
   const refreshing = useRef<string | null>(null);
   contextRef.current = [apiUrl, projectId, selected?.id].join("|");
   const dirty = hasUnsavedVisionPolicy(savedPolicy, draftPolicy);
-  const enabled = Boolean(!settingsError && savedPolicy?.enabled && hasVisionConsent(savedPolicy) && (savedPolicy.provider !== "codex_cli" || savedPolicy.input_policy_fingerprint) && providers.find((item) => item.id === savedPolicy.provider)?.configured);
+  const agentLoopAvailable = savedPolicy?.agent_loop_enabled === true;
+  const chosenEngine: ExplorationEngine = agentLoopAvailable ? engine : "planner";
+  const enabled = Boolean(!settingsError && savedPolicy?.enabled && hasVisionConsent(savedPolicy) && (!isBridgeProvider(savedPolicy.provider) || savedPolicy.input_policy_fingerprint) && providers.find((item) => item.id === savedPolicy.provider)?.configured);
   const active = useMemo(() => selected !== null && !terminal.has(selected.state), [selected]);
   useEffect(() => { onProjectChange?.(projectId); }, [projectId, onProjectChange]);
 
@@ -95,11 +98,11 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
     return () => { disposed = true; };
   }, [apiUrl, settingsRefresh]);
   useEffect(() => {
-    if (draftPolicy?.provider !== "codex_cli") return;
+    if (!isBridgeProvider(draftPolicy?.provider)) return;
     let disposed = false;
     const timer = setInterval(() => {
       void getVisionProviders(apiUrl).then((catalogue) => { if (!disposed) setProviders(catalogue.items); }).catch(() => {
-        if (!disposed) setProviders((items) => items.map((item) => item.id === "codex_cli" ? { ...item, configured: false, bridge_readiness: null } : item));
+        if (!disposed) setProviders((items) => items.map((item) => item.id === draftPolicy?.provider ? { ...item, configured: false, bridge_readiness: null } : item));
       });
     }, 5000);
     return () => { disposed = true; clearInterval(timer); };
@@ -183,7 +186,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
     event.preventDefault(); setNotice("");
     if (dirty || saving) { setNotice("Save or discard your Vision settings changes before starting an exploration."); return; }
     if (!enabled) { setNotice("Vision exploration is disabled by tenant policy."); return; }
-    if (savedPolicy) setConfirmation({ ...visionConfirmation(savedPolicy), disclosure: visionDisclosure(savedPolicy), kind: "new", request: { project_id: projectId, target_url: targetUrl, task_intent: taskIntent } });
+    if (savedPolicy) setConfirmation({ ...visionConfirmation(savedPolicy), disclosure: visionDisclosure(savedPolicy), kind: "new", request: { project_id: projectId, target_url: targetUrl, task_intent: taskIntent, ...engineRequestFields(chosenEngine) } });
   }
   function requestReload() {
     if (!selected || active || !enabled || dirty || saving || submitting || !savedPolicy) return;
@@ -255,6 +258,8 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
         <FormField id="vision-project" label="Project"><NativeSelect id="vision-project" required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Choose a project</option>{options.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</NativeSelect></FormField>
         <FormField id="vision-target-url" label="Target URL"><Input id="vision-target-url" required type="url" placeholder="https://example.com" value={targetUrl} onChange={(event) => setTargetUrl(event.target.value)} /></FormField>
         <FormField id="vision-intent" label="Exploration intent" className="min-[720px]:col-span-2"><Textarea id="vision-intent" required className="min-h-24" value={taskIntent} onChange={(event) => setTaskIntent(event.target.value)} /></FormField>
+        {agentLoopAvailable && <FormField id="vision-engine" label="Exploration engine"><NativeSelect id="vision-engine" value={engine} onChange={(event) => setEngine(explorationEngine(event.target.value))}><option value="planner">Planner</option><option value="agent_loop">Agent loop</option></NativeSelect></FormField>}
+        {agentLoopAvailable && <Hint className="min-[720px]:col-span-2">{engine === "agent_loop" ? "Agent loop: the model proposes actions step by step and the platform runs only guarded ones. Advisory only; any test draft still needs approval." : "Planner: advisory, model proposals only. Any test draft still needs approval."}</Hint>}
         {!enabled && <Notice tone="warning" className="min-[720px]:col-span-2">Vision is unavailable until a tenant administrator enables an available provider and accepts its required data-transfer disclosure in Vision settings below.</Notice>}
         <div className="min-[720px]:col-span-2"><Button disabled={!projectId || !enabled || dirty || saving || submitting}>Start advisory exploration</Button></div>
       </form>
@@ -296,7 +301,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
       {debugEvidence && <><Hint>Expires: {debugEvidence.retention_until}</Hint><CodeBlock label="Diagnostic evidence">{debugEvidence.payload}</CodeBlock></>}
     </Section>}
     {selected && canDeleteReplay && frames.length > 0 && <Section aria-label="Replay deletion" title="Delete replay evidence" description="Only tenant administrators can permanently delete these private frames." contentClassName="flex flex-wrap gap-2">{selectedFrame && <Button type="button" variant="destructive" size="sm" onClick={() => setReplayDeletion("frame")}>Delete selected frame</Button>} <Button type="button" variant="destructive" size="sm" onClick={() => setReplayDeletion("all")}>Delete all replay frames</Button></Section>}
-    <ConfirmDialog open={confirmation !== null} title={confirmation?.expected_provider === "codex_cli" ? "Send page elements to OpenAI?" : `Send screenshots to ${visionProviderLabel(confirmation?.expected_provider ?? "")}?`} description={`${confirmation?.disclosure ?? ""} Model: ${confirmation?.expected_model ?? ""}. ${confirmation?.kind === "reload" ? "Reload starts a new session with the saved target and intent; the previous session stays in history." : "This starts an advisory exploration."} Any resulting test draft requires approval before execution.`} confirmLabel={confirmation?.kind === "reload" ? "Start new session" : "Start advisory exploration"} onConfirm={() => void submitExploration()} onCancel={() => setConfirmation(null)} busy={submitting} />
+    <ConfirmDialog open={confirmation !== null} title={isBridgeProvider(confirmation?.expected_provider) ? `Send page elements to ${bridgeVendor(confirmation?.expected_provider ?? "")}?` : `Send screenshots to ${visionProviderLabel(confirmation?.expected_provider ?? "")}?`} description={`${confirmation?.disclosure ?? ""} Model: ${confirmation?.expected_model ?? ""}. ${confirmation?.kind === "reload" ? "Reload starts a new session with the saved target and intent; the previous session stays in history." : "This starts an advisory exploration."} Any resulting test draft requires approval before execution.`} confirmLabel={confirmation?.kind === "reload" ? "Start new session" : "Start advisory exploration"} onConfirm={() => void submitExploration()} onCancel={() => setConfirmation(null)} busy={submitting} />
     <ConfirmDialog open={replayDeletion !== null} title={replayDeletion === "all" ? "Delete all replay frames?" : "Delete this replay frame?"} description="This permanently removes private replay evidence. It does not change the advisory session, generated draft, or deterministic test verdict." confirmLabel="Delete replay evidence" onConfirm={() => void deleteReplay()} onCancel={() => setReplayDeletion(null)} busy={deletingReplay} />
   </div>;
 }

@@ -1,0 +1,21 @@
+[
+  {
+    "session_id": "4a1f649e-ec7a-4980-8bef-4fb7cccbb855",
+    "operation_id": "66cd6a6b-afd3-4d48-a5ee-dcf78d0b3e11",
+    "destination_hashes": [
+      "c18abd4b04f82fc521e9bf569d2cf6386505326b4cc5c8cedb8a51cd30c0503c"
+    ],
+    "truncated": false,
+    "status": "completed",
+    "navigation_chain": [
+      {
+        "url_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+        "redirected_from_sha256": null
+      },
+      {
+        "url_sha256": "c18abd4b04f82fc521e9bf569d2cf6386505326b4cc5c8cedb8a51cd30c0503c",
+        "redirected_from_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3"
+      }
+    ]
+  }
+]

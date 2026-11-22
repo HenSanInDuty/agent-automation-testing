@@ -1,0 +1,951 @@
+<title>Tiến độ Vision Loop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: một cột đọc 880px, bảng và khối số liệu cuộn ngang trong khung riêng */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --fg:#1b2330; --muted:#5b6678; --line:#dfe3ea;
+  --accent:#1f5fbf; --ok:#17794a; --ok-bg:#e1f3ea; --warn:#9a5b00; --warn-bg:#fbefd5;
+  --bad:#b3261e; --bad-bg:#fbe4e2; --code-bg:#eef1f5;
+  --font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-head:"Space Grotesk","Inter",system-ui,sans-serif;
+  --font-mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161d; --surface:#1a2029; --fg:#e6eaf0; --muted:#98a3b5; --line:#2b3340;
+  --accent:#6ea4f0; --ok:#5fd09a; --ok-bg:#183a2a; --warn:#f0b75a; --warn-bg:#3d2f12;
+  --bad:#ff8c84; --bad-bg:#43211f; --code-bg:#232b37; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161d; --surface:#1a2029; --fg:#e6eaf0; --muted:#98a3b5; --line:#2b3340;
+  --accent:#6ea4f0; --ok:#5fd09a; --ok-bg:#183a2a; --warn:#f0b75a; --warn-bg:#3d2f12;
+  --bad:#ff8c84; --bad-bg:#43211f; --code-bg:#232b37; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--font-body)}
+.wrap{max-width:880px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:32px}
+h1,h2,h3{font-family:var(--font-head);line-height:1.25;text-wrap:balance;margin:0}
+h1{font-size:1.9rem} h2{font-size:1.3rem} h3{font-size:1.05rem}
+p,ul{margin:0} ul{padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+.sub{color:var(--muted);margin-top:6px}
+section{display:flex;flex-direction:column;gap:14px;min-width:0}
+.label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.88rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+code{font-family:var(--font-mono);font-size:.82em;background:var(--code-bg);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+.pill{display:inline-block;font-size:.76rem;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.ok{background:var(--ok-bg);color:var(--ok)} .warn{background:var(--warn-bg);color:var(--warn)} .bad{background:var(--bad-bg);color:var(--bad)}
+.note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:6px;padding:10px 14px;font-size:.9rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+pre{margin:0;background:var(--code-bg);padding:10px 12px;border-radius:6px;overflow-x:auto;font:.8rem/1.5 var(--font-mono)}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="label">Plan 09112026103202</div>
+  <h1>Vòng lặp cải thiện Vision đến &gt;95%</h1>
+  <p class="sub">Trạng thái 5 phase và chi tiết vòng agent loop round 01 (r5 sang r6, r7, r8, r9, r10, r11, r12, r13, r14, r15 đến r19, r20–r21), cập nhật 2026-11-21.</p>
+</header>
+
+<section>
+  <h2>Trạng thái các phase</h2>
+  <div class="scroll"><table>
+    <tr><th>#</th><th>Mục tiêu</th><th>Trạng thái</th><th>Phụ thuộc</th><th>Validation</th></tr>
+    <tr><td>01</td><td>Đóng băng oracle và bộ chấm</td><td><span class="pill ok">completed</span></td><td>Không</td><td>37 Python + 6 worker tests; audit 1280×720</td></tr>
+    <tr><td>02</td><td>Harness vòng chạy và chẩn đoán</td><td><span class="pill ok">completed</span></td><td>01</td><td>35 Python tests; historical API import</td></tr>
+    <tr><td>03</td><td>Tái hiện và sửa lỗi restoration</td><td><span class="pill ok">completed</span></td><td>01, 02</td><td>177 regression + 6 recovery; 102 worker tests</td></tr>
+    <tr><td>04</td><td>Chạy vòng cải thiện liên tục</td><td><span class="pill warn">in progress</span></td><td>01–03</td><td>Reopened: round 17 carousel outcome evidence fails; round 16 pass retained. Agent loop r7 (2026-11-21): hai hướng offline xong, leader PASS cả hai. Vòng r8 (2026-11-21): A1–A3 offline sau cờ xong, leader PASS, QA PASS; chưa live, chưa deploy. Vòng r9 (2026-11-21): phiên live A1+A3 <code>79b90323…</code> chết <code>bridge_policy_revoked</code> (không chấm); race receipt đã sửa offline (ADR-041), leader PASS, QA PASS; chưa rebuild/live lại. Vòng r10 (2026-11-21): phiên live A1+A3 <code>22187cc7…</code> agent_done, chấm chính thức C 1/47, A 1/10, P 7/7, R 7/47 (sources all), chưa đạt; ADR-041 giữ live (14 job, 0 revoked). r11: prompt agent-loop-v2 (leader PASS, QA PASS). r12 live <code>e0de6697…</code>: agent scroll + 5 click dưới màn hình (mct-18, 19, 20, 30, 31), dừng <code>settle_timeout</code> (không phải terminal agent) → không điểm chính thức; diagnostic C 3–5/47. r13: nguyên nhân settle_timeout = CSS pulse vô hạn trên link play-now. r14: sửa settle A+B giới hạn (ADR-042), review 2 vòng, leader PASS, QA PASS; chưa rebuild/live. r15 gác (patch <code>.pytest-artifacts/r15-shelved/</code>). r16 live hỏng ở open: hồi quy r14 (<code>__name</code> dưới tsx). r18 sửa (leader PASS, QA PASS). r19 live <code>6eef105a…</code>: open OK, 6 click (5 oracle), settle_timeout ở scroll thứ hai sau nút TOP → không điểm chính thức; diagnostic C 3–5/47. r20: nguyên nhân settle là churn <code>mount-switcher</code> (đợt 25 s / ~36 s ở y≈1200 khi tab active), không phải nút TOP. r21: thăm dò — style animation/transition 1 ms giảm churn 22–30 → 1–2 thay đổi/5 s, settle ~0,9 s; còn hop carousel do JS timer; thiết kế chưa triển khai</td></tr>
+    <tr><td>05</td><td>Qualification và bàn giao</td><td><span class="pill warn">in progress, chờ 04</span></td><td>04</td><td>Offline 1151 passed, 2 explained skips; first fresh attempt failed, streak 0/3</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>Phase 04: vòng agent loop round 01, r5 sang r6 (2026-11-21)</h2>
+
+  <h3>Mục tiêu và người làm</h3>
+  <p>Chạy phiên agent loop live trên trang oracle, sửa chặn tích hợp làm phiên r5 chết sớm, rồi chấm lại ở r6. Be-developer làm 5 lượt (r1 đến r5), leader review r1, QA r1. Phiên chính rebuild và deploy giữa các lượt (log <code>coordinator-*.log</code>).</p>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>be-developer r1</td><td><span class="pill warn">BLOCKED</span> Bridge lệch source: <code>vision_agent_loop.py</code> khác nhau ở claude-bridge (image dựng từ r3). Chưa submit phiên. Sau đó phiên chính rebuild bridge, <code>check</code> ra 0 mismatch.</td></tr>
+    <tr><td>be-developer r2</td><td><span class="pill bad">FAIL</span> Phiên r5 <code>b77691e6…</code> kết thúc <code>origin_blocked</code>: 11 model call, 13 operation, không import, không chấm. Nguyên nhân: sau click HO TRO rời origin, <code>observe_dom</code> trả <code>state_mismatch</code>, loop phát <code>wait</code> refresh nhưng worker chặn off-origin.</td></tr>
+    <tr><td>be-developer r3</td><td>Sửa control-plane (retry đọc-chỉ khi off-origin). Đã <strong>revert</strong> ở r4 vì đọc lại không chữa được state cũ.</td></tr>
+    <tr><td>be-developer r4</td><td>Sửa worker: thêm một ngoại lệ hẹp cho <code>wait</code> refresh đọc-chỉ <code>purpose=setup</code> (<code>vision-operations.ts</code> dòng 521-529). Control-plane về bản gốc.</td></tr>
+    <tr><td>leader r1</td><td><span class="pill ok">PASS</span> Không có BLOCKING.</td></tr>
+    <tr><td>qa r1</td><td><span class="pill ok">PASS</span> 22 case, 22 pass.</td></tr>
+    <tr><td>be-developer r5</td><td><span class="pill ok">DONE</span> Phiên live r6 <code>fa802b9c…</code>, chấm điểm, không đạt gate.</td></tr>
+  </table></div>
+
+  <h3>Diff thật</h3>
+  <div class="note">Working tree còn nhiều thay đổi cũ chưa commit từ các phiên trước và nhiều file untracked, nên <code>git diff --stat</code> gồm cả phần cũ. File untracked (<code>??</code>) không có +/- trong git, cột dưới ghi tổng số dòng hiện tại. Phần của lượt này lấy theo mô tả trong báo cáo developer.</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/− (git, gồm phần cũ)</th><th>Phần của lượt này</th></tr>
+    <tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td>sửa</td><td class="n">+91 / −11</td><td>~4 dòng ở 521-529: ngoại lệ refresh đọc-chỉ off-origin</td></tr>
+    <tr><td><code>workers/playwright/src/vision-agent-mode.spec.ts</code></td><td>tạo (untracked)</td><td class="n">357 dòng</td><td>+1 test, đỏ trên luật cũ, xanh sau sửa</td></tr>
+    <tr><td><code>workers/playwright/src/vision-agent-mode.qa.spec.ts</code></td><td>tạo (untracked)</td><td class="n">330 dòng</td><td>QA thêm QA-W20, QA-W21</td></tr>
+    <tr><td><code>tests/test_vision_agent_loop.py</code></td><td>tạo (untracked)</td><td class="n">1113 dòng</td><td>FakeWorker áp luật worker mới + 4 test hồi quy</td></tr>
+    <tr><td><code>apps/control-plane/application/vision_agent_loop.py</code></td><td>tạo (untracked)</td><td class="n">683 dòng</td><td>Sau r3 revert, chỉ còn 1 dòng comment so với bản gốc</td></tr>
+    <tr><td><code>docs/vision-agent-operations.md</code></td><td>sửa</td><td class="n">+61 / −0</td><td>~5 dòng ở mục Safety/K3 (ngoại lệ refresh)</td></tr>
+    <tr><td><code>docs/adr/038-vision-agent-loop-engine.md</code></td><td>tạo (untracked)</td><td class="n">99 dòng</td><td>+1 đoạn K3</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md</code></td><td>tạo (untracked)</td><td class="n">244 dòng</td><td>Thêm mục r5 và r6 (Write/Edit)</td></tr>
+    <tr><td><code>plan/09112026103202-vision-accuracy-loop/README.md</code></td><td>sửa</td><td class="n">+84 / −0</td><td>Nối handoff r5 và r6</td></tr>
+  </table></div>
+
+  <h3>Database</h3>
+  <p>Không đụng, không có migration. Các bảng <code>visual_operations</code>, <code>visual_agent_steps</code>, <code>codex_bridge_jobs</code> chỉ được đọc để chẩn đoán.</p>
+
+  <h3>Test</h3>
+  <div class="grid">
+    <div class="box"><span class="label">Dev r4</span>
+      <span>ruff: sạch</span><span>pytest: 192 + 27 passed</span><span>tsc: sạch</span><span>playwright: 141 passed</span></div>
+    <div class="box"><span class="label">QA r1</span>
+      <span>pytest: 219 passed (Postgres cô lập)</span><span>playwright: 143 passed</span><span><span class="pill ok">QA VERDICT PASS</span></span></div>
+  </div>
+  <p>Chi tiết: <a href="qa/phase-04/test-report.md">test-report.md</a> và <a href="qa/phase-04/test-cases.md">test-cases.md</a>. Test control-plane xanh cả trên source gốc vì FakeWorker dùng luật mới (chặn hồi quy). Bằng chứng đỏ sang xanh thật nằm ở worker spec. Chưa chạy được <code>test_vision_agent_engine_selection.py</code> do <code>Settings()</code> đọc <code>.env</code> cục bộ.</p>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> theo <code>docs/code-standards.md</code> và <code>AGENTS.md</code>. Lệch: agent r5 dùng heredoc để nối markdown (lỗi quy trình, nội dung chỉ append, không sửa phần cũ).</li>
+    <li><strong>Graph:</strong> không đổi quan hệ import. <code>hgraph check --changed</code> báo <code>workers/playwright/src/vision-operations.ts</code> uncovered dù file đã nằm trong graph <code>playwright-vision-worker</code> (<code>hgraph add</code> thêm 0 file). Đây là báo nhầm do tiền tố đường dẫn của tool, vì git root là thư mục cha <code>agent-at</code>. 47 file uncovered khác là nợ cũ.</li>
+    <li><strong>Ponytail:</strong> retry control-plane ở r3 bị revert (xoá thay vì thêm), worker chỉ thêm một ngoại lệ hẹp. Gợi ý ngoài phạm vi: dòng ~553 của runbook vẫn ghi "only close_popup and back pass" (leader OPTIONAL).</li>
+  </ul>
+
+  <h3>Kết quả live</h3>
+  <div class="scroll"><table>
+    <tr><th>Mục</th><th>r5 <code>b77691e6…</code></th><th>r6 <code>fa802b9c…</code></th></tr>
+    <tr><td>Kết thúc</td><td><span class="pill bad">origin_blocked</span></td><td><span class="pill warn">agent_stopped</span> (<code>unsupported_state</code>, step 20)</td></tr>
+    <tr><td>Model call</td><td class="n">11</td><td class="n">20, 0 schema rejection</td></tr>
+    <tr><td>Token in / out</td><td class="n">56,686 / 4,668</td><td class="n">107,235 / 8,976</td></tr>
+    <tr><td>Operation</td><td class="n">13</td><td class="n">30: 24 completed, 6 rejected <code>state_mismatch</code></td></tr>
+    <tr><td>Fix off-origin</td><td>Chưa có</td><td>Chạy thật: 10 refresh completed, 0 origin_blocked</td></tr>
+    <tr><td>Điểm harness</td><td>Không chấm</td><td class="n">C 0/47, A 0/12</td></tr>
+    <tr><td>Review thủ công</td><td>Không áp dụng</td><td class="n">5/5 click đúng: C trần 5/47 (10.64%), A 5/12 (41.67%)</td></tr>
+  </table></div>
+  <p>Điểm chính thức bằng 0 vì harness chỉ chấm locator <code>dom_path</code> (<code>run.py:283-287</code>, <code>evidence.py:56-62</code>), còn agent loop dùng locator <code>role</code> nên <code>path=null</code>. Đây là khoảng trống đo lường, không phải kết quả model. Terminal r6 do 6 lần <code>state_mismatch</code> liên tiếp trên trang chủ sau scroll (steps 14-19). K1 (20 call đủ không): không, 20 call chạm 5/47 target.</p>
+
+  <h3>Kết luận</h3>
+  <ul>
+    <li>Leader: <span class="pill ok">PASS</span> &nbsp; QA: <span class="pill ok">PASS</span> cho bản sửa worker.</li>
+    <li>Bước kế, chờ user quyết: (1) harness chấm agent_loop với locator role, (2) điều tra <code>state_mismatch</code> sau scroll trên trang chủ.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Phase 04: agent loop round 01 r7, hai hướng offline (2026-11-21)</h2>
+
+  <h3>Mục tiêu và người làm</h3>
+  <p>Làm hai việc offline, không live, không deploy, không commit: (A) harness chấm được locator <code>role</code> của agent_loop; (B) thêm instrumentation cho <code>vision.state.mismatch</code> để cô lập drift trang chủ. Be-developer ×2 chạy song song (r6a, r6b), leader ×2 review (r2a, r2b). QA bỏ qua theo quy tắc (không đụng DB, contract, API, UI; phase 04 không phải phase cuối).</p>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>be-developer r6a (hướng A)</td><td><span class="pill ok">DONE</span> Harness bind locator role vào oracle (root tab, viewport, role, tên chuẩn hoá, IoU ≥ 0.8, ứng viên duy nhất, click trong box, một credit mỗi target). Chấm lại r6 từ trace đã lưu: tự suy ra mct-01, 02, 04, 05, 06, khớp review thủ công. C 5/47, A 5/12, R 0/47, inventory chưa đủ, <code>passed=false</code>. Kèm ESCALATE 3 quyết định.</td></tr>
+    <tr><td>be-developer r6b (hướng B)</td><td><span class="pill ok">DONE</span> Chỉ thêm diag cho <code>vision.state.mismatch</code> (<code>state_age_ms</code>, <code>interaction_*</code>, <code>failure_stage=observe_start</code>). Chứng minh một phần: 6/6 từ chối là fingerprint tương tác scope <code>all</code> đổi trong cửa sổ nghỉ 6-10 s (không phải ref cũ, không phải race ms). Chưa cô lập phần tử nào đổi; cổng không sửa.</td></tr>
+    <tr><td>leader r2a</td><td><span class="pill ok">PASS</span> Không BLOCKING. OPTIONAL: export url fingerprint/scroll trong <code>/trace</code>.</td></tr>
+    <tr><td>leader r2b</td><td><span class="pill ok">PASS</span> Không BLOCKING. OPTIONAL: <code>observe_start</code> thêm 1 dòng log error mỗi lần observe bị từ chối.</td></tr>
+  </table></div>
+
+  <h3>Diff thật</h3>
+  <div class="note">Số liệu từ <code>git diff --numstat</code> và <code>git status --short</code> trong <code>auto-at-ui</code>, chỉ các file hai báo cáo dev liệt kê. File untracked (<code>??</code>) ghi tổng dòng bằng <code>wc -l</code>. File đã bẩn từ trước (<code>vision-operations.ts</code>, <code>playwright-vision-worker.md</code>) có +/− là diff tổng so với HEAD, phần hướng B trích theo báo cáo dev.</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td colspan="4"><span class="label">Hướng A</span></td></tr>
+    <tr><td><code>benchmark/vision/accuracy/evidence.py</code></td><td>sửa</td><td class="n">+108 / −3</td><td>Thêm <code>export_grounding</code>, <code>normalize_label</code>, <code>box_iou</code>, <code>binding_error</code></td></tr>
+    <tr><td><code>benchmark/vision/accuracy/run.py</code></td><td>sửa</td><td class="n">+84 / −24</td><td><code>Loop.trace/ground</code>, <code>check_grounding</code>, <code>evaluate</code> dùng <code>binding_error</code>, lệnh <code>ground</code></td></tr>
+    <tr><td><code>benchmark/vision/accuracy/README.md</code></td><td>sửa</td><td class="n">+20 / −0</td><td>Mục "Binding agent_loop (role) locators"</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md</code></td><td>tạo (untracked)</td><td class="n">266 dòng</td><td>Chỉ nối mục "Round r6a"</td></tr>
+    <tr><td><code>tests/test_vision_accuracy_binding.py</code></td><td>tạo (untracked)</td><td class="n">379 dòng</td><td>21 test mới: dương, âm, run cũ giữ điểm cũ</td></tr>
+    <tr><td><code>docs/adr/039-agent-loop-role-binding-in-accuracy-harness.md</code></td><td>tạo (untracked)</td><td class="n">58 dòng</td><td>ADR luật bind role</td></tr>
+    <tr><td><code>docs/graphs/vision-accuracy-harness.md</code></td><td>tạo (untracked)</td><td class="n">82 dòng</td><td>Graph mới cho harness</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/runs/1c56623e-…/</code> (<code>grounding.json</code>, <code>rescore-role-binding.json</code>)</td><td>tạo (thư mục run untracked)</td><td class="n">không đếm</td><td>Evidence chấm lại r6; file cũ không đổi</td></tr>
+    <tr><td colspan="4"><span class="label">Hướng B</span></td></tr>
+    <tr><td><code>workers/playwright/src/vision-checkpoints.ts</code></td><td>sửa</td><td class="n">+37 / −1</td><td><code>privateInteractions</code>, <code>capturedAt</code>, <code>interactionDiff</code>, diag trong <code>logStateMismatch</code></td></tr>
+    <tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td>sửa</td><td class="n">+94 / −12 (tổng so với HEAD)</td><td>Phần hướng B: 1 chỗ trong <code>observeDom</code> ghi log <code>observe_start</code> trước khi từ chối <code>state_mismatch</code>; còn lại là phần cũ</td></tr>
+    <tr><td><code>workers/playwright/src/vision-observability.spec.ts</code></td><td>sửa</td><td class="n">+27 / −0</td><td>+1 test diag, không lộ text</td></tr>
+    <tr><td><code>workers/playwright/src/vision-agent-mode.spec.ts</code></td><td>tạo (untracked)</td><td class="n">431 dòng</td><td>Phần hướng B: +7 test (1 tái hiện autoplay, 6 test âm)</td></tr>
+    <tr><td><code>docs/graphs/playwright-vision-worker.md</code></td><td>sửa</td><td class="n">+90 / −72 (tổng so với HEAD)</td><td>Phần hướng B: 1 bullet tay mô tả diag; phần còn lại là cập nhật cũ</td></tr>
+  </table></div>
+
+  <h3>Database</h3>
+  <p>Không đụng, không migration, không đổi contract, API, env. Hướng A chỉ chạy SELECT và GET chỉ đọc để khảo sát; control-plane Python không sửa file nào ở hướng B.</p>
+
+  <h3>Test</h3>
+  <div class="grid">
+    <div class="box"><span class="label">Dev r6a (A)</span>
+      <span>ruff: sạch</span><span>accuracy: 57 passed</span><span>agent_loop + safety: 73 passed, 38 skipped</span><span>oracle và <code>metrics.py</code> diff exit 0</span></div>
+    <div class="box"><span class="label">Dev r6b (B)</span>
+      <span>ruff: sạch; tsc exit 0</span><span>worker suite: 293 passed, 1 failed, 62 skipped</span><span>agent_loop: 141 passed, 51 skipped</span><span>fail duy nhất <code>vision-outcome-capture.spec.ts:10</code> timing-flaky, chạy riêng 2/2 pass</span></div>
+    <div class="box"><span class="label">Leader</span>
+      <span>r2a: ruff sạch, accuracy 57 passed</span><span>r2b: tsc exit 0, 9 spec liên quan passed, ruff sạch</span><span><span class="pill ok">PASS</span> cả hai</span></div>
+    <div class="box"><span class="label">QA</span>
+      <span>Bỏ qua theo quy tắc</span></div>
+  </div>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> tuân <code>AGENTS.md</code> và <code>docs/code-standards.md</code>, không lệch. Lint worker hỏng sẵn: <code>workers/playwright</code> thiếu <code>eslint</code> trong devDependencies, nên eslint không chạy được (không do thay đổi này).</li>
+    <li><strong>Graph:</strong> tạo graph mới <code>vision-accuracy-harness</code>; <code>playwright-vision-worker</code> đã phủ file hướng B (thêm 1 bullet tay). <code>hgraph check</code> exit 0. <code>hgraph check --changed</code> exit 1 do lỗi tool: git root là <code>agent-at</code>, hgraph root là <code>auto-at-ui</code>, đường dẫn mang tiền tố <code>auto-at-ui/</code> nên không khớp (leader xác nhận).</li>
+    <li><strong>Ponytail:</strong> leader ghi shrink note, không cắt phần yêu cầu: hướng A giữ lệnh <code>run.py ground</code> và <code>check_grounding</code> để bù run cũ; hướng B giữ <code>interactionDiff</code> + <code>unmatched</code> (~20 dòng) cho chẩn đoán. Kết luận leader: cả hai PASS.</li>
+  </ul>
+
+  <h3>Quyết định cần user</h3>
+  <div class="note">Hướng A: agent_loop không thể đạt C &gt; 95% hay inventory đầy đủ với evidence control-plane xuất hiện nay. Số đếm thô: 47 positive, 16 bind được (viewport đầu), 31 dưới màn hình đầu, 15 không tên hoặc <code>div</code>, trần khoảng 32/47 (68.09%) dù có scroll; C &gt; 95% cần 45/47. Inventory chưa lưu (23/23 state <code>page_inventory</code> NULL).</div>
+  <ul>
+    <li><strong>A1:</strong> export <code>scroll_x/scroll_y</code> và <code>url_fingerprint</code> mỗi operation trong <code>/trace</code> (dữ liệu đã có trong checkpoint, không migration; khoảng 0.5-1 ngày). Mở khoá 32/47 và định danh trang.</li>
+    <li><strong>A2:</strong> với 15 target không tên/<code>div</code>: cho agent mode ground control ẩn danh bằng <code>dom_path</code> (1-2 ngày worker + test), hoặc duyệt bind theo box + tag với IoU cao hơn (nới luật định danh, quyết định của user).</li>
+    <li><strong>A3:</strong> inventory: lưu inventory mỗi observation trong <code>pages</code> (1-2 ngày, có thể không migration nếu dùng <code>page_inventory</code>), hoặc chấp nhận audit read-only độc lập (<code>audit-1280-*</code>, <code>baseline-20261109.json</code>) làm nguồn detection cho agent_loop (đổi định nghĩa).</li>
+    <li><strong>B:</strong> một phiên live ngắn sau khi rebuild <code>playwright-worker</code> (<code>docker compose build playwright-worker</code> rồi up; kiểm <code>agent_loop_round.py check</code> 0 mismatch), đọc log <code>vision.state.mismatch</code> rồi mới quyết sửa cổng. Không cần rebuild control-plane, temporal-worker, claude-bridge. Đề xuất chưa thêm prompt hint cho <code>state_mismatch</code>.</li>
+  </ul>
+  <p>Đến khi có quyết định, mọi run agent_loop vẫn <code>inventory_complete=false</code> và <code>passed=false</code>; harness báo đúng điều đó.</p>
+</section>
+
+<section>
+  <h2>Phase 04 · vòng r8 — A1/A2/A3 sau cờ (2026-11-21)</h2>
+  <p class="sub">Phase 04 vẫn in progress; đây là một vòng trong phase. Offline, không live, không deploy, không commit.</p>
+
+  <h3>Mục tiêu và người làm</h3>
+  <p>Hiện thực ba hạng mục ESCALATE user đã duyệt sau r7, mỗi hạng mục sau một cờ cấu hình mặc định tắt (ADR-040): A1 xuất scroll + URL fingerprint mỗi click, A2 <code>dom_path</code> cho control không tên trong agent mode, A3 lưu inventory mỗi observation. Mục đích: để harness chấm lại agent_loop theo từng tổ hợp nguồn và chỉ giữ cái nào cho điểm tốt hơn.</p>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>be-developer r7</td><td><span class="pill ok">DONE</span> A1, A2, A3 offline sau cờ. Báo cáo <a href="reports/phase-04/be-developer-r7.md">be-developer-r7.md</a>.</td></tr>
+    <tr><td>leader r3</td><td><span class="pill ok">PASS</span> Không BLOCKING. <a href="reports/phase-04/leader-r3.md">leader-r3.md</a>.</td></tr>
+    <tr><td>qa r2</td><td><span class="pill ok">PASS</span> 49 case, 0 fail. <a href="reports/phase-04/qa-r2.md">qa-r2.md</a>.</td></tr>
+  </table></div>
+
+  <h3>Diff thật</h3>
+  <div class="note">Số liệu từ <code>git diff --numstat</code> và <code>git status --short</code> (git root <code>agent-at</code>), chỉ các file báo cáo r7 và QA r2 liệt kê. Nhiều file đã bẩn từ vòng trước nên +/− là <strong>tích luỹ so với HEAD</strong>, không gán hết cho r8; phần r8 theo mô tả của dev. File untracked (<code>??</code>) ghi tổng dòng hiện tại.</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td><code>packages/contracts/src/auto_at/contracts/vision.py</code></td><td>sửa</td><td class="n">+22 / −1</td><td><code>VisualExecutedClick</code> thêm <code>scroll_x</code>, <code>scroll_y</code>, <code>url_fingerprint</code> tuỳ chọn; serializer bỏ key vắng</td></tr>
+    <tr><td><code>packages/contracts/src/auto_at/contracts/vision_worker.py</code></td><td>sửa</td><td class="n">+9 / −2</td><td>Thêm capability <code>click-context-v1</code>, <code>agent-dom-path-v1</code></td></tr>
+    <tr><td><code>workers/playwright/src/vision-contract.generated.ts</code></td><td>sửa</td><td class="n">+63 / −4</td><td>Sinh lại; đã có 17 dòng diff từ vòng trước</td></tr>
+    <tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td>sửa</td><td class="n">+113 / −19</td><td>Cờ phiên theo capability, điền scroll/URL vào click, nhận <code>dom_path</code> trong agent mode (tích luỹ, gồm r7)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-dom.ts</code></td><td>sửa</td><td class="n">+35 / −9</td><td><code>observeDom(..., {agentDomPath})</code>: control không tên có <code>dom_path</code> v2/v3; tắt = đường code cũ</td></tr>
+    <tr><td><code>workers/playwright/src/vision-agent-evidence.spec.ts</code></td><td>tạo (untracked)</td><td class="n">156 dòng</td><td>6 spec worker</td></tr>
+    <tr><td><code>apps/control-plane/config.py</code></td><td>sửa</td><td class="n">+11 / −0</td><td>Ba cờ (tích luỹ)</td></tr>
+    <tr><td><code>.env.example</code></td><td>sửa</td><td class="n">+9 / −0</td><td>Ba cờ (tích luỹ)</td></tr>
+    <tr><td><code>apps/control-plane/application/vision_agent_loop.py</code></td><td>tạo (untracked)</td><td class="n">707 dòng</td><td><code>worker_capabilities()</code>, <code>_save_inventory</code> (A3), checkpoint theo operation</td></tr>
+    <tr><td><code>apps/control-plane/domain/vision_coverage.py</code></td><td>sửa</td><td class="n">+19 / −0</td><td><code>merge_inventory</code></td></tr>
+    <tr><td><code>benchmark/vision/accuracy/evidence.py</code></td><td>sửa</td><td class="n">+226 / −3</td><td>Tích luỹ: gồm r7 hướng A; r8 thêm <code>click_context</code>, <code>export_inventory</code>, <code>derive_detection</code>, <code>descriptor_key</code></td></tr>
+    <tr><td><code>benchmark/vision/accuracy/run.py</code></td><td>sửa</td><td class="n">+171 / −29</td><td>Tích luỹ: r8 thêm <code>parse_sources</code>, <code>--sources</code>, <code>--label</code>, lệnh <code>detect</code></td></tr>
+    <tr><td><code>benchmark/vision/accuracy/README.md</code></td><td>sửa</td><td class="n">+37 / −0</td><td>Tích luỹ: cách chấm từng tổ hợp</td></tr>
+    <tr><td><code>tests/test_vision_agent_evidence_flags.py</code></td><td>tạo (untracked)</td><td class="n">243 dòng</td><td>20 test cờ</td></tr>
+    <tr><td><code>tests/test_vision_accuracy_agent_evidence.py</code></td><td>tạo (untracked)</td><td class="n">398 dòng</td><td>23 test harness</td></tr>
+    <tr><td><code>tests/test_qa_r8_agent_evidence.py</code></td><td>tạo (untracked, QA)</td><td class="n">379 dòng</td><td>49 case QA</td></tr>
+    <tr><td><code>docs/adr/040-agent-loop-accuracy-evidence-flags.md</code></td><td>tạo (untracked)</td><td class="n">80 dòng</td><td>ADR-040</td></tr>
+    <tr><td><code>docs/vision-agent-operations.md</code></td><td>sửa</td><td class="n">+82 / −0</td><td>Tích luỹ: mục runbook cho cờ</td></tr>
+    <tr><td><code>docs/graphs/playwright-vision-worker.md</code></td><td>sửa</td><td class="n">+95 / −71</td><td>Tích luỹ so với HEAD (gồm r7)</td></tr>
+    <tr><td><code>docs/graphs/vision-agent-loop.md</code></td><td>tạo (untracked)</td><td class="n">213 dòng</td><td>Cập nhật prose + sync; QA thêm file test</td></tr>
+    <tr><td><code>docs/graphs/vision-accuracy-harness.md</code></td><td>tạo (untracked)</td><td class="n">91 dòng</td><td>Cập nhật prose + sync</td></tr>
+    <tr><td><code>plan/09112026103202-vision-accuracy-loop/README.md</code></td><td>sửa</td><td class="n">không đếm</td><td>Nối mục "Agent loop round 01 r8 handoff"</td></tr>
+  </table></div>
+  <p>Oracle JSON và <code>metrics.py</code>: <code>git diff</code> rỗng, hash <code>9242b33d…</code> không đổi.</p>
+
+  <h3>Database</h3>
+  <p>Không migration. A3 dùng cột JSON <code>page_inventory</code> sẵn có (<code>visual_exploration_states.page_inventory</code>) qua <code>uow.page_inventory</code>; A1 thêm key tuỳ chọn trong JSON <code>visual_operations.payload</code>. Dữ liệu cũ vẫn hợp lệ.</p>
+
+  <h3>Ba cờ</h3>
+  <div class="scroll"><table>
+    <tr><th>Hạng mục</th><th>Biến môi trường</th><th>Mặc định</th><th>Capability worker</th><th>Cần rebuild</th></tr>
+    <tr><td>A1 scroll + URL fingerprint</td><td><code>VISION_AGENT_CLICK_CONTEXT_ENABLED</code></td><td>false</td><td><code>click-context-v1</code></td><td>playwright-worker; recreate temporal-worker</td></tr>
+    <tr><td>A2 <code>dom_path</code> control không tên</td><td><code>VISION_AGENT_DOM_PATH_ENABLED</code></td><td>false</td><td><code>agent-dom-path-v1</code></td><td>playwright-worker; recreate temporal-worker</td></tr>
+    <tr><td>A3 inventory mỗi observation</td><td><code>VISION_AGENT_INVENTORY_ENABLED</code></td><td>false</td><td>không</td><td>control-plane + temporal-worker (không cần worker)</td></tr>
+  </table></div>
+  <p>Ba cờ độc lập, chỉ <code>temporal-worker</code> đọc. <code>docker-compose.yml</code> không chuyển tiếp cờ: dùng override trong scratchpad rồi recreate <code>temporal-worker</code>. Worker cũ + cờ bật: control plane từ chối mở phiên (fail closed), nên phải rebuild worker trước.</p>
+
+  <h3>Test</h3>
+  <div class="grid">
+    <div class="box"><span class="label">Dev r7</span>
+      <span>ruff: sạch; tsc exit 0; eslint exit 0</span><span>test mới: 43 passed (20 + 23)</span><span>pytest tập trung: 509 passed, 81 skipped; và 75 passed, 153 skipped</span><span>worker: 6 spec mới; 111 passed 1 skipped; 123 passed</span></div>
+    <div class="box"><span class="label">Leader r3</span>
+      <span>ruff sạch; tsc exit 0</span><span>accuracy: 123 passed</span><span><span class="pill ok">PASS</span></span></div>
+    <div class="box"><span class="label">QA r2</span>
+      <span>49 case QA: 49 passed, 0 fail</span><span>159 tập trung passed</span><span>463 passed, 149 skipped</span><span>worker: 37 passed</span><span><span class="pill ok">QA VERDICT PASS</span></span></div>
+  </div>
+  <p>Mọi skip là do không có PostgreSQL cô lập trên 55437, nên test chạy DB (processor thật, <code>/result</code>, <code>/trace</code> HTTP) chưa chạy; dùng stub thay. Chi tiết: <a href="qa/phase-04/r8-test-cases.md">r8-test-cases.md</a> và <a href="qa/phase-04/r8-test-report.md">r8-test-report.md</a>. Stress test: không cần.</p>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> theo <code>docs/code-standards.md</code> và <code>AGENTS.md</code> (uv, layering một chiều, <code>config.py</code> là nơi duy nhất đọc env, contract dùng chung, đổi hành vi có test); leader xác nhận khớp, không lệch. <code>docs/api-conventions.md</code> không tồn tại, không đổi route.</li>
+    <li><strong>Graph:</strong> cập nhật <code>vision-agent-loop</code>, <code>playwright-vision-worker</code>, <code>vision-accuracy-harness</code> (prose + <code>hgraph sync --apply</code>); đưa <code>vision_coverage.py</code>, <code>contracts/vision.py</code> và các test mới vào graph; QA thêm file test của mình bằng <code>hgraph add</code>. <code>hgraph check</code> exit 0 (6 graph, 459 file). <code>hgraph check --changed</code> exit 1 do lỗi tiền tố git-root <code>auto-at-ui/</code> đã biết; mọi file đổi đều nằm trong graph (<code>hgraph which</code>).</li>
+    <li><strong>Ponytail:</strong> dev không ghi comment <code>ponytail:</code> trong source; có mục "Ladder" (tái dùng <code>inventory</code>, <code>groundLocator</code>, <code>normalize_label</code>; chỉ thêm <code>merge_inventory</code>). Ghi chú <code>shrink</code> của leader (chỉ gợi ý, không chặn): helpers <code>_unit/_pixels/_count</code> trong <code>evidence.py</code> gần trùng nhau; khối <code>dom_path</code> v2/v3 trong <code>vision-dom.ts</code> copy từ khối anonymous-button.</li>
+  </ul>
+
+  <h3>Quan sát của QA</h3>
+  <ul>
+    <li><code>derive_detection</code> báo <code>inventory_complete=true</code> khi mọi control của trang oracle đều là rác bị loại; không được credit (recall vẫn 0), nên không phải lỗi chấm điểm.</li>
+    <li><code>page_url</code> lưu trong <code>page_inventory</code> có thể chứa query string (đã có từ trước, harness bỏ trường này khi export).</li>
+    <li>Worker cũ + cờ bật: phiên không mở (<code>VisualWorkerUnavailable</code>), đúng ý fail closed nhưng phải rebuild worker trước.</li>
+  </ul>
+  <div class="note">Chấm lại r6 offline từ trace đã lưu, với mọi <code>--sources</code>: C 5/47, A 5/12, R 0/47, inventory chưa đủ, <code>passed=false</code>, không đổi so với score r7 đã lưu. Chưa có bằng chứng nào cho thấy C, A, P hay R tốt lên.</div>
+
+  <h3>Kết luận và bước kế</h3>
+  <ul>
+    <li>Leader: <span class="pill ok">PASS</span> &nbsp; QA: <span class="pill ok">PASS</span>. Chưa kiểm live: negotiation capability với worker mới, độ ổn định <code>dom_path</code> trên carousel dots thật, kích thước inventory thật, hành vi model khi thấy control không tên, hiển thị dashboard khi A3 bật (đổi <code>observed_controls</code>/<code>remaining_controls</code>).</li>
+    <li>Bước kế: rebuild <code>playwright-worker</code> (thêm control-plane và temporal-worker nếu dev nói cần: có, vì cờ do temporal-worker đọc và A3 chạy ở control plane), rồi một phiên live agent_loop bật cờ; phiên đọc <code>vision.state.mismatch</code> (B) đã được user duyệt. Sau đó <code>run.py import</code>, <code>collect</code>, <code>detect</code>, review, rồi chấm các tổ hợp <code>--sources</code> (<code>all</code>, <code>none</code>, <code>click_context</code>, <code>inventory</code>, <code>click_context,inventory</code>); giữ cái nào điểm tốt hơn.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Phase 04 · vòng r9 — phiên live A1+A3 và sửa race receipt bridge (2026-11-21)</h2>
+  <p class="sub">Phase 04 vẫn in progress. Phiên live không hợp lệ nên không chấm; fix chỉ chạy offline, chưa rebuild, chưa live lại, không commit.</p>
+
+  <h3>Mục tiêu và người làm</h3>
+  <p>Chạy đúng một phiên live agent_loop bật A1 (click context) và A3 (inventory) để lấy bằng chứng thật, rồi xử lý lỗi bridge làm chết phiên.</p>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>Phiên chính</td><td><span class="pill ok">DONE</span> Rebuild 4 service (control-plane, temporal-worker, claude-bridge, playwright-worker) và recreate; <code>check</code> ra 0 mismatch (163 / 163 / 163 / 49). Log: <a href="reports/phase-04/coordinator-r8-build.log">coordinator-r8-build.log</a>, <a href="reports/phase-04/coordinator-r8-up.log">coordinator-r8-up.log</a>.</td></tr>
+    <tr><td>be-developer r8 (live)</td><td><span class="pill warn">ESCALATE</span> Một phiên live <code>79b90323…</code> chết <code>bridge_policy_revoked</code>, không phải terminal hợp lệ. <a href="reports/phase-04/be-developer-r8.md">be-developer-r8.md</a>.</td></tr>
+    <tr><td>be-developer r9 (fix)</td><td><span class="pill ok">DONE</span> Sửa race receipt trong <code>FileSpool.stop_reason</code>, ADR-041. <a href="reports/phase-04/be-developer-r9.md">be-developer-r9.md</a>.</td></tr>
+    <tr><td>leader r4</td><td><span class="pill ok">PASS</span> Không BLOCKING. <a href="reports/phase-04/leader-r4.md">leader-r4.md</a>.</td></tr>
+    <tr><td>qa r3</td><td><span class="pill ok">PASS</span> 28 case QA mới. <a href="reports/phase-04/qa-r3.md">qa-r3.md</a>.</td></tr>
+  </table></div>
+
+  <h3>Kết quả live</h3>
+  <div class="scroll"><table>
+    <tr><th>Mục</th><th>Giá trị</th></tr>
+    <tr><td>Session</td><td><code>79b90323-e05f-474e-9ca7-6f66993995f2</code>, engine <code>agent_loop</code>, model <code>claude_cli</code> <code>claude-opus-5-5</code>, cờ loop + A1 + A3 bật, A2 tắt</td></tr>
+    <tr><td>Terminal</td><td><span class="pill bad">unavailable</span> / <code>bridge_policy_revoked</code> sau khoảng 40 s (không thuộc agent_done, agent_stopped, agent_step_limit, session_timeout). Không import vào <code>runs/</code>, không có điểm chính thức.</td></tr>
+    <tr><td>Bridge job / token</td><td class="n">2 job: job 1 completed (4,655 in / 289 out); job 2 failed <code>bridge_policy_revoked</code> sau 2.2 s, không có usage, 0 schema rejection</td></tr>
+    <tr><td>Operation</td><td class="n">2: setup navigate, 1 click <code>1:2</code> SU KIEN (completed, <code>url_change=changed</code>)</td></tr>
+    <tr><td>A1 chạy thật</td><td>Click mang <code>executed_click</code> (x=0.4386, y=0.0422, viewport 1280×720, scroll 0/0, <code>url_fingerprint</code> = sha256 của <code>https://mongchiton.vn/</code>, khớp <code>source_url</code> của oracle). Navigate setup: <code>executed_click: null</code> như thiết kế.</td></tr>
+    <tr><td>A3 chạy thật</td><td><code>/result</code> có 2 trang: trang chủ 7 control (<code>skipped_count=9</code> <code>multiple_matches</code>), <code>/su-kien</code> 11 control (<code>skipped_count=2</code>); không bị cắt. Kết luận runtime vẫn <code>partial</code>, <code>observed_controls=18</code>, <code>completed_controls=0</code>.</td></tr>
+    <tr><td>Click review độc lập</td><td>SU KIEN mở đúng <code>/su-kien</code>; box khớp oracle mct-02.</td></tr>
+    <tr><td><code>vision.state.mismatch</code></td><td>0 dòng trong log worker; câu hỏi hướng B (phần tử nào đổi) vẫn chưa có dữ liệu.</td></tr>
+  </table></div>
+  <div class="note"><strong>Điểm diagnostic, không phải điểm chính thức.</strong> Chạy trong thư mục scratch với đúng một click đã review (mct-02 đúng). Mọi <code>--sources</code> đều cho C 1/47, A 1/1, <code>passed=false</code>; detection P 7/7, R 7/47 với <code>all</code>, <code>inventory</code>, <code>click_context,inventory</code>; P 0/0, R 0/47 với <code>none</code>, <code>click_context</code>. Detection nhận mct-01 đến 06 và mct-11, 0 unexpected, inventory chưa đủ. Không so sánh được với r6 (C 5/47, A 5/12, R 0/47) vì r6 chạy 20 bước còn r9 chỉ 1 click: không kết luận C, A, P, R tốt lên. Giá trị của A1 chỉ thấy khi click dưới màn hình đầu; chưa có click nào như vậy.</div>
+
+  <h3>Nguyên nhân và fix</h3>
+  <ul>
+    <li><strong>Nguyên nhân:</strong> <code>FileSpool.stop_reason</code> (<code>spool.py</code>) coi receipt là thu hồi nếu <code>recorded_at &gt; now</code>. Bridge lấy <code>now</code> trước khi đọc <code>authorization.json</code>; control-plane ghi lại receipt mỗi khoảng 2 s (ghi atomic). Receipt ghi giữa hai thời điểm đó bị coi là <code>bridge_policy_revoked</code>. Dev r9 loại trừ ghi không atomic và rule ttl. Chứng minh offline bằng test: đỏ trên code cũ, xanh sau sửa; QA tái hiện bằng poll trễ 30 ms (skew 0: 76/76 và 78/78 poll bị revoked sai; skew 1 s: 0). Race gốc cỡ micro-giây không tự đỏ trên máy QA (0/1406). Chưa chứng minh live; spool folder r9 đã mất nên chưa loại hẳn receipt thiếu/hết hạn.</li>
+    <li><strong>Fix (ADR-041):</strong> hằng <code>RECEIPT_CLOCK_SKEW = 1 s</code>; điều kiện thành <code>recorded_at - RECEIPT_CLOCK_SKEW &lt;= now</code>. Expiry, deadline, ttl (0, 10 s], status <code>queued</code>, cancel giữ nguyên. <code>codex_bridge.py</code> không cần sửa.</li>
+  </ul>
+
+  <h3>Diff thật</h3>
+  <div class="note">Số liệu từ <code>git diff --numstat</code> và <code>git status --short</code> (git root <code>agent-at</code>). File đã bẩn từ trước nên +/− là <strong>tích luỹ so với HEAD</strong>; file untracked (<code>??</code>) ghi tổng dòng hiện tại (<code>wc -l</code>).</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td><code>apps/control-plane/infrastructure/codex_bridge/spool.py</code></td><td>sửa</td><td class="n">+14 / −4</td><td>Tích luỹ so với HEAD. Phần r9: hằng <code>RECEIPT_CLOCK_SKEW</code> và một điều kiện so sánh. Leader ghi nhận diff còn chứa <code>REQUEST_MAX_BYTES</code> / <code>AGENT_REQUEST_MAX_BYTES</code> từ vòng trước.</td></tr>
+    <tr><td><code>tests/test_codex_bridge_spool.py</code></td><td>sửa</td><td class="n">+57 / −2</td><td>Tích luỹ. Dev thêm 4 test (re-authorize giữa now và đọc; recorded_at xa hơn skew; thiếu/hết hạn/deadline; ttl quá dài)</td></tr>
+    <tr><td><code>docs/adr/041-bridge-receipt-clock-skew-tolerance.md</code></td><td>tạo (untracked)</td><td class="n">24 dòng</td><td>ADR dung sai đồng hồ receipt</td></tr>
+    <tr><td><code>tests/test_qa_r9_bridge_receipt.py</code></td><td>tạo (untracked, QA)</td><td class="n">255 dòng</td><td>28 test: biên, revoke thật, cancel, đồng thời</td></tr>
+    <tr><td><code>docs/graphs/codex-bridge.md</code></td><td>sửa</td><td class="n">+101 / −54</td><td>Tích luỹ so với HEAD; QA thêm file test của mình bằng <code>hgraph add</code> (tổng 25 file)</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md</code></td><td>tạo (untracked)</td><td class="n">311 dòng</td><td>Dev r8 nối mục r9 (live)</td></tr>
+    <tr><td><code>plan/09112026103202-vision-accuracy-loop/README.md</code></td><td>sửa</td><td class="n">không đếm</td><td>Nối handoff r9 và r10</td></tr>
+  </table></div>
+  <p>Oracle JSON và <code>metrics.py</code>: <code>git diff --quiet</code> exit 0, không đổi.</p>
+
+  <h3>Database</h3>
+  <p>Không đụng. Không migration, không đổi chữ ký hàm; chỉ thêm hằng <code>RECEIPT_CLOCK_SKEW</code>.</p>
+
+  <h3>Test</h3>
+  <div class="grid">
+    <div class="box"><span class="label">Dev r9</span>
+      <span>đỏ trước sửa: 1 failed, 22 passed, 1 skipped (<code>assert 'bridge_policy_revoked' is None</code>); 3 test adverse còn lại đã xanh sẵn</span><span>xanh sau sửa: 134 passed, 29 skipped (6 file bridge)</span><span>ruff: sạch</span></div>
+    <div class="box"><span class="label">Leader r4</span>
+      <span>ruff sạch</span><span><code>test_codex_bridge_spool.py</code>: 23 passed, 1 skipped</span><span><span class="pill ok">PASS</span></span></div>
+    <div class="box"><span class="label">QA r3</span>
+      <span>28 passed (3 lần chạy ổn định; 1414 poll đồng thời, 0 revoked sai)</span><span>ruff sạch</span><span>hồi quy 12 file: 253 passed, 46 skipped, 1 failed</span><span><span class="pill ok">QA VERDICT PASS</span></span></div>
+  </div>
+  <ul>
+    <li><strong>1 failed tồn đọng, không do r9:</strong> <code>tests/test_codex_bridge_benchmark.py::test_offline_manifest_provenance_and_explicit_live_boundary</code>; hash nguồn trong <code>benchmark/vision/codex/manifest.json</code> lệch 17 file (nhiều file không liên quan). Cần regenerate manifest ở round riêng.</li>
+    <li><strong>Không collect được:</strong> <code>tests/test_codex_bridge_end_to_end.py</code> (<code>.env</code> máy bật bridge nên Settings báo lỗi).</li>
+    <li><strong>Skip:</strong> 46 (container Linux, PostgreSQL 55437 không có, harness image, flock/symlink Linux). Stress test: không cần. Chi tiết: <a href="qa/phase-04/r9-test-cases.md">r9-test-cases.md</a>, <a href="qa/phase-04/r9-test-report.md">r9-test-report.md</a>.</li>
+    <li>Chưa test được: live sau fix, lệch đồng hồ thật giữa container.</li>
+  </ul>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> theo <code>AGENTS.md</code> và <code>docs/code-standards.md</code>; leader xác nhận khớp, ADR 041 theo format ADR 040.</li>
+    <li><strong>Graph:</strong> <code>hgraph check</code> sạch (6 graph, 459 file, QA thêm file thành 460). File QA mới đã <code>hgraph add</code> vào <code>codex-bridge</code>. <code>hgraph check --changed</code> lỗi tool (tiền tố git-root <code>auto-at-ui/</code>, đã biết), không có drift hay stale; ADR không thuộc graph nào.</li>
+    <li><strong>Ponytail:</strong> shrink của leader: trong <code>tests/test_codex_bridge_spool.py</code> (khoảng L311) test ttl quá dài đang monkeypatch <code>_receipt</code> rồi <code>undo()</code>; nên ghi receipt trực tiếp bằng <code>spool._receipt(req, "queued", req.deadline, UUID(int=0))</code> và bỏ monkeypatch. OPTIONAL: câu "effective security window unchanged" trong ADR 041 hơi lệch; trần lease tương đối so với <code>now</code> của bridge có thể tới khoảng 11 s thay vì 10 s (writer vẫn giới hạn expiry - now &lt;= 10 s). Không chặn.</li>
+  </ul>
+
+  <h3>Kết luận và bước kế</h3>
+  <ul>
+    <li>Leader: <span class="pill ok">PASS</span> &nbsp; QA: <span class="pill ok">PASS</span>. Phiên live r9 không hợp lệ, không có điểm chính thức; A1 và A3 đã chạy thật lần đầu. Fix mới chỉ kiểm offline.</li>
+    <li>Bước kế (cần user duyệt phiên live mới): rebuild <code>control-plane</code>, <code>temporal-worker</code>, <code>claude-bridge</code> (cả ba import <code>spool.py</code>), rồi một phiên live A1+A3 cùng cờ để so với r6, theo dõi log bridge có <code>bridge_policy_revoked</code> ở job 2 trở đi. Nếu vẫn revoked thì nguyên nhân khác (receipt thiếu/hết hạn). Regenerate <code>benchmark/vision/codex/manifest.json</code> ở round riêng. A2 chỉ chạy sau khi có terminal hợp lệ.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Phase 04 · vòng r10 — phiên live A1+A3 sau ADR-041 (2026-11-21)</h2>
+  <p class="sub">Phase 04 vẫn in progress. Phiên live hợp lệ, đã import và chấm chính thức; chưa đạt gate. Chỉ đổi file benchmark/docs, không đổi source, không commit.</p>
+
+  <h3>Mục tiêu và người làm</h3>
+  <p>Rebuild ba service có ADR-041, chạy đúng một phiên live agent_loop bật A1 và A3 (A2 tắt), import, review thủ công và chấm chính thức theo 5 tổ hợp <code>--sources</code>.</p>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>Phiên chính</td><td><span class="pill ok">DONE</span> Rebuild control-plane, temporal-worker, claude-bridge (có ADR-041); <code>check</code> 0 mismatch (163 / 163 / 163 / 49). Log: <a href="reports/phase-04/coordinator-r10-build.log">coordinator-r10-build.log</a>, <a href="reports/phase-04/coordinator-r10-up.log">coordinator-r10-up.log</a>.</td></tr>
+    <tr><td>be-developer r10 (live, chấm)</td><td><span class="pill ok">DONE</span> Một phiên live, import, review, chấm 5 tổ hợp. <a href="reports/phase-04/be-developer-r10.md">be-developer-r10.md</a>.</td></tr>
+    <tr><td>leader / QA</td><td>Không chạy: không có diff source, chỉ benchmark/docs.</td></tr>
+  </table></div>
+
+  <h3>Kết quả live</h3>
+  <div class="scroll"><table>
+    <tr><th>Mục</th><th>Giá trị</th></tr>
+    <tr><td>Session</td><td><code>22187cc7-4247-426b-83ec-446de3682f5c</code>, correlation <code>7ede4ae0-4102-487b-aa63-57cbb071ec25</code>; cờ loop + A1 + A3 bật, A2 tắt</td></tr>
+    <tr><td>Iteration</td><td><code>396af7e4-11f9-4983-adea-180d37c768db</code> (import, không đủ điều kiện qualification)</td></tr>
+    <tr><td>Terminal</td><td><span class="pill ok">agent_done</span> state <code>unavailable</code>, <code>safe_failure_reason=agent_done</code> (model dừng <code>complete</code>); terminal hợp lệ. Khoảng 3 phút 19 giây (09:27:55 đến 09:31:14 UTC).</td></tr>
+    <tr><td>Bridge job / token</td><td class="n">14 job, đều completed, 0 failed, 0 <code>bridge_policy_revoked</code>, 0 Claude rejection; 72,096 in / 5,136 out, cached 24,233. ADR-041 chạy thật (khoảng 70 lần re-authorize, không chết như r9).</td></tr>
+    <tr><td>Operation</td><td class="n">16, đều completed: setup navigate 1, setup wait 1, click 10, back 1, close_popup 3</td></tr>
+    <tr><td>Click</td><td class="n">10 click, chỉ seq 2 (SU KIEN) trên trang oracle; 9 click còn lại trên /su-kien, /tin-tuc, /cam-nang</td></tr>
+  </table></div>
+
+  <h3>Điểm chính thức</h3>
+  <p>Chấm bằng <code>run.py evaluate --sources &lt;x&gt; --label r10_&lt;x&gt;</code>, một review (seq 2 mct-02). Oracle, <code>metrics.py</code>, policy, prompt không đổi.</p>
+  <div class="scroll"><table>
+    <tr><th><code>--sources</code></th><th>C</th><th>A</th><th>P</th><th>R</th><th>Inventory đủ</th><th>Unsafe</th><th>Passed</th></tr>
+    <tr><td><code>all</code></td><td class="n">1/47 (2.13%)</td><td class="n">1/10</td><td class="n">7/7</td><td class="n">7/47</td><td>false</td><td class="n">0</td><td><span class="pill bad">false</span></td></tr>
+    <tr><td><code>none</code></td><td class="n">1/47</td><td class="n">1/10</td><td class="n">0/0 (n/a)</td><td class="n">0/47</td><td>false</td><td class="n">0</td><td><span class="pill bad">false</span></td></tr>
+    <tr><td><code>click_context</code></td><td class="n">1/47</td><td class="n">1/10</td><td class="n">0/0 (n/a)</td><td class="n">0/47</td><td>false</td><td class="n">0</td><td><span class="pill bad">false</span></td></tr>
+    <tr><td><code>inventory</code></td><td class="n">1/47</td><td class="n">1/10</td><td class="n">7/7</td><td class="n">7/47</td><td>false</td><td class="n">0</td><td><span class="pill bad">false</span></td></tr>
+    <tr><td><code>click_context,inventory</code></td><td class="n">1/47</td><td class="n">1/10</td><td class="n">7/7</td><td class="n">7/47</td><td>false</td><td class="n">0</td><td><span class="pill bad">false</span></td></tr>
+  </table></div>
+  <p>Detection nhận mct-01 đến 06 và mct-11 (chỉ trang oracle), 0 unexpected; inventory chưa đủ (trang chủ <code>scrollable</code>, <code>skipped_count=9</code>).</p>
+
+  <h3>So sánh r6, r9, r10</h3>
+  <div class="scroll"><table>
+    <tr><th>Run</th><th>Bước / click</th><th>Terminal</th><th>C</th><th>A</th><th>R</th><th>Ghi chú</th></tr>
+    <tr><td>r6</td><td class="n">20 / 12 (8 ok, 4 rejected)</td><td>agent_stopped</td><td class="n">5/47 (ADR-039, không page-check)</td><td class="n">5/12</td><td class="n">0/47</td><td>6 <code>state_mismatch</code> ở trang chủ, 107,235 in</td></tr>
+    <tr><td>r9</td><td class="n">2 job / 1 click</td><td>bridge_policy_revoked</td><td class="n">1/47 diagnostic</td><td class="n">1/1</td><td class="n">7/47 diagnostic</td><td>không hợp lệ</td></tr>
+    <tr><td>r10</td><td class="n">14 / 10 (đều ok)</td><td>agent_done</td><td class="n">1/47 (page-checked)</td><td class="n">1/10</td><td class="n">7/47</td><td>72,096 in, 1 mismatch đã recover</td></tr>
+  </table></div>
+  <div class="note"><strong>Không so sánh cùng điều kiện, không khẳng định cải thiện.</strong> C và A thấp hơn vì bằng chứng chặt hơn và agent phần lớn click ngoài trang; R tăng chỉ nhờ inventory A3. K1 chưa đạt (14 lần gọi, 1 target). Verdict runtime vẫn <code>partial</code> / <code>inventory_limited</code>.</div>
+
+  <h3>Phát hiện</h3>
+  <ul>
+    <li><strong>Agent không scroll:</strong> sau click đầu nó ở lại /su-kien, /tin-tuc, /cam-nang, thử các link header dùng chung, rồi dừng <code>complete</code>. 46 trên 47 target oracle chưa chạm (31 dưới màn hình, 15 không tên).</li>
+    <li><strong>9 control dưới màn hình bị skip</strong> (<code>multiple_matches</code>) trong inventory của chính agent trên trang chủ; agent không quay lại để xử lý.</li>
+    <li><strong>A1 từ chối click ngoài trang:</strong> 4 click (seq 7, 10, 12, 16, trùng nhãn và box với mct-04, 05, 06, 01) và seq 15 (mct-03) bị <code>off_page_url</code>, không credit. Review viên không tính. A1 biến 5/47 giả thành 1/47 thật.</li>
+    <li><strong>r6 5/47 không page-checked:</strong> diagnostic trong scratch (không chính thức) cho thấy cách chấm chỉ theo nhãn và box sẽ ra C 5/47, A 5/10 với <code>none</code>; <code>click_context</code> từ chối <code>off_page_url</code>.</li>
+    <li><strong>Inventory A3 thật:</strong> 14 trang, khoảng 30 KB, 1 đến 11 control mỗi trang, <code>truncated=false</code> (trần 100). Trang chủ 7 control + 9 skipped; 3 trang nav 11 control (skipped 2); Facebook 5 (skipped 17); id.tpl.vn/rules 3; support.tpl.vn 1 (skipped 3).</li>
+    <li><strong><code>state_mismatch</code> 1 lần:</strong> worker, <code>dom_observation</code> / <code>observe_start</code>, sau click HO TRO mở support.tpl.vn: một <code>IMG</code> lazy được thêm (<code>interaction_count 56 → 57</code>, <code>state_age_ms=345</code>, scope <code>all</code>). Recover bằng setup <code>wait</code> rồi <code>close_popup</code>. Drift ở trang chủ sau scroll của r6 không tái diễn vì agent không scroll; câu hỏi đó vẫn mở. Cổng không đổi.</li>
+  </ul>
+
+  <h3>Diff thật</h3>
+  <div class="note">Số liệu từ <code>git status --short</code> và <code>git diff --numstat</code> (git root <code>agent-at</code>), giới hạn <code>auto-at-ui/benchmark/vision/accuracy</code> và README của plan. File đã bẩn từ trước nên +/− là <strong>tích luỹ so với HEAD</strong>; file untracked ghi tổng dòng hiện tại (<code>wc -l</code>). Không có file source.</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td><code>benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md</code></td><td>tạo (untracked)</td><td class="n">343 dòng</td><td>Dev r10 nối mục r10</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/README.md</code></td><td>sửa</td><td class="n">+37 / −0</td><td>Tích luỹ từ vòng trước, không phải r10</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/evidence.py</code></td><td>sửa</td><td class="n">+226 / −3</td><td>Tích luỹ từ r7, r8, không phải r10</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/run.py</code></td><td>sửa</td><td class="n">+171 / −29</td><td>Tích luỹ từ r7, r8, không phải r10</td></tr>
+    <tr><td><code>plan/09112026103202-vision-accuracy-loop/README.md</code></td><td>sửa</td><td class="n">+147 / −1</td><td>Tích luỹ; r10 nối mục "r10 live handoff"</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/runs/396af7e4-11f9-4983-adea-180d37c768db/</code></td><td>tạo (thư mục run untracked)</td><td class="n">không đếm</td><td>Output harness: 5 bộ <code>*.r10_*.json</code> và review; không có <code>score.json</code> mặc định</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/runs/1c56623e-…/</code></td><td>tạo (thư mục run untracked)</td><td class="n">không đếm</td><td>Từ r7, không phải r10</td></tr>
+  </table></div>
+  <p>Oracle <code>9242b33d…</code>, <code>metrics.py</code>, policy, prompt: không đổi. Ghi ngoài phạm vi thường: file scratch, <code>.pytest-artifacts/agent-loop-r10-*.json</code>, đổi tên <code>agent-loop-session.r9.json</code>.</p>
+
+  <h3>Database</h3>
+  <p>Không migration, không đổi schema; chỉ có dữ liệu phiên (job, operation, state inventory) do chạy live.</p>
+
+  <h3>Test</h3>
+  <p>Không đổi source nên không chạy test mới trong vòng này. Kiểm chứng bằng live thật và chấm harness (5 tổ hợp). Các test offline của r8, r9 giữ nguyên kết quả cũ.</p>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> không lệch (<code>AGENTS.md</code>, <code>docs/code-standards.md</code>).</li>
+    <li><strong>Graph:</strong> không đổi; không thêm, xoá file source, không đổi import.</li>
+    <li><strong>Ponytail:</strong> không có.</li>
+  </ul>
+
+  <h3>Kết luận và bước kế (chờ user)</h3>
+  <ul>
+    <li>ADR-041 hoạt động live; A1 và A3 cho bằng chứng thật. Gate chưa đạt; nút thắt giờ là hành vi agent, không phải harness. Phiên live đã duyệt đã dùng hết.</li>
+    <li>Bước kế cần user duyệt: đổi prompt/policy để agent quay lại trang chủ và scroll khi <code>skipped_count&gt;0</code> (tăng version prompt), rồi một phiên live A1+A3 để so với r10. A2 chạy sau đó.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Phase 04 · vòng r11–r12 — prompt agent-loop-v2 và phiên live (2026-11-21)</h2>
+  <p class="sub">Phase 04 vẫn in progress. r11 chỉ đổi prompt, chạy offline; r12 là phiên live duy nhất đã duyệt, kết thúc bằng <code>settle_timeout</code> nên không có điểm chính thức. Không commit.</p>
+
+  <h3>Quyết định của user (sau r10)</h3>
+  <p>Duyệt đổi prompt agent_loop (version mới) để agent quay lại trang oracle và scroll khi còn control dưới màn hình bị skip (<code>skipped_count &gt; 0</code>) thay vì dừng <code>complete</code>. Policy caps, gate, oracle, metrics không đổi. Sau đó một phiên live A1+A3; A2 để sau.</p>
+
+  <h3>Mục tiêu và người làm</h3>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>be-developer r11</td><td><span class="pill ok">DONE</span> Prompt v1 sang v2, offline. <a href="reports/phase-04/be-developer-r11.md">be-developer-r11.md</a></td></tr>
+    <tr><td>leader r5</td><td><span class="pill ok">PASS</span> <a href="reports/phase-04/leader-r5.md">leader-r5.md</a></td></tr>
+    <tr><td>QA r4</td><td><span class="pill ok">PASS</span> (offline; hành vi thật của model chưa kiểm chứng) <a href="reports/phase-04/qa-r4.md">qa-r4.md</a>, <a href="qa/phase-04/r11-test-cases.md">r11-test-cases.md</a>, <a href="qa/phase-04/r11-test-report.md">r11-test-report.md</a></td></tr>
+    <tr><td>Phiên chính (rebuild)</td><td><span class="pill ok">DONE</span> Rebuild control-plane, temporal-worker, claude-bridge. <a href="reports/phase-04/coordinator-r12-build.log">coordinator-r12-build.log</a>, <a href="reports/phase-04/coordinator-r12-up.log">coordinator-r12-up.log</a></td></tr>
+    <tr><td>be-developer r12 (live)</td><td><span class="pill warn">DONE, terminal không hợp lệ</span> Một phiên live, chẩn đoán trong scratch. <a href="reports/phase-04/be-developer-r12.md">be-developer-r12.md</a></td></tr>
+  </table></div>
+
+  <h3>r11 · Bằng chứng</h3>
+  <ul>
+    <li><code>render_snapshot</code> (<code>application/vision_agent_loop.py:100-117</code>) đã gửi cho model dòng <code>more below: yes|no</code> và dòng <code>N control ngoài snapshot</code> khi <code>skipped_count&gt;0</code>. Không cần đổi observation.</li>
+    <li>Kết quả r10: trang chủ <code>scrollable=true, skipped_count=9</code>; /su-kien, /tin-tuc, /cam-nang <code>scrollable=true, skipped_count=2</code>. Model nhận cả hai tín hiệu nhưng bỏ qua; prompt v1 chỉ nói mơ hồ, không có quy tắc quay lại trang đầu, không cấm <code>complete</code>.</li>
+    <li>Không kiểm chứng offline được: đúng văn bản snapshot model thấy ở r10 (trace không lưu), chỉ suy ra từ code và kết quả.</li>
+  </ul>
+
+  <h3>r11 · Thay đổi prompt</h3>
+  <ul>
+    <li><code>PROMPT_VERSION</code> <code>agent-loop-v1</code> sang <code>agent-loop-v2</code>.</li>
+    <li>Mục lỗi nêu hai tín hiệu; mục mới "Covering the starting page first": phủ xong trang đầu trước các link header dùng chung, quay lại bằng navigate/back, rồi scroll khi còn <code>more below: yes</code> hoặc control ngoài snapshot.</li>
+    <li>Mục Finishing: không <code>complete</code> khi các tín hiệu còn trên trang đầu, trừ khi scroll không lộ thêm gì. Nội dung tổng quát, không tên site, URL, số lượng.</li>
+    <li>Loop code, policy caps không đổi; chỉ cấm bằng prompt, không có guard trong code.</li>
+  </ul>
+
+  <h3>Diff thật</h3>
+  <div class="note">Số liệu từ <code>git -C D:/Person/CaoHoc/KhoaLuanTotNghiep/agent-at status --short</code> và <code>git diff --numstat</code> cho các file be-developer r11 và qa r4 liệt kê. File đã bẩn từ trước nên +/− là <strong>tích luỹ so với HEAD</strong>; file untracked (chưa có trong git HEAD) ghi tổng dòng hiện tại (<code>wc -l</code>), không tách phần r11. Đường dẫn tính từ <code>auto-at-ui/</code>.</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td><code>apps/control-plane/agents/prompts/agent_loop.py</code></td><td>untracked</td><td class="n">136 dòng</td><td>Prompt v2 (dev r11)</td></tr>
+    <tr><td><code>apps/control-plane/agents/prompts/README.md</code></td><td>sửa</td><td class="n">+1 / −0</td><td>Dev r11 nâng hàng lên v2 + câu changelog; số git tích luỹ so với HEAD (21 dòng hiện tại)</td></tr>
+    <tr><td><code>tests/test_agent_loop_prompt.py</code></td><td>untracked</td><td class="n">212 dòng</td><td>Version/README sang v2; thêm test "covering the starting page"</td></tr>
+    <tr><td><code>tests/test_agent_loop_bridge.py</code></td><td>untracked</td><td class="n">407 dòng</td><td>v1 sang v2</td></tr>
+    <tr><td><code>tests/test_vision_agent_loop.py</code></td><td>untracked</td><td class="n">1113 dòng</td><td>v1 sang v2</td></tr>
+    <tr><td><code>tests/test_agent_loop_bridge_qa.py</code></td><td>untracked</td><td class="n">297 dòng</td><td>Không sửa; v1 giữ làm version bị từ chối</td></tr>
+    <tr><td><code>tests/test_qa_r11_agent_loop_prompt.py</code></td><td>tạo (untracked, QA)</td><td class="n">159 dòng</td><td>23 test item mới</td></tr>
+    <tr><td><code>docs/graphs/vision-agent-loop.md</code></td><td>untracked</td><td class="n">220 dòng</td><td>Ghi v2; QA thêm test mới vào graph</td></tr>
+    <tr><td><code>docs/graphs/codex-bridge.md</code></td><td>sửa</td><td class="n">+108 / −54</td><td>Tích luỹ nhiều vòng; QA chạy <code>hgraph sync codex-bridge --apply</code> (thêm test mới). Dòng 92 còn ghi v1 (cosmetic)</td></tr>
+  </table></div>
+  <p>Toàn working tree hiện 103 file thay đổi/untracked (<code>git status --short</code>), phần lớn từ vòng trước. <code>benchmark/vision/codex/manifest.json</code> không tái tạo: <code>agent_loop.py</code> không thuộc nguồn của manifest.</p>
+
+  <h3>Database</h3>
+  <p>Không đụng: không migration, không đổi schema.</p>
+
+  <h3>Test</h3>
+  <ul>
+    <li>Dev r11: <code>uv run ruff check .</code> sạch; pytest nhóm prompt/bridge/contracts/loop: <strong>1 failed, 362 passed, 67 skipped</strong> (110 s). 1 fail là <code>test_codex_bridge_benchmark.py::test_offline_manifest_provenance_and_explicit_live_boundary</code> (lệch hash có từ trước, không đổi). 67 skip có sẵn.</li>
+    <li>Leader r5: ruff sạch; 51 passed, 48 skipped (81 s).</li>
+    <li>QA r4: 23 test item mới (14 case) pass 23 / fail 0; hồi quy 404 passed, 64 skipped (109,64 s), skip do PostgreSQL <code>127.0.0.1:55437</code> không có. Loop có DB không chạy được; phần phủ bằng R11-12 (loop script, không DB).</li>
+    <li>Chưa test được: model thật có tuân chỉ dẫn hay không (chỉ live); không có bản v1 trong git để chứng minh test fail trên code cũ.</li>
+  </ul>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> khớp <code>AGENTS.md</code>, <code>docs/code-standards.md</code>, <code>prompts/README.md</code> (prompt tập trung, README và version cập nhật).</li>
+    <li><strong>Graph:</strong> <code>hgraph check</code> "Không có vấn đề" (6 graph, 460 file source). Cập nhật vision-agent-loop (text version) và codex-bridge (sync). <code>hgraph check --changed</code> còn liệt kê file uncovered từ các vòng trước, không thuộc r11.</li>
+    <li><strong>Ponytail:</strong> shrink note của leader: đoạn "After scrolling no longer reveals new controls, that is covered." ở mục Finishing lặp ý với "Repeat until..." ở mục Covering; giữ một chỗ, không chặn. OPTIONAL: nói <code>back</code> trước <code>navigate</code> cho trang off-origin (navigate không được chấp nhận ở trang off-origin, chỉ <code>close_popup</code>/<code>back</code>); và cập nhật nhãn v1 ở <code>docs/graphs/codex-bridge.md:92</code>, <code>codex_service.py:63</code> khi có dịp.</li>
+  </ul>
+
+  <h3>r12 · Phiên live</h3>
+  <div class="scroll"><table>
+    <tr><th>Mục</th><th>Giá trị</th></tr>
+    <tr><td>Session</td><td><code>e0de6697-ed86-4418-8d8d-f3bc4922e36a</code>, correlation <code>196104d1-0504-4681-97bf-7d23dd6b5099</code>; cờ loop + A1 + A3 bật, A2 tắt. Prompt <code>agent-loop-v2</code> (chứng cứ gián tiếp: bridge chỉ còn builder hiện tại, 5 job completed)</td></tr>
+    <tr><td>Terminal</td><td><span class="pill bad">settle_timeout</span> state <code>unavailable</code>, <code>safe_failure_reason=settle_timeout</code>, không phải <code>agent_done</code>/<code>agent_stopped</code>; terminal không hợp lệ. Khoảng 1 phút 33 giây (10:37:38 đến 10:39:11 UTC).</td></tr>
+    <tr><td>Bridge job / token</td><td class="n">5 job, đều completed, 0 failed, 0 <code>bridge_policy_revoked</code>, 0 Claude rejection; 27,976 in / 2,598 out, cached 6,136</td></tr>
+    <tr><td>Calls</td><td class="n">5 trên 20</td></tr>
+    <tr><td>Operation</td><td class="n">9: setup navigate 1 ok, scroll 2 (1 ok, 1 failed <code>settle_timeout</code>), click 5 ok, setup wait 1 rejected <code>settle_timeout</code></td></tr>
+    <tr><td>Import / chấm</td><td>Không import vào <code>runs/</code>; chỉ diagnostic trong thư mục scratch. Không điểm chính thức.</td></tr>
+  </table></div>
+
+  <h3>r12 · Hành vi agent (prompt v2 so với r10)</h3>
+  <ul>
+    <li>Agent không rời trang chủ: mọi click và scroll đều trên trang oracle (r10 rời sau click 1).</li>
+    <li><strong>Scroll:</strong> hành động đầu sau navigate là <code>scroll</code> (seq 2, <code>scroll_y=600</code>); sau đó 5 click tại scroll (0, 600): Su Kien (mct-19), Cam Nang (mct-20), NHAN VAT (mct-30), THU CUOI (mct-31), Tin Tuc (mct-18). Scroll thứ hai (seq 8) lỗi <code>settle_timeout</code>.</li>
+    <li><strong>Inventory cuối:</strong> trang chủ <code>scrollable=true</code>, <code>skipped_count=12</code> (4 state, đều trang chủ: 21, 14, 14, 14 control, <code>truncated=false</code>). Model chưa kịp ra quyết định <code>complete</code>; worker kết thúc phiên.</li>
+    <li><strong><code>state_mismatch</code> 1 lần</strong> (<code>dom_observation</code> / <code>observe_start</code>, 10:39:01) giữa hai lần settle lỗi: <code>interaction_count 18 → 18</code>, thêm 0, bớt 0, một control đổi hình học (<code>interaction_geometry_only=1</code>), không đổi URL hay scroll, <code>state_age_ms=216</code>. Cổng không đổi.</li>
+    <li><code>bridge_policy_revoked</code>: 0.</li>
+  </ul>
+
+  <h3>r12 · Chi tiết <code>settle_timeout</code></h3>
+  <div class="scroll"><table>
+    <tr><th>Operation</th><th>Mã</th><th>Thay đổi trong 10 s</th><th>Quiet dài nhất / cần</th></tr>
+    <tr><td>scroll seq 8</td><td><code>state_kept_changing</code></td><td class="n">53 thay đổi state, 2 thay đổi DOM/layout nhìn thấy, 0 URL</td><td class="n">236 ms / 800 ms</td></tr>
+    <tr><td>setup wait (recovery)</td><td><code>settle_timeout</code></td><td class="n">51 thay đổi, 0 nhìn thấy</td><td class="n">266 ms / 800 ms</td></tr>
+  </table></div>
+  <p>Trang chủ liên tục thay đổi sau scroll và click tab (nghi widget có animation; giả thuyết chưa cô lập). Recovery wait cũng hết hạn vì trang không bao giờ có cửa sổ yên 800 ms. Cùng loại với drift trang chủ r6, nay là trần chính.</p>
+
+  <h3>r12 · Điểm diagnostic (KHÔNG chính thức)</h3>
+  <div class="note"><strong>Không chính thức.</strong> Terminal không hợp lệ, chấm trong thư mục scratch, không ghi vào <code>runs/</code>. Hai cách đọc frame: strict không tính mct-30, mct-31 vì panel khớp nằm dưới khung; lenient tính (oracle cho phép chọn lại tab đã active).</div>
+  <div class="scroll"><table>
+    <tr><th>Cách đọc</th><th><code>--sources</code></th><th>C</th><th>A</th><th>P</th><th>R</th></tr>
+    <tr><td>strict</td><td><code>all</code></td><td class="n">3/47 (6.38%)</td><td class="n">3/5</td><td class="n">14/35</td><td class="n">14/47</td></tr>
+    <tr><td>strict</td><td><code>none</code>, <code>inventory</code></td><td colspan="4">từ chối <code>no_oracle_match</code></td></tr>
+    <tr><td>strict</td><td><code>click_context</code></td><td class="n">3/47</td><td class="n">3/5</td><td class="n">0/0</td><td class="n">0/47</td></tr>
+    <tr><td>strict</td><td><code>click_context,inventory</code></td><td class="n">3/47</td><td class="n">3/5</td><td class="n">14/35</td><td class="n">14/47</td></tr>
+    <tr><td>lenient</td><td><code>all</code></td><td class="n">5/47 (10.64%)</td><td class="n">5/5</td><td class="n">14/35</td><td class="n">14/47</td></tr>
+    <tr><td>lenient</td><td><code>none</code>, <code>inventory</code></td><td colspan="4">từ chối <code>no_oracle_match</code></td></tr>
+    <tr><td>lenient</td><td><code>click_context</code></td><td class="n">5/47</td><td class="n">5/5</td><td class="n">0/0</td><td class="n">0/47</td></tr>
+    <tr><td>lenient</td><td><code>click_context,inventory</code></td><td class="n">5/47</td><td class="n">5/5</td><td class="n">14/35</td><td class="n">14/47</td></tr>
+  </table></div>
+  <p>passed=false, unsafe 0, inventory chưa đủ (scrollable, skipped 12). Detection nhận mct-01 đến 06, 11, 18, 19, 20, 30, 31, 37, 43; 21 control không khớp oracle (ví dụ link bài viết) nên P 14/35. Giá trị A1: không có scroll offset thì click dưới màn hình không bind được (<code>no_oracle_match</code>). Seq 3, 4, 7: tab active và danh sách hiện đúng; seq 5, 6: panel khớp nằm dưới khung.</p>
+
+  <h3>So sánh r6, r9, r10, r12</h3>
+  <div class="scroll"><table>
+    <tr><th>Run</th><th>C</th><th>A</th><th>P</th><th>R</th><th>Click</th><th>Scroll</th><th>Call</th><th>Terminal</th></tr>
+    <tr><td>r6</td><td class="n">5/47 (ADR-039, không page-check)</td><td class="n">5/12</td><td>n/a</td><td class="n">0/47</td><td class="n">12 (8 ok)</td><td class="n">2</td><td class="n">20</td><td>agent_stopped, hợp lệ</td></tr>
+    <tr><td>r9</td><td class="n">1/47 diagnostic</td><td class="n">1/1</td><td class="n">7/7 diag</td><td class="n">7/47 diag</td><td class="n">1</td><td class="n">0</td><td class="n">2</td><td>bridge_policy_revoked, không hợp lệ</td></tr>
+    <tr><td>r10</td><td class="n">1/47 chính thức</td><td class="n">1/10</td><td class="n">7/7</td><td class="n">7/47</td><td class="n">10 (1 trên trang oracle)</td><td class="n">0</td><td class="n">14</td><td>agent_done, hợp lệ</td></tr>
+    <tr><td>r12</td><td class="n">3/47 strict, 5/47 lenient (diagnostic)</td><td class="n">3/5, 5/5</td><td class="n">14/35</td><td class="n">14/47</td><td class="n">5 (đều trên trang oracle)</td><td class="n">2 (1 lỗi)</td><td class="n">5</td><td>settle_timeout, không hợp lệ</td></tr>
+  </table></div>
+  <div class="note"><strong>Không khẳng định cải thiện.</strong> Chỉ r6 (5/47, không page-check) và r10 (1/47) là số chính thức với terminal hợp lệ; r9 và r12 là diagnostic. Điều dữ liệu hỗ trợ là về hành vi: v2 scroll và ở lại trang oracle (5 call cho 5 target oracle, r10 là 14 call cho 1 target).</div>
+
+  <h3>Kết luận</h3>
+  <ul>
+    <li>Prompt v2 làm đúng hai hành vi được yêu cầu: scroll sớm và ở lại trang oracle.</li>
+    <li>Blocker mới là quy tắc settle của worker (<code>state_kept_changing</code>) trên trang chủ sau scroll/click tab, kết thúc phiên ở 5 trên 20 call, không phải model.</li>
+    <li>A1 bắt buộc cho mọi điểm dưới màn hình; A3 nhận 14 control nhưng cũng 21 không khớp (precision 40%). 12 control vẫn bị skip ở trang chủ.</li>
+    <li>Phiên live đã duyệt đã dùng hết; muốn có terminal hợp lệ cần quyết định mới. r12 không đổi source.</li>
+  </ul>
+
+  <h3>Bước kế (chờ user)</h3>
+  <ul>
+    <li>Quyết định cách xử lý <code>settle_timeout</code> ở trang chủ sau scroll mà <strong>không nới gate</strong> (ví dụ thay đổi chỉ hình học/animation, hoặc retry giới hạn cho recovery wait); cần rebuild playwright-worker.</li>
+    <li>Chốt quy tắc tab-outcome khi panel nằm dưới khung (strict 3 so với lenient 5) trước khi chấm một phiên hợp lệ.</li>
+    <li>Sau đó một phiên live A1+A3 mới để lấy terminal hợp lệ; A2 (<code>VISION_AGENT_DOM_PATH_ENABLED</code>, nhắm 15 control không tên) chạy riêng sau đó.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Phase 04 · vòng r13–r14 — settle_timeout trang chủ và ADR-042 (2026-11-21)</h2>
+  <p class="sub">Phase 04 vẫn in progress. r13 chẩn đoán offline, r14 sửa settle (A + B giới hạn) và qua 2 vòng review. Chưa rebuild playwright-worker, chưa live, không commit.</p>
+
+  <h3>Quyết định của user</h3>
+  <ul>
+    <li>Sau r12: chẩn đoán <code>settle_timeout</code> trang chủ offline trước; không đổi gate, không phiên live ở bước này.</li>
+    <li>Sau r13: sửa settle theo phương án <strong>A + B giới hạn</strong> (dung sai hình học khi nội dung control không đổi, cộng hộp layout chỉ cho control dưới animation CSS vô hạn đã nhận diện), kèm ADR mới; hit test và exact-node verify lúc dispatch giữ nguyên. Tab outcome mct-30/31: giữ nguyên chữ của rule oracle, bổ sung bằng chứng (after-frame cuộn tới panel). Thứ tự: r14 sửa settle, r15 bằng chứng tab, rồi một phiên live.</li>
+  </ul>
+
+  <h3>Người làm</h3>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>be-developer r13</td><td><span class="pill ok">DONE</span> Chẩn đoán offline. <a href="reports/phase-04/be-developer-r13.md">be-developer-r13.md</a></td></tr>
+    <tr><td>be-developer r14</td><td><span class="pill ok">DONE</span> Sửa settle A + B, ADR-042. <a href="reports/phase-04/be-developer-r14.md">be-developer-r14.md</a></td></tr>
+    <tr><td>leader r6</td><td><span class="pill bad">FAIL</span> 1 BLOCKING. <a href="reports/phase-04/leader-r6.md">leader-r6.md</a></td></tr>
+    <tr><td>QA r5</td><td><span class="pill bad">FAIL</span> QA-P1. <a href="reports/phase-04/qa-r5.md">qa-r5.md</a>, <a href="qa/phase-04/r14-test-cases.md">r14-test-cases.md</a>, <a href="qa/phase-04/r14-test-report.md">r14-test-report.md</a></td></tr>
+    <tr><td>be-developer r14b</td><td><span class="pill ok">DONE</span> Sửa 2 lỗi review. <a href="reports/phase-04/be-developer-r14b.md">be-developer-r14b.md</a></td></tr>
+    <tr><td>leader r7</td><td><span class="pill ok">PASS</span> 0 BLOCKING. <a href="reports/phase-04/leader-r7.md">leader-r7.md</a></td></tr>
+    <tr><td>QA r6</td><td><span class="pill ok">PASS</span> (offline, fixture cục bộ; widget live chưa kiểm). <a href="reports/phase-04/qa-r6.md">qa-r6.md</a></td></tr>
+  </table></div>
+
+  <h3>r13 · Chẩn đoán</h3>
+  <p><strong>Nguyên nhân gốc:</strong> widget "play now" trên trang chủ (<code>div.group.absolute.animate-play-now-pulse</code> chứa <code>a.absolute.inset-0</code>) chạy CSS animation <code>play-now-pulse</code> vô hạn (scale), nằm trong viewport sau scroll 600 px. Swiper autoplay chỉ góp các đợt đổi rời rạc (drift r6b), không phải nguyên nhân của r12.</p>
+  <ul>
+    <li><strong>Thuật toán (<code>vision-checkpoints.ts:209</code> <code>settleState</code>):</strong> polling ~80 ms, mỗi lần <code>inspectState</code> (60-150 ms), không dùng MutationObserver. "Đổi" = <code>fingerprint</code> khác hoặc <code>privateForms</code> khác. <code>interaction_fingerprint</code> scope <code>all</code> băm bounds đã clip, 5 hit test và cờ transparent của mọi control nhìn thấy, nên link pulse đổi băm gần mỗi mẫu. Cửa sổ yên 800 ms (scroll/navigate, hạn 10 s) không bao giờ đạt; khoảng yên dài nhất đo được chỉ 236-431 ms.</li>
+    <li><strong>Probe cô lập</strong> (Chromium headless 1280x720, trang thật, 1 wheel 600 px, không click, không form): lần 1 có 95 mẫu, 85 thay đổi trong 15 s, yên dài nhất 341 ms. Lần 2 có 92 mẫu, 79 thay đổi, yên dài nhất 431 ms, 78/79 chỉ đổi hình học (content added/removed 0). Khớp r12 (53 đổi/10 s, quiet 236 ms). <code>a.absolute.inset-0</code> chiếm ~100 sự kiện; 144 trạng thái bounds khác nhau trong 9 s, kích thước 94x72 sang 99x77 rồi về lại. <code>document.getAnimations()</code>: <code>play-now-pulse</code> running (vô hạn). Lưu ý: tỷ lệ semantic/interaction ở r12 (container) chưa tái hiện y hệt trên host.</li>
+    <li><strong>Spec tái hiện:</strong> <code>vision-settle-animation.spec.ts</code> + fixture <code>settle-animated-control.ts</code>; 4 test, <code>7 passed (11.2s)</code> cùng settle-observability, test "pulse thuần trình bày không được chặn settle" đánh dấu <code>test.fail(true)</code> (đỏ thật ở thời điểm đó).</li>
+    <li><strong>Phương án:</strong> A = dung sai hình học có điều kiện (khuyến nghị); B = hộp layout bỏ transform cho control dưới animation vô hạn; C = tách hai tầng (settle theo content digest, hình học chỉ kiểm lúc prepare). Không khuyến nghị: trả <code>settled</code> sau deadline hoặc tăng timeout.</li>
+    <li><strong>Phụ, tab outcome mct-30/31:</strong> tab nằm sát đáy viewport sau scroll 600, panel nằm dưới khung nên đọc nghiêm 3/47, đọc nới 5/47. Đã chọn hướng bổ sung after-frame (r15).</li>
+  </ul>
+
+  <h3>r14 · Triển khai (ADR-042)</h3>
+  <ul>
+    <li><strong>A (dung sai):</strong> hằng số có tên <code>BOX_CENTER_TOLERANCE_PX = 3</code>, <code>BOX_MIN_IOU = 0.8</code>. <code>equivalentState</code> giữ fast path hash; nếu khác thì so từng entry theo vị trí: url/form presence/scroll giống hệt, cùng số entry, content digest giống hệt và <code>sameBox</code> (tâm lệch ≤ 3 px mỗi trục và IoU ≥ 0.8). Hit tâm luôn phải khớp; hit 4 góc và transparent chỉ được miễn khi CẢ HAI trạng thái <code>animated</code>.</li>
+    <li><strong>B giới hạn:</strong> chỉ CSSAnimation vô hạn mà keyframe chỉ chạm transform (scale/rotate, không translate/matrix/perspective) hoặc opacity, không pseudoElement, không bị animation vô hạn khác chặn, không có transform lạ trên chuỗi tổ tiên (loại wrapper swiper/carousel translate), thuộc document chính (không shadow). Control như vậy dùng hộp layout (offset chain, cắt viewport; bỏ qua fixed/sticky). Marquee translate, <code>left/top/width</code>, <code>Element.animate</code>, transition không được miễn.</li>
+    <li><strong>Settle so với mốc mở cửa sổ yên</strong> (<code>reference</code>), không so mẫu trước, để drift chậm không trôi lọt dung sai từng bước; reset khi context bị thay.</li>
+    <li>Không đổi: <code>fingerprint</code>, <code>interaction_fingerprint</code>, <code>semantic_fingerprint</code>, hash policy, metadata checkpoint, public contract. Không đụng DB.</li>
+    <li>Đỏ rồi xanh: trước khi sửa, test pulse trả <code>Expected: true Received: false</code>; sau sửa pulse settle trong 938 ms, không phát <code>settle_timeout</code>.</li>
+  </ul>
+
+  <h3>Vòng review 1 · FAIL, 2 lỗi</h3>
+  <ul>
+    <li><strong>Leader BLOCKING (<code>vision-dom.ts:33</code>, <code>vision-operations.ts:552</code>/<code>:543</code>):</strong> còn so fingerprint lưu trữ trực tiếp với giá trị wire, không qua <code>equivalentState</code>. Settle pass nhưng observe/prepare kế tiếp inspect lại, pha pulse khác, hash khác, nên <code>state_mismatch</code> ngay trước dispatch; mục tiêu "state_mismatch hình học không còn" chưa đạt dù spec 14 test xanh (spec không chạy luồng observe/prepare với pulse).</li>
+    <li><strong>QA-P1:</strong> prepare click tâm link pulse, chờ 700 ms, execute cho <code>status=unknown</code>, <code>action_outcome_unknown</code>, <code>executed_click=null</code>: <code>locator.click</code> chờ actionability "element is not stable" (hộp đổi liên tục), hết timeout thì ném lỗi. Đối chứng trang tĩnh: <code>completed</code>. QA-P0 chứng minh <code>force: true</code> click được.</li>
+  </ul>
+
+  <h3>r14b · Sửa</h3>
+  <ul>
+    <li><strong>Held fingerprint + equivalentState:</strong> <code>observeDom</code> nhận <code>options.held</code> (= <code>session.state</code>): <code>held.fingerprint === expected &amp;&amp; equivalentState(held, fresh)</code>, snapshot trả <code>held.fingerprint</code>. Prepare: <code>session.state.fingerprint === expected &amp;&amp; equivalentState(fresh, session.state)</code>, rồi <code>runtime.before = session.state</code> (hash đã phát là định danh; drift không cộng dồn qua các vòng). Không có <code>held</code> thì giữ so sánh hash chính xác như cũ.</li>
+    <li><strong>force chỉ cho target animation vô hạn eligible sau hit test:</strong> <code>isPresentationOnlyAnimated(target, point)</code> dùng cùng quy tắc <code>animated</code> và yêu cầu <code>elementFromPoint</code> tại điểm click resolve về target/descendant (vì force bỏ qua hit-target check của Playwright). Chạy sau hit test + exact-node verify hiện có; lỗi thì false. Đã chọn force thay vì tạm dừng animation (không đổi trạng thái trang, không cần khôi phục trên mọi đường lỗi).</li>
+    <li>Test: observe/prepare/execute 3 vòng trên strong pulse không <code>state_mismatch</code> (tạm bỏ <code>held</code> thì test đỏ, khôi phục thì xanh); ma trận force (pulse, strong, spin = true; tĩnh, marquee, left, width, carousel, điểm bị che = false); bỏ <code>test.fail</code> của QA-P1.</li>
+  </ul>
+
+  <h3>Vòng review 2 · PASS</h3>
+  <ul>
+    <li><strong>Leader r7 PASS (0 BLOCKING):</strong> hash trực tiếp còn lại ở <code>vision-operations.ts:958</code> (re-baseline sau type, chỉ bỏ qua re-baseline, bảo thủ) và các so sánh trường chính xác; không sót. Dung sai không cộng dồn trong một chu kỳ observe, prepare, execute; <code>session.state</code> chỉ đổi sau execute.</li>
+    <li><strong>QA r6 PASS (13 nhóm case r2, 13/13):</strong> QA-P1 xanh không flaky (34 passed x2; qa spec 24 passed x3); fingerprint kỳ vọng sai vẫn <code>state_mismatch</code>; drift 1 px/vòng không trôi baseline; <code>force</code> không quyết cho Element.animate, transition, wrapper translate, marquee, điểm bị che. Dung sai tích luỹ tối đa ~3 px so với state đã giữ (có thể ~6 px so với lúc model thấy khi tính cả settle).</li>
+  </ul>
+
+  <h3>Diff thật</h3>
+  <div class="note">Số liệu từ <code>git -C D:/Person/CaoHoc/KhoaLuanTotNghiep/agent-at diff --numstat</code> và <code>status --short</code> cho các file worker/docs/spec/ADR mà các báo cáo liệt kê. File tracked đã bẩn từ trước nên +/− là <strong>tích luỹ so với HEAD</strong> (gồm các vòng trước, không tách riêng r14); file untracked ghi tổng dòng hiện tại (<code>wc -l</code>). Đường dẫn tính từ <code>auto-at-ui/</code>. Một developer khác có thể đang sửa worker cùng lúc nên số có thể đã đổi.</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td><code>workers/playwright/src/vision-checkpoints.ts</code></td><td>sửa</td><td class="n">+171 / −18</td><td>Hằng số dung sai, <code>animated</code>/<code>box</code> trong <code>inspectState</code>, <code>equivalentState</code> có dung sai, settle so với reference, <code>isPresentationOnlyAnimated</code></td></tr>
+    <tr><td><code>workers/playwright/src/vision-dom.ts</code></td><td>sửa</td><td class="n">+41 / −11</td><td><code>observeDom</code> nhận <code>held</code> (r14b)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td>sửa</td><td class="n">+126 / −23</td><td>Prepare so với state giữ; <code>force</code> cho dispatch (r14b)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-settle-animation.spec.ts</code></td><td>untracked</td><td class="n">165 dòng</td><td>Spec dev (r13 tạo, r14 viết lại 14 test)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-settle-animation.qa.spec.ts</code></td><td>untracked</td><td class="n">402 dòng</td><td>Spec QA (24 test)</td></tr>
+    <tr><td><code>workers/playwright/src/fixtures/settle-animated-control.ts</code></td><td>untracked</td><td class="n">34 dòng</td><td>Fixture pulse, strong pulse, rotate+fade, marquee, left, width, carousel</td></tr>
+    <tr><td><code>docs/adr/042-settle-geometry-tolerance.md</code></td><td>untracked</td><td class="n">93 dòng</td><td>ADR-042: quyết định, hằng số, giới hạn, rủi ro, rollback, test</td></tr>
+    <tr><td><code>docs/vision-agent-operations.md</code></td><td>sửa</td><td class="n">+93 / −0</td><td>Đoạn settle/dung sai (số tích luỹ so với HEAD)</td></tr>
+    <tr><td><code>docs/graphs/playwright-vision-worker.md</code></td><td>sửa</td><td class="n">+116 / −73</td><td>Sync, thêm spec/fixture, sửa dòng cổng fingerprint lỗi thời (tích luỹ)</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md</code></td><td>untracked</td><td class="n">384 dòng</td><td>Mục r13 (r13 ghi vào file này)</td></tr>
+  </table></div>
+  <p>r13 chỉ thêm spec và fixture, không sửa source worker; r14 sửa <code>vision-checkpoints.ts</code>; r14b sửa thêm <code>vision-dom.ts</code>, <code>vision-operations.ts</code>. Không đụng oracle, metrics, policy, prompt, control-plane, contract.</p>
+
+  <h3>Database</h3>
+  <p>Không đụng: không migration, không đổi schema, không đổi public contract hay giá trị fingerprint lưu trữ.</p>
+
+  <h3>Test</h3>
+  <ul>
+    <li>Dev r14: <code>vision-settle-animation.spec.ts</code> <strong>14 passed</strong> (12.4s); settle-observability, dom, history, readiness, target-preflight, sample-guard, visual-buttons, observability <strong>97 passed</strong> (55.0s); <code>vision-operations.spec.ts</code> <strong>99 passed</strong> (6.5m); agent-mode, agent-evidence, outcome-capture <strong>46 passed</strong> (4.0m); agent-mode.qa, locators, vision.spec <strong>35 passed</strong> (1.6m). <code>tsc --noEmit</code> và <code>eslint</code> exit 0.</li>
+    <li>Dev r14b: settle dev + QA + settle-observability + agent-mode(+qa) + agent-evidence + outcome-capture <strong>103 passed</strong> (5.8m); dom, history, readiness, target-preflight, sample-guard, visual-buttons, observability, locators <strong>104 passed</strong> (49.3s); <code>vision-operations.spec.ts</code> <strong>99 passed</strong> (6.4m); qa spec riêng <strong>20 passed</strong> (41.9s). tsc exit 0, eslint 4 file exit 0.</li>
+    <li>Leader r6: 14 passed (12.3s). Leader r7: <strong>34 passed</strong> (53.2s) cho settle dev + QA, tsc exit 0.</li>
+    <li>QA r5: 22 case, pass 21 / fail 1 (QA-P1); hồi quy 111 + 99 + 66 passed. QA r6: 13/13 nhóm; <strong>34 passed</strong> x2, qa spec <strong>24 passed</strong> x3; hồi quy <strong>145 passed</strong> (6.2m) + <code>vision-operations.spec.ts</code> <strong>99 passed</strong> (6.3m). Flaky đã biết <code>vision-outcome-capture.spec.ts:10</code> không xuất hiện.</li>
+    <li>Chưa test được: widget live mongchiton (hit/transparent dao động 9-10 lần ở r13, hit tâm có ổn định không), iframe/shadow DOM thật, <code>Element.animate</code>/transition (không miễn theo thiết kế), chi phí inspect trên trang lớn. Stress test: không cần.</li>
+  </ul>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> khớp <code>AGENTS.md</code>, <code>docs/code-standards.md</code>, ADR-042; không có CONVENTION_CHANGE.</li>
+    <li><strong>Graph:</strong> <code>playwright-vision-worker</code> cập nhật (spec/fixture r13, sync r14, qua QA thêm spec QA: 32 file). <code>hgraph check</code> "6 graph, 464 file source. Không có vấn đề." exit 0. <code>hgraph check --changed</code> còn liệt kê 66 file uncovered do tool so tiền tố <code>auto-at-ui/</code> (có từ trước, không thuộc r14).</li>
+    <li><strong>Ponytail (shrink notes của leader):</strong> <code>isPresentationOnlyAnimated</code> lặp quy tắc animation của <code>inspectState</code> (~15 dòng); OPTIONAL tách helper "eligible animation" dùng chung; <code>privateInteractions</code> mang 4 trường meta mỗi entry, chấp nhận. Không có delete/yagni/stdlib/dependency mới. ADR nên nêu rõ các exact-hash gate còn lại và dịch tích luỹ ~6 px (r14b đã ghi).</li>
+  </ul>
+
+  <h3>NỢ</h3>
+  <div class="note"><strong>DOM mode click theo toạ độ trúng control che lên.</strong> <code>groundLocator</code> (<code>vision-locators.ts:101</code>, gọi ở <code>vision-operations.ts:613/734</code>, <code>vision-dom.ts:180</code>) ground theo toạ độ; control nhìn thấy nằm trên pulse nhận click và operation <code>completed</code>. Có sẵn trước r14 (<code>vision-locators.ts</code> không đổi so với HEAD; r14b chỉ mở thêm <code>force</code> khi hit tâm pass, điểm bị che thì <code>force=false</code>), nhưng lệch bất biến "nhấn sai mục tiêu = 0" (click khác element model chọn). Chưa chạy HEAD cũ để đối chiếu thực nghiệm. Gợi ý: guard <code>dom_element_id</code> so với descriptor của node tại điểm (<code>dom_descriptor_mismatch</code>) trong <code>groundLocator</code>/prepare. Không BLOCKING ở r14; cần quyết định ở vòng sau.</div>
+
+  <h3>Bước kế</h3>
+  <ul>
+    <li><strong>Rebuild <code>playwright-worker</code></strong> (chưa rebuild; không đổi control-plane/contract).</li>
+    <li><strong>r15:</strong> thêm after-frame cuộn tới panel cho click tab (mct-30/31), giữ nguyên rule oracle.</li>
+    <li>Một phiên live A1+A3: kiểm <code>vision.state.settle_timeout</code> biến mất khi scroll 600 px và <code>state_mismatch</code> hình học không còn; nếu còn, dump entry đổi (thứ tự, hit tâm, transparent) trước khi nới tiếp. A2 chạy riêng sau.</li>
+    <li>Quyết định guard <code>dom_element_id</code> cho nợ click che.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Phase 04 · vòng r15–r19 — gác tab panel, hồi quy tsx và phiên live r19 (2026-11-21)</h2>
+  <p class="sub">Phase 04 vẫn in progress. r15 làm xong rồi bị gác; r16 live hỏng ở open; r17 tìm ra nguyên nhân; r18 sửa và qua review; r19 live mở được nhưng dừng <code>settle_timeout</code>. Không commit.</p>
+
+  <h3>Quyết định của user</h3>
+  <ul>
+    <li><strong>Sau r15:</strong> gác r15 (tab panel frame, ADR-043, migration <code>c8d0e2f4a6b8</code> chưa được duyệt và 5 file control-plane ngoài phạm vi, phát hiện chỉ theo ARIA sẽ không bắn trên nút mct-30/31 thật). Lưu thành patch khôi phục được, gỡ khỏi cây, rồi rebuild <code>playwright-worker</code> và chạy một phiên live A1+A3 để kiểm ADR-042. Bằng chứng tab xem lại sau.</li>
+    <li><strong>Sau r16/r17:</strong> sửa tận gốc (không đặt hàm có tên trong callback <code>page.evaluate</code>), thêm shim init-script <code>__name</code> làm lớp phòng thủ, thêm test chạy <code>open</code> dưới tsx và log an toàn tên lỗi cho <code>unexpected_error</code>; review; rebuild worker; một lần open/close không LLM; rồi một phiên live A1+A3.</li>
+    <li><strong>Sau r19:</strong> chưa có quyết định; phiên được duyệt đã dùng hết. Bước kế ghi ở cuối section, chờ user.</li>
+  </ul>
+
+  <h3>Người làm</h3>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>be-developer r15</td><td><span class="pill warn">DONE (offline), sau đó gác</span> Tab panel frame sau cờ. <a href="reports/phase-04/be-developer-r15.md">be-developer-r15.md</a></td></tr>
+    <tr><td>be-developer r15-shelve</td><td><span class="pill ok">DONE</span> Gỡ r15, lưu patch. <a href="reports/phase-04/be-developer-r15-shelve.md">be-developer-r15-shelve.md</a></td></tr>
+    <tr><td>be-developer r16</td><td><span class="pill bad">FAIL</span> Phiên live <code>82e22289…</code> chết ở <code>session_open</code>. <a href="reports/phase-04/be-developer-r16.md">be-developer-r16.md</a></td></tr>
+    <tr><td>be-developer r17</td><td><span class="pill ok">DONE</span> Chẩn đoán, tái hiện được. <a href="reports/phase-04/be-developer-r17.md">be-developer-r17.md</a></td></tr>
+    <tr><td>be-developer r18</td><td><span class="pill ok">DONE</span> Sửa + test tsx đỏ rồi xanh. <a href="reports/phase-04/be-developer-r18.md">be-developer-r18.md</a></td></tr>
+    <tr><td>leader r8</td><td><span class="pill ok">PASS</span> 0 BLOCKING. <a href="reports/phase-04/leader-r8.md">leader-r8.md</a></td></tr>
+    <tr><td>QA r7</td><td><span class="pill ok">PASS</span> 12 case, 12 pass. <a href="reports/phase-04/qa-r7.md">qa-r7.md</a>, <a href="qa/phase-04/r18-test-cases.md">r18-test-cases.md</a>, <a href="qa/phase-04/r18-test-report.md">r18-test-report.md</a></td></tr>
+    <tr><td>be-developer r19</td><td><span class="pill warn">FAIL (không điểm chính thức)</span> Phiên live <code>6eef105a…</code>, invalid terminal. <a href="reports/phase-04/be-developer-r19.md">be-developer-r19.md</a></td></tr>
+  </table></div>
+
+  <h3>r15 · Thiết kế tab panel frame (vượt phạm vi, bị gác)</h3>
+  <ul>
+    <li><strong>Thiết kế:</strong> capability <code>tab-panel-frame-v1</code>, cờ <code>VISION_AGENT_TAB_PANEL_FRAME_ENABLED</code> (mặc định false), theo mẫu ADR-040. Sau click agent hoàn tất, nếu phần tử là tab (role=tab, <code>aria-selected</code> hoặc <code>aria-controls</code>) và panel nằm ngoài viewport thì chụp một dải <code>captureBeyondViewport</code> (tối đa 720 px, không cuộn), kiểm lại <code>equivalentState</code> và scroll, lỗi thì bỏ ảnh. Control-plane lưu thành hàng frame thứ ba (role <code>panel</code>), commit cùng transaction với after-frame.</li>
+    <li><strong>Vượt phạm vi:</strong> cần migration <code>c8d0e2f4a6b8</code> (đổi CHECK role, chưa từng chạy) cùng 5 file control-plane ngoài danh sách (<code>vision_operations.py</code>, <code>vision_unit_of_work.py</code>, <code>repositories.py</code>, <code>models.py</code>, <code>vision_results.py</code>). Báo cáo r15 xin duyệt (ESCALATE).</li>
+    <li><strong>ARIA không khớp site:</strong> oracle ghi mct-30/31 là <code>button.button-character-title</code> (class <code>active</code>) không có role/aria; phát hiện ARIA có thể không bắn đúng hai mục tiêu này. Test PG chưa chạy (không có DB).</li>
+    <li><strong>Gác (r15-shelve):</strong> patch khôi phục ở <code>auto-at-ui/.pytest-artifacts/r15-shelved/</code> (<code>r15.patch</code> 20 file, <code>new/</code> 6 file mới, <code>with-r15/</code> bản gốc, <code>README.md</code> các bước khôi phục). Grep dấu vết r15 trong source: rỗng. Kiểm sau gỡ: ruff sạch; pytest <strong>500 passed, 69 skipped</strong> (skip do PostgreSQL); worker 5 spec <strong>67 passed, 1 skipped</strong>; <code>tsc</code> exit 0.</li>
+  </ul>
+
+  <h3>r16 · Phiên live hỏng ở open</h3>
+  <ul>
+    <li>Phiên <code>82e22289-b52a-4fd3-b74f-633a31147214</code> (A1+A3, prompt v2, ADR-042) kết thúc <code>unavailable</code> / <code>visual_exploration_unavailable</code> ngay <code>session_open</code>: worker HTTP 422 <code>visual_request_rejected</code>, <code>error_type=unexpected_error</code>, 3.787 ms. 0 operation, 0/20 call. Không import, không điểm; ADR-042 và prompt v2 chưa được kiểm.</li>
+    <li>Môi trường tốt (không OOM, 0 restart, đích truy cập được); cây code qua <code>45 passed</code> local; giả thuyết sai ban đầu: Chromium cold start. Nguyên nhân thật không suy ra được vì worker cố ý không log message.</li>
+    <li>Phát hiện phụ: provider <code>claude_cli</code> báo <code>online=false</code> khoảng phút đầu sau khi recreate bridge; harness nên chờ ổn định trước khi submit.</li>
+  </ul>
+
+  <h3>r17 · Nguyên nhân <code>__name</code></h3>
+  <ul>
+    <li><strong>Gốc (tái hiện được, ổn định):</strong> <code>inspectState()</code> ném <code>ReferenceError: __name is not defined</code> trong trình duyệt. Worker chạy qua <strong>tsx</strong> (<code>npm run start</code>, esbuild 0.23.1 <code>keepNames</code>), nên mọi hàm có tên bị bọc <code>__name(fn, "name")</code>; callback <code>page.evaluate</code> được serialize bằng <code>toString()</code> rồi chạy trong trang, nơi <code>__name</code> không tồn tại.</li>
+    <li><strong>Kích hoạt:</strong> r14/r14b thêm <code>const layoutBox = (el) =&gt; {...}</code> lồng trong callback <code>inspectState</code> (<code>vision-checkpoints.ts</code>). Bản HEAD không có hàm có tên lồng nên r12 (trước r14) chạy được. Lỗi xảy ra trên trang trắng, không riêng mongchiton, và ảnh hưởng mọi <code>inspectState</code> (open, navigate, observe), tức không phiên nào chạy được trong container từ r14.</li>
+    <li><strong>Vì sao spec không bắt:</strong> test runner Playwright dùng transform Babel riêng, không chèn <code>__name</code>; chỉ entry production (tsx) chèn. 45/45 spec local xanh trong khi container hỏng.</li>
+    <li><strong>Loại trừ:</strong> lệch contract sau gác r15 (payload thật qua <code>validateVision</code>, và lỗi contract sẽ log <code>contract_rejection</code>); chỉ hỏng trên trang mongchiton (sai: hỏng cả trên <code>about:blank</code>); Chromium cold start (launch local ~0,3 s, container 0,8–1,1 s).</li>
+    <li><strong>Tái hiện không LLM:</strong> gọi trực tiếp <code>open</code> dưới tsx 3 lần: 3 FAIL (~300 ms); trong container 2 lần: 2 x 422 <code>visual_request_rejected</code>. Với shim init-script thử ngoài source: 2 OK.</li>
+  </ul>
+
+  <h3>r18 · Sửa, test tsx đỏ rồi xanh, log an toàn</h3>
+  <ul>
+    <li><strong>Sửa tận gốc:</strong> <code>layoutBox</code> đổi thành object method <code>geometry.layoutBox</code> (cùng mẫu <code>traversal</code>), toán học giữ nguyên nên hành vi ADR-042 không đổi. Kiểm kê mọi callback evaluate trong <code>src</code> bằng esbuild keepNames: chỉ <code>layoutBox</code> là closure có tên phía trình duyệt; các closure còn lại là phía Node nên vô hại.</li>
+    <li><strong>Phòng thủ:</strong> <code>open()</code> thêm <code>context.addInitScript("globalThis.__name = globalThis.__name || ((fn) =&gt; fn);")</code> ngay sau <code>newContext</code>, không ghi đè <code>__name</code> của trang. Context của <code>openVisualSession</code> cũ (<code>vision.ts</code>) không có shim vì callback ở đó chưa có closure có tên.</li>
+    <li><strong>Log an toàn:</strong> hàm mới <code>visionErrorDetails</code> chỉ cho <code>unexpected_error</code>: <code>error_name</code> (allow-list <code>^[A-Za-z]{1,40}$</code>, ngoài ra <code>Error</code>), <code>error_origin</code> (tiền tố API Playwright cố định), <code>error_digest</code> (8 hex sha256). Không bao giờ log message hay stack; <code>visionErrorType</code> không đổi.</li>
+    <li><strong>Test tsx:</strong> spec mới <code>vision-tsx-runtime.spec.ts</code> + probe, chạy <code>node node_modules/tsx/dist/cli.mjs ...</code> (cùng transform với <code>npm run start</code>): open, setContent fixture pulse, <code>inspectState</code> (nhánh layoutBox chạy), <code>isPresentationOnlyAnimated</code>, close. Có nhánh <code>inspect_without_guard</code> trên context trần để chứng minh callback tự sạch chứ không chỉ nhờ shim. <strong>Đỏ trước sửa:</strong> <code>1 failed ... ReferenceError: __name is not defined</code>; <strong>xanh sau sửa:</strong> <code>1 passed (3.2s)</code>.</li>
+    <li><strong>Docs:</strong> ADR-042 thêm mục "Runtime: no named closures inside browser callbacks"; <code>vision-agent-operations.md</code> thêm mục smoke open/close không model.</li>
+    <li><strong>Review:</strong> leader r8 PASS (0 BLOCKING), QA r7 PASS (12/12). Ghi nhận không chặn: <code>prepare</code> lỗi evaluate trả 200 <code>prepare_failed</code> chứ không 422; shim chỉ phủ context từ <code>open()</code>.</li>
+    <li><strong>Rebuild (coordinator):</strong> <code>playwright-worker</code> dựng lại; open/close không LLM trong container: <code>open 200</code> (1.341 ms) + <code>delete 200</code>, lần hai <code>open 200</code> (929 ms) + <code>delete 200</code> (r17 từng 2 x 422). Log coordinator: <code>coordinator-r19-build.log</code>, <code>coordinator-r19-up.log</code>, <code>coordinator-r19-open-check.log</code>; kiểm identity trước phiên 0 mismatch.</li>
+  </ul>
+
+  <h3>Diff thật</h3>
+  <div class="note">Số liệu từ <code>git -C D:/Person/CaoHoc/KhoaLuanTotNghiep/agent-at diff --numstat</code> và <code>status --short</code> cho các file r18 liệt kê. File tracked đã bẩn từ trước nên +/− là <strong>tích luỹ so với HEAD</strong> (gồm các vòng trước, không tách riêng r18); file untracked ghi tổng dòng hiện tại (<code>wc -l</code>). r15 đã gỡ nên không để lại file trong cây.</div>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td><code>workers/playwright/src/vision-checkpoints.ts</code></td><td>sửa</td><td class="n">+173 / −18</td><td>Phần r18: <code>layoutBox</code> thành object method <code>geometry.layoutBox</code> + comment lý do (còn lại là r14)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td>sửa</td><td class="n">+131 / −23</td><td>Phần r18: chỉ <code>open()</code>, thêm <code>addInitScript</code> shim</td></tr>
+    <tr><td><code>workers/playwright/src/vision-observability.ts</code></td><td>sửa</td><td class="n">+13 / −0</td><td><code>visionErrorDetails</code> (r18)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-http.ts</code></td><td>sửa</td><td class="n">+4 / −2</td><td>Catch lưu <code>errorDetails</code>, trải vào log <code>vision.request_rejected</code> (r18)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-observability.spec.ts</code></td><td>sửa</td><td class="n">+61 / −2</td><td>Test log không lộ message (r18 thêm 1 test; số tích luỹ)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-tsx-runtime.spec.ts</code></td><td>untracked</td><td class="n">25 dòng</td><td>Spec tsx của dev</td></tr>
+    <tr><td><code>workers/playwright/src/fixtures/vision-tsx-runtime-probe.ts</code></td><td>untracked</td><td class="n">44 dòng</td><td>Probe chạy dưới tsx</td></tr>
+    <tr><td><code>workers/playwright/src/vision-tsx-runtime.qa.spec.ts</code></td><td>untracked</td><td class="n">45 dòng</td><td>QA thêm 4 test</td></tr>
+    <tr><td><code>workers/playwright/src/fixtures/vision-tsx-runtime-flow-probe.ts</code></td><td>untracked</td><td class="n">112 dòng</td><td>Probe luồng của QA</td></tr>
+    <tr><td><code>docs/adr/042-settle-geometry-tolerance.md</code></td><td>untracked</td><td class="n">112 dòng</td><td>Thêm mục runtime (r18)</td></tr>
+    <tr><td><code>docs/vision-agent-operations.md</code></td><td>sửa</td><td class="n">+101 / −0</td><td>Mục smoke open/close (r18; số tích luỹ)</td></tr>
+    <tr><td><code>docs/graphs/playwright-vision-worker.md</code></td><td>sửa</td><td class="n">+146 / −80</td><td>2 file mới vào graph, sync (tích luỹ; QA thêm 2 file, tổng 36)</td></tr>
+  </table></div>
+  <p>r15 và r15-shelve cộng dồn bằng không so với cây trước r15 (patch lưu ngoài cây). r16, r17, r19 không sửa source (chỉ ghi <code>AGENT-LOOP-01-20261120.md</code>, README và <code>.pytest-artifacts</code>). Không đụng oracle, metrics, policy, prompt, control-plane, contract.</p>
+
+  <h3>Database</h3>
+  <p>Không đụng: migration r15 <code>c8d0e2f4a6b8</code> đã gỡ và chưa từng chạy (Alembic head vẫn <code>b7c9d1e3f5a7</code>); r16–r19 không đổi schema hay contract.</p>
+
+  <h3>Test</h3>
+  <ul>
+    <li>Dev r18: spec tsx đỏ rồi <strong>1 passed (3.2s)</strong>; <code>tsc --noEmit</code> exit 0; eslint các file đụng exit 0; <code>vision-observability.spec.ts</code> <strong>10 passed</strong> (3.0s); nhóm A (settle dev + QA + settle-observability + operations) <strong>140 passed</strong> (7.1m); nhóm B (agent-mode, agent-mode.qa, agent-evidence, outcome-capture, dom, history, readiness, tsx-runtime, observability) <strong>140 passed</strong> (5.8m); probe tsx local 3 lần OK (~270 ms, 9 capability).</li>
+    <li>Leader r8: <code>11 passed</code> (5.5s) cho tsx + observability, <code>tsc</code> exit 0; quét esbuild keepNames xác nhận không còn closure có tên trong callback.</li>
+    <li>QA r7: tsx spec <strong>5 passed</strong> (13.3s); preflight + sample-guard + visual-buttons + locators + vision.spec + click-evidence <strong>39 passed</strong> (30.5s); settle + operations <strong>140 passed</strong> (7.5m); mongchiton qua tsx open+close OK 282 ms và 582 ms; 12/12 case.</li>
+    <li>r15 (đã gác): ruff sạch; worker 7 spec tab panel + <strong>36 passed, 1 skipped</strong>; Python 55 passed, 38 skipped; 2 test PostgreSQL và migration chưa chạy thật.</li>
+    <li>Chưa test được: red của bug cũ do QA không dựng lại (dựa bằng chứng dev); stress test không cần.</li>
+  </ul>
+
+  <h3>Convention, graph, ponytail</h3>
+  <ul>
+    <li><strong>Convention:</strong> khớp <code>AGENTS.md</code>, <code>docs/code-standards.md</code>, ADR-042; không có CONVENTION_CHANGE. Ghi chú: r15 đã chạm 5 file ngoài danh sách trước khi bị gác (xem trên).</li>
+    <li><strong>Graph:</strong> <code>playwright-vision-worker</code> thêm 2 file mới (spec và probe tsx), QA thêm 2 file, tổng 36; <code>hgraph check</code> "Không có vấn đề" (exit 0). <code>hgraph check --changed</code> vẫn exit khác 0 do tool so tiền tố <code>auto-at-ui/</code> lệch git root (72 file) cùng file phase khác, không phải do r18. Leader từng thấy drift do file probe QA chưa vào graph; QA đã <code>hgraph add</code>.</li>
+    <li><strong>Ponytail:</strong> leader r8: không có delete/yagni/stdlib/native, không thêm dependency, <code>package.json</code> không đổi. Lựa chọn nhỏ nhất: object method thay vì giải pháp tạm; shim một dòng làm lưới an toàn; chưa tạo helper <code>newVisionContext</code> dùng chung vì chưa cần.</li>
+  </ul>
+
+  <h3>r19 · Phiên live sau sửa tsx</h3>
+  <p>Phiên <code>6eef105a-ae98-44cf-9b09-e5a6d0ad1262</code> (correlation <code>5075d594-b471-49d7-8366-4583bb4fc797</code>, prompt v2, A1+A3 on, A2 off). Mở được, 14 operation, kết thúc <code>unavailable</code> / <code>settle_timeout</code> (terminal không hợp lệ). <strong>Không import vào <code>runs/</code>, không có điểm chính thức.</strong> Identity trước phiên: <code>agent_loop_round.py check</code> 0 mismatch (163/163/163/56); provider ổn định 60 s.</p>
+  <ul>
+    <li><strong>Operations (14):</strong> navigate 1; scroll 3 (seq 2 ok ở <code>scroll_y=600</code>, seq 9 fail <code>settle_timeout</code>, seq 12 rejected <code>state_mismatch</code>); click 6 (đều completed); wait 4 (seq 10, 11 ok; seq 13 rejected <code>state_mismatch</code>; seq 14 setup rejected <code>settle_timeout</code>). Frame: 22 giữ, 6 thiếu (op bị từ chối).</li>
+    <li><strong>Clicks:</strong> 6, trong đó 5 trúng oracle (Sự kiện mct-19, Cẩm nang mct-20, Tin tức mct-18, NHÂN VẬT mct-30, THÚ CƯỠI mct-31; box viewport + scroll 600 khớp đúng box oracle) và 1 nút TOP (back-to-top cố định, không phải oracle, chỉ tính attempted). Không click trúng control khác; không force click; nợ control bị che chưa được thử. mct-30 đã active nên frame không đổi; mct-30/31 đọc nghiêm không tính, đọc nới tính (panel nằm dưới khung).</li>
+    <li><strong>settle_timeout:</strong> (1) scroll seq 9 ngay sau click TOP, trang ở đầu: 52 thay đổi trong 10 s (14 visible, 0 URL, 1 scroll), yên dài nhất 240 ms (cần 800). (2) setup wait seq 14: 52 thay đổi (9 visible), yên dài nhất 353 ms. Cả 6 click và scroll đầu (y=600, link play-now còn nhấp nháy) đều settle: ADR-042 hiệu quả ở đó.</li>
+    <li><strong>state_mismatch (4):</strong> observe_start 275 ms sau scroll fail (geometry_only=1); dom_collection 654 ms (geometry_only=3, visual_semantics_changed=true); prepare_start x2, state_age 7,5 s và 20,6 s (geometry_only=3). Tất cả: 18 control, 0 thêm, 0 bớt, không đổi tag/URL/scroll; log không nêu tên control trôi. Sau settle fail, state giữ cũ đi (7–20 s) nên prepare kế bị từ chối.</li>
+    <li><strong>Calls:</strong> 8/20 (8 proposal <code>agent_step</code>, 0 schema rejection), 0 <code>bridge_policy_revoked</code>; <code>unexpected_error</code> 0 (xác nhận sửa r18 live). Không rời trang oracle; inventory 8 state, đều trang chủ, <code>scrollable=true</code>, không truncated.</li>
+    <li><strong>Hành vi agent:</strong> gom 3 click trong một bước (seq 6–8), bấm TOP làm cuộn lại đầu trang rồi muốn cuộn tiếp tìm 9–12 control còn lại nhưng không bao giờ gặp state ổn định. Không bấm link WINDOW vì rủi ro tải file.</li>
+  </ul>
+
+  <div class="note"><strong>Điểm diagnostic, KHÔNG chính thức</strong> (terminal không hợp lệ; chạy ở thư mục scratch; <code>passed=false</code>, unsafe 0, inventory chưa đủ). Chỉ để so sánh, không dùng cho gate. Identified: mct-01–06, 11, 18, 19, 20, 30, 31, 37, 43; 21 control không khớp (link bài viết).</div>
+  <div class="scroll"><table>
+    <tr><th>Cách đọc</th><th><code>--sources</code></th><th>C</th><th>A</th><th>P</th><th>R</th></tr>
+    <tr><td>nghiêm</td><td>all, click_context,inventory</td><td class="n">3/47 = 6,38%</td><td class="n">3/6</td><td class="n">14/35</td><td class="n">14/47</td></tr>
+    <tr><td>nghiêm</td><td>click_context</td><td class="n">3/47</td><td class="n">3/6</td><td class="n">0/0</td><td class="n">0/47</td></tr>
+    <tr><td>nghiêm</td><td>none, inventory</td><td colspan="5">từ chối <code>no_oracle_match</code></td></tr>
+    <tr><td>nới</td><td>all, click_context,inventory</td><td class="n">5/47 = 10,64%</td><td class="n">5/6</td><td class="n">14/35</td><td class="n">14/47</td></tr>
+    <tr><td>nới</td><td>click_context</td><td class="n">5/47</td><td class="n">5/6</td><td class="n">0/0</td><td class="n">0/47</td></tr>
+    <tr><td>nới</td><td>none, inventory</td><td colspan="5">từ chối <code>no_oracle_match</code></td></tr>
+  </table></div>
+
+  <h3>So sánh r6 / r10 / r12 / r19</h3>
+  <div class="scroll"><table>
+    <tr><th>Run</th><th>C</th><th>A</th><th>P</th><th>R</th><th>Click</th><th>Scroll</th><th>Calls</th><th>Terminal</th></tr>
+    <tr><td>r6</td><td class="n">5/47 chính thức (không page check)</td><td class="n">5/12</td><td>n/a</td><td class="n">0/47</td><td class="n">12 (8 ok)</td><td class="n">2</td><td class="n">20</td><td>agent_stopped, hợp lệ</td></tr>
+    <tr><td>r10</td><td class="n">1/47 chính thức</td><td class="n">1/10</td><td class="n">7/7</td><td class="n">7/47</td><td class="n">10 (1 trên trang oracle)</td><td class="n">0</td><td class="n">14</td><td>agent_done, hợp lệ</td></tr>
+    <tr><td>r12</td><td class="n">3/47 nghiêm, 5/47 nới (diagnostic)</td><td class="n">3/5, 5/5</td><td class="n">14/35</td><td class="n">14/47</td><td class="n">5</td><td class="n">2 (1 fail)</td><td class="n">5</td><td>settle_timeout, không hợp lệ</td></tr>
+    <tr><td>r19</td><td class="n">3/47 nghiêm, 5/47 nới (diagnostic)</td><td class="n">3/6, 5/6</td><td class="n">14/35</td><td class="n">14/47</td><td class="n">6 (5 oracle + TOP)</td><td class="n">3 (1 ok)</td><td class="n">8</td><td>settle_timeout, không hợp lệ</td></tr>
+  </table></div>
+  <p>Chỉ r6 và r10 có điểm chính thức. r19 bằng r12 ở C/P/R: không tuyên bố cải thiện hay hồi quy. Dữ liệu chỉ cho thấy: open chạy (r18), ADR-042 cho phép click và scroll ở y=600 settle, nhưng đầu trang chủ sau khi cuộn lại vẫn không settle.</p>
+
+  <h3>Bài học</h3>
+  <div class="note">Spec Playwright không phủ runtime tsx của production: một lỗi chỉ xuất hiện khi chạy qua tsx (<code>keepNames</code>) đã làm hỏng cả một phiên live có phí mà 45/45 spec xanh. Nay có test chạy <code>open</code> và <code>inspectState</code> dưới tsx thật (đỏ rồi xanh) và log <code>error_name</code>/<code>error_origin</code>/<code>error_digest</code> để lỗi sau tự chẩn đoán được. Trước mỗi phiên live cần một lần open/close không LLM trên container vừa rebuild.</div>
+
+  <h3>NỢ</h3>
+  <div class="note"><strong>Control che lên vẫn chưa kiểm live.</strong> Click DOM mode ground theo toạ độ (xem nợ r14); r19 không gặp control che nên không chứng minh hay bác bỏ. Cũng còn: tab outcome mct-30/31 (r15 đã gác, bằng chứng tab xem lại sau) và <code>prepare</code> lỗi evaluate trả 200 <code>prepare_failed</code>.</div>
+
+  <h3>Bước kế (chờ user)</h3>
+  <ul>
+    <li><strong>Chẩn đoán offline settle sau khi cuộn lại đầu trang (nút TOP):</strong> probe trang thật sau scroll-to-top xem control nào đổi hình học và animation nào (giả thuyết: hero/swiper); mở rộng ADR-042 hoặc recovery có giới hạn; cần quyết định/ADR của user.</li>
+    <li>Cân nhắc hướng agent tránh nút TOP (prompt/policy), hoặc chấp nhận là attempted không tính điểm.</li>
+    <li>Sau đó một phiên live mới (cần user duyệt; phiên r19 đã dùng). A2 chạy riêng sau.</li>
+    <li>Nợ covered-control quyết sau.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Phase 04 · vòng r20–r21 — churn mount-switcher và thăm dò tắt animation (2026-11-21)</h2>
+  <p class="sub">Phase 04 vẫn in progress. Hai bước offline, chỉ đọc: chẩn đoán vì sao trang chủ không settle sau nút TOP (r20) và thăm dò tắt animation lúc settle (r21). Không live, không gọi bridge/model, không docker, không sửa source, không đụng gate, không commit.</p>
+
+  <h3>Quyết định của user</h3>
+  <ul>
+    <li><strong>Sau r19:</strong> chẩn đoán offline vì sao trang chủ không settle ở scroll sau khi nút TOP đưa về đầu trang (r19 seq 9); probe chỉ đọc, không đổi gate, không live.</li>
+    <li><strong>Sau r20:</strong> chọn phương án <strong>C</strong>: thăm dò trang thật chỉ đọc xem tạm dừng/tắt animation lúc settle có làm hit-test và box của <code>mount-switcher</code> ổn định không (z-index vẫn có thể đổi); chưa sửa source.</li>
+    <li><strong>Sau r21:</strong> chưa có quyết định. Bước kế ghi cuối section, chờ user.</li>
+  </ul>
+
+  <h3>Người làm</h3>
+  <div class="scroll"><table>
+    <tr><th>Lượt</th><th>Kết quả</th></tr>
+    <tr><td>be-developer r20</td><td><span class="pill ok">DONE</span> Chẩn đoán offline, tái hiện cơ chế bằng spec. <a href="reports/phase-04/be-developer-r20.md">be-developer-r20.md</a></td></tr>
+    <tr><td>be-developer r21</td><td><span class="pill ok">DONE</span> Thăm dò tắt animation, spec fixture, đề xuất thiết kế (chưa triển khai). <a href="reports/phase-04/be-developer-r21.md">be-developer-r21.md</a></td></tr>
+  </table></div>
+
+  <h3>r20 · Cơ chế: churn của mount-switcher, không phải nút TOP</h3>
+  <ul>
+    <li><strong>Kết luận:</strong> click TOP không phải nguyên nhân. Chữ ký lỗi (khoảng 52 thay đổi/10 s, yên dài nhất 236–266 ms, chỉ trôi hình học/hit của 1–3 trong 18 control) giống hệt r12 (không bấm TOP) và r19. TOP cuộn tức thì (9 ms) và settle sau khoảng 1 s.</li>
+    <li><strong>Cơ chế:</strong> khi tab NHAN VAT / THU CUOI đang active và viewport ở panel của chúng (scroll y≈1200), widget <code>div.mount-switcher</code> (và <code>div.character-switcher</code> + carousel <code>a.video-frame</code> khi chưa bấm tab) đổi state liên tục. Mỗi mẫu (~125 ms) có control đổi: 5 hit probe lật (thẻ chồng nhau bị xếp lại theo class <code>.active</code>) và/hoặc box dịch 6–37 px (<code>margin-left</code>) hoặc 200–590 px (<code>translate</code> của phần tử cha trong carousel).</li>
+    <li><strong>Số liệu đợt (r20 <code>i3</code>, 5 tab, y=1200, cửa sổ 50 s):</strong> một đợt 145 thay đổi kéo dài 25,5 s (mỗi mẫu một thay đổi), sau đó từng tick mỗi 3,6 s, đợt kế sau ~36 s. Không bấm tab (<code>h1</code>/<code>h3</code>, 130 s): đợt 4,2 s mỗi 14,5 s (24–26 thay đổi/đợt), settle luôn thành công cục bộ. Scroll có cửa sổ settle 10 s rơi vào đợt dài thì kết thúc <code>state_kept_changing</code>; cả r12 op 8 và r19 op 9 đều đã bấm NHAN VAT và THU CUOI trước đó.</li>
+    <li><strong>Vì sao ADR-042 không hấp thụ:</strong> (A) cho phép 3 px / IoU 0,8 và đòi hit test bằng nhau, nhưng hit lật và box dịch vượt ngưỡng. (B) cần animation CSS VÔ HẠN chỉ scale/rotate/opacity; ở đây animation hữu hạn (<code>iterations = 1</code>; <code>scale</code>, <code>margin-left</code>, <code>transform</code>, <code>width</code>), do timer bắn lại, nên <code>animated=false</code> cho mọi phần tử chuyển động. Cũng không phải smooth-scroll, header resize, lazy-load hay hit-corner của pulse.</li>
+  </ul>
+  <div class="scroll"><table>
+    <tr><th>Phương án</th><th>Nội dung</th><th>Gate</th><th>Ưu / nhược</th></tr>
+    <tr><td>A</td><td>Kéo dài ngân sách settle cho op đổi viewport và recovery (nay cố định 10 000 ms, <code>vision-operations.ts</code> ~887): ví dụ <code>min(session.deadline, 40 s)</code>, giữ 800 ms yên</td><td>không đổi</td><td>Nhỏ nhất, không đổi trang. Không chữa lỗi kế: đợt bắt đầu sau settle làm <code>prepare</code> (<code>equivalentState(held, fresh)</code>) từ chối <code>state_mismatch</code> (r19 seq 12/13); tốn thời gian phiên (tổng 120 s).</td></tr>
+    <tr><td>B</td><td>Equivalence theo phạm vi ("ambient motion", ứng viên ADR-043): <code>settleState</code> và <code>prepare</code> bỏ qua đổi hit/box của control không chồng lên target, miễn digest nội dung, số lượng, URL, form, scroll đều giống; dispatch giữ exact-node + centre hit + preflight target</td><td>nới (cần quyết định ADR của user)</td><td>Gỡ cả hai kiểu lỗi (settle và prepare). Làm yếu bảo đảm "cả trang không đổi": thẻ không liên quan có thể che target mà chỉ centre hit probe bắt; cần reviewer duyệt và test chồng lấp.</td></tr>
+    <tr><td>C</td><td>Worker làm tĩnh trang lúc settle (chèn <code>animation: none; transition: none</code> trong lúc settle, gỡ sau)</td><td>không đổi</td><td>Rẻ để thử, nhưng sửa trang và ảnh chụp; fixture r20 cho thấy timer đổi <code>z-index</code> vẫn lật hit probe, có thể vô ích. Cần probe trang thật trước. (Người dùng đã chọn bước này, xem r21.)</td></tr>
+    <tr><td>Không khuyến nghị</td><td>Prompt/policy né nút TOP</td><td>n/a</td><td>TOP chỉ là ngẫu nhiên; mục tiêu cần (mct-30/31 và panel bên dưới) chính là thứ khởi động widget.</td></tr>
+  </table></div>
+  <div class="note"><strong>Giới hạn r20 (không giấu):</strong> (1) <code>delta_y</code> của r19 seq 9 (operation <code>cb145ad0</code>) không có trong dump nào; từ y=0 một wheel +600 chỉ tới y=600, nơi trang yên, nên seq 9 phải cuộn xa hơn +600 thì cơ chế này mới là nguyên nhân. (2) Không tái hiện được <code>settle_timeout</code> đủ 10 s cục bộ: tệ nhất 4,2 s (CPU thường), 6,6 s (CDP throttle 4x), 8,4–8,6 s ở ba bản sao timeline r19 (luôn settle vì wheel tới trước đợt); gần nhất 8,5/10 s. Chưa biết quan hệ pha giữa đợt và tuổi trang/thời điểm bấm tab. (3) Chromium Windows và nội dung trang thật có thể khác container Linux. Nguyên nhân do đó là một lớp cơ chế (animation hữu hạn do timer ở widget switcher trong đợt dài), chưa phải đúng sự kiện r19.</div>
+
+  <h3>r21 · Thăm dò tắt animation lúc settle (phương án C)</h3>
+  <p>Probe <code>.pytest-artifacts/r21-suppress-probe.mts</code> trên trang thật, chỉ đọc (wheel + 5 lần bấm tab của r12/r19/r20, không click nào khác, không form). Hình: mở, wheel 600, 5 tab, wheel tới y=1200; đợi đầu một đợt churn rồi đo control và biện pháp trong CÙNG một đợt (baseline 4 s, áp biện pháp, <code>settleState(3 s, 800 ms)</code>, đo 5 s, gỡ, đo 4 s) để loại bất định pha. Có MutationObserver toàn trang.</p>
+  <div class="scroll"><table>
+    <tr><th>Biện pháp</th><th>Thay đổi / 5 s (baseline → áp)</th><th>Yên dài nhất</th><th><code>settleState</code> 3 s</th><th>Lý do giữ / loại</th></tr>
+    <tr><td>none (đối chứng, 2 run)</td><td class="n">24 → 28, 23 → 28</td><td class="n">345 ms</td><td>FAIL 3,0 s / 2,9 s</td><td>Đợt tái hiện, 100% churn hit</td></tr>
+    <tr><td>a1: <code>getAnimations()</code> pause một lần</td><td class="n">20 → 18</td><td class="n">1605 ms</td><td>ok 0,84 s (ăn may)</td><td>Loại: transition mới bắt đầu sau pause</td></tr>
+    <tr><td>a2: pause mỗi 40 ms</td><td class="n">23 → 2</td><td class="n">3701 ms</td><td>ok 0,84 s</td><td>Loại: đóng băng khung giữa (box lệch 31 px, scale 1,039), <code>play()</code> sau đó lại dịch</td></tr>
+    <tr><td>b: <code>animation-play-state:paused; transition:none</code> (3 run)</td><td class="n">20–24 → 1</td><td class="n">3735–4255 ms</td><td>ok 0,84–0,93 s</td><td>Loại làm chính: nuốt <code>transitionend</code>/<code>animationend</code></td></tr>
+    <tr><td><strong>b2: duration/delay 1 ms (2 run)</strong></td><td class="n">23 → 2, 21 → 2</td><td class="n">4215 / 3767 ms</td><td>ok 0,95 / 0,91 s</td><td><strong>Tốt nhất:</strong> giữ ngữ nghĩa, sự kiện end vẫn bắn, về đúng trạng thái cuối, chỉ thêm một <code>&lt;style&gt;</code></td></tr>
+    <tr><td>c1, c2: <code>finish()</code> animation hữu hạn</td><td class="n">23 → 30, 23 → 27</td><td class="n">361 ms</td><td>FAIL 2,9 / 3,0 s</td><td>Loại: lúc gọi có 0 animation hữu hạn đang chạy</td></tr>
+    <tr><td>d1: pause theo cây con của animation đang chạy</td><td class="n">22 → 22</td><td class="n">1102 ms</td><td>ok 0,96 s</td><td>Loại: churn đến từ phần tử khác</td></tr>
+    <tr><td>d2: CSS theo cây con</td><td class="n">23 → 30</td><td class="n">384 ms</td><td>FAIL 2,95 s</td><td>Loại: như d1</td></tr>
+    <tr><td>cdp: <code>Animation.setPlaybackRate(100)</code> (2 run)</td><td class="n">22 → 22, 22 → 17</td><td class="n">698 / 1382 ms</td><td>FAIL 2,9 s x2</td><td>Loại; chưa giải thích được vì sao tốc độ 100 thất bại còn 1 ms thì được</td></tr>
+  </table></div>
+  <ul>
+    <li><strong>B2 tốt nhất:</strong> rule <code>*,*::before,*::after{animation-duration:1ms!important;animation-delay:0s!important;transition-duration:1ms!important;transition-delay:0s!important}</code>. Settle ổn định trong đợt (1–2 thay đổi/5 s thay vì 22–30; yên dài nhất 3,8–4,3 s; settle 0,9 s so với đối chứng fail 2,9 s với 28 thay đổi). Tái hiện 2/2. Gỡ được, bắn <code>transitionend</code>, không đổi DOM trang ngoài một <code>&lt;style&gt;</code> (sau gỡ <code>leftover_style_nodes</code> = 0). Animation vô hạn (pulse) vẫn chạy 1 ms/vòng nên ADR-042 B vẫn áp dụng, chưa kiểm live.</li>
+    <li><strong>Vì sao scoped (d) hỏng:</strong> churn là dòng transition ngắn sinh ra rồi chết giữa hai lần probe cộng với JS ghi style; tập thủ phạm không phải tập animation đang chạy tại một thời điểm. Chỉ rule áp cho mọi phần tử tương lai (b, b2) hoặc vòng pause mọi thứ mỗi 40 ms (a2) mới gỡ được.</li>
+    <li><strong>Giới hạn 1 — hop JS timer:</strong> timer của trang vẫn ghi DOM khi bị suppress (class/style/childList, 21–47 thay đổi/5 s; Swiper autoplay vẫn nhảy slide, 1–2 hop/5 s, mỗi hop là một thay đổi state). Hop rơi giữa settle và <code>prepare_end</code> / <code>before_dispatch</code> vẫn cho <code>state_mismatch</code>. Timer tự dịch control (fixture) không bị chặn.</li>
+    <li><strong>Giới hạn 2 — phải giữ calm suốt prepare/dispatch/after-capture:</strong> gỡ rule thì churn quay lại mức baseline ngay (20–23 thay đổi/4 s), nên <code>held</code> (calm) và <code>fresh</code> (không calm) sẽ lệch nhau. Chỉ bật trong settle là không đủ. Điều này suy ra từ pha 3 và luật equivalence, chưa đo trực tiếp held-vs-fresh qua một lần gỡ trên trang thật.</li>
+    <li><strong>Giới hạn 3 — chưa kiểm live dạng duration-only:</strong> probe trang dùng bản mạnh hơn (thêm <code>animation-iteration-count:1</code>); bản duration-only (<code>FAST_CSS</code> trong spec) mới chỉ chạy trên fixture. Cần xác minh trên trang thật.</li>
+    <li><strong>Giới hạn 4 — chưa click trên trang thật:</strong> không click nào ngoài 5 lần bấm tab. Khẳng định an toàn click chỉ dựa trên fixture cục bộ: sau khi gỡ rule 1 ms, <code>elementFromPoint</code> tại tâm slide là đúng node và <code>mouse.click</code> tới đúng node; ảnh chụp lúc calm bằng byte với ảnh trạng thái cuối thật.</li>
+    <li><strong>Khác:</strong> 1 site, một đợt mỗi run, 2–3 run cho biện pháp có triển vọng, 1 run cho phần còn lại; <code>delta_y</code> r19 seq 9 vẫn chưa đọc (probe chỉ chứng minh calm gỡ churn ở y=1200, không chứng minh seq 9 là một đợt). Phát hiện khi viết fixture: timer chỉ đổi <code>z-index</code> mà không có animation thì KHÔNG lật hit probe trong fixture, làm yếu cách diễn đạt "timer z-index" của r20; trên trang thật hit churn đi theo chuyển động CSS/JS và biến mất dưới b/b2.</li>
+  </ul>
+
+  <h3>Thiết kế đề xuất (B2 "calm motion", chưa triển khai)</h3>
+  <ul>
+    <li><strong>File mới <code>workers/playwright/src/vision-calm.ts</code>:</strong> <code>enableCalm(page)</code>, <code>disableCalm(page)</code> (idempotent, chịu page đóng/frame tách), <code>withCalm(page, fn)</code> (try/finally). Chèn bằng <code>page.evaluate</code> với hàm dựng từ chuỗi (bài học r18: không đặt hàm có tên trong callback evaluate). Style node có id cố định nên bật lần hai là no-op. Chỉ main frame (iframe giữ nhịp thật, giới hạn đã nêu).</li>
+    <li><strong>Điểm gọi (<code>vision-operations.ts</code>):</strong> ~887 settle sau action đổi viewport (scroll/navigate/back/close_popup): <code>enableCalm(afterPage)</code> trước <code>settleState(…, 10_000, 800)</code>, giữ qua after-capture và screenshot, <code>disableCalm</code> trong <code>finally</code>; ~552 refresh settle (<code>refresh_observation</code>) tương tự; <code>prepare</code> / <code>observeDom</code> (~328, ~557–561, ~655, ~729) phải đo state cùng chế độ với fresh inspection, nên chính sách nhất quán là cấp phiên: bật khi op cuộn/điều hướng bắt đầu, giữ đến hết operation (gồm click và capture sau click) hoặc <code>close</code>. Bật/tắt từng settle bị loại do pha 3.</li>
+    <li><strong>Cờ:</strong> biến môi trường của worker, mặc định <strong>tắt</strong> cho đến khi một lần chạy live chứng minh hiệu quả; không đổi field contract; chỉ cho Vision agent.</li>
+    <li><strong>Khôi phục mọi đường:</strong> <code>finally</code> cho thành công, <code>settle_timeout</code>, lỗi ném ra, navigated/popup (<code>afterPage</code> mới), page đóng (nuốt <code>TargetClosedError</code>), đóng phiên, tắt worker. Sau điều hướng style mất cùng document cũ; gọi áp lại trước settle.</li>
+    <li><strong>Hop còn lại:</strong> kèm một trong hai (quyết định của user): <strong>A-lite</strong> (khi <code>prepare</code> gặp <code>state_mismatch</code> một hop, <code>settleState</code> thêm một lần rồi so lại một lần, giới hạn bởi <code>session.deadline</code>) hoặc <strong>B</strong> (ADR scoped-equivalence cho mover không chồng lên target).</li>
+    <li><strong>ADR-043 mới</strong> "Calm motion during settle" (trạng thái proposed): quyết định, các phương án bị loại (a/b/c/d/cdp kèm số liệu trên), luật held/fresh cùng chế độ, hop còn lại, cờ, và câu "worker được làm gì với trang" (chỉ một style node, không DOM, không event). Thêm một dòng tham chiếu vào ADR-042 (đường B animated không đổi). Lưu ý: số 043 trước đây thuộc r15 đã gác; cần chốt khi tạo ADR.</li>
+    <li><strong>Test sẽ thêm:</strong> spec <code>vision-calm.spec.ts</code> + bản tsx song sinh: bật/tắt idempotent và gỡ node; tắt khi lỗi/page đóng/điều hướng; fixture carousel settle khi có calm và không khi thiếu; <code>transitionend</code> bắn; khung calm bằng khung trạng thái cuối thật; fixture timer JS vẫn fail (<code>test.fail()</code>, ghi giới hạn); kiểm runtime tsx r18 với đường calm; click trúng đúng node sau calm.</li>
+    <li><strong>Rủi ro:</strong> agent thấy khung đã calm (transition bị bỏ qua), test nào kiểm thời gian sẽ thấy trang đổi; trang thật có thể đổi; mới 2 run dạng B2 (và 3 run dạng b) trên trang thật.</li>
+  </ul>
+
+  <h3>Diff thật</h3>
+  <p>Không có source production nào đổi trong r20–r21. Theo <code>git status --short</code>, phần của hai vòng này chỉ là hai file spec mới (untracked, fixture để inline, không có file fixture mới) và các doc nối thêm (cộng dồn cả các vòng trước):</p>
+  <div class="scroll"><table>
+    <tr><th>File</th><th>Git</th><th>+/−</th><th>Tóm tắt</th></tr>
+    <tr><td><code>workers/playwright/src/vision-settle-switcher.spec.ts</code></td><td>tạo (untracked)</td><td class="n">64 dòng</td><td>r20: 3 test (cơ chế; đối chứng yên khi churn dừng; <code>test.fail()</code> settle 5 s trong đợt dài)</td></tr>
+    <tr><td><code>workers/playwright/src/vision-settle-suppression.spec.ts</code></td><td>tạo (untracked)</td><td class="n">140 dòng</td><td>r21: 6 test fixture (baseline, <code>none</code>+pause, 1 ms, <code>pause()</code>, timer JS, click sau resume)</td></tr>
+    <tr><td><code>benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md</code></td><td>tạo (untracked)</td><td class="n">458 dòng</td><td>Tích luỹ; r20 và r21 nối mỗi vòng một mục</td></tr>
+    <tr><td><code>plan/09112026103202-vision-accuracy-loop/README.md</code></td><td>sửa</td><td class="n">+221 / −1</td><td>Tích luỹ; nối handoff r20 và r21 (và quyết định user sau r19, r20)</td></tr>
+    <tr><td><code>docs/graphs/playwright-vision-worker.md</code></td><td>sửa</td><td class="n">+156 / −80</td><td>Tích luỹ so với HEAD; r20 và r21 mỗi vòng thêm 1 file qua hgraph (tổng 38 file)</td></tr>
+  </table></div>
+  <p><code>benchmark/vision/accuracy/README.md</code> (+37 / −0) cũng đang sửa nhưng là phần của r8, không thuộc hai vòng này. Probe và JSON nằm ở <code>.pytest-artifacts/r20-*</code>, <code>r21-*</code> (không theo dõi bởi git). <strong>Database:</strong> không đụng (không migration, không ghi DB; hàng proposal của r19 trong DB chưa đọc).</p>
+
+  <h3>Test</h3>
+  <div class="scroll"><table>
+    <tr><th>Lệnh (<code>workers/playwright</code>)</th><th>Kết quả thật</th></tr>
+    <tr><td><code>npx playwright test src/vision-settle-switcher.spec.ts --reporter=line</code> (r20)</td><td>3 passed (12,6 s); dòng <code>vision.state.settle_timeout</code> in ra là đầu ra kỳ vọng của test 3 (51 thay đổi, 0 URL)</td></tr>
+    <tr><td><code>npx tsc --noEmit</code> (r20)</td><td>exit 0, không output</td></tr>
+    <tr><td><code>npx playwright test src/vision-settle-suppression.spec.ts --reporter=list --workers=1</code> (r21)</td><td>6 passed (28,0 s)</td></tr>
+    <tr><td><code>npx tsc --noEmit</code>, <code>npx eslint src/vision-settle-suppression.spec.ts</code> (r21)</td><td>sạch, không output</td></tr>
+  </table></div>
+  <p>Lượt này (cập nhật artifact) không chạy lại test nào; số trên lấy nguyên văn từ báo cáo r20 và r21.</p>
+
+  <h3>Graph</h3>
+  <p><code>docs/graphs/playwright-vision-worker.md</code> được cập nhật qua hgraph, mỗi vòng thêm 1 file spec mới. <code>hgraph check</code> sau r20: 6 graph, 469 file source, không vấn đề; sau r21: 6 graph, 470 file source, không vấn đề. <code>hgraph check --changed</code> vẫn liệt kê trên 70 file thuộc các việc chưa commit khác là <code>uncovered-changed</code> (control-plane Python, dashboard, docs); không file nào thuộc hai vòng này.</p>
+
+  <h3>Bước kế (chờ user)</h3>
+  <ul>
+    <li><strong>Duyệt triển khai B2</strong> (<code>vision-calm.ts</code>, cờ mặc định tắt, ADR-043) <strong>kèm A-lite hoặc B</strong> cho hop còn lại, rồi một phiên live mới (cần user duyệt).</li>
+    <li>Hoặc <strong>đọc trước <code>delta_y</code> của r19 seq 9</strong> (operation <code>cb145ad0</code>, truy vấn DB chỉ đọc hoặc log worker) để chốt r20 mục 1.</li>
+    <li>Nên xác minh dạng duration-only trên trang thật và đo held-vs-fresh qua một lần gỡ calm trước khi tin vào thiết kế.</li>
+    <li>A2 chạy riêng sau; nợ covered-control quyết sau.</li>
+  </ul>
+</section>
+</div>

@@ -52,6 +52,7 @@ from infrastructure.persistence.models import (
     TestRunModel,
     VisionDebugEvidenceModel,
     VisualActionProposalModel,
+    VisualAgentStepModel,
     VisualExplorationSessionModel,
     VisualExplorationStateModel,
     VisualLocatorEvidenceModel,
@@ -1268,6 +1269,14 @@ class SqlAlchemyVisualTraceRepository:
         )
         self._session.flush()
         return handoff
+
+    def agent_steps(self, scope: VisualSessionScope) -> list[VisualAgentStepModel]:
+        """Steps of one session in `step_index` order; scoped by tenant, project and session."""
+        return list(self._session.scalars(
+            select(VisualAgentStepModel).where(
+                *self._scope(VisualAgentStepModel, scope),
+            ).order_by(VisualAgentStepModel.step_index)
+        ))
 
     def snapshot(self, scope: VisualSessionScope) -> dict[str, tuple]:
         """Return detached contracts, including frame tombstones, from one DB snapshot."""

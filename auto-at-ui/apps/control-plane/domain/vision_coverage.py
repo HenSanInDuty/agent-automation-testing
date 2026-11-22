@@ -29,6 +29,25 @@ def inventory(checkpoint, bound, attempted, scope="all"):
     )
 
 
+def merge_inventory(previous, current):
+    """Union of the observations of one state (the agent scrolls without a new checkpoint).
+
+    Controls are keyed by descriptor hash and the latest status wins; the list is capped at the
+    contract's 100 controls and then marked truncated. Flags describe the newest observation,
+    except that truncation and skipped controls are never forgotten.
+    """
+    if previous is None:
+        return current
+    controls = {control.key: control for control in previous.controls}
+    controls.update({control.key: control for control in current.controls})
+    ordered = tuple(controls.values())
+    return current.model_copy(update={
+        "controls": ordered[:100],
+        "truncated": previous.truncated or current.truncated or len(ordered) > 100,
+        "skipped_count": max(previous.skipped_count, current.skipped_count),
+    })
+
+
 def remaining_observation(checkpoint, bound, attempted):
     bindings = tuple(b for b in bound.bindings
                      if target_key(checkpoint, b.descriptor) not in attempted)

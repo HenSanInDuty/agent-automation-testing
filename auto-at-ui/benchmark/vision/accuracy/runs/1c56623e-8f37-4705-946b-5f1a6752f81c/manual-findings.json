@@ -1,0 +1,7 @@
+{
+  "2": "Header SU KIEN link (box 488,11 145x37 equals oracle mct-02) opened the Su Kien page: SU KIEN title and highlighted nav item; matches declared mongchiton.vn/su-kien (HEAD 200).",
+  "6": "Header DIEU KHOAN link (box equals oracle mct-04) rendered Tepaylink Terms of Service; matches independently reviewed 301 from declared id.tepaylink.vn/site/rules to id.tpl.vn/rules (redirect-review-20261117.json).",
+  "9": "Header CONG DONG link (box equals oracle mct-05) rendered the Facebook group VLCM Origin (mongchiton.vn) behind a login dialog; matches declared facebook.com/groups/mongchiton.vn. No login performed.",
+  "11": "Header HO TRO link (box equals oracle mct-06) rendered the Tepaylink support center; matches independently reviewed 301 from declared support.tepaylink.vn to support.tpl.vn. No login performed.",
+  "14": "Header TRANG CHU link (box 332,11 equals oracle mct-01) returned from /cam-nang to the homepage; TRANG CHU highlighted, matches declared mongchiton.vn/."
+}

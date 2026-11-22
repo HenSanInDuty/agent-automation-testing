@@ -1,0 +1,400 @@
+{
+ "outcome": "unavailable",
+ "state": "unavailable",
+ "reason": "agent_done",
+ "seconds": 94.438275,
+ "model_calls": 10,
+ "script": [
+  {
+   "call": 1,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 2,
+   "rows": 13,
+   "buttons": 4,
+   "links": 9,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 3,
+   "rows": 4,
+   "buttons": 3,
+   "links": 1,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 4,
+   "rows": 8,
+   "buttons": 0,
+   "links": 8,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc"
+  },
+  {
+   "call": 5,
+   "rows": 8,
+   "buttons": 0,
+   "links": 8,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc"
+  },
+  {
+   "call": 6,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 7,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 8,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 9,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 10,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  }
+ ],
+ "operations": [
+  {
+   "seq": 1,
+   "purpose": "setup",
+   "kind": "navigate",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "changed",
+   "parent": "None",
+   "after_frame": "0fd40396-7f41-4a44-95f6-d1f919a7306d",
+   "before_frame": "4757d9f9-616e-4130-8e31-f1e28b72c571",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 2,
+   "purpose": "explore",
+   "kind": "click",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "d50f6644",
+   "after_frame": "8c7d5724-8fff-4f98-a11d-badce1402d42",
+   "before_frame": "c1fffb88-e3e9-4191-b328-cc2d62b82850",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 3,
+   "purpose": "explore",
+   "kind": "scroll",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "d50f6644",
+   "after_frame": "626e6756-52a0-42ff-bc9d-d52ab4e59f19",
+   "before_frame": "a7ed2932-ce99-4e65-b408-0d1f99d5d9a1",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 4,
+   "purpose": "explore",
+   "kind": "scroll",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "d50f6644",
+   "after_frame": "9bbbc0c6-e3a4-489c-afca-d0a23d3e614e",
+   "before_frame": "6684e44f-315f-474e-8a91-2c0516d34598",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 5,
+   "purpose": "explore",
+   "kind": "click",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "changed",
+   "parent": "d50f6644",
+   "after_frame": "b78875d1-4fb6-499f-9703-31f0e6e9617d",
+   "before_frame": "b2e34e2c-6c4a-411f-a835-335f344f2311",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 6,
+   "purpose": "explore",
+   "kind": "back",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "d50f6644",
+   "after_frame": "37ff5f29-56fb-450a-8745-8e5800f2bd5e",
+   "before_frame": "99f2d8b0-d310-4dcd-9f8d-fe2d4d1ffc22",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 7,
+   "purpose": "explore",
+   "kind": "navigate",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "changed",
+   "parent": "None",
+   "after_frame": "e329cf88-1ea1-453d-b27f-2780d70f61c6",
+   "before_frame": "7acd984e-bc7b-423a-968c-b22de0cac755",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 8,
+   "purpose": "explore",
+   "kind": "wait",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "d50f6644",
+   "after_frame": "c84147ee-66e9-4dd0-9e5d-85b7bc28a453",
+   "before_frame": "f329bfd9-7df6-4eb8-9240-326cea7c6c73",
+   "after_why": null,
+   "before_why": null
+  }
+ ],
+ "steps": [
+  {
+   "i": 1,
+   "stop": "state_changed",
+   "actions": [
+    {
+     "kind": "click",
+     "ref": "1:1",
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    },
+    {
+     "kind": "scroll",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 2,
+   "stop": "state_changed",
+   "actions": [
+    {
+     "kind": "type",
+     "ref": "2:1",
+     "skipped": "sensitive_action_blocked",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    },
+    {
+     "kind": "click",
+     "ref": "0:1",
+     "skipped": "stale_ref",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    },
+    {
+     "kind": "scroll",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 3,
+   "stop": "url_change",
+   "actions": [
+    {
+     "kind": "click",
+     "ref": "3:1",
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "changed"
+    },
+    {
+     "kind": "wait",
+     "ref": null,
+     "skipped": "batch_stopped",
+     "stop_cause": "url_change",
+     "result": null,
+     "status": null,
+     "url_change": null
+    }
+   ]
+  },
+  {
+   "i": 4,
+   "stop": null,
+   "actions": [
+    {
+     "kind": "back",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 5,
+   "stop": "url_change",
+   "actions": [
+    {
+     "kind": "navigate",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "changed"
+    }
+   ]
+  },
+  {
+   "i": 6,
+   "stop": null,
+   "actions": [
+    {
+     "kind": "wait",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 7,
+   "stop": null,
+   "actions": [
+    {
+     "kind": "click",
+     "ref": "0:1",
+     "skipped": "stale_ref",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    },
+    {
+     "kind": "type",
+     "ref": "7:1",
+     "skipped": "sensitive_action_blocked",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    }
+   ]
+  },
+  {
+   "i": 8,
+   "stop": null,
+   "actions": [
+    {
+     "kind": "click",
+     "ref": "0:1",
+     "skipped": "stale_ref",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    },
+    {
+     "kind": "type",
+     "ref": "8:1",
+     "skipped": "sensitive_action_blocked",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    }
+   ]
+  },
+  {
+   "i": 9,
+   "stop": null,
+   "actions": [
+    {
+     "kind": "click",
+     "ref": "0:1",
+     "skipped": "stale_ref",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    },
+    {
+     "kind": "type",
+     "ref": "9:1",
+     "skipped": "sensitive_action_blocked",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    }
+   ]
+  },
+  {
+   "i": 10,
+   "stop": "agent_done",
+   "actions": []
+  }
+ ]
+}

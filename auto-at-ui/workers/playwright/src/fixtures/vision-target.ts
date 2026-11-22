@@ -187,23 +187,29 @@ export async function startVisionTarget() {
     if (path === "/initial-release" || path === "/initial-hydrated") { response.end('ok'); return; }
     if (["/coverage-history-delay", "/coverage-history-duplicate",
       "/coverage-history-duplicate-form", "/coverage-history-overwritten",
+      "/coverage-history-overwritten-unreachable",
       "/coverage-history-scroll-reset", "/coverage-history-scroll-reset-form",
       "/coverage-history-scroll-reset-up"].includes(path)) {
+      // `-unreachable` (ADR-044): the Reveal cluster sits below the fold and a root-level
+      // "Top action" stays reachable by URL after the revealed branch can no longer be restored.
       response.end(`<!doctype html><style>button,a{display:inline-block;margin:20px;padding:15px;background:gold;border-radius:5px}</style><body><script>
         const home=location.pathname;let revealed=false,returned=false;
         const resetScroll=${path.startsWith('/coverage-history-scroll-reset')};
         const resetUp=${path.endsWith('-reset-up')};
         if(resetScroll)history.scrollRestoration='manual';
+        const unreachable=${path.endsWith('-unreachable')};
         function root(){
           if(resetScroll)document.body.style.cssText='margin:0;padding-top:'+(resetUp?0:800)+'px;height:1100px;box-sizing:border-box';
-          document.body.innerHTML='<input type="hidden" value="fixture-original"><button id="reveal">Reveal</button><span id="actions" hidden><a href="/history-destination" id="next">Next</a><button id="sibling">Sibling</button></span>';
+          if(unreachable)document.body.style.cssText='margin:0;padding-top:900px;height:1300px;box-sizing:border-box';
+          document.body.innerHTML=(unreachable?'<button id="top-action" style="position:absolute;top:20px;left:20px">Top action</button>':'')+'<input type="hidden" value="fixture-original"><button id="reveal">Reveal</button><span id="actions" hidden><a href="/history-destination" id="next">Next</a><button id="sibling">Sibling</button></span>';
+          if(unreachable)document.querySelector('#top-action').onclick=()=>fetch('/record-button/top-action');
           document.querySelector('#actions').hidden=!revealed;
           if(returned && ${path.endsWith('-form')})document.querySelector('input').value='fixture-changed';
           if(returned && resetScroll)window.scrollTo(0,resetUp?300:0);
           document.querySelector('#reveal').onclick=()=>{fetch('/record-button/reveal');revealed=true;document.querySelector('#actions').hidden=false};
           document.querySelector('#sibling').onclick=()=>fetch('/record-button/sibling');
           document.querySelector('#next').onclick=event=>{event.preventDefault();fetch('/record-button/next');
-            if(${path.endsWith('-overwritten')})history.replaceState({},'', '/overwritten-source');
+            if(${path.includes('-overwritten')})history.replaceState({},'', '/overwritten-source');
             history.pushState({},'', '/history-destination');
             if(${path !== '/coverage-history-delay'})history.pushState({},'', '/history-destination?view=latest');
             document.body.innerHTML='<h1>Destination</h1><input type="hidden" value="fixture-original">'};

@@ -1,0 +1,27 @@
+{
+  "operation_id": "7306fe54-b39b-4d13-93e9-ee1d6afee0bf",
+  "sequence": 128,
+  "target_id": "mct-57",
+  "expected": "previous step: indicator 5 -> 4 (Thu Cuoi Kinh Dien)",
+  "before_observed_index": 5,
+  "after_observed_index": 5,
+  "before_slide": "Vo Lam Chan Menh",
+  "after_slide": "Vo Lam Chan Menh",
+  "next_frame_operation_sequence": 129,
+  "next_frame_observed_index": 6,
+  "before": {
+    "id": "60d20716-11ce-4171-b728-04d3e9cc166d",
+    "checksum": "da15a7b1e0f19def248b938f2aaa706efd22ab98e6388cd27590e4b092dcc068",
+    "availability": "retained",
+    "byte_count": 1222972
+  },
+  "after": {
+    "id": "09994f67-f6f9-41cd-9f2d-aa664051ebf8",
+    "checksum": "d5567493b7e5a562a486b3b6150ebb05f87189a6c471cf5e47319806240b5e3e",
+    "availability": "retained",
+    "byte_count": 1223223
+  },
+  "verdict": "unverified",
+  "finding": "Verified locator targets the previous arrow, but the retained after-frame shows the same indicator 5 / slide as before; the following wait op 129 shows indicator 6 (autoplay forward). No backward step observed. No credit; ineffective click vs capture timing is not proven, and no wrong physical target is claimed.",
+  "review_scope": "All 46 bound positive outcomes independently reviewed (retained images, checkpoint page_url, redirect review, click-bound download evidence)."
+}

@@ -70,6 +70,7 @@ class VisualDiagnosticFailure(ValueError):
 
 _SECRET_PATTERNS = (
     compile(r"AIza[0-9A-Za-z_-]{20,}"),
+    compile(r"sk-ant-[0-9A-Za-z_-]{20,}"),
     compile(r"(?i)data:image/[^\s;,\"']+;base64,[a-z0-9+/=_-]*"),
     compile(r"(?i)(?:bearer\s+)[a-z0-9._~+/-]+=*"),
     compile(r"(?i)(?:api[_-]?key|password|secret|token)\s*[:=]\s*[^\s,;]+"),

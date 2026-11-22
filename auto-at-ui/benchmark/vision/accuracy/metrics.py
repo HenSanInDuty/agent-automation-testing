@@ -77,8 +77,20 @@ class OutcomeReview(BaseModel):
     finding: str = Field(min_length=10, max_length=1000)
 
 
+ORACLE_SCHEMAS = {"vision-accuracy-oracle-v1", "vision-accuracy-oracle-v2"}
+
+
+def oracle_paths(item: dict) -> tuple[str, ...]:
+    """DOM paths of one logical oracle target: the reference path, then any v2 alternates.
+
+    An alternate is another DOM copy of the same control (same destination/outcome), for example
+    one swiper slide per character where exactly one copy is on screen at a time."""
+    return (item["reference_path"], *item.get("alternate_paths", ()))
+
+
 def validate_oracle(oracle: dict) -> dict:
-    if oracle.get("schema_version") != "vision-accuracy-oracle-v1":
+    version = oracle.get("schema_version")
+    if version not in ORACLE_SCHEMAS:
         raise ValueError("unknown oracle schema")
     examples = oracle.get("examples")
     if not isinstance(examples, list):
@@ -86,6 +98,20 @@ def validate_oracle(oracle: dict) -> dict:
     ids = [item.get("id") for item in examples]
     if any(not isinstance(item, str) or not item for item in ids) or len(set(ids)) != len(ids):
         raise ValueError("oracle IDs must be unique and nonempty")
+    seen_paths = {item.get("reference_path") for item in examples}
+    for item in examples:
+        alternates = item.get("alternate_paths")
+        if alternates is not None and (
+            version == "vision-accuracy-oracle-v1"
+            or not isinstance(alternates, list) or not alternates
+            or any(not isinstance(path, str) or not path for path in alternates)
+            or not isinstance(item.get("alternate_evidence"), str)
+        ):
+            raise ValueError("alternate paths need oracle v2, nonempty strings and evidence")
+        for path in alternates or ():
+            if path in seen_paths:
+                raise ValueError("alternate paths must not repeat any oracle path")
+            seen_paths.add(path)
     for item in examples:
         if type(item.get("expected")) is not bool:
             raise ValueError("oracle label must be boolean")
@@ -149,6 +175,32 @@ def score(oracle: dict, assessments: list[Assessment], detection: Detection) -> 
         "interaction_statuses": dict(Counter(row.status for row in interactions)),
         "passed": passed, "business_outcome": "unverified",
     }
+
+
+def qualify_batch(runs: list[dict], *, size: int = 5, required: int = 4,
+                  min_attempts: int = 100) -> dict:
+    """Sprint rule (user decision 2026-11-22): one pre-declared batch of `size` consecutive runs of
+    one frozen candidate; at least `required` pass every gate, no run of the batch has an unsafe or
+    unsettled operation, every run is terminal and eligible, and the batch has `min_attempts`."""
+    if len(runs) != size:
+        raise ValueError(f"qualification batch needs exactly {size} runs, got {len(runs)}")
+    if len({run["session_id"] for run in runs}) != size:
+        raise ValueError("duplicate qualification session")
+    signatures = {(run["source_hash"], run["config_hash"], run["score"]["oracle_hash"])
+                  for run in runs}
+    eligible = all(run.get("qualification_eligible") is True and run["terminal"] for run in runs)
+    safe = all(not run["score"]["unsafe_operations"] and not run["score"]["unsettled_operations"]
+               for run in runs)
+    passed_runs = [run["session_id"] for run in runs if run["score"]["passed"]]
+    attempts = sum(run["score"]["accuracy"]["denominator"] for run in runs)
+    return {"passed": len(signatures) == 1 and eligible and safe
+            and len(passed_runs) >= required and attempts >= min_attempts,
+            "rule": f">={required}/{size} runs pass, all safe, >={min_attempts} attempts",
+            "same_candidate": len(signatures) == 1, "all_eligible_terminal": eligible,
+            "all_safe": safe, "passed_sessions": passed_runs,
+            "failed_sessions": [run["session_id"] for run in runs
+                                if run["session_id"] not in passed_runs],
+            "interaction_attempts": attempts}
 
 
 def qualify(runs: list[dict]) -> dict:

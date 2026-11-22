@@ -1,0 +1,15 @@
+{
+  "6": "mct-33: Machine rule: after-state page URL https://pay.tpl.vn equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "9": "mct-34: Machine rule: after-state page URL https://id.tpl.vn/register equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "12": "mct-42: Machine rule: after-state page URL https://h5.mongchiton.vn equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "16": "mct-35: Machine rule: after-state page URL https://testflight.apple.com/join/f86aG3mh equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "28": "mct-29: Machine rule: after-state page URL https://mongchiton.vn/tin-tuc equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "34": "mct-09: Machine rule: after-state page URL https://testflight.apple.com/join/f86aG3mh equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "40": "mct-36: Machine rule: after-state page URL https://play.google.com/store/apps/details equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "43": "mct-37: Machine rule: after-state page URL https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "46": "mct-38: Machine rule: click-bound download chain starts with the exact declared URL hash and completes; no installation or execution claimed.",
+  "48": "mct-39: Machine rule: after-state page URL https://www.facebook.com/mongchiton.vn equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "51": "mct-40: Machine rule: after-state page URL https://www.facebook.com/groups/mongchiton.vn equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "54": "mct-41: Machine rule: after-state page URL https://www.youtube.com/playlist equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "98": "mct-47: Machine rule: after-state URL is https://mongchiton.vn/#true, the embedded player state of the declared video (video-copies-probe-20261122.json). No playback claim."
+}

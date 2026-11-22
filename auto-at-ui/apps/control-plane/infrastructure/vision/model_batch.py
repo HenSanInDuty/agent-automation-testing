@@ -9,7 +9,11 @@ from time import monotonic
 from agents.shared.models import LanguageModel
 from agents.shared.openrouter import create_vision_language_model
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
-from agents.shared.vision_providers import VISION_MODEL_TIMEOUT_SECONDS
+from agents.shared.vision_providers import (
+    INLINE_IMAGE_PROVIDERS,
+    VISION_MODEL_TIMEOUT_SECONDS,
+    is_bridge_provider,
+)
 from agents.vision.executor import VisualCandidateBatchOutcome, execute_visual_candidate_batch
 from agents.vision.temporary_images import GoogleDriveTemporaryVisionImageStore
 from application.vision_model_batch import VisionModelSession
@@ -38,7 +42,7 @@ class VisionModelBatch:
             return _unavailable("provider_timeout")
         if (session.provider, session.model) != (policy.provider, policy.model):
             return _unavailable("policy_changed")
-        if policy.provider == "codex_cli":
+        if is_bridge_provider(policy.provider):
             # Codex requires the separate DOM/fencing/job gateway capability.
             return _unavailable("bridge_offline")
         settings = self.settings
@@ -55,7 +59,7 @@ class VisionModelBatch:
             check_policy()
             if monotonic() >= deadline:
                 raise TimeoutError
-            if policy.provider == "gemini":
+            if policy.provider in INLINE_IMAGE_PROVIDERS:
                 # Do not even construct the Drive adapter for inline delivery.
                 yield None
                 return

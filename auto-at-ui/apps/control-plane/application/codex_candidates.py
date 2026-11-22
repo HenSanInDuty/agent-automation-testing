@@ -13,9 +13,11 @@ from uuid import UUID
 from zlib import crc32
 
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.codex_service import task_context, validate_candidates
 from agents.vision.executor import VisualCandidateBatchOutcome
 from auto_at.contracts.codex_bridge import (
+    BRIDGE_PROVIDER_MODELS,
     CodexBoundObservation,
     CodexBridgeResponse,
     CodexTaskContext,
@@ -34,9 +36,10 @@ class CodexUnavailable(ValueError):
 
 
 def require_dom_policy(policy: VisionPolicy):
-    if (not policy.enabled or policy.provider != "codex_cli" or policy.model != "gpt-6-luna"
+    if (not policy.enabled or not is_bridge_provider(policy.provider)
+            or policy.model != BRIDGE_PROVIDER_MODELS[policy.provider]
             or policy.codex is None or not policy.codex.dom_transfer_accepted
-            or policy.codex.dom_transfer_provider != "codex_cli"):
+            or policy.codex.dom_transfer_provider != policy.provider):
         raise CodexUnavailable("policy_changed")
 
 
@@ -163,7 +166,7 @@ class CodexCandidateService:
                 image = None
                 if stage == "image":
                     if (not policy.raw_screenshot_transfer_accepted
-                            or policy.raw_screenshot_transfer_provider != "codex_cli"):
+                            or policy.raw_screenshot_transfer_provider != policy.provider):
                         raise CodexUnavailable("image_consent_required")
                     # Reserve before capturing pixels, so exhaustion cannot leak an image.
                     sequence = await budget.reserve(
@@ -182,7 +185,7 @@ class CodexCandidateService:
                 policy = budget.check_policy()
                 require_dom_policy(policy)
                 if image and (not policy.raw_screenshot_transfer_accepted
-                              or policy.raw_screenshot_transfer_provider != "codex_cli"):
+                              or policy.raw_screenshot_transfer_provider != policy.provider):
                     raise CodexUnavailable("policy_changed")
                 remaining = (budget.deadline - datetime.now(UTC)).total_seconds()
                 if remaining <= 0:
@@ -201,8 +204,10 @@ class CodexCandidateService:
                         require_dom_policy(policy)
                         if not await check_state():
                             raise CodexUnavailable("bridge_stale_result")
-                        if image and (not policy.raw_screenshot_transfer_accepted
-                                      or policy.raw_screenshot_transfer_provider != "codex_cli"):
+                        if image and (
+                            not policy.raw_screenshot_transfer_accepted
+                            or policy.raw_screenshot_transfer_provider != policy.provider
+                        ):
                             raise CodexUnavailable("policy_changed")
                     remaining = (budget.deadline - datetime.now(UTC)).total_seconds()
                     if remaining <= 0:

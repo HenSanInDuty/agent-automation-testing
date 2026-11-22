@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -17,6 +18,7 @@ from pydantic import (
     Field,
     TypeAdapter,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -33,6 +35,14 @@ FailureCode = Literal[
     "bridge_tool_rejected", "bridge_provider_unavailable",
     "bridge_cleanup_pending",
 ]
+# Local CLI bridge engines. Each provider is pinned to exactly one model; consent,
+# requests and responses must all name the same provider.
+BridgeProvider = Literal["codex_cli", "claude_cli"]
+BridgeModel = Literal["gpt-6-luna", "claude-opus-5-5"]
+BRIDGE_PROVIDER_MODELS: dict[str, str] = {
+    "codex_cli": "gpt-6-luna", "claude_cli": "claude-opus-5-5",
+}
+BRIDGE_PROVIDERS = frozenset(BRIDGE_PROVIDER_MODELS)
 
 
 class ClosedModel(BaseModel):
@@ -52,27 +62,31 @@ def content_hash(value: BaseModel) -> str:
 class CodexInputPolicy(ClosedModel):
     input_mode: Literal["dom_first"] = "dom_first"
     dom_transfer_accepted: bool = False
-    dom_transfer_provider: Literal["codex_cli"] | None = None
+    dom_transfer_provider: BridgeProvider | None = None
     max_dom_elements: int = Field(default=100, ge=1, le=100)
     max_dom_bytes: int = Field(default=65_536, ge=1024, le=65_536)
 
     @model_validator(mode="after")
     def consent(self):
-        if self.dom_transfer_accepted != (self.dom_transfer_provider == "codex_cli"):
-            raise ValueError("DOM consent must be explicitly bound to codex_cli")
+        if self.dom_transfer_accepted != (self.dom_transfer_provider is not None):
+            raise ValueError("DOM consent must be explicitly bound to a bridge provider")
         return self
 
 
 class CodexConsentSnapshot(CodexInputPolicy):
     raw_screenshot_transfer_accepted: bool = False
-    raw_screenshot_transfer_provider: Literal["codex_cli"] | None = None
+    raw_screenshot_transfer_provider: BridgeProvider | None = None
 
     @model_validator(mode="after")
     def image_consent(self):
         if self.raw_screenshot_transfer_accepted != (
-            self.raw_screenshot_transfer_provider == "codex_cli"
+            self.raw_screenshot_transfer_provider is not None
         ):
-            raise ValueError("image consent must be explicitly bound to codex_cli")
+            raise ValueError("image consent must be explicitly bound to a bridge provider")
+        if (self.raw_screenshot_transfer_provider is not None
+                and self.dom_transfer_provider is not None
+                and self.raw_screenshot_transfer_provider != self.dom_transfer_provider):
+            raise ValueError("image and DOM consent must name the same bridge provider")
         return self
 
 
@@ -186,6 +200,31 @@ class CodexTaskContext(ClosedModel):
         return self
 
 
+AGENT_PROMPT_PATTERN = r"^agent-loop-v[1-9][0-9]*$"
+AGENT_MEMORY_MAX_CHARS = 2000
+AGENT_HISTORY_MAX_ITEMS = 5
+AGENT_HISTORY_ITEM_MAX_CHARS = 600
+AGENT_SNAPSHOT_MAX_CHARS = 24_000
+AGENT_MAX_ACTIONS = 10
+# UTF-8 byte ceiling of a whole agent request (canonical bytes, ensure_ascii=False).
+AGENT_REQUEST_MAX_BYTES = 131_072
+
+
+class AgentLoopContext(ClosedModel):
+    """Everything the agent prompt may carry; history is rendered once by the control plane."""
+
+    task: str = Field(min_length=1, max_length=4000)
+    allowed_hosts: tuple[Annotated[str, Field(min_length=1, max_length=255)], ...] = Field(
+        max_length=100,
+    )
+    memory: str = Field(default="", max_length=AGENT_MEMORY_MAX_CHARS)
+    history: tuple[Annotated[str, Field(max_length=AGENT_HISTORY_ITEM_MAX_CHARS)], ...] = Field(
+        default=(), max_length=AGENT_HISTORY_MAX_ITEMS,
+    )
+    snapshot_version: int = Field(ge=1, le=1_000_000)
+    snapshot: str = Field(max_length=AGENT_SNAPSHOT_MAX_CHARS)
+
+
 class CodexBridgeRequest(CodexScope):
     schema_version: Literal["v1"] = "v1"
     job_id: UUID
@@ -195,9 +234,9 @@ class CodexBridgeRequest(CodexScope):
     observation_id: UUID
     snapshot_id: UUID
     state_fingerprint: Digest
-    provider: Literal["codex_cli"] = "codex_cli"
-    model: Literal["gpt-6-luna"] = "gpt-6-luna"
-    prompt_version: str = Field(pattern=r"^codex-dom-v[1-9][0-9]*$")
+    provider: BridgeProvider = "codex_cli"
+    model: BridgeModel = "gpt-6-luna"
+    prompt_version: str = Field(pattern=r"^(codex-dom|agent-loop)-v[1-9][0-9]*$")
     stage: Stage
     created_at: AwareDatetime
     deadline: AwareDatetime
@@ -208,15 +247,33 @@ class CodexBridgeRequest(CodexScope):
     max_output_bytes: int = Field(default=32_768, ge=1024, le=32_768)
     context: CodexTaskContext | None = None
     dom_element_count: int | None = Field(default=None, ge=0, le=100)
+    agent_context: AgentLoopContext | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_agent_context(self, handler):
+        # Keeps the canonical bytes (and request hash) of every v4 job unchanged.
+        data = handler(self)
+        if data.get("agent_context") is None:
+            data.pop("agent_context", None)
+        return data
 
     @model_validator(mode="after")
     def valid_job(self):
+        is_agent = re.fullmatch(AGENT_PROMPT_PATTERN, self.prompt_version) is not None
+        if is_agent != (self.agent_context is not None):
+            raise ValueError("agent prompt version and agent context must occur together")
+        if is_agent and len(canonical_bytes(self)) > AGENT_REQUEST_MAX_BYTES:
+            raise ValueError("agent request exceeds byte limit")
         if (self.prompt_version in {
             "codex-dom-v2", "codex-dom-v3", "codex-dom-v4", "codex-dom-v5", "codex-dom-v6",
             "codex-dom-v7", "codex-dom-v8", "codex-dom-v9", "codex-dom-v10", "codex-dom-v11",
         }
                 and self.context is None):
             raise ValueError("versioned prompt requires bounded task context")
+        if BRIDGE_PROVIDER_MODELS[self.provider] != self.model:
+            raise ValueError("bridge provider and model mismatch")
+        if self.consent.dom_transfer_provider != self.provider:
+            raise ValueError("DOM consent is bound to another bridge provider")
         duration = (self.deadline - self.created_at).total_seconds()
         if not 0 < duration <= 3600:
             raise ValueError("job deadline must be within the session duration")
@@ -312,6 +369,101 @@ def parse_codex_output(data: bytes) -> CodexOutput:
     return TypeAdapter(CodexOutput).validate_python(value)
 
 
+AgentActionKind = Literal["click", "type", "scroll", "wait", "back", "close_popup", "navigate"]
+# Format `version:n` is checked by the domain (fullmatch with this pattern -> `invalid_ref`),
+# not at parse time, so one bad ref does not reject the whole step. Strict schema has no pattern.
+AGENT_REF_PATTERN = r"^[0-9]+:[0-9]+$"
+AgentRef = Annotated[str, Field(min_length=1, max_length=24)]
+
+# Fields each kind carries (besides the optional expected_outcome). `navigate` has no field:
+# it can only return to the session target, and `ref` is always null for it.
+_AGENT_ACTION_FIELDS: dict[str, frozenset[str]] = {
+    "click": frozenset({"ref"}),
+    "type": frozenset({"ref", "text"}),
+    "scroll": frozenset({"delta_y"}),
+    "wait": frozenset({"duration_ms"}),
+    "back": frozenset(),
+    "close_popup": frozenset(),
+    "navigate": frozenset(),
+}
+
+
+class AgentAction(ClosedModel):
+    """Flat on purpose: a strict-mode JSON schema cannot express per-kind variants safely."""
+
+    kind: AgentActionKind
+    ref: AgentRef | None = None
+    text: str | None = Field(default=None, min_length=1, max_length=1000)
+    delta_y: int | None = Field(default=None, ge=-2000, le=2000)
+    duration_ms: int | None = Field(default=None, ge=100, le=10_000)
+    expected_outcome: str | None = Field(default=None, min_length=1, max_length=300)
+
+    @model_validator(mode="after")
+    def fields_match_kind(self):
+        present = frozenset(
+            key for key in ("ref", "text", "delta_y", "duration_ms")
+            if getattr(self, key) is not None
+        )
+        if present != _AGENT_ACTION_FIELDS[self.kind]:
+            raise ValueError("agent action fields do not match kind")
+        return self
+
+
+class AgentStep(ClosedModel):
+    outcome: Literal["agent_step"] = "agent_step"
+    evaluation_previous_goal: str = Field(min_length=1, max_length=500)
+    memory: str = Field(max_length=AGENT_MEMORY_MAX_CHARS)
+    next_goal: str = Field(min_length=1, max_length=500)
+    actions: tuple[AgentAction, ...] = Field(min_length=1, max_length=AGENT_MAX_ACTIONS)
+
+
+AgentLoopOutput = Annotated[
+    AgentStep | CodexNeedScreenshot | CodexStop, Field(discriminator="outcome"),
+]
+# What a bridge response may carry: either family; `CodexOutput` itself never gains a variant.
+BridgeOutput = Annotated[
+    CodexCandidates | AgentStep | CodexNeedScreenshot | CodexStop, Field(discriminator="outcome"),
+]
+
+
+def parse_agent_output(data: bytes) -> AgentLoopOutput:
+    """Same root-object envelope rule as `parse_codex_output`, for the agent family."""
+    value = json.loads(data)
+    if isinstance(value, dict) and set(value) == {"result"}:
+        value = value["result"]
+    return TypeAdapter(AgentLoopOutput).validate_python(value)
+
+
+def agent_loop_output_schema() -> bytes:
+    """Strict JSON schema for agent output: every field required (nullable), closed objects."""
+    union = TypeAdapter(AgentLoopOutput).json_schema()
+    definitions = union.pop("$defs")
+    schema = {
+        "type": "object", "properties": {"result": union}, "required": ["result"],
+        "additionalProperties": False, "$defs": definitions,
+    }
+
+    def strict(node):
+        if isinstance(node, dict):
+            for key in ("default", "discriminator", "title"):
+                node.pop(key, None)
+            if "oneOf" in node:
+                node["anyOf"] = node.pop("oneOf")
+            if "const" in node:
+                node["enum"] = [node.pop("const")]
+            if "properties" in node:
+                node["required"] = list(node["properties"])
+                node["additionalProperties"] = False
+            for child in node.values():
+                strict(child)
+        elif isinstance(node, list):
+            for child in node:
+                strict(child)
+
+    strict(schema)
+    return json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+
+
 class CodexUsage(ClosedModel):
     input_tokens: int = Field(ge=0, le=1_000_000_000)
     output_tokens: int = Field(ge=0, le=1_000_000_000)
@@ -329,12 +481,12 @@ class CodexBridgeResponse(CodexScope):
     state_fingerprint: Digest
     request_hash: Digest
     stage: Stage
-    actual_model: Literal["gpt-6-luna"] | None
+    actual_model: BridgeModel | None
     cli_version: str = Field(pattern=r"^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$")
     started_at: AwareDatetime
     completed_at: AwareDatetime
     failure_code: FailureCode | None = None
-    output: CodexOutput | None = None
+    output: BridgeOutput | None = None
     usage: CodexUsage | None = None
 
     @model_validator(mode="after")
@@ -364,6 +516,7 @@ class CodexBridgeReceipt(CodexScope):
 
 
 class CodexBridgeReadiness(ClosedModel):
+    provider: BridgeProvider = "codex_cli"
     busy: bool = False
     configured: bool = False
     online: bool = False

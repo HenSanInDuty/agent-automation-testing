@@ -1,3 +1,9 @@
+---
+status: superseded
+cook_step: superseded-by-phase-06
+owner: be-developer
+qa: required
+---
 # Phase 04 — Chạy, phân tích, sửa, chạy tiếp
 
 ## Mục tiêu và prerequisites
@@ -87,3 +93,8 @@ The three retrospective priorities are implemented and validated offline: curren
 ## Round 20 failed, 2026-11-18
 
 ADR-036 candidate deployed and one live round completed. Coverage ceiling 31/47 fails; operation 85 has an unknown controller outcome after worker success and an orphan after-image in RustFS. Six early carousel images were retained within 500 ms. See canonical README and ROUND20-20261118.md for bounded evidence and the after-frame commit diagnostic handoff. Phase remains open; no round 21 started.
+
+
+## Superseded 2026-11-22
+
+Thay bằng `phase-06-sprint.md` (quyết định người dùng sau đánh giá lại). Lịch sử round 1-21 và agent loop r1-r21 ở `history/`.

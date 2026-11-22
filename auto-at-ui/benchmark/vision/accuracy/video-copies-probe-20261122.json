@@ -1,0 +1,197 @@
+{
+  "schema_version": "vision-oracle-alias-evidence-v1",
+  "target_id": "mct-47",
+  "observed_on": "2026-11-22",
+  "method": "Read-only Playwright probe at 1280x720 on https://mongchiton.vn/ (no form, login, download or navigation away). Clicked the four character switchers, then the on-screen video frame for characters 2 and 4.",
+  "copy_paths": [
+    "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+    "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+    "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+    "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)"
+  ],
+  "positions_by_selected_character": [
+    {
+      "label": "initial",
+      "copies": [
+        {
+          "slot": 1,
+          "x": -546,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 2,
+          "x": 754,
+          "on_screen_hit": true,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 3,
+          "x": 2054,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 4,
+          "x": 3354,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        }
+      ]
+    },
+    {
+      "label": "after switcher 1",
+      "copies": [
+        {
+          "slot": 1,
+          "x": 754,
+          "on_screen_hit": true,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 2,
+          "x": 2054,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 3,
+          "x": 3354,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 4,
+          "x": 4654,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        }
+      ]
+    },
+    {
+      "label": "after switcher 2",
+      "copies": [
+        {
+          "slot": 1,
+          "x": -546,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 2,
+          "x": 754,
+          "on_screen_hit": true,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 3,
+          "x": 2054,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 4,
+          "x": 3354,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        }
+      ]
+    },
+    {
+      "label": "after switcher 3",
+      "copies": [
+        {
+          "slot": 1,
+          "x": -1846,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 2,
+          "x": -546,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 3,
+          "x": 754,
+          "on_screen_hit": true,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 4,
+          "x": 2054,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        }
+      ]
+    },
+    {
+      "label": "after switcher 4",
+      "copies": [
+        {
+          "slot": 1,
+          "x": -3146,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 2,
+          "x": -1846,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 3,
+          "x": -546,
+          "on_screen_hit": false,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        },
+        {
+          "slot": 4,
+          "x": 754,
+          "on_screen_hit": true,
+          "href_tail": ".com/watch?v=_llS1gbeknQ"
+        }
+      ]
+    }
+  ],
+  "click_results": {
+    "before_url": "https://mongchiton.vn/",
+    "character_2": {
+      "clicked": true,
+      "url_after": "https://mongchiton.vn/#true",
+      "iframes": [
+        {
+          "src": "https://www.youtube-nocookie.com/embed/_llS1gbeknQ?v=_llS1gbeknQ&controls=1&enablejsapi=1&nocookie=1&rel=0&fs=1",
+          "w": 1011,
+          "h": 542
+        }
+      ],
+      "popups": []
+    },
+    "character_4": {
+      "clicked": true,
+      "url_after": "https://mongchiton.vn/#true",
+      "iframes": [
+        {
+          "src": "https://www.youtube-nocookie.com/embed/_llS1gbeknQ?v=_llS1gbeknQ&controls=1&enablejsapi=1&nocookie=1&rel=0&fs=1",
+          "w": 1011,
+          "h": 542
+        }
+      ],
+      "popups": []
+    }
+  },
+  "click_screenshots_sha256": {
+    "2": "4ef400e312b98907fad86a9b6c0b83464dcbc19106bb2fc43b0e926a1a326297",
+    "4": "41a3a6ff2aca47a50fc2bae01c7eec013b960d0fcf41a9bacbda0304c428fcbd"
+  },
+  "findings": [
+    "The four a.video-frame copies are swiper slides, one per character; exactly one copy is on screen (x=754, hit test on itself) after any character selection, the other three are off screen.",
+    "All four copies share href https://www.youtube.com/watch?v=_llS1gbeknQ (the oracle url_sha256 07edbdaf...).",
+    "Clicking the on-screen copy for characters 2 and 4 sets the page URL to https://mongchiton.vn/#true and opens an embedded player iframe youtube-nocookie.com/embed/_llS1gbeknQ: same declared video.",
+    "Round 21 inventory keys 50f0e9d3, 52249891, eefb0880 are the v3 dom_path descriptor keys of slots 4, 1 and 2; round 21 op 109 clicked slot 4 and its after-state URL fingerprint equals sha256('https://mongchiton.vn/#true')."
+  ],
+  "decision": "One logical positive target (the video frame of the selected character). Slots 1, 2 and 4 become alternate_paths of mct-47 in oracle v2; denominator stays 47; no target relabeled negative."
+}

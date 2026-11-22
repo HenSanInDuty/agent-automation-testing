@@ -110,7 +110,7 @@ class SqlAlchemyCodexJobGateway:
         validate_request_time(request, now)
         if (
             row.state != "running"
-            or row.provider != "codex_cli"
+            or row.provider != request.provider
             or row.model != request.model
             or row.id != request.session_id
             or row.tenant_id != request.tenant_id

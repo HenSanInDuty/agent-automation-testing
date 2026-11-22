@@ -1,0 +1,31 @@
+{
+  "at": "2026-11-22T10:19:12.395079+00:00",
+  "source_hash": "5f3014581c776ee528fcb45ea60143c671f4ced806b6524571074807969820ca",
+  "checks": {
+    "no_active_session": true,
+    "no_unresolved_iteration": true,
+    "claude_bridge_ready": true,
+    "agent_loop_flags_off": true,
+    "images_match_tree": true,
+    "worker_http_auth_required": true,
+    "claude_token_3h": false,
+    "worker_open_close": true
+  },
+  "agent_flags": {
+    "VISION_AGENT_LOOP_ENABLED": "unset",
+    "VISION_AGENT_CLICK_CONTEXT_ENABLED": "unset",
+    "VISION_AGENT_DOM_PATH_ENABLED": "unset",
+    "VISION_AGENT_INVENTORY_ENABLED": "unset"
+  },
+  "image:control-plane": "sha256:db8990c6e6c3cf3155fc2cd8269850a69794911a65908ecfb4ce85dda8058f50",
+  "image:temporal-worker": "sha256:b2ad32b0a4dbfc7a303688900663808a259beb769b2b2158a5131c21bab3e79b",
+  "image:playwright-worker": "sha256:a75a8bca1650eaa1e3810a4fddef23fb2234b2c46067917077261c05f69a49b3",
+  "image_mismatches": [],
+  "claude_token_hours": 1.03,
+  "worker_open_close": {
+    "open": 200,
+    "open_ms": 1191,
+    "close": 200
+  },
+  "passed": false
+}

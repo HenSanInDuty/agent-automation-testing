@@ -15,7 +15,7 @@ import type { VisualWorkerObserveDom, VisualWorkerDomObservation } from "./visio
 import { captureVisionScreen } from "./vision-screen.js";
 import { observeClick } from "./vision-click-evidence.js";
 import { logVisionEvent, logVisionFailure, visionErrorType, visionLogScope } from "./vision-observability.js";
-import { checkpointMetadata, equivalentState, inspectState, logStateMismatch, setInteractionScope, settleState, type RuntimeState } from "./vision-checkpoints.js";
+import { checkpointMetadata, equivalentState, inspectState, isPresentationOnlyAnimated, logStateMismatch, setInteractionScope, settleState, type RuntimeState } from "./vision-checkpoints.js";
 import { captureHistory, validateHistory, returnToHistory, type HistoryCheckpoint } from "./vision-history.js";
 
 export type OperationResult = VisualWorkerOperationResult;
@@ -41,7 +41,33 @@ type Session = {
   externalOrigins: Map<string, VisualExternalOrigin>; originsTruncated: boolean;
   domSnapshots: Map<string, DomSnapshot>;
   navigationMethods: WeakMap<Page, string>;
+  // Agent mode only (VisualWorkerOpen.agent_mode); v4 sessions keep every default below.
+  agentMode: boolean; blockedTerms: string[]; latestSnapshotId: string | null;
+  // Opt-in capabilities requested at open (control-plane flags, default off): scroll/URL on confirmed
+  // clicks (`click-context-v1`) and dom_path locators for unnamed controls (`agent-dom-path-v1`).
+  clickContext: boolean; agentDomPath: boolean;
+  // Recoverable dialog/download caused by the running operation (K4); cleared per operation.
+  recovered: string | null;
 };
+type SensitiveFacts = { submit: boolean; download: boolean; names: string[] };
+
+const normalizeTerm = (value: string): string => value.normalize("NFC").toLowerCase();
+// Runs in the page: facts about the grounded control that the control plane cannot see.
+function sensitiveFacts(el: Element): SensitiveFacts {
+  const tag = el.tagName.toLowerCase();
+  const typed = (tag === "button" || tag === "input") ? el as HTMLButtonElement | HTMLInputElement : null;
+  const attr = el.getAttribute("type")?.toLowerCase() ?? null;
+  const submit = !!typed && (attr === "submit" || attr === "reset" ||
+    (!!typed.form && (typed.type === "submit" || typed.type === "image")));
+  const labelled = (el.getAttribute("aria-labelledby") ?? "").split(/\s+/)
+    .map(id => el.ownerDocument.getElementById(id)?.textContent ?? "");
+  const names = [el.getAttribute("aria-label"), ...labelled, el.getAttribute("title"),
+    ...Array.from((el as HTMLInputElement).labels ?? []).map(label => label.textContent),
+    typed && ["button", "submit", "reset"].includes(typed.type) ? typed.value : null,
+    el.matches("input,textarea,select") ? null : el.textContent];
+  return { submit, download: !!el.closest("a")?.hasAttribute("download"),
+    names: names.filter((value): value is string => !!value?.trim()).map(value => value.slice(0, 400)) };
+}
 
 export class VisualOperationWorker {
   private sessions = new Map<string, Session>();
@@ -125,6 +151,11 @@ export class VisualOperationWorker {
       // live geometry, identity and Playwright actionability checks still apply.
       const context = await browser.newContext({ viewport: { width: 1280, height: 720 },
         acceptDownloads: false, serviceWorkers: "block", reducedMotion: "reduce" });
+      // Safety net (r17/r18, ADR 042 "Runtime"): the worker runs through tsx/esbuild keepNames, which wraps named
+      // closures as `__name(fn, "name")`. Playwright serialises evaluate callbacks, so a closure that slips into one
+      // would throw `__name is not defined` in the page. The callbacks are written without such closures; this no-op
+      // keeps a future one from killing every session. vision-tsx-runtime.spec.ts checks the callbacks without it.
+      await context.addInitScript("globalThis.__name = globalThis.__name || ((fn) => fn);");
       // Route/page callbacks may run before the initial page has been inspected.
       // eslint-disable-next-line prefer-const
       let session: Session | undefined;
@@ -155,9 +186,20 @@ export class VisualOperationWorker {
       });
       context.on("page", (page) => {
         setInteractionScope(page, request.interaction_scope);
-        page.on("dialog", (dialog) => { if (session) session.policyFailure = "dialog_unsupported"; void dialog.dismiss().catch(() => undefined); });
+        page.on("dialog", (dialog) => {
+          // K4: in agent mode a dialog raised by the running operation is dismissed and
+          // reported, not a permanent lock. Anything else keeps the v4 session lock.
+          if (session) {
+            if (session.agentMode && session.activeOperation) session.recovered = "dialog_unsupported";
+            else session.policyFailure = "dialog_unsupported";
+          }
+          void dialog.dismiss().catch(() => undefined);
+        });
         page.on("download", (download) => {
-          if (session && !session.downloadOwner?.(page, download.url())) session.policyFailure = "download_unsupported";
+          if (session && !session.downloadOwner?.(page, download.url())) {
+            if (session.agentMode && session.activeOperation) session.recovered = "download_unsupported";
+            else session.policyFailure = "download_unsupported";
+          }
           // Initiation is evidence, never permission to retain a downloaded file.
           void download.cancel().catch(() => undefined);
         });
@@ -173,7 +215,11 @@ export class VisualOperationWorker {
       session = { request, browser, context, page, pages: new Map(), parents: new Map(), deadline,
         timer: setTimeout(() => undefined, 0), expired: false, busy: false, operations: new Map(),
         pending: null, checkpoints: new Map(), ancestry: [], exploredStates: 0, state, policyFailure: null, activeOperation: null,
-        externalOrigins: new Map(), originsTruncated: false, domSnapshots: new Map(), navigationMethods: new WeakMap() };
+        externalOrigins: new Map(), originsTruncated: false, domSnapshots: new Map(), navigationMethods: new WeakMap(),
+        agentMode: request.agent_mode === true, latestSnapshotId: null, recovered: null,
+        clickContext: request.agent_mode === true && request.required_capabilities.includes("click-context-v1"),
+        agentDomPath: request.agent_mode === true && request.required_capabilities.includes("agent-dom-path-v1"),
+        blockedTerms: request.agent_mode === true ? (request.blocked_action_terms ?? []).map(normalizeTerm) : [] };
       const opened = session;
       clearTimeout(opened.timer);
       opened.timer = setTimeout(() => { void this.expire(opened); }, Math.max(1, deadline - Date.now()));
@@ -182,7 +228,7 @@ export class VisualOperationWorker {
       this.pageId(opened, page);
       this.sessions.set(request.session_id, opened);
       return { session_id: request.session_id, contract_version: "v4", state_fingerprint: state.fingerprint,
-        operation_budget: this.budget(opened), capabilities: ["dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1", "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1"] };
+        operation_budget: this.budget(opened), capabilities: ["dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1", "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1", "click-context-v1", "agent-dom-path-v1"] };
     } catch (error) { await browser?.close(); throw error; }
     finally { this.opening.delete(request.session_id); }
   }
@@ -276,9 +322,12 @@ export class VisualOperationWorker {
       requireVision(!session.pending, "operation_pending");
       requireVision(!session.policyFailure, session.policyFailure ?? "policy_block");
       requireVision(!session.domSnapshots.has(request.snapshot_id), "snapshot_already_exists");
-      requireVision(session.domSnapshots.size < session.request.max_states, "dom_snapshot_limit");
-      requireVision(equivalentState(session.state, await inspectState(session.page)), "state_mismatch");
-      const snapshot = await observeDom(session.page, request);
+      // Agent mode retains only the latest snapshot, so the v4 snapshot cap is unreachable.
+      if (!session.agentMode) requireVision(session.domSnapshots.size < session.request.max_states, "dom_snapshot_limit");
+      const current = await inspectState(session.page);
+      if (!equivalentState(session.state, current)) logStateMismatch(session.state, current, "observe_start");
+      requireVision(equivalentState(session.state, current), "state_mismatch");
+      const snapshot = await observeDom(session.page, request, { agentDomPath: session.agentDomPath, held: session.state });
       if (request.revalidate_snapshot_id) {
         const previous = session.domSnapshots.get(request.revalidate_snapshot_id);
         requireVision(previous && (request.revalidate_context_only || request.revalidate_element_ids.length > 0), "stale_dom_snapshot");
@@ -286,11 +335,21 @@ export class VisualOperationWorker {
         requireVision(equivalentState(snapshot.state, await inspectState(session.page)), "state_changed_during_observation");
       }
       this.timeout(session);
+      if (session.agentMode) await this.evictSnapshots(session);
       session.domSnapshots.set(request.snapshot_id, snapshot);
+      session.latestSnapshotId = request.snapshot_id;
       return validateVision<VisualWorkerDomObservation>("VisualWorkerDomObservation", {
         ...this.scope(request), capability: "dom-observation-v1", data: snapshot.data,
       });
     });
+  }
+  // Only called while no operation is pending (observeDom rejects operation_pending),
+  // so no in-flight action can still hold a retained node handle of an old snapshot.
+  private async evictSnapshots(session: Session): Promise<void> {
+    const old = [...session.domSnapshots.values()]; session.domSnapshots.clear();
+    await Promise.allSettled(old.flatMap(snapshot => [snapshot.document.dispose(),
+      ...[...snapshot.anonymousTargets.values()].map(target => target.dispose())]));
+    for (const snapshot of old) snapshot.anonymousTargets.clear();
   }
   async screen(value: unknown, id: string): Promise<Buffer> {
     const session = this.identity(value, id);
@@ -471,11 +530,22 @@ export class VisualOperationWorker {
           session.timer.unref();
         } else requireVision(request.step_deadline == null, "invalid_step_deadline");
         if (session.policyFailure) throw new VisionWorkerError(session.policyFailure);
+        // K3: a page outside allowed_origins is observe-only; only leaving it is permitted.
+        // The one other exception is the read-only observation refresh (a setup `wait` that never
+        // touches the page): it re-syncs session.state after a redirect so the page can be read.
+        // Its other fields are validated below (invalid_observation_refresh).
+        // Non-http pages (the initial about:blank) are not external origins.
+        if (session.agentMode && /^https?:/i.test(runtime.page.url()) &&
+            !allowedOrigin(runtime.page.url(), session.request.allowed_origins)) {
+          const refresh = request.refresh_observation && request.purpose === "setup" && request.action.kind === "wait";
+          requireVision(refresh || ["close_popup", "back"].includes(request.action.kind), "origin_blocked");
+        }
         if (request.refresh_observation) {
           requireVision(request.purpose === "setup" && request.action.kind === "wait" &&
             request.checkpoint_id && !request.proposal_id && !request.dom_snapshot_id &&
             !request.expected_locator && !request.restore_checkpoint_id && !request.replay_operation_id,
           "invalid_observation_refresh");
+          // ADR 042: held state (published hash) vs expected, exact by design; settle compares against this state.
           requireVision(request.expected_state_fingerprint === session.state.fingerprint, "state_mismatch");
           // A refresh may follow scrolling into lazy content or a carousel.
           // Use the navigation readiness window, still bounded by this step.
@@ -485,10 +555,14 @@ export class VisualOperationWorker {
         } else {
           runtime.before = await inspectState(session.page);
           if (!equivalentState(runtime.before, session.state)) logStateMismatch(session.state, runtime.before, "prepare_start");
-          requireVision(runtime.before.fingerprint === request.expected_state_fingerprint &&
+          // ADR 042: the expected hash names the state the worker published (`session.state`); the fresh inspection
+          // only has to be equivalent to it. Keep the published state as the baseline so its hash stays the identity.
+          requireVision(session.state.fingerprint === request.expected_state_fingerprint &&
             equivalentState(runtime.before, session.state), "state_mismatch");
+          runtime.before = session.state;
         }
         if (request.dom_snapshot_id) {
+          if (session.agentMode) requireVision(request.dom_snapshot_id === session.latestSnapshotId, "stale_dom_snapshot");
           const snapshot = session.domSnapshots.get(request.dom_snapshot_id);
           requireVision(snapshot, "unknown_dom_snapshot");
           requireVision(snapshot.data.observation.state_fingerprint === request.expected_state_fingerprint, "stale_dom_snapshot");
@@ -499,10 +573,13 @@ export class VisualOperationWorker {
           request.expected_locator = target.binding.descriptor;
         }
         if (request.expected_locator?.strategy === "dom_path") requireVision(
-          ["buttons", "visual_buttons"].includes(session.request.interaction_scope) && request.dom_snapshot_id && request.dom_element_id,
+          (["buttons", "visual_buttons"].includes(session.request.interaction_scope) || session.agentDomPath) &&
+            request.dom_snapshot_id && request.dom_element_id,
           "live_node_binding_required");
-        if (request.purpose === "explore") requireVision(session.ancestry.length <= session.request.max_hops, "hop_limit");
-        if (request.purpose === "explore" || request.purpose === "setup") requireVision(session.exploredStates < session.request.max_states, "state_limit");
+        // Agent mode walks forward from the current page: no ancestry or state counting for explore.
+        const sequential = session.agentMode && request.purpose === "explore";
+        if (request.purpose === "explore" && !sequential) requireVision(session.ancestry.length <= session.request.max_hops, "hop_limit");
+        if ((request.purpose === "explore" && !sequential) || request.purpose === "setup") requireVision(session.exploredStates < session.request.max_states, "state_limit");
         if (request.checkpoint_id) {
           requireVision(!session.checkpoints.has(request.checkpoint_id), "checkpoint_already_exists");
           requireVision(session.checkpoints.size < session.request.max_states, "state_limit");
@@ -521,11 +598,13 @@ export class VisualOperationWorker {
           request.action = structuredClone(source.prepare.action);
         }
         if (request.action.kind === "navigate") {
-          requireVision(request.purpose === "setup" || request.purpose === "replay" ||
+          requireVision(request.purpose === "setup" || request.purpose === "replay" || sequential ||
             (request.purpose === "restore" && request.restore_checkpoint_id &&
               session.checkpoints.get(request.restore_checkpoint_id)?.navigable), "invalid_navigation_purpose");
         }
-        if (["back", "close_popup"].includes(request.action.kind)) requireVision(request.purpose === "restore", "invalid_restore_purpose");
+        if (["back", "close_popup"].includes(request.action.kind)) requireVision(request.purpose === "restore" || sequential, "invalid_restore_purpose");
+        // type goes through pressSequentially: a line break would press Enter and submit the form.
+        if (session.agentMode && request.action.kind === "type") requireVision(!/[\r\n]/.test(request.action.text ?? ""), "sensitive_action_blocked");
         // Before bytes are staged before metadata can be acknowledged by the caller.
         await this.capture(session, runtime, "before", session.page);
         if (["click", "type"].includes(request.action.kind)) {
@@ -561,6 +640,13 @@ export class VisualOperationWorker {
           }
           if (session.request.interaction_scope === "visual_buttons") {
             requireVision(request.action.kind === "click" && (await ground.target!.evaluate(visualButtonSemantics)).length === 1, "out_of_scope_target");
+          }
+          if (session.agentMode) {
+            const facts = await ground.target!.evaluate(sensitiveFacts);
+            requireVision(!facts.submit && !facts.download && !facts.names.some(name => {
+              const text = normalizeTerm(name);
+              return session.blockedTerms.some(term => text.includes(term));
+            }), "sensitive_action_blocked");
           }
           if (request.action.kind === "click") runtime.replayable = await ground.target!.evaluate((el) => el.tagName === "A" &&
             !!el.getAttribute("href") && !el.hasAttribute("download") && !el.hasAttribute("onclick"));
@@ -662,7 +748,9 @@ export class VisualOperationWorker {
           session.checkpoints.get(command.history_checkpoint_id)?.history, runtime.page, runtime.historyFromEntryId);
         runtime.result.operation.status = "executing";
         runtime.result.dispatch_started = true;
-        if (command.purpose === "explore" || command.purpose === "setup") session.exploredStates++;
+        const sequential = session.agentMode && command.purpose === "explore";
+        if ((command.purpose === "explore" && !sequential) || command.purpose === "setup") session.exploredStates++;
+        session.recovered = null;
         session.activeOperation = request.operation_id;
         status = "unknown"; code = "action_outcome_unknown";
         const timeout = this.timeout(session);
@@ -709,29 +797,40 @@ export class VisualOperationWorker {
             !runtime.grounded!.descriptor?.scope.some((scope) => scope.kind === "iframe") &&
             groundedBox && Math.abs(groundedBox.width * 1280 - box.width) < 1 &&
             Math.abs(groundedBox.height * 720 - box.height) < 1;
+          // ADR 042: the hit test and exact-node check above already passed. A target under an eligible infinite
+          // presentation-only animation is never "stable" for Playwright, so only it skips that wait; all other
+          // targets keep full actionability.
+          const force = await isPresentationOnlyAnimated(runtime.grounded!.target!,
+            runtime.grounded!.descriptor?.strategy === "dom_path" ? undefined : { x: action.x! * 1279, y: action.y! * 719 }).catch(() => false);
           const capture = await observeClick(runtime.grounded!.target!).catch(() => null);
           let actual: Awaited<NonNullable<typeof capture>["result"]> = null;
           try {
             if (runtime.grounded!.descriptor?.strategy === "dom_path") {
               // The retained node must survive through dispatch. A replacement
               // at the same CSS path can never inherit this proposal.
-              await runtime.grounded!.target!.click({ timeout });
-            } else await runtime.grounded!.locator!.click({ timeout, position: {
+              await runtime.grounded!.target!.click({ timeout, force });
+            } else await runtime.grounded!.locator!.click({ timeout, force, position: {
               x: action.x! * 1279 - box.x, y: action.y! * 719 - box.y } });
           } finally {
             // A navigation may destroy the event context; retain the existing
             // conservative geometry fallback only when its checks succeed.
             if (capture) { await capture.dispose(); actual = await capture.result; }
           }
+          // `click-context-v1` only: the state fingerprint (which covers scroll and URL) was verified equal
+          // to this snapshot at dispatch, so `runtime.before` is the page context of the click.
+          const context = session.clickContext && runtime.before ? {
+            scroll_x: runtime.before.scroll_x, scroll_y: runtime.before.scroll_y,
+            url_fingerprint: runtime.before.url_fingerprint,
+          } : {};
           if (actual && actual.width === 1280 && actual.height === 720 &&
               actual.x >= 0 && actual.x <= 1279 && actual.y >= 0 && actual.y <= 719) runtime.confirmedClick = {
             x: actual.x / 1279, y: actual.y / 719, viewport_width: 1280, viewport_height: 720,
-            before_frame_id: beforeFrame.id, confirmed_at: new Date().toISOString(),
-          };
+            before_frame_id: beforeFrame.id, confirmed_at: new Date().toISOString(), ...context,
+          } as VisualExecutedClick;
           else if (canRecord) runtime.confirmedClick = {
             x: point.x / 1279, y: point.y / 719, viewport_width: 1280, viewport_height: 720,
-            before_frame_id: beforeFrame.id, confirmed_at: new Date().toISOString(),
-          };
+            before_frame_id: beforeFrame.id, confirmed_at: new Date().toISOString(), ...context,
+          } as VisualExecutedClick;
         } else if (action.kind === "type") {
           // Preserve append semantics; do not persist text in evidence or fill/clear.
           await runtime.grounded!.locator!.press("ControlOrMeta+End", { timeout });
@@ -776,6 +875,8 @@ export class VisualOperationWorker {
         }
         this.observeOrigin(session, afterPage.url(), afterPage === runtime.page ? "navigation" : "popup");
         if (session.policyFailure) throw new VisionWorkerError(session.policyFailure);
+        // Recoverable (K4): same outcome code as v4, but the session stays usable.
+        if (session.recovered) throw new VisionWorkerError(session.recovered);
         // DOMContentLoaded can precede hydration and carousel initialization by
         // several seconds. Scrolling can reveal lazy content and make DOM reads
         // slow too, including during replay. Keep the original step deadline.
@@ -798,7 +899,7 @@ export class VisualOperationWorker {
         session.state = settled.state; runtime.result.state_fingerprint = settled.state.fingerprint;
         runtime.result.semantic_change = runtime.before.semantic_fingerprint === settled.state.semantic_fingerprint ? "unchanged" : "changed";
         runtime.result.operation.url_change = runtime.before.url_fingerprint === settled.state.url_fingerprint ? "unchanged" : "changed";
-        if (!command.restore_checkpoint_id && status === "completed") {
+        if (!command.restore_checkpoint_id && status === "completed" && !sequential) {
           if (action.kind === "navigate") session.ancestry = [request.operation_id];
           else if (command.purpose === "explore" || command.purpose === "replay" || command.refresh_observation ||
               (command.purpose === "setup" && action.kind === "scroll")) session.ancestry.push(request.operation_id);
@@ -815,7 +916,7 @@ export class VisualOperationWorker {
         session.context.off("request", onNavigation);
         session.context.off("page", onPage);
         session.downloadOwner = undefined;
-        session.activeOperation = null; session.pending = null; session.page = afterPage;
+        session.activeOperation = null; session.pending = null; session.page = afterPage; session.recovered = null;
         let captured: RuntimeState | null = null;
         try {
           // Failed/unknown actions retain diagnostic pixels even when the page
@@ -858,6 +959,13 @@ export class VisualOperationWorker {
           status = "failed"; code = "state_restore_failed";
         }
         runtime.result.replayable = runtime.replayable && status === "completed";
+        if (session.agentMode && status === "completed" && action.kind === "type" && captured &&
+            command.dom_snapshot_id && runtime.before.fingerprint === captured.fingerprint) {
+          // Only typed values moved (URL, controls, form presence, scroll are unchanged): re-baseline the
+          // retained snapshot so the next action in the batch is not rejected as stale for privateForms.
+          const snapshot = session.domSnapshots.get(command.dom_snapshot_id);
+          if (snapshot) snapshot.state = captured;
+        }
         if (status === "unknown" || code === "state_restore_failed") session.policyFailure = code;
         this.finalize(runtime, status, code);
         if (downloadStarted) logVisionEvent("info", "vision.download.destinations",

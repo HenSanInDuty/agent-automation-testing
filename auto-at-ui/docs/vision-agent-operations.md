@@ -311,6 +311,17 @@ only: page content, attributes, form values and fingerprints never enter logs.
 Diagnostics do not change timeouts or verdicts. Readiness semantics are specified
 separately in ADR-014.
 
+Settle and the pre-dispatch state checks compare states with a bounded geometry
+tolerance (ADR-042): the same controls may differ by at most 3 px in centre and
+IoU 0.8, and controls under an infinite CSS scale/rotate/fade animation are measured
+by layout box. Moved, resized, added, removed or relabelled controls, translate
+carousels and left/width animations still count as changes, so
+`state_kept_changing` on such pages is expected rather than a bug. The expected state
+hash must name the state the worker holds and the fresh page only has to be equivalent
+to it; only a target under such a presentation-only animation is clicked with
+`force` (after the hit test and exact-node check), all other targets keep
+Playwright actionability.
+
 Logs never include screenshot bytes, page content, locator text, request bodies,
 credentials, raw exception messages, or stacks. More detailed capture categories
 are operational diagnostics only and do not change response contracts, retries,
@@ -393,6 +404,14 @@ reads, and expiry deleted/failed/overdue counts. Alert when cleanup lag exceeds 
 hours, any key/decryption mismatch occurs, cleanup failures persist, or plaintext
 payload-log detection is nonzero. Labels must not include tenant IDs, session IDs,
 correlation IDs, payloads, ciphertext, prompts, screenshots, URLs, or exception text.
+
+### Smoke: open and close without a model (after any playwright-worker change)
+
+The worker image runs `tsx`, which Playwright's test transform does not reproduce (ADR 042, "Runtime"). Before a paid live
+session: `cd workers/playwright && npm test -- vision-tsx-runtime.spec.ts`, then rebuild/recreate `playwright-worker` and open +
+close one session with no click and no bridge call (`docker exec -i auto-at-ui-playwright-worker-1 node -e ...` posting
+to `127.0.0.1:7100`, see `.pytest-artifacts/r17-container-open.cjs`). Expect 200 on open; a 422 `visual_request_rejected`
+now logs `error_name`/`error_origin`/`error_digest` in Loki (`event="vision.request_rejected"`).
 
 ## Locator trace sessions (v4)
 
@@ -512,6 +531,95 @@ access. The configured-stack Compose dashboard workflow is separate: it creates
 users/runs and can invoke configured providers, so do not run it as a fixture-only
 check. Record skipped Compose checks explicitly. Browser dashboard tests require
 `VISION_DASHBOARD_URL` pointing to a local dashboard with intercepted API fixtures.
+
+## Claude (`claude -p`) local bridge
+
+Claude runs as the `claude_cli` Vision provider through the same local DOM-first
+bridge as Codex, not through the Anthropic API. See
+[Claude local bridge](claude-local-bridge.md) and
+[ADR-037](adr/037-claude-cli-bridge-engine.md).
+
+## Agent loop engine (`engine=agent_loop`)
+
+Closed-loop browser agent selected per session; the planner (v4) stays the default.
+Decision record: [ADR-038](adr/038-vision-agent-loop-engine.md). Graph: `docs/graphs/vision-agent-loop.md`.
+
+**Enable.** The engine is off unless `VISION_AGENT_LOOP_ENABLED=true` reaches **both**
+`control-plane` (submit gate; the policy read response reports `agent_loop_enabled`) and
+`temporal-worker` (processor). `docker-compose.yml` does not forward this variable, so a
+local run needs it in `.env` or in an extra compose override file passed with `-f`
+(for example `environment: VISION_AGENT_LOOP_ENABLED: "true"` for both services); recreate
+both containers afterwards. `VISION_AGENT_SNAPSHOT_CHARS` (default 24000, 4000-24000) caps the snapshot
+text sent per model call. Run `uv run alembic upgrade head` first (migration `b7c9d1e3f5a7`:
+`exploration_engine` column and `visual_agent_steps` log).
+
+**Choose the engine.** `POST /api/v1/vision/explorations` with `"engine": "agent_loop"`
+(omitted or `"planner"` keeps v4). The dashboard shows an engine selector only when
+`agent_loop_enabled` is true. A reload keeps the engine of the original session (K5).
+Submitting `agent_loop` while the flag is off is rejected with HTTP 422.
+
+**Budget.** At most `min(policy.max_steps, 20)` model calls per session; every bridge call
+counts, including a retry after a schema error and the image-stage call after
+`need_screenshot` (matches `ck_codex_job_sequence BETWEEN 1 AND 20`). Each call receives
+only the newest snapshot, the memory (max 2000 characters) and the last five step summaries.
+Raising the ceiling needs its own plan (K1). Time is bounded per step by the policy
+`max_session_seconds` (step timeout); the whole session by `min(3600, step timeout x calls)`.
+
+**Safety (code, not prompt).** The control plane blocks an action before any browser request:
+`invalid_ref` (ref does not match `version:n`), `stale_ref` (old version or unknown ref),
+`action_kind_blocked` (outside click, type, scroll, wait, back, close_popup, navigate),
+`origin_blocked` (page outside the project `allowed_origins`; only `close_popup` and `back`
+pass), `ineligible_target` (element disabled, or not editable for `type`), `sensitive_action_blocked` (submit/reset input or an element name matching
+`BLOCKED_ACTION_TERMS` in `domain/vision_agent_safety.py`). The worker repeats the check in agent
+mode and adds `a[download]` and form submit buttons. The batch stops after a URL change, new
+popup, download, state-fingerprint change not caused by a form edit, or any operation that is
+not `completed`; the next step observes again. Blocked actions appear in the step log `actions`
+with `skipped_reason` and never in `operation_ids`. The allowlist is observe-only (K3): an
+external page may be opened and read, never acted upon. The one exception is the read-only observation refresh (a setup `wait` with
+`refresh_observation`): the worker lets it run on such a page so a stale observation
+(`state_mismatch`, e.g. a late redirect) is resynced; it never clicks or types. If three reads
+still fail the session ends with `state_mismatch`. A dialog or download caused by an action
+is recorded, cancelled and reported to the model (K4); `action_outcome_unknown` still locks the session.
+
+**Terminal reasons.** `agent_done`, `agent_stopped` (model stop or unsafe/unsupported state),
+`agent_step_limit` (ceiling reached), `session_timeout`, plus the shared bridge/worker codes
+(`bridge_malformed_output` after two invalid outputs in a row, `policy_disabled`,
+`worker_unavailable`, ...). The engine never emits `restore` or replay, so `unsafe_replay`
+does not occur. Step log: `GET .../trace` items of type `agent_step`, retained until the
+session `intent_retention_until` (K5).
+
+**Diagnose a session that ends in seconds.** A terminal state with zero operations and zero
+bridge jobs means the worker refused `POST /visual-explorations`; read the playwright-worker log
+event `vision.request_rejected` (`code`). Example from the first live attempt: `invalid_deadline`
+(see `benchmark/vision/accuracy/AGENT-LOOP-01-20261120.md`).
+
+**Run as a benchmark.** Create the session with a local helper (not tracked), then
+`run.py import` once it is terminal, `collect`, independent outcome review, `evaluate`. Detection
+numbers are not comparable with v4 (no full-page inventory).
+
+**Accuracy evidence flags (ADR-040, all default `false`).** Three independent opt-ins give the benchmark
+facts the agent engine did not export. They are read only by `temporal-worker` (set them in an extra
+compose override like `VISION_AGENT_LOOP_ENABLED`, then recreate that service); with all three off,
+worker requests, `/trace`, `/result` and harness output are unchanged.
+
+| Flag | Needs rebuilt `playwright-worker` | What the new session stores |
+|---|---|---|
+| `VISION_AGENT_CLICK_CONTEXT_ENABLED` (A1) | yes (`click-context-v1`) | `/trace` `items[].executed_click` gains `scroll_x`, `scroll_y`, `url_fingerprint` |
+| `VISION_AGENT_DOM_PATH_ENABLED` (A2) | yes (`agent-dom-path-v1`) | unnamed controls are listed to the model as `role ""` and bound by `dom_path` |
+| `VISION_AGENT_INVENTORY_ENABLED` (A3) | no | `/result` `pages` holds the controls the agent observed, per state (no migration; JSON column) |
+
+A session that requires a capability the running worker lacks ends at open with `worker DOM capability
+unavailable`; it never falls back silently. A2 changes what the model can click (it cannot tell unnamed
+controls apart except by order), A1 and A3 only add evidence. Suggested order for one comparison: run one
+session with A1+A3 (agent behaviour unchanged), then one with A1+A2+A3, and compare. Re-scoring a stored
+session needs no new run: `run.py ground`, `run.py detect --sources inventory --label <name>`, then
+`run.py evaluate --sources <all|none|click_context,inventory> --label <name> --detection
+runs/<iteration>/detection.derived.<name>.json`. `--sources` only removes optional evidence from the
+scoring of a session that already has it; A2 cannot be toggled after the fact (compare sessions).
+
+**Roll back.** Set `VISION_AGENT_LOOP_ENABLED=false` and recreate the two services; existing
+`agent_loop` sessions stay readable; new ones are refused. No schema rollback is needed. To drop only the
+evidence flags set them to `false` and recreate `temporal-worker`; stored optional data stays valid.
 
 ## Gehihi (Google Gemini) local setup
 

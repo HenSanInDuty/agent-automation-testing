@@ -1,0 +1,11 @@
+{
+  "after_checksum": "e9c64deb6986f24d3cfd469f1e5c649981c0d325b0571a925c88b732e39add44",
+  "before_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "finding": "After frame explicitly shows carousel indicator 2 selected and matching slide Bang Chien Nay Lua, following the verified bound selector click. Credit uses selection identity, not generic animation.",
+  "operation_id": "f2f3845e-3e21-4fd4-be93-4b265b07c92e",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

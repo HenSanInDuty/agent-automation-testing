@@ -1,6 +1,7 @@
 """Checksum-verified, tenant-scoped RustFS object storage adapter."""
 
 import hashlib
+from time import sleep
 from urllib.parse import urlparse
 
 import boto3
@@ -8,6 +9,9 @@ from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from config import Settings
 from domain.entities import ArtifactRecord, VisualOperationFrameRecord, VisualReplayFrameRecord
+
+# Seconds between verified read attempts of an operation frame (about 1.1 s total).
+OPERATION_FRAME_READ_RETRY_DELAYS = (0.05, 0.15, 0.3, 0.6)
 
 
 class ArtifactStorageError(RuntimeError):
@@ -144,9 +148,26 @@ class RustFSArtifactStore:
             raise ArtifactStorageError("operation frame upload failed") from error
 
     def read_operation_frame(self, record: VisualOperationFrameRecord) -> bytes:
-        frame = record.metadata
-        if frame.deleted_at is not None:
+        """Verified read with a short bounded retry for RustFS read-after-write lag.
+
+        Pinned RustFS alpha.73 can serve a just-written object as zero bytes
+        (FileCorrupt / aborted body) for a moment after a successful PUT. Only
+        exact bytes with the recorded length and SHA-256 are ever returned; a
+        persistent mismatch still fails after the bounded attempts.
+        """
+        if record.metadata.deleted_at is not None:
             raise ValueError("operation frame is deleted")
+        for delay in (*OPERATION_FRAME_READ_RETRY_DELAYS, None):
+            try:
+                return self._read_operation_frame_once(record)
+            except (ArtifactStorageError, ValueError):
+                if delay is None:
+                    raise
+                sleep(delay)
+        raise AssertionError("unreachable")
+
+    def _read_operation_frame_once(self, record: VisualOperationFrameRecord) -> bytes:
+        frame = record.metadata
         try:
             response = self._client.get_object(Bucket=self._bucket, Key=record.storage_key)
             body = response["Body"]

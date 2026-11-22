@@ -1,0 +1,11 @@
+{
+  "after_checksum": "541a6da8f5e05a5831ee30749841a5208271675ba1ea74bcc240be8939b8d027",
+  "before_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "finding": "mct-53: after frame shows indicator 3 selected with matching slide Chinh Phuc PvE (before: indicator 4).",
+  "operation_id": "2abb5284-8962-4a6b-b064-5e3993b64b52",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

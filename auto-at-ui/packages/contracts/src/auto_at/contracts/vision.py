@@ -8,7 +8,14 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 
 class VisualExplorationState(StrEnum):
@@ -344,6 +351,20 @@ class VisualExecutedClick(BaseModel):
     viewport_height: int = Field(gt=1, le=16384)
     before_frame_id: UUID
     confirmed_at: datetime
+    # Optional page context of the click (capability `click-context-v1`, agent engine, flag
+    # `VISION_AGENT_CLICK_CONTEXT_ENABLED`): document scroll offset and the SHA-256 of the page URL
+    # at click time. Absent keys are never serialized, so stored/served data keeps its old shape.
+    scroll_x: int | None = Field(default=None, ge=0, le=10_000_000)
+    scroll_y: int | None = Field(default=None, ge=0, le=10_000_000)
+    url_fingerprint: Fingerprint | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_context(self, handler):
+        data = handler(self)
+        for key in ("scroll_x", "scroll_y", "url_fingerprint"):
+            if data.get(key) is None:
+                data.pop(key, None)
+        return data
 
 
 class VisualOperation(VisualTraceIdentity):

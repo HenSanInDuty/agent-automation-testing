@@ -1,0 +1,45 @@
+{
+  "operations": 148,
+  "frames_verified": 291,
+  "frames_unavailable": 5,
+  "model_jobs": 16,
+  "downloads": 2,
+  "diagnosis": {
+    "categories": [
+      {
+        "operation_id": "ad7ae6f4-4929-4dd4-845a-81122c0a1a56",
+        "category": "operation_failure",
+        "code": "state_changed_during_prepare",
+        "purpose": "setup"
+      },
+      {
+        "operation_id": "7663b35d-d4bf-4baa-9c40-5591711727ec",
+        "category": "operation_failure",
+        "code": "state_changed_during_prepare",
+        "purpose": "setup"
+      },
+      {
+        "operation_id": "e0b4e6fe-d0e6-406f-8619-778b07212d81",
+        "category": "operation_failure",
+        "code": "state_changed_during_prepare",
+        "purpose": "setup"
+      },
+      {
+        "operation_id": "6135a4af-cfb0-4f65-a1fd-2a4ab1231de8",
+        "category": "operation_failure",
+        "code": "history_checkpoint_unavailable",
+        "purpose": "restore"
+      }
+    ],
+    "missing_evidence_operations": [
+      "ad7ae6f4-4929-4dd4-845a-81122c0a1a56",
+      "7663b35d-d4bf-4baa-9c40-5591711727ec",
+      "e0b4e6fe-d0e6-406f-8619-778b07212d81",
+      "6135a4af-cfb0-4f65-a1fd-2a4ab1231de8"
+    ],
+    "reason": "exploration_coverage_incomplete",
+    "physical_retry_authorized": false
+  },
+  "state": "unavailable",
+  "reason": "exploration_coverage_incomplete"
+}

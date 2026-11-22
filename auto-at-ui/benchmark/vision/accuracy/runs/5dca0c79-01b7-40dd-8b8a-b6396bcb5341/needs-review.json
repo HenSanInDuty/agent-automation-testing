@@ -1,0 +1,363 @@
+[
+  {
+    "sequence": 15,
+    "status": "completed",
+    "target": "mct-51",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "4cfb897d-23f4-4e66-b9bd-4a9ad5b3b46a",
+      "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+      "availability": "retained",
+      "byte_count": 798710
+    },
+    "after": {
+      "id": "2fd9d599-887a-4baf-adf7-e455ab0559e5",
+      "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+      "availability": "retained",
+      "byte_count": 812792
+    }
+  },
+  {
+    "sequence": 19,
+    "status": "completed",
+    "target": "mct-52",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "005a232d-8be1-403e-9b6a-e44947f6e55c",
+      "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+      "availability": "retained",
+      "byte_count": 812792
+    },
+    "after": {
+      "id": "1ec8cb4c-635b-4200-984e-63c1d2d53691",
+      "checksum": "525729fabab19e6d7738f43bfc2c260f461439936d52a4e78fddfa7719cb961a",
+      "availability": "retained",
+      "byte_count": 1203809
+    }
+  },
+  {
+    "sequence": 21,
+    "status": "completed",
+    "target": "mct-53",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "5ff183f7-331d-45f7-9f65-b47ea7e1ce83",
+      "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+      "availability": "retained",
+      "byte_count": 780157
+    },
+    "after": {
+      "id": "873e85a1-9351-476f-9b01-4b09f6032b9e",
+      "checksum": "541a6da8f5e05a5831ee30749841a5208271675ba1ea74bcc240be8939b8d027",
+      "availability": "retained",
+      "byte_count": 1217741
+    }
+  },
+  {
+    "sequence": 23,
+    "status": "completed",
+    "target": "mct-54",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "38f7faa0-0186-4749-a5f8-0243fb68ce95",
+      "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+      "availability": "retained",
+      "byte_count": 798710
+    },
+    "after": {
+      "id": "668af226-0141-40c5-a1cd-36c8d32eda5a",
+      "checksum": "428c0a948349981112f6c5d286aadc69cd7f591da82c1a06bb1aaab9ba4e1e49",
+      "availability": "retained",
+      "byte_count": 1216422
+    }
+  },
+  {
+    "sequence": 25,
+    "status": "completed",
+    "target": "mct-55",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "eb8ec705-7c90-4cbf-92ed-5529e96eebe0",
+      "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+      "availability": "retained",
+      "byte_count": 798710
+    },
+    "after": {
+      "id": "b5aaaafc-16c2-4ae9-9f31-5d6842549fc0",
+      "checksum": "9c5412145e0d3398bfae40819588d52ca877f0535fc59e10c2007cd0c81b49a9",
+      "availability": "retained",
+      "byte_count": 1234533
+    }
+  },
+  {
+    "sequence": 27,
+    "status": "completed",
+    "target": "mct-56",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "25ad2f08-43cf-4e1c-86fc-2efc3c7abb40",
+      "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+      "availability": "retained",
+      "byte_count": 812792
+    },
+    "after": {
+      "id": "36fb97af-3bc1-4ad6-b6c1-80ed7942030a",
+      "checksum": "dbdd7e8ae5c0f62545e2dec653ed1e5c91ec4931ffddc0a5b3a1d44e3e3d865b",
+      "availability": "retained",
+      "byte_count": 1241295
+    }
+  },
+  {
+    "sequence": 29,
+    "status": "completed",
+    "target": "mct-43",
+    "kind": "scroll_top",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "64dceaac-e2bc-4831-8594-31ebaa6c3580",
+      "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+      "availability": "retained",
+      "byte_count": 812792
+    },
+    "after": {
+      "id": "99851c5d-d682-4ddb-8e4a-461a79352428",
+      "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+      "availability": "retained",
+      "byte_count": 1009785
+    }
+  },
+  {
+    "sequence": 107,
+    "status": "completed",
+    "target": "mct-18",
+    "kind": "selected_tab",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "42f87d1b-96e6-4cfe-a2f4-91a05588b0f8",
+      "checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+      "availability": "retained",
+      "byte_count": 915303
+    },
+    "after": {
+      "id": "a48a20bf-d2ec-455f-8952-2f40630a9c5c",
+      "checksum": "5de6521b1e59e73754f2f56a93674488ae693138a1e16f06fb647c5feee69fca",
+      "availability": "retained",
+      "byte_count": 1478868
+    }
+  },
+  {
+    "sequence": 114,
+    "status": "completed",
+    "target": "mct-19",
+    "kind": "selected_tab",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "bf489625-2dad-4912-8afd-fe1ece69af50",
+      "checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+      "availability": "retained",
+      "byte_count": 915303
+    },
+    "after": {
+      "id": "aea3eaa1-bdb5-4437-9ca1-6cb61324b558",
+      "checksum": "72656d2f2d0d62244ce5571d4d9c9a13ab6a1c8264840ebe2954a6da07bf1adb",
+      "availability": "retained",
+      "byte_count": 1478033
+    }
+  },
+  {
+    "sequence": 115,
+    "status": "completed",
+    "target": "mct-20",
+    "kind": "selected_tab",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "7f3757a0-4a24-46d1-85f7-a3f354eacbd2",
+      "checksum": "79c8719ba0b3ac0a065d3dc4a73ea4dba7197809d01a368681e0bd7247fce432",
+      "availability": "retained",
+      "byte_count": 914588
+    },
+    "after": {
+      "id": "555ba39a-86cf-4059-ab51-8568fd7da307",
+      "checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+      "availability": "retained",
+      "byte_count": 909728
+    }
+  },
+  {
+    "sequence": 116,
+    "status": "completed",
+    "target": "mct-21",
+    "kind": "empty_search",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "87eadd90-07b0-4e17-9391-531651995f23",
+      "checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+      "availability": "retained",
+      "byte_count": 909728
+    },
+    "after": {
+      "id": "0f9777f2-83c4-410f-9e2b-ff1139867dfe",
+      "checksum": "f8eab092597efb48232c3badd0754546fee8239a33d81c486073b00af10fafc4",
+      "availability": "retained",
+      "byte_count": 1474799
+    }
+  },
+  {
+    "sequence": 118,
+    "status": "completed",
+    "target": "mct-32",
+    "kind": "selected_character",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "8b0850e9-0368-465a-861f-0758d9035837",
+      "checksum": "b0d9905a02691ad0cbaabd1a35cd36b485c732c1048947f45f32af0253f90628",
+      "availability": "retained",
+      "byte_count": 1083877
+    },
+    "after": {
+      "id": "233510cc-3616-4f90-b090-41674807d040",
+      "checksum": "fea1e9de2d9fe6693319ea27df267a99696047da69922775bbe7bbdc73ec2162",
+      "availability": "retained",
+      "byte_count": 1100943
+    }
+  },
+  {
+    "sequence": 120,
+    "status": "completed",
+    "target": "mct-44",
+    "kind": "selected_character",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "756164d8-571b-4a93-b995-8e02991bea20",
+      "checksum": "57c393d86233dcd9c97a65462a7edce6656638bce9a4ac799cab677af3ec29dc",
+      "availability": "retained",
+      "byte_count": 1083932
+    },
+    "after": {
+      "id": "4a7d17b7-1df2-48dc-bab8-e5026f279bdd",
+      "checksum": "11c2586ad9672536dbf4f5ab7804aa7640e638b58d6de34c06a017d370e2e3cf",
+      "availability": "retained",
+      "byte_count": 1049414
+    }
+  },
+  {
+    "sequence": 122,
+    "status": "completed",
+    "target": "mct-45",
+    "kind": "selected_character",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "2c09a1dd-48d6-4f55-8a0d-0fb36e30d673",
+      "checksum": "5a0b7bba493ebf9b2ff232a0f0cf75fdf80554f9d681f0e85c8e6d6474c686fd",
+      "availability": "retained",
+      "byte_count": 1074537
+    },
+    "after": {
+      "id": "7889b8b7-c96d-4014-bdae-ed5d1e1feb2d",
+      "checksum": "3da57be6f9324788a6e6bff777efce5343198fafaf37dec4a78d2d18b3cfd6dd",
+      "availability": "retained",
+      "byte_count": 1083966
+    }
+  },
+  {
+    "sequence": 124,
+    "status": "completed",
+    "target": "mct-46",
+    "kind": "selected_character",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "aea5ca68-b275-480f-88f2-e3aa739f1896",
+      "checksum": "1a0430ea127afabe907a48f0c0a9913ce5b89eec37fa0fe6461cc6652ac77bf7",
+      "availability": "retained",
+      "byte_count": 1100934
+    },
+    "after": {
+      "id": "98b0424a-6b8c-4489-888c-1f9abcaa37e2",
+      "checksum": "00d8f37a9ddceca103f444f49220f684042b0ba814a8ad5d7339b6d8a6e8ec0e",
+      "availability": "retained",
+      "byte_count": 1074691
+    }
+  },
+  {
+    "sequence": 128,
+    "status": "completed",
+    "target": "mct-57",
+    "kind": "carousel_step",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "a88ca121-bdf9-47da-ad04-3081c63f08b3",
+      "checksum": "bdcc80de5136722f37285bb8640fec9a2cfd87ef1d8ca8b72b16b054b42a6c4d",
+      "availability": "retained",
+      "byte_count": 1203729
+    },
+    "after": {
+      "id": "60500b1b-6f02-4ef7-bb24-2c5e001c4c4a",
+      "checksum": "cd0820ef60a0abab3e98b02ab1cb96fd5819288e7be4e045ec018521ef9aabe3",
+      "availability": "retained",
+      "byte_count": 1250763
+    }
+  },
+  {
+    "sequence": 130,
+    "status": "completed",
+    "target": "mct-58",
+    "kind": "carousel_step",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "31abcba1-2540-40f7-a8a9-d7dbd20f3f6b",
+      "checksum": "48b397a669324637555281932dac3d9f8c68ad749f13a941bcb8246af2f01132",
+      "availability": "retained",
+      "byte_count": 1202695
+    },
+    "after": {
+      "id": "310a3034-da0d-4032-b6ae-e5f1f472ba46",
+      "checksum": "370be89e4467f2ca0becfac8355ce9332ddf711dc571641c43ac1b1f06ba208e",
+      "availability": "retained",
+      "byte_count": 1161427
+    }
+  },
+  {
+    "sequence": 148,
+    "status": "completed",
+    "target": "mct-30",
+    "kind": "selected_tab",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "7e599efe-2c52-40bd-a3a9-cb4209ebd526",
+      "checksum": "0e7242225c2e901ed232b4709ad6d6bd9f335b713cb067960d8765bea10b3717",
+      "availability": "retained",
+      "byte_count": 1074592
+    },
+    "after": {
+      "id": "15eae59e-4c67-445a-a58e-257388fa40b5",
+      "checksum": "9f72e57efd2ed6b1fe7819acfff54abc43424141dec4c28eb400866826cb1e09",
+      "availability": "retained",
+      "byte_count": 1100954
+    }
+  },
+  {
+    "sequence": 150,
+    "status": "completed",
+    "target": "mct-31",
+    "kind": "selected_tab",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "3ab9e969-c960-496a-8349-0cd94f86cab5",
+      "checksum": "ae717a78dd08d22540459a0a6f1643ad8a0234b2ef5414ab69ebeeae3a66aa9a",
+      "availability": "retained",
+      "byte_count": 1084111
+    },
+    "after": {
+      "id": "fa93f3f9-1663-432a-90b7-462410213e60",
+      "checksum": "ee83a133f8eb99396734734b3fee14f8af44996f8f1051525ddd362f34bc0d93",
+      "availability": "retained",
+      "byte_count": 1070054
+    }
+  }
+]

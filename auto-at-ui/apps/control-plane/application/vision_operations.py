@@ -1,6 +1,8 @@
 """Commit intent and real evidence around each primitive; never redispatch uncertainty."""
 
 import asyncio
+import logging
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
@@ -16,6 +18,17 @@ from domain.entities import VisualOperationFrameRecord
 from domain.ports import VisualTraceUnitOfWork, VisualWorkerTransport
 from domain.vision import FINAL_OPERATION_STATUSES, VisualSessionLease
 
+logger = logging.getLogger(__name__)
+_SAFE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}")
+# Allowlisted stages only; anything else is reported as "unclassified".
+FAILURE_STAGES = frozenset({
+    "prepare", "capture_before", "execute", "merge", "capture_after", "ack",
+    "frame_limit", "frame_fetch", "frame_signature",
+    "store_write", "store_readback",
+    "db_commit", "db_frame", "db_locator", "db_operation", "db_observe",
+    "db_checkpoint", "db_edge", "db_progress", "unclassified",
+})
+
 
 def evolve(value, **changes):
     return type(value).model_validate(value.model_dump() | changes)
@@ -23,6 +36,16 @@ def evolve(value, **changes):
 
 class VisualOperationStopped(RuntimeError):
     """Safe terminal reason; previously committed evidence remains available."""
+
+
+def _staged(error, stage):
+    """Attach the first failure stage to an exception without changing its type."""
+    if getattr(error, "failure_stage", None) is None:
+        try:
+            error.failure_stage = stage
+        except Exception:  # pragma: no cover - exotic exception without __dict__
+            pass
+    return error
 
 
 class ExecuteVisualOperation:
@@ -47,6 +70,7 @@ class ExecuteVisualOperation:
         self.step_timeout_seconds = step_timeout_seconds
         self.operation_deadline = None
         self.deadline_ceiling = None
+        self.last_failure: dict[str, str | int] | None = None
         self.identity = VisualWorkerIdentity(
             tenant_id=lease.scope.tenant_id,
             project_id=lease.scope.project_id,
@@ -131,6 +155,24 @@ class ExecuteVisualOperation:
             ),
         )
 
+    def _diagnose(self, error, phase, operation, outcome_code):
+        """Record a typed, secret-free failure classification; never the message or traceback."""
+        stage = getattr(error, "failure_stage", None) or phase
+        name = type(error).__name__
+        module = type(error).__module__.split(".", 1)[0]
+        self.last_failure = {
+            "failure_stage": stage if stage in FAILURE_STAGES else "unclassified",
+            "error_type": name if _SAFE_NAME.fullmatch(name) else "unclassified",
+            "error_module": module if _SAFE_NAME.fullmatch(module) else "unclassified",
+            "operation_id": str(operation.id),
+            "operation_sequence": operation.sequence,
+            "outcome_code": outcome_code,
+        }
+        logger.warning(
+            "Vision operation outcome could not be proven.",
+            extra={"event": "vision.operation.failure_stage", **self.last_failure},
+        )
+
     async def _capture(self, operation, result, role):
         metadata = next((frame for frame in result.frames if frame.role == role), None)
         reference = getattr(operation, f"actual_{role}_frame_id")
@@ -139,13 +181,17 @@ class ExecuteVisualOperation:
         if metadata is None:
             return self.uow.commit_operation(self.lease, operation)
         if metadata.byte_count > self.max_frame_bytes:
-            raise VisualOperationStopped("screenshot_byte_limit")
-        content = await self.bounded(lambda: self.worker.frame(self.identity, metadata))
+            raise _staged(VisualOperationStopped("screenshot_byte_limit"), "frame_limit")
+        try:
+            content = await self.bounded(lambda: self.worker.frame(self.identity, metadata))
+        except Exception as error:
+            _staged(error, "frame_fetch")
+            raise
         signature = (
             b"\x89PNG\r\n\x1a\n" if metadata.content_type == "image/png" else b"\xff\xd8\xff"
         )
         if not content.startswith(signature):
-            raise VisualOperationStopped("capture_type_invalid")
+            raise _staged(VisualOperationStopped("capture_type_invalid"), "frame_signature")
         tenant = sha256(metadata.tenant_id.encode()).hexdigest()
         record = VisualOperationFrameRecord(
             metadata,
@@ -196,6 +242,7 @@ class ExecuteVisualOperation:
             raise VisualOperationStopped("previous_operation_unresolved")
         current = self.uow.commit_prepared(self.lease, intent)
         dispatched = False
+        phase = "prepare"
         if self.step_timeout_seconds is not None:
             self.operation_deadline = datetime.now(UTC) + timedelta(
                 seconds=self.step_timeout_seconds,
@@ -208,11 +255,15 @@ class ExecuteVisualOperation:
                 result = await self.bounded(lambda: self.worker.prepare(request))
             except Exception:
                 result = await self.bounded(lambda: self.worker.read(self.identity, intent.id))
+            phase = "merge"
             prepared = self._merge(current, result)
+            phase = "capture_before"
             current = await self._capture(prepared, result, "before")
             if current.status in FINAL_OPERATION_STATUSES:
+                phase = "ack"
                 await self._ack(result)
                 return result.model_copy(update={"operation": current})
+            phase = "execute"
             self.guard()
             current = self.uow.commit_operation(self.lease, evolve(current, status="executing"))
             before = next(frame for frame in result.frames if frame.role == "before")
@@ -230,21 +281,24 @@ class ExecuteVisualOperation:
             except Exception:
                 # Read the same operation only. Never repeat execute after a lost response.
                 result = await self.bounded(lambda: self.worker.read(self.identity, intent.id))
+            phase = "merge"
             final = self._merge(current, result)
             if final.status not in FINAL_OPERATION_STATUSES:
                 raise VisualOperationStopped("worker_response_lost")
+            phase = "capture_after"
             current = await self._capture(final, result, "after")
+            phase = "ack"
             await self._ack(result)
             return result.model_copy(update={"operation": current})
         except Exception as error:
             if current.status not in FINAL_OPERATION_STATUSES:
-                self._stop(
-                    current,
+                code = (
                     "step_timeout" if isinstance(error, VisualOperationStopped)
                     and str(error) == "step_timeout"
-                    else "worker_response_lost" if dispatched else "prepare_unavailable",
-                    unknown=dispatched,
+                    else "worker_response_lost" if dispatched else "prepare_unavailable"
                 )
+                self._diagnose(error, phase, current, code)
+                self._stop(current, code, unknown=dispatched)
             if isinstance(error, VisualOperationStopped):
                 raise
             raise VisualOperationStopped("operation_unavailable") from None
@@ -253,6 +307,7 @@ class ExecuteVisualOperation:
 
     async def reconcile(self, operation: VisualOperation):
         """Read-only reconciliation; RAM loss never reconstructs input or repeats a side effect."""
+        phase = "merge"
         try:
             result = await self.bounded(lambda: self.worker.read(self.identity, operation.id))
             final = self._merge(operation, result)
@@ -263,12 +318,15 @@ class ExecuteVisualOperation:
                 # A prepared record has not authorized browser execution.
                 if operation.status != "executing":
                     raise VisualOperationStopped("prepared_operation_abandoned")
+                phase = "capture_after"
                 operation = await self._capture(final, result, "after")
             else:
                 raise VisualOperationStopped("worker_response_lost")
+            phase = "ack"
             await self._ack(result)
             return result.model_copy(update={"operation": final})
-        except Exception:
+        except Exception as error:
             if operation.status not in FINAL_OPERATION_STATUSES:
+                self._diagnose(error, phase, operation, "worker_response_lost")
                 self._stop(operation, "worker_response_lost", unknown=True)
             raise VisualOperationStopped("worker_state_unavailable") from None

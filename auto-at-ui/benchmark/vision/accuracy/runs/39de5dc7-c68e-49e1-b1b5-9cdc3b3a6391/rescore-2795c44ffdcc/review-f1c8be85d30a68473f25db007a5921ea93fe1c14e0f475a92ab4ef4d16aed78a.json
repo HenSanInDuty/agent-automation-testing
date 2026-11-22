@@ -1,0 +1,11 @@
+{
+  "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "before_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "finding": "Before image is the footer area; after image shows homepage header and hero at scroll_y=0 in retained state evidence. TOP control has the frozen verified binding.",
+  "operation_id": "11c45200-8b5d-428a-8c74-3a9a1003b45c",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "scroll_top",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

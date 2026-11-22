@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { chromium, expect, test, type Browser, type Page } from "@playwright/test";
-import { observeDom, resolveDomTarget } from "./vision-dom.js";
+import { observeDom, resolveDomTarget, type DomSnapshot } from "./vision-dom.js";
 import { inspectState, setInteractionScope, settleState } from "./vision-checkpoints.js";
 import { validateVision, type VisualWorkerObserveDom } from "./vision-contract.js";
 import { VisualOperationWorker } from "./vision-operations.js";
@@ -219,6 +219,203 @@ test("anonymous inventory resolves a fresh point after movement during DOM colle
   expect(snapshot.data.observation.elements).toHaveLength(1);
   expect(snapshot.data.observation.skipped_count).toBe(0);
   expect(snapshot.data.bindings[0].bounds.x).toBeCloseTo(400 / page.viewportSize()!.width);
+});
+
+// ADR 045: a visual button inside a moving carousel track is seen "fully in the viewport" while it slides, then
+// grounded from its moving centre under another layer. The cover is wider than the early path, not the stop point.
+const COVER = "position:absolute;left:0;top:150px;width:620px;height:150px;z-index:5";
+async function observeSliding(page: Page, opts: { cover?: string; distance?: number; ms?: number; removeAfter?: number } = {}) {
+  const { cover = COVER, distance = 500, ms = 1000, removeAfter } = opts;
+  await page.setContent('<body style="margin:0"><a href="/play" style="position:absolute;left:100px;top:200px;width:100px;height:40px;' +
+    `display:block;background:#c33;border:1px solid #000;border-radius:6px">Play</a><div style="${cover}"></div></body>`);
+  setInteractionScope(page, "visual_buttons");
+  const req = await request(page);
+  await page.evaluate(({ distance, ms, removeAfter }) => {
+    const link = document.querySelector("a")!;
+    link.style.transition = `transform ${ms}ms linear`; void link.offsetWidth;
+    link.style.transform = `translateX(${distance}px)`;
+    if (removeAfter !== undefined) setTimeout(() => link.remove(), removeAfter);
+  }, { distance, ms, removeAfter });
+  const lines: string[] = [], warn = console.warn, log = console.log;
+  console.warn = console.log = (line: string) => { lines.push(String(line)); };
+  // Counts DOM walks (A2 repeats the walk at most once per observation).
+  const evaluate = page.evaluate.bind(page);
+  let walks = 0;
+  page.evaluate = (async (...args: Parameters<Page["evaluate"]>) => {
+    const result = await evaluate(...args);
+    if (result && typeof result === "object" && "candidates" in result) walks++;
+    return result;
+  }) as Page["evaluate"];
+  const began = Date.now();
+  try {
+    const outcome: { snapshot?: DomSnapshot; error?: unknown } = await observeDom(page, req)
+      .then(snapshot => ({ snapshot }), error => ({ error }));
+    return { ...outcome, elapsed: Date.now() - began, walks,
+      events: lines.filter(line => line.startsWith("{")).map(line => JSON.parse(line) as Record<string, unknown>) };
+  } finally { console.warn = warn; console.log = log; page.evaluate = evaluate; }
+}
+
+test("visual button sliding under a non-control layer is bound once it stops", async ({ page }) => {
+  const result = await observeSliding(page);
+  expect(result.error).toBeUndefined();
+  const observation = result.snapshot!.data.observation;
+  expect(observation.elements.map(e => e.name)).toEqual(["Play"]);
+  expect(observation.skipped_count).toBe(0);
+  expect(result.snapshot!.data.bindings[0].bounds.x).toBeCloseTo(600 / page.viewportSize()!.width, 1);
+  expect(result.events.find(e => e.event === "vision.dom.motion_regrounded")).toMatchObject({ level: "info", motion_regrounded: 1 });
+  expect(JSON.stringify(result.events)).not.toMatch(/Play|\/play|dom_path|nth-of-type/);
+  await Promise.all([...result.snapshot!.anonymousTargets.values()].map(t => t.dispose()));
+  await result.snapshot!.document.dispose();
+});
+
+test("visual button sliding under another control is bound once it stops", async ({ page }) => {
+  const result = await observeSliding(page, { cover: COVER + ";cursor:pointer" });
+  expect(result.error).toBeUndefined();
+  expect(result.snapshot!.data.observation.elements.map(e => e.name)).toEqual(["Play"]);
+  expect(result.snapshot!.data.observation.skipped_count).toBe(0);
+  await Promise.all([...result.snapshot!.anonymousTargets.values()].map(t => t.dispose()));
+  await result.snapshot!.document.dispose();
+});
+
+test("visual button sliding out of the viewport is re-walked once, finds nothing, and the state gate rejects it", async ({ page }) => {
+  // The cover spans the whole viewport width, so the centre is covered on every visible part of the way out and
+  // grounding always fails by motion. The link is fully out after ~400 ms, well inside the 1200 ms wait.
+  // A2 expectation: the stop outside the viewport triggers exactly one more walk (2 in total), which finds no
+  // visible control, so nothing is skipped; the only control of the page is gone, so equivalentState(before, after)
+  // fails and the observation is rejected with state_changed_during_observation (never a skip, never a snapshot).
+  const result = await observeSliding(page, { distance: 3000, cover: COVER.replace("width:620px", "width:1280px") });
+  expect(result.snapshot).toBeUndefined();
+  expect(String((result.error as Error)?.message)).toContain("state_changed_during_observation");
+  expect(result.walks).toBe(2);
+});
+
+test("a visual button removed while waiting for motion ends the observation fast with a defined outcome", async ({ page }) => {
+  // Removed 500 ms in: the box read must time out on its own (not the 30 s default) and the state gate rejects.
+  const result = await observeSliding(page, { distance: 500, ms: 10000, removeAfter: 500 });
+  expect(result.snapshot).toBeUndefined();
+  expect(String((result.error as Error)?.message)).toContain("state_changed_during_observation");
+  expect(result.elapsed).toBeLessThan(2000);
+});
+
+test("visual button that never stops within the wait is skipped as before with a bounded delay", async ({ page }) => {
+  // 50 px/s for 10 s: always moving (2.5 px per sample) and always under the cover.
+  const result = await observeSliding(page, { distance: 500, ms: 10000 });
+  expect(result.error).toBeUndefined();
+  expect(result.snapshot!.data.observation.elements).toHaveLength(0);
+  expect(result.snapshot!.data.observation.skipped_count).toBe(1);
+  expect(result.elapsed).toBeGreaterThanOrEqual(1100);
+  expect(result.elapsed).toBeLessThan(4000);
+  expect(result.walks).toBe(1);
+  expect(result.events.find(e => e.event === "vision.dom.coverage_limited")).toMatchObject({ motion_waits: 1, motion_regrounded: 0, motion_retraversals: 0 });
+  expect(result.events.some(e => e.event === "vision.dom.motion_regrounded")).toBe(false);
+  await result.snapshot!.document.dispose();
+});
+
+test("a static visual button under a layer is skipped without any motion wait", async ({ page }) => {
+  const result = await observeSliding(page, { distance: 0, ms: 1 });
+  expect(result.error).toBeUndefined();
+  expect(result.snapshot!.data.observation.skipped_count).toBe(1);
+  expect(result.elapsed).toBeLessThan(1000);
+  expect(result.events.find(e => e.event === "vision.dom.coverage_limited")).toMatchObject({ motion_waits: 0, motion_regrounded: 0 });
+  expect(result.events.some(e => e.event === "vision.dom.motion_regrounded")).toBe(false);
+  await result.snapshot!.document.dispose();
+});
+
+// ADR 045 (A2): a swiper `loop` track of three slides, each holding an identical link. Edge layers cover the slide
+// path like the character column and the download panel. The track slides one slide to the left in 600 ms.
+// "out": it stays there (swiper's loop reset comes seconds later), so the observed copy stays outside the viewport
+// and its twin, another node at another DOM position, is the one on show.
+// "jump": at the end the transform is reset without animation, so the observed copy returns to where it was first seen.
+// "lost": the track stops between two slides (-1050 px), so no copy is fully inside the viewport once it is still.
+// "between": the same stop position, but from the start and with no motion at all (the walk itself sees no copy).
+async function observeLoopSwiper(page: Page, mode: "out" | "jump" | "lost" | "between") {
+  await page.setViewportSize({ width: 700, height: 400 });
+  const link = '<a href="/play" style="position:absolute;left:300px;top:150px;width:100px;height:40px;' +
+    'display:block;background:#c33;border:1px solid #000;border-radius:6px">Play</a>';
+  const slide = `<div style="position:relative;flex:0 0 700px;height:400px">${link}</div>`;
+  await page.setContent('<body style="margin:0"><div style="position:absolute;left:0;top:0;width:700px;height:400px;overflow:hidden">' +
+    `<div id="track" style="display:flex;width:2100px;transform:translateX(${mode === "between" ? -1050 : -700}px)">${slide}${slide}${slide}</div></div>` +
+    '<div style="position:absolute;left:0;top:100px;width:330px;height:200px;z-index:5"></div>' +
+    '<div style="position:absolute;left:620px;top:100px;width:80px;height:200px;z-index:5"></div></body>');
+  setInteractionScope(page, "visual_buttons");
+  const req = await request(page);
+  // The DOM walk sees the link at rest, fully inside the viewport. The track starts to slide right after it and
+  // grounding runs 80 ms later, mid-slide, with the link under the left layer (the T0/T1 gap of ADR 045).
+  const evaluate = page.evaluate.bind(page);
+  let started = mode === "between";
+  page.evaluate = (async (...args: Parameters<Page["evaluate"]>) => {
+    const result = await evaluate(...args);
+    if (!started && result && typeof result === "object" && "candidates" in result) {
+      started = true;
+      await evaluate(({ mode }) => {
+        const track = document.getElementById("track")!;
+        track.style.transition = "transform 600ms linear"; void track.offsetWidth;
+        track.addEventListener("transitionend", () => {
+          if (mode === "jump") { track.style.transition = "none"; track.style.transform = "translateX(-700px)"; }
+        }, { once: true });
+        track.style.transform = mode === "lost" ? "translateX(-1050px)" : "translateX(-1400px)";
+      }, { mode });
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    return result;
+  }) as Page["evaluate"];
+  const lines: string[] = [], warn = console.warn, log = console.log;
+  console.warn = console.log = (line: string) => { lines.push(String(line)); };
+  try {
+    const outcome: { snapshot?: DomSnapshot; error?: unknown } = await observeDom(page, req)
+      .then(snapshot => ({ snapshot }), error => ({ error }));
+    return { ...outcome, events: lines.filter(line => line.startsWith("{")).map(line => JSON.parse(line) as Record<string, unknown>) };
+  } finally { console.warn = warn; console.log = log; }
+}
+
+test("T-loop-out: a copy that slid out of the viewport is re-observed once and its on-show twin is bound", async ({ page }) => {
+  const result = await observeLoopSwiper(page, "out");
+  expect(result.error).toBeUndefined();
+  const observation = result.snapshot!.data.observation;
+  expect(observation.elements.map(e => e.name)).toEqual(["Play"]);
+  expect(observation.skipped_count).toBe(0);
+  expect(result.snapshot!.data.bindings[0].bounds.x).toBeCloseTo(300 / 700, 2);
+  expect(result.events.find(e => e.event === "vision.dom.motion_regrounded")).toMatchObject({ level: "info", motion_retraversals: 1 });
+  expect(JSON.stringify(result.events)).not.toMatch(/Play|\/play|dom_path|nth-of-type/);
+  await Promise.all([...result.snapshot!.anonymousTargets.values()].map(t => t.dispose()));
+  await result.snapshot!.document.dispose();
+});
+
+test("T-loop-jump: a copy whose track jumped back to where it was first seen is grounded again", async ({ page }) => {
+  const result = await observeLoopSwiper(page, "jump");
+  expect(result.error).toBeUndefined();
+  const observation = result.snapshot!.data.observation;
+  expect(observation.elements.map(e => e.name)).toEqual(["Play"]);
+  expect(observation.skipped_count).toBe(0);
+  expect(result.snapshot!.data.bindings[0].bounds.x).toBeCloseTo(300 / 700, 2);
+  expect(result.events.find(e => e.event === "vision.dom.motion_regrounded")).toMatchObject({ motion_regrounded: 1, motion_retraversals: 0 });
+  await Promise.all([...result.snapshot!.anonymousTargets.values()].map(t => t.dispose()));
+  await result.snapshot!.document.dispose();
+});
+
+test("T-loop-lost: a copy that slid out with no equivalent copy fully on show stays a counted skip", async ({ page }) => {
+  const result = await observeLoopSwiper(page, "lost");
+  expect(result.error).toBeUndefined();
+  const observation = result.snapshot!.data.observation;
+  expect(observation.elements).toHaveLength(0);
+  expect(observation.skipped_count).toBe(1);
+  expect(observation.unsupported).toContain("unbound_target");
+  expect(result.events.find(e => e.event === "vision.dom.coverage_limited")).toMatchObject({
+    skipped_count: 1, skip_reasons: { unsupported_target: 1 }, motion_retraversals: 1 });
+  expect(JSON.stringify(result.events)).not.toMatch(/Play|\/play|dom_path|nth-of-type/);
+  await result.snapshot!.document.dispose();
+});
+
+// Known limit (ADR 045): a walk that runs while no copy is fully in the viewport has no candidate to lose, so there
+// is nothing to skip and nothing to re-walk. Pre-existing behaviour, common to every scope; recorded, not fixed here.
+test("a walk made while no copy is fully in the viewport finds nothing and skips nothing", async ({ page }) => {
+  const result = await observeLoopSwiper(page, "between");
+  expect(result.error).toBeUndefined();
+  const observation = result.snapshot!.data.observation;
+  expect(observation.elements).toHaveLength(0);
+  expect(observation.skipped_count).toBe(0);
+  expect(result.events.some(e => e.event === "vision.dom.coverage_limited")).toBe(false);
+  await result.snapshot!.document.dispose();
 });
 
 test("viewport scanning exposes lower controls and stops requesting scroll at the bottom", async ({ page }) => {

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "4ebe463cd69ea18d3d0daf96c9a90f7f00fd056bd85f1e81dc9a140235732bb4",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "mct-40: Machine rule: after-state page URL https://www.facebook.com/groups/mongchiton.vn equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "87e5b0fb-f940-4876-bda6-370a7fd97e1b",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

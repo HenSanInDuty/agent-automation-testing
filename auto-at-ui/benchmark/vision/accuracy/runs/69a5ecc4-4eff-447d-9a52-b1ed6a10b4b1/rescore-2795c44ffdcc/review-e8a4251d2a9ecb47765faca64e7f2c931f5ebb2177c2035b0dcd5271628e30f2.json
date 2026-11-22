@@ -1,0 +1,11 @@
+{
+  "after_checksum": "4c1bd9447086dcee8acbd1903655ad7a34a49c9d8275ab6fcaee1d19729bdfe0",
+  "before_checksum": "364e6066ab9cd262911d64f0f6f8d9896b84b43749261781181158aeef56f316",
+  "finding": "mct-44: second character control becomes active and the Dao Hoa panel is shown (before: Co Mo).",
+  "operation_id": "1e674c84-cc64-41ef-86df-605997f408ab",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

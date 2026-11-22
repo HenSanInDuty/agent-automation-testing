@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
 import { errors } from "@playwright/test";
 import { logEvent, type LogContext } from "./observability.js";
 import { VisionWorkerError } from "./vision-contract.js";
@@ -21,6 +22,18 @@ export function visionErrorType(error: unknown): string {
     if (/protocol error/i.test(error.message)) return "browser_protocol_error";
   }
   return "unexpected_error";
+}
+
+// r18: `unexpected_error` alone hid a whole live session (r16/r17). Add only values that cannot carry page data:
+// the error class name (allow-listed shape), the Playwright API that threw (fixed prefix list) and a short sha256
+// of the message so repeats can be correlated. The message and stack are still never logged.
+const PLAYWRIGHT_ORIGIN = /^(page|locator|frame|browserType|browserContext|browser|elementHandle|jsHandle)\.[A-Za-z]+/;
+export function visionErrorDetails(error: unknown, type: string): Record<string, string> {
+  if (type !== "unexpected_error" || !(error instanceof Error)) return {};
+  const name = /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : "Error";
+  const origin = PLAYWRIGHT_ORIGIN.exec(error.message)?.[0];
+  return { error_name: name, ...(origin ? { error_origin: origin } : {}),
+    error_digest: createHash("sha256").update(error.message).digest("hex").slice(0, 8) };
 }
 
 export function logVisionFailure(event: string, fields: Record<string, unknown>): void {

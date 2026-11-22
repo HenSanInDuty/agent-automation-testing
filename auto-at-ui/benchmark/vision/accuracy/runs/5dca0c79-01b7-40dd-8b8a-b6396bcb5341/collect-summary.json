@@ -1,0 +1,31 @@
+{
+  "operations": 170,
+  "frames_verified": 336,
+  "frames_unavailable": 4,
+  "model_jobs": 20,
+  "downloads": 2,
+  "diagnosis": {
+    "categories": [
+      {
+        "operation_id": "32e8873e-1b55-4f63-874f-b0b716e4c962",
+        "category": "operation_failure",
+        "code": "history_checkpoint_unavailable",
+        "purpose": "restore"
+      },
+      {
+        "operation_id": "89546b89-8b70-4ecd-af35-1725f2399449",
+        "category": "operation_failure",
+        "code": "history_checkpoint_unavailable",
+        "purpose": "restore"
+      }
+    ],
+    "missing_evidence_operations": [
+      "32e8873e-1b55-4f63-874f-b0b716e4c962",
+      "89546b89-8b70-4ecd-af35-1725f2399449"
+    ],
+    "reason": "exploration_coverage_incomplete",
+    "physical_retry_authorized": false
+  },
+  "state": "unavailable",
+  "reason": "exploration_coverage_incomplete"
+}

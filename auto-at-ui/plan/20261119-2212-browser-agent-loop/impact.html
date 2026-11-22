@@ -1,0 +1,290 @@
+<title>Agent Loop Vision</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column, sticky section index on wide screens; tables scroll inside their own box. */
+:root {
+  --bg: #f6f7f4; --surface: #ffffff; --fg: #1c211d; --muted: #5d665f; --line: #d9ddd6;
+  --accent: #2f6b4f; --accent-soft: #e3efe8; --warn: #9a5b00; --warn-soft: #fbefdc; --crit: #a33a2a; --crit-soft: #f8e3df;
+  --code-bg: #eef0eb;
+  --f-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141815; --surface: #1b201c; --fg: #e4e8e3; --muted: #9aa49c; --line: #2f3631;
+  --accent: #7cc4a0; --accent-soft: #1f3529; --warn: #e2a64b; --warn-soft: #3a2c15; --crit: #ef8a78; --crit-soft: #3d1f1a;
+  --code-bg: #232a25; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141815; --surface: #1b201c; --fg: #e4e8e3; --muted: #9aa49c; --line: #2f3631;
+  --accent: #7cc4a0; --accent-soft: #1f3529; --warn: #e2a64b; --warn-soft: #3a2c15; --crit: #ef8a78; --crit-soft: #3d1f1a;
+  --code-bg: #232a25; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--f-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 40px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; font-size: 13px; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
+main { min-width: 0; display: flex; flex-direction: column; gap: 40px; }
+header h1 { font-family: var(--f-display); font-size: 34px; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
+.eyebrow { font: 500 12px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); max-width: 70ch; margin: 0; }
+.na { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 16px; }
+section h2 { font-family: var(--f-display); font-size: 22px; margin: 0 0 12px; display: flex; gap: 10px; align-items: baseline; }
+section h2 .k { font: 500 13px var(--f-mono); color: var(--accent); }
+h3 { font-size: 15px; margin: 18px 0 6px; }
+p, li { max-width: 75ch; }
+code, .mono { font-family: var(--f-mono); font-size: 13px; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; overflow-wrap: anywhere; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+.pill { display: inline-block; font: 500 11px var(--f-mono); padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.new { background: var(--accent-soft); color: var(--accent); }
+.mod { background: var(--warn-soft); color: var(--warn); }
+.req { background: var(--crit-soft); color: var(--crit); }
+.contract { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.contract > div { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.contract h3 { margin-top: 0; }
+.contract ul, .contract ol { margin: 0; padding-left: 18px; }
+.callout { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 10px 14px; border-radius: 0 6px 6px 0; }
+.callout.crit { border-color: var(--crit); background: var(--crit-soft); }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; margin-bottom: 10px; }
+.q b { display: block; margin-bottom: 4px; }
+.q .rec { color: var(--accent); font-weight: 500; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-x: auto; }
+ol.flow { padding-left: 20px; }
+ol.flow li { margin-bottom: 6px; }
+@media (max-width: 820px) { .wrap { grid-template-columns: minmax(0, 1fr); } nav.toc { display: none; } .contract { grid-template-columns: minmax(0, 1fr); } header h1 { font-size: 27px; } }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Mục lục">
+  <a href="#a">A. Contract</a><a href="#b">B. Database</a><a href="#c">C. Trường</a><a href="#d">D. File</a>
+  <a href="#e">E. Luồng dữ liệu</a><a href="#f">F. Luồng nghiệp vụ</a><a href="#g">G. Màn hình</a><a href="#h">H. Sơ đồ</a>
+  <a href="#i">I. Phase</a><a href="#j">J. Convention & Graph</a><a href="#k">K. Rủi ro & câu hỏi</a><a href="#l">L. Lược bỏ</a>
+</nav>
+<main>
+<header>
+  <div class="eyebrow">h-plan · Gate 2 · chờ duyệt</div>
+  <h1>Engine agent loop cho Vision</h1>
+  <p class="lede">Thêm engine Vision thứ hai chạy theo vòng lặp khép kín kiểu browser agent (paper arXiv 2511.19477): quan sát → model tự đánh giá bước trước, ghi memory, chọn hành động trên ref có version → thực thi → quan sát lại. Engine hiện tại (planner, v4) giữ nguyên và vẫn là mặc định. Test case "click hết control" của mongchiton chạy được như một task bình thường trên engine mới, chấm bằng benchmark độc lập như cũ.</p>
+  <p class="na">Khảo sát: <code>reports/survey/be-control-plane.md</code>, <code>be-worker.md</code>, <code>fe-dashboard.md</code>. Mọi mục đều áp dụng.</p>
+</header>
+
+<section id="a"><h2><span class="k">A</span>Contract</h2>
+<div class="contract">
+  <div><h3>Outcome</h3><p>Chọn <code>engine=agent_loop</code> khi tạo session. Mỗi bước: worker trả snapshot mới (ref dạng <code>version:n</code>), model trả <code>evaluation_previous_goal</code>, <code>memory</code>, <code>next_goal</code> và 1..N action (hoặc done/stop/need_screenshot). Control-plane kiểm an toàn bằng code, chạy từng action qua đường operation có sẵn (frame before/after), dừng batch khi trang đổi, ghi step log, lặp. Không restore, không replay: agent đi tiếp từ trang hiện tại, <code>back</code>/<code>navigate</code> là tool của model.</p></div>
+  <div><h3>Constraints</h3><ul>
+    <li>Quy tắc tầng của <code>AGENTS.md</code>; prompt chỉ ở <code>agents/prompts/</code> có version + README; contract chung ở <code>packages/contracts</code>; Python qua <code>uv</code>.</li>
+    <li>v4 không đổi hành vi, không đổi schema hash của <code>codex-dom-v11</code>; mọi nới guard ở worker đặt sau cờ engine.</li>
+    <li>Provider giữ nguyên (<code>codex_cli</code>, <code>claude_cli</code> qua bridge hiện có).</li>
+    <li>Evidence tương thích <code>run.py collect/evaluate</code>; <code>metrics.py</code> và oracle không đổi.</li>
+    <li>Ngân sách: số lần gọi model, rate/phút, thời gian session, trần ký tự snapshot.</li>
+  </ul></div>
+  <div><h3>Non-goals</h3><ul>
+    <li>Không dùng model nhẹ để cắt snapshot (cần chọn provider mới); chỉ cắt tất định.</li>
+    <li>Không bỏ hay viết lại v4; không đổi metrics/oracle.</li>
+    <li>Không multi-tab ngoài cơ chế một popup hiện có; không game thời gian thực/canvas.</li>
+    <li>Không giữ phiên CLI sống giữa các bước (cần ADR bảo mật riêng).</li>
+    <li>Không cam kết miễn nhiễm prompt injection.</li>
+  </ul></div>
+  <div><h3>Acceptance criteria</h3><ol>
+    <li>Session <code>agent_loop</code> chạy vòng lặp; mỗi lần gọi model chỉ nhận snapshot mới nhất + memory + K bước gần nhất; step log lưu evaluation/memory/next_goal/actions.</li>
+    <li>Ref của snapshot cũ bị từ chối an toàn, không có hành động trình duyệt.</li>
+    <li>Hành động trên trang ngoài allowlist, nút submit/download/từ khoá nhạy cảm bị chặn bằng code và được ghi lại.</li>
+    <li>Batch dừng các action còn lại sau action làm đổi trang và lấy snapshot mới.</li>
+    <li>Input mỗi lần gọi bị chặn trên (cap snapshot + marker <code>[refs a-b trimmed]</code> + nén lịch sử).</li>
+    <li>Task click-hết-control mongchiton chạy trên <code>agent_loop</code>; <code>run.py collect</code> + <code>evaluate</code> sinh <code>score.json</code> không sửa metrics/oracle; không kết thúc bằng <code>unsafe_replay</code>.</li>
+    <li>Toàn bộ test hồi quy v4 xanh; engine mặc định vẫn là planner.</li>
+  </ol></div>
+</div>
+</section>
+
+<section id="b"><h2><span class="k">B</span>Database bị ảnh hưởng</h2>
+<div class="tbl"><table>
+<tr><th>Bảng (Postgres platform)</th><th>Thay đổi</th><th>Chi tiết</th></tr>
+<tr><td><code>visual_exploration_sessions</code></td><td><span class="pill mod">ALTER</span></td><td>ADD <code>exploration_engine</code> String(20) NOT NULL server_default <code>'planner'</code> (giá trị <code>planner</code> | <code>agent_loop</code>). Không index.</td></tr>
+<tr><td><code>visual_agent_steps</code></td><td><span class="pill new">mới</span></td><td><code>id</code> UUID PK; <code>tenant_id</code>; <code>session_id</code> FK (cùng khuôn <code>fk_visual_operation_session</code>); <code>step_index</code> int; <code>snapshot_version</code> int; <code>evaluation_previous_goal</code>, <code>memory</code>, <code>next_goal</code> Text có giới hạn, qua <code>redact_value</code>; <code>actions</code> JSONB; <code>operation_ids</code> JSONB; <code>stop_reason</code> String(80) null; <code>job_id</code> UUID null; <code>created_at</code>. Unique(<code>session_id</code>, <code>step_index</code>).</td></tr>
+</table></div>
+<ul>
+  <li><b>Migration</b>: <code>migrations/versions/&lt;rev&gt;_add_agent_loop_engine.py</code>, <code>down_revision = "a4c6e8f01234"</code> (head hiện tại, Alembic).</li>
+  <li><b>Rollback</b>: <code>op.drop_table("visual_agent_steps"); op.drop_column("visual_exploration_sessions", "exploration_engine")</code>.</li>
+  <li><b>Backfill</b>: không; row cũ nhận default <code>planner</code>. <b>Lock</b>: ADD COLUMN với default hằng trên PG ≥ 11 chỉ đổi metadata; CREATE TABLE không khoá bảng hiện có.</li>
+  <li><b>Ai đang đọc <code>visual_exploration_sessions</code></b>: <code>repositories.py</code> (claim/_fence), <code>vision_results.py</code>, <code>vision_screen.py</code>, response API dashboard. Cột mới chỉ được đọc ở dispatch và response.</li>
+  <li>Không đụng CHECK <code>ck_codex_job_sequence BETWEEN 1 AND 20</code> trừ khi bạn chọn nâng trần ở câu hỏi K1.</li>
+</ul>
+</section>
+
+<section id="c"><h2><span class="k">C</span>Trường bị ảnh hưởng</h2>
+<div class="tbl"><table>
+<tr><th>Trường</th><th>Nơi</th><th>Kiểu</th><th></th><th>Ghi</th><th>Đọc</th><th>Ràng buộc</th></tr>
+<tr><td><code>engine</code></td><td>request <code>POST /explorations</code>, <code>ExplorationResponse</code></td><td>Literal planner|agent_loop</td><td><span class="pill new">mới</span></td><td>dashboard / benchmark</td><td>route → application</td><td>mặc định planner; agent_loop chỉ khi cờ <code>vision_agent_loop_enabled</code> bật và provider là bridge</td></tr>
+<tr><td><code>exploration_engine</code></td><td>sessions</td><td>String(20)</td><td><span class="pill new">mới</span></td><td><code>RequestVisualExploration</code></td><td><code>vision_publisher</code> (dispatch), results</td><td>NOT NULL default planner</td></tr>
+<tr><td><code>AgentStep</code>, <code>AgentAction</code>, <code>AgentLoopContext</code>, <code>AgentLoopOutput</code></td><td><code>contracts/codex_bridge.py</code></td><td>Pydantic closed</td><td><span class="pill new">mới</span></td><td>bridge (model)</td><td>agent loop processor</td><td>schema phẳng, mọi field nullable, ref khớp <code>^[0-9]+:[0-9]+$</code>; KHÔNG thêm vào <code>CodexOutput</code> (giữ hash v4)</td></tr>
+<tr><td><code>prompt_version</code></td><td><code>CodexBridgeRequest</code></td><td>regex</td><td><span class="pill mod">sửa</span></td><td>codex_batch</td><td>bridge host</td><td>mở regex cho <code>agent-loop-v1</code>; <code>valid_job</code> đòi <code>agent_context</code></td></tr>
+<tr><td><code>agent_mode</code> / <code>origin_policy</code></td><td><code>VisualWorkerOpen</code> (sinh TS)</td><td>bool / enum</td><td><span class="pill new">mới</span></td><td>agent loop</td><td>worker</td><td>mặc định tắt → v4 không đổi</td></tr>
+<tr><td><code>VISION_AGENT_LOOP_ENABLED</code></td><td><code>config.py</code>, <code>.env.example</code></td><td>bool</td><td><span class="pill new">mới</span></td><td>env</td><td>application</td><td>mặc định false</td></tr>
+</table></div>
+</section>
+
+<section id="d"><h2><span class="k">D</span>File bị ảnh hưởng</h2>
+<div class="tbl"><table>
+<tr><th>File</th><th></th><th>Lý do</th><th>Phía</th><th>Ladder (file mới)</th></tr>
+<tr><td><code>packages/contracts/.../codex_bridge.py</code></td><td><span class="pill mod">sửa</span></td><td>Agent schema, context, regex prompt_version, <code>parse_agent_output</code></td><td>BE</td><td></td></tr>
+<tr><td><code>packages/contracts/.../vision_worker.py</code> + <code>vision-contract.generated.ts</code></td><td><span class="pill mod">sửa</span></td><td>Cờ agent mode, origin policy trên <code>VisualWorkerOpen</code>; purpose cho back/navigate của agent; regenerate TS</td><td>BE</td><td></td></tr>
+<tr><td><code>migrations/versions/&lt;rev&gt;_add_agent_loop_engine.py</code></td><td><span class="pill new">mới</span></td><td>Cột engine + bảng step</td><td>BE</td><td>Alembic là công cụ của repo</td></tr>
+<tr><td><code>infrastructure/persistence/models.py</code>, <code>vision_unit_of_work.py</code></td><td><span class="pill mod">sửa</span></td><td>Cột + <code>VisualAgentStepModel</code>; thêm method ghi step có fence (không tạo class mới)</td><td>BE</td><td></td></tr>
+<tr><td><code>api/v1/routes/vision.py</code>, <code>application/vision.py</code>, <code>application/vision_reload.py</code>, <code>config.py</code>, <code>.env.example</code></td><td><span class="pill mod">sửa</span></td><td>Field engine, cờ bật, reload giữ engine</td><td>BE</td><td></td></tr>
+<tr><td><code>infrastructure/workflows/vision_publisher.py</code></td><td><span class="pill mod">sửa</span></td><td>Dispatch theo <code>exploration_engine</code> (giữ <code>handler</code> test-injection)</td><td>BE</td><td></td></tr>
+<tr><td><code>application/vision_agent_loop.py</code></td><td><span class="pill new">mới</span></td><td>Processor vòng lặp: observe → render → model → safety → operations → step log</td><td>BE</td><td><code>primitive()</code> của v4 là closure trong <code>execute()</code> (<code>vision_trace_events.py:250</code>), không import được; sửa v4 vi phạm AC7. Tái dùng nguyên <code>ExecuteVisualOperation</code>, <code>CodexCallBudget</code>, <code>CodexModelBatch</code>.</td></tr>
+<tr><td><code>domain/vision_agent_safety.py</code></td><td><span class="pill new">mới</span></td><td>Rule thuần: allowlist host, submit/reset, từ khoá nhạy cảm, kind không hỗ trợ</td><td>BE</td><td>Control-plane chưa có rule hành động nào; <code>ProjectExecutionPolicy.allows</code> và <code>origin_for_url</code> được tái dùng bên trong.</td></tr>
+<tr><td><code>agents/prompts/agent_loop.py</code> + <code>agents/prompts/README.md</code></td><td><span class="pill new">mới</span>/<span class="pill mod">sửa</span></td><td>Prompt <code>agent-loop-v1</code>, thứ tự static → schema → session → history → snapshot</td><td>BE</td><td><code>AGENTS.md</code> bắt buộc prompt tập trung; <code>codex-dom-v11</code> là danh tính benchmark, không sửa.</td></tr>
+<tr><td><code>infrastructure/vision/codex_batch.py</code>, <code>agents/vision/codex_service.py</code>, <code>application/codex_bridge.py</code>, <code>codex_bridge_cli.py</code>, <code>infrastructure/codex_bridge/process.py</code>, <code>claude_process.py</code></td><td><span class="pill mod">sửa</span></td><td>Tham số tuỳ chọn prompt_version/schema; chọn builder + parser theo prompt_version; mặc định = cũ</td><td>BE</td><td></td></tr>
+<tr><td><code>domain/activity.py</code></td><td><span class="pill mod">sửa</span></td><td>Stage tiến độ <code>agent.step</code>, reason code <code>agent_done</code>, <code>agent_step_limit</code></td><td>BE</td><td></td></tr>
+<tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td><span class="pill mod">sửa</span></td><td>Agent mode: chỉ snapshot mới nhất + evict handle; không đếm hop/state; cho back/navigate; enforce allowlist ở <code>context.route</code> (:138); chặn submit/download/keyword ở prepare; re-baseline form; lỗi dialog/download báo về thay vì khoá session</td><td>BE</td><td></td></tr>
+<tr><td><code>workers/playwright/src/vision-dom.ts</code></td><td><span class="pill mod">sửa</span></td><td>Trả tổng số ứng viên để render marker trimmed; (tuỳ chọn) heading/text ngắn có cap</td><td>BE</td><td></td></tr>
+<tr><td><code>workers/playwright/src/vision-agent-*.spec.ts</code>, <code>src/fixtures/agent-loop-target.ts</code></td><td><span class="pill new">mới</span></td><td>Spec agent mode; fixture có form, link ngoài origin, popup, download, dialog, trang đổi sau click</td><td>BE</td><td><code>vision-target.ts</code> dùng chung cho spec v4, nhồi route agent vào làm lẫn fixture; <code>visual-buttons-dataset.ts</code> được tái dùng cho click-all offline.</td></tr>
+<tr><td><code>apps/dashboard/app/generation-api.ts</code>, <code>vision-dashboard.tsx</code>, <code>generation-types.ts</code>, <code>components/vision-operation-ledger.tsx</code>, <code>vision-provider-model.ts</code></td><td><span class="pill mod">sửa</span></td><td>Chọn engine; field <code>agent_step?</code> trong ledger; map mã lỗi mới</td><td>FE</td><td>Không file/component mới (ledger tái dùng).</td></tr>
+<tr><td><code>benchmark/vision/accuracy/run.py</code> (nếu cần) + báo cáo vòng</td><td><span class="pill mod">sửa nhỏ</span></td><td>Truyền <code>engine</code> khi start; metrics/oracle không đổi</td><td>BE</td><td></td></tr>
+<tr><td><code>docs/adr/038-vision-agent-loop-engine.md</code>, <code>docs/vision-agent-operations.md</code></td><td><span class="pill new">mới</span>/<span class="pill mod">sửa</span></td><td>Ghi quyết định và vận hành</td><td>BE</td><td>Mỗi quyết định kiến trúc vision đã có ADR riêng (020–037).</td></tr>
+<tr><td>Test Python: <code>test_vision_agent_loop.py</code>, <code>test_vision_agent_safety.py</code>, <code>test_agent_loop_contracts.py</code>, <code>test_agent_loop_prompt.py</code>, migration/route test</td><td><span class="pill new">mới</span></td><td>Phủ AC1–AC5, AC7</td><td>BE</td><td>Dựa trên <code>tests/vision_trace_fixtures.py</code>, mẫu <code>test_vision_event_processor.py</code>.</td></tr>
+</table></div>
+</section>
+
+<section id="e"><h2><span class="k">E</span>Luồng dữ liệu</h2>
+<ol class="flow">
+  <li><b>Entry</b>: <code>POST /explorations {engine: "agent_loop", ...}</code> → validate (cờ bật, provider bridge, target thuộc <code>allowed_origins</code> của project) → session row <code>exploration_engine=agent_loop</code>, <code>trace_version="v4"</code> (giữ để lease/trace/dashboard chạy) → outbox event. <i>Đồng bộ, một transaction.</i></li>
+  <li><b>Dispatch</b>: temporal-worker poll → <code>vision_publisher</code> đọc session → <code>VisionAgentLoopProcessor</code>. <i>Bất đồng bộ, có lease.</i></li>
+  <li><b>Open + setup</b>: <code>worker.open</code> (agent_mode, origin_policy) → op <code>navigate</code> purpose setup (frame + checkpoint).</li>
+  <li><b>Observe</b>: <code>worker.observe_dom</code> → control-plane đánh số <code>version:n</code> → map RAM <code>{(version,n) → (snapshot_id, element_id)}</code>. <i>Biến đổi shape</i>: element id 32 hex thành ref ngắn; cắt theo trần ký tự, chèn <code>[refs a-b trimmed]</code>.</li>
+  <li><b>Decide</b>: <code>CodexCallBudget.reserve</code> → <code>CodexModelBatch</code> (prompt <code>agent-loop-v1</code>, <code>agent_context</code> = task, allowlist, memory, K bước gần nhất, snapshot) → spool → CLI → <code>AgentLoopOutput</code>. <i>Bất đồng bộ qua file spool, ~41 s/job.</i></li>
+  <li><b>Guard</b>: ref sai version → từ chối (không gọi worker); <code>vision_agent_safety</code> → chặn/ghi lý do.</li>
+  <li><b>Act</b>: mỗi action → state/proposal/edge (<code>uow.proposals</code>) → <code>ExecuteVisualOperation</code> (prepare, before frame, ack, execute, after frame) purpose <code>explore</code>, binding <code>dom_snapshot_id/dom_element_id</code> → worker chặn lần hai (allowlist, submit/download, stale). <i>Side effect</i>: hành động trình duyệt, frame lên RustFS.</li>
+  <li><b>Stop batch</b> khi fingerprint đổi, <code>url_change</code>, popup, download, hoặc lỗi.</li>
+  <li><b>Record</b>: <code>visual_agent_steps</code> (fenced write) + activity <code>agent.step</code>. <i>Transaction boundary</i>: mỗi step một commit.</li>
+  <li><b>Loop</b> về bước 4 tới khi done/stop/hết budget → <code>uow.finish(reason)</code>; <code>/result</code>, <code>/trace</code> phục vụ dashboard và <code>run.py collect</code>.</li>
+</ol>
+</section>
+
+<section id="f"><h2><span class="k">F</span>Luồng nghiệp vụ</h2>
+<p><b>Actor</b>: người kiểm thử hoặc benchmark harness. <b>Tiền điều kiện</b>: project có <code>allowed_origins</code> chứa target; tenant policy chọn provider bridge; cờ <code>VISION_AGENT_LOOP_ENABLED</code> bật; bridge host đang chạy.</p>
+<ol class="flow">
+  <li>Gửi task (ví dụ "click thử tất cả các nút trên trang chủ và kiểm tra trang đích"), chọn engine agent loop.</li>
+  <li>Agent mở trang, nhận snapshot, lên kế hoạch trong <code>memory</code>, gửi batch action.</li>
+  <li><b>Rẽ nhánh</b> sau mỗi action:
+    <ul>
+      <li>Trang không đổi → action kế trong batch.</li>
+      <li>Trang đổi / popup mở → dừng batch, snapshot mới, model đánh giá (ví dụ "popup Tepaylink mở đúng, đóng và quay lại").</li>
+      <li>Popup/trang ngoài allowlist → xem K3: chỉ quan sát, mọi action trên đó bị chặn trừ đóng/quay lại.</li>
+      <li>Action bị chặn (submit, download, từ khoá) → không chạy, kết quả "blocked" trả về model ở bước sau.</li>
+      <li>Ref cũ → "stale_ref", model phải dùng snapshot mới.</li>
+    </ul></li>
+  <li>Model tự đánh giá kết quả bước trước. Thất bại thì không lặp y hệt, phải đổi cách (ví dụ carousel PREVIOUS không đổi slide → thử lại một lần bằng chấm indicator).</li>
+  <li>Kết thúc khi model trả <code>done</code>, <code>stop</code>, hoặc hết budget/thời gian.</li>
+</ol>
+<p><b>Đường lỗi</b>: bridge timeout / schema sai → một lần retry rồi dừng có lý do; worker <code>action_outcome_unknown</code> → khoá session như v4; mất lease → dừng an toàn. <b>Hậu điều kiện</b>: step log + operations + frames đầy đủ; conclusion <code>partial / not_established</code> (engine mới không có inventory toàn trang, không tự nhận "completed"). <b>Biên</b>: trang chỉ có canvas → need_screenshot; trang &gt; 100 control → marker trimmed + cuộn; form nhiều ô → batch type nhờ re-baseline.</p>
+</section>
+
+<section id="g"><h2><span class="k">G</span>Màn hình / UI</h2>
+<ul>
+  <li><b>Form tạo exploration</b> (<code>vision-dashboard.tsx</code>): thêm một <code>&lt;select&gt;</code> Engine (Planner mặc định / Agent loop), chỉ hiện khi API báo cờ bật. Không thêm ô allowlist (dùng <code>allowed_origins</code> của project).</li>
+  <li><b>Chi tiết session</b>: ledger operation hiện có hiển thị thêm khối nhỏ theo bước: đánh giá bước trước, memory, mục tiêu kế. Action bị chặn hiện thành dòng "blocked" với lý do.</li>
+  <li><b>Mã lỗi mới</b> (<code>stale_ref</code>, <code>origin_blocked</code>, <code>sensitive_action_blocked</code>, <code>agent_step_limit</code>) có câu hiển thị riêng trong <code>vision-provider-model.ts</code>.</li>
+  <li>Loading / empty / error / không quyền: tái dùng trạng thái có sẵn. Không đổi bố cục; điều khiển bàn phím của ledger giữ nguyên.</li>
+  <li>Sửa nhãn "advisory, model proposals only" cho session agent loop vì engine này thực thi thật.</li>
+</ul>
+</section>
+
+<section id="h"><h2><span class="k">H</span>Sơ đồ vòng lặp</h2>
+<pre class="mermaid">
+sequenceDiagram
+  participant API as API / application
+  participant P as AgentLoopProcessor
+  participant M as Bridge (codex/claude CLI)
+  participant S as vision_agent_safety
+  participant W as Playwright worker
+  participant DB as Postgres + RustFS
+  API->>DB: session(engine=agent_loop) + outbox
+  P->>W: open(agent_mode, origin_policy) + navigate(setup)
+  loop đến done / stop / hết budget
+    P->>W: observe_dom(snapshot v)
+    W-->>P: elements (latest only, cũ bị evict)
+    P->>M: agent-loop-v1: static | schema | session | memory+K bước | snapshot v
+    M-->>P: evaluation, memory, next_goal, actions[v:n...]
+    loop từng action trong batch
+      P->>S: check(action, element, allowlist)
+      alt bị chặn hoặc ref cũ
+        S-->>P: blocked (không gọi worker)
+      else hợp lệ
+        P->>W: prepare / before frame / execute / after frame
+        W-->>P: result (fingerprint, url_change, popup, outcome)
+        P->>DB: operation + frames
+      end
+      opt trang đổi
+        P->>P: dừng batch
+      end
+    end
+    P->>DB: visual_agent_steps (fenced)
+  end
+  P->>DB: finish(reason)
+</pre>
+</section>
+
+<section id="i"><h2><span class="k">I</span>Chia phase đề xuất</h2>
+<div class="tbl"><table>
+<tr><th>#</th><th>Phase</th><th>Mục tiêu</th><th>File sở hữu</th><th>Phụ thuộc</th><th>Xong khi</th><th>QA</th></tr>
+<tr><td>0</td><td>Ổn định nền</td><td>Commit/khoá ~55 file đang sửa dở (Claude bridge, RustFS retry, round 21) để có baseline sạch</td><td>Không file mới; chỉ commit theo chỉ định của bạn</td><td>—</td><td>Working tree sạch trên vùng sắp sửa; test hồi quy v4 xanh làm baseline</td><td><span class="pill">skip</span></td></tr>
+<tr><td>1</td><td>Contract + DB + chọn engine</td><td>Cột engine, bảng step, field API, cờ config, schema AgentStep, cờ agent mode trên VisualWorkerOpen + regenerate TS</td><td>contracts (codex_bridge, vision_worker, generated TS), migration, models, unit_of_work, routes/vision, application/vision, vision_reload, config, .env.example, activity</td><td>0</td><td>Migration up/down chạy; route nhận engine, mặc định planner; schema agent thoả <code>enforceable_schema</code>; hash schema v4 không đổi</td><td><span class="pill req">required</span></td></tr>
+<tr><td>2</td><td>Worker agent mode</td><td>Latest-only + evict, bỏ đếm hop/state, back/navigate, allowlist ở <code>context.route</code>, chặn submit/download/keyword, re-baseline form, lỗi hồi phục được</td><td>vision-operations.ts, vision-dom.ts, vision-agent-*.spec.ts, fixtures/agent-loop-target.ts</td><td>1</td><td>Spec agent xanh; spec v4 (operations, dom, history, locators, target-preflight, visual-buttons, readiness, outcome-capture) xanh</td><td><span class="pill req">required</span></td></tr>
+<tr><td>3</td><td>Prompt + bridge</td><td>Prompt <code>agent-loop-v1</code>, thứ tự cache, dispatch builder/parser theo prompt_version, tham số codex_batch</td><td>agents/prompts/agent_loop.py + README, codex_batch, codex_service, application/codex_bridge, codex_bridge_cli, process.py, claude_process.py</td><td>1</td><td>Test prompt (thứ tự, phần động ở cuối), test bridge cả hai họ prompt, v4 byte-identical</td><td><span class="pill">skip</span></td></tr>
+<tr><td>4</td><td>Agent loop processor + safety</td><td>Vòng lặp, ref version, cắt snapshot + marker, nén lịch sử, safety thuần, dừng batch, step log, dispatch publisher</td><td>application/vision_agent_loop.py, domain/vision_agent_safety.py, vision_publisher.py, test_vision_agent_loop.py, test_vision_agent_safety.py</td><td>1, 2, 3</td><td>AC1–AC5 có test bằng fake worker + fake exchange</td><td><span class="pill req">required</span></td></tr>
+<tr><td>5</td><td>Dashboard</td><td>Chọn engine, khối step trong ledger, mã lỗi mới, nhãn advisory</td><td>generation-api.ts, vision-dashboard.tsx, generation-types.ts, vision-operation-ledger.tsx, vision-provider-model.ts</td><td>1</td><td>typecheck/lint/test dashboard xanh; xem được step trên session thật</td><td><span class="pill req">required</span></td></tr>
+<tr><td>6</td><td>End-to-end + benchmark + docs</td><td>Chạy task click-hết-control mongchiton trên agent loop, collect/evaluate, so sánh round 21; ADR-038; cập nhật docs vận hành</td><td>benchmark run.py (nếu cần), báo cáo vòng, docs/adr/038, docs/vision-agent-operations.md</td><td>2, 3, 4, 5</td><td>AC6, AC7; <code>score.json</code> có; không <code>unsafe_replay</code></td><td><span class="pill req">required</span></td></tr>
+</table></div>
+<p>Phase 2, 3, 5 chạy song song được sau phase 1. Mỗi file chỉ thuộc một phase.</p>
+</section>
+
+<section id="j"><h2><span class="k">J</span>Convention &amp; Graph</h2>
+<ul>
+  <li><b>Convention</b>: repo không có <code>docs/code-standards.md</code> hay <code>docs/api-conventions.md</code>. Áp dụng <code>AGENTS.md</code>: mục "Code organization rules" (tầng api/application/domain/infrastructure/agents, <code>config.py</code> là nơi duy nhất đọc env, prompt tập trung + README + version), "Required checks" (uv, ruff, pytest), "Boundaries requiring user direction" (provider/model). Ngoài ra bám pattern các file vision hiện có.</li>
+  <li><b>Lệch có chủ đích</b>: processor mới lặp lại khoảng 60 dòng của <code>primitive()</code> v4 vì không sửa được v4 (AC7). Ghi nợ kỹ thuật, hợp nhất khi v4 đóng băng.</li>
+  <li><b>Graph</b>: <code>docs/graphs</code> trống; hgraph không index <code>workers/playwright/src</code>. Đề xuất chạy <code>/h-graph</code> lập <code>vision-agent-loop</code> (control-plane) và <code>playwright-vision-worker</code> sau phase 1 hoặc trước khi cook, tuỳ bạn.</li>
+</ul>
+</section>
+
+<section id="k"><h2><span class="k">K</span>Rủi ro &amp; câu hỏi còn treo</h2>
+<div class="q"><b>K1. Trần 20 lần gọi model mỗi session</b>Nằm ở 6 chỗ (policy, step guard, request_sequence request/response, CHECK DB, activity). Round 21 v4 dùng 20 lần cho 47 click. Agent loop dừng batch mỗi khi popup mở (25/47 target là popup), nên 20 bước có thể không đủ cho task click-hết-control.<br><span class="rec">Đề xuất: giữ 20 cho phase 1–5, đo ở phase 6; nếu thiếu thì thêm phase nâng trần riêng cho agent loop (v4 vẫn 20).</span></div>
+<div class="q"><b>K2. Tool mới của paper (hover, press_key, select_option, wait_for text, navigate tới URL tuỳ ý)</b>Mỗi tool đổi enum contract worker, TS và <code>evidence.py</code> của benchmark.<br><span class="rec">Đề xuất: đợt đầu chỉ dùng kind có sẵn (click, type, scroll, wait, back, close_popup, navigate về target); tool mới để plan sau (mục L).</span></div>
+<div class="q"><b>K3. Allowlist và popup ra ngoài</b>Test case mongchiton cần popup sang Facebook, Tepaylink, TestFlight, Google Play mở được để chấm "trang đích". Chặn cứng theo <code>allowed_origins</code> của project sẽ làm hỏng test case này.<br><span class="rec">Đề xuất: điều hướng/popup ngoài allowlist được mở để quan sát, mọi action trên đó bị chặn trừ đóng/quay lại; sub-resource (ảnh, CDN) không chặn. Allowlist lấy từ project, không thêm cột theo session.</span></div>
+<div class="q"><b>K4. Lỗi dialog/download</b>Hiện một dialog hay download không rõ chủ khoá vĩnh viễn session.<br><span class="rec">Đề xuất: ở agent mode, dialog/download do chính action gây ra được ghi lại, huỷ và báo model; <code>action_outcome_unknown</code> vẫn khoá như v4.</span></div>
+<div class="q"><b>K5. Retention và reload</b><span class="rec">Đề xuất: step log theo <code>intent_retention_until</code> của session; reload giữ engine của session gốc.</span></div>
+<div class="callout"><b>Rủi ro</b><ul>
+  <li>~41 s/job bridge → 20 bước ≈ 14 phút model; bulk action là điều kiện cần.</li>
+  <li>Working tree có ~55 file sửa chưa commit trên đúng đường đi (codex_bridge, codex_candidates, vision_trace_events, rustfs…). Phải xử lý ở phase 0, nếu không merge sẽ lẫn.</li>
+  <li>Detection precision/recall của benchmark lấy từ inventory trang; agent loop không quét toàn trang nên điểm detection có thể không so được với v4. Coverage/accuracy vẫn so được.</li>
+  <li>Phase 6 chạy live gọi model thật (subscription), cần bạn cho phép lúc chạy; token Claude bridge hết hạn ~2026-11-20 03:50.</li>
+  <li>Chi phí grounding khi nâng trần &gt; 100 phần tử chưa đo.</li>
+</ul></div>
+</section>
+
+<section id="l"><h2><span class="k">L</span>Lược bỏ (YAGNI)</h2>
+<h3>Đã bỏ khỏi thiết kế</h3>
+<ul>
+  <li>Bỏ model nhẹ cắt snapshot — thêm khi snapshot thực tế vượt trần và bạn chọn provider.</li>
+  <li>Bỏ endpoint snapshot theo range ở worker — snapshot đã nằm ở control-plane, render range tại đó.</li>
+  <li>Bỏ endpoint batch ở worker — per-op giữ frame before/after cho benchmark; tiết kiệm chỉ vài round trip.</li>
+  <li>Bỏ <code>ariaSnapshot()</code> làm nguồn ref — Playwright 1.50 không trả ref hay handle.</li>
+  <li>Bỏ giữ phiên CLI sống, multi-tab, cột allowlist theo session.</li>
+</ul>
+<h3>Đề nghị cắt khỏi đợt đầu (bạn quyết)</h3>
+<ul>
+  <li>Tool hover / press_key / select_option / wait_for text / navigate URL tuỳ ý — thêm khi có task thật cần form/menu (K2).</li>
+  <li>Nâng trần 20 lần gọi — thêm khi phase 6 cho thấy thiếu (K1).</li>
+</ul>
+</section>
+</main>
+</div>

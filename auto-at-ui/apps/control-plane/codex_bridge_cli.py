@@ -6,16 +6,30 @@ import json
 import signal
 from pathlib import Path
 
-from agents.prompts.codex_exploration import build_prompt
+from agents.prompts import agent_loop, codex_exploration
 from application.codex_bridge import BridgeService
 from application.codex_generation_bridge import GenerationBridgeService
 from config import Settings
+from infrastructure.codex_bridge.claude_process import ClaudeProcess
 from infrastructure.codex_bridge.doctor import doctor
 from infrastructure.codex_bridge.generation_process import GenerationProcess
 from infrastructure.codex_bridge.generation_spool import GenerationSpool
 from infrastructure.codex_bridge.process import CodexProcess
 from infrastructure.codex_bridge.spool import FileSpool
 from infrastructure.observability.logging import configure_logging
+
+PROMPT_BUILDERS = {
+    codex_exploration.PROMPT_VERSION: codex_exploration.build_prompt,
+    agent_loop.PROMPT_VERSION: agent_loop.build_prompt,
+}
+
+
+def build_prompt(request, dom: bytes) -> bytes:
+    try:
+        builder = PROMPT_BUILDERS[request.prompt_version]
+    except KeyError:
+        raise ValueError("unsupported bridge prompt version") from None
+    return builder(request, dom)
 
 
 async def run(settings, readiness):
@@ -29,20 +43,27 @@ async def run(settings, readiness):
         settings.codex_bridge_allowed_tenant, settings.codex_bridge_max_pending,
         owner_uid=settings.codex_bridge_spool_owner_uid,
     )
-    service = BridgeService(
-        settings, spool, CodexProcess(
-            settings.codex_bridge_executable,
-            poll_seconds=settings.codex_bridge_cancel_poll_seconds,
-            kill_grace_seconds=settings.codex_bridge_kill_grace_seconds,
-        ), build_prompt, readiness.model_copy(update={"online": True}),
-        generation=GenerationBridgeService(
+    timing = dict(poll_seconds=settings.codex_bridge_cancel_poll_seconds,
+                  kill_grace_seconds=settings.codex_bridge_kill_grace_seconds)
+    if settings.codex_bridge_engine == "claude":
+        # Claude engine serves Vision proposals only; draft generation stays on Codex.
+        process = ClaudeProcess(
+            settings.codex_bridge_executable, settings.claude_bridge_token_file, **timing,
+        )
+        generation = None
+    else:
+        process = CodexProcess(settings.codex_bridge_executable, **timing)
+        generation = GenerationBridgeService(
             GenerationSpool(
                 Path(settings.codex_bridge_container_spool) / ".generation",
                 settings.codex_bridge_id, settings.codex_bridge_allowed_tenant,
                 owner_uid=settings.codex_bridge_spool_owner_uid,
             ),
             GenerationProcess(CodexProcess(settings.codex_bridge_executable)),
-        ),
+        )
+    service = BridgeService(
+        settings, spool, process, build_prompt,
+        readiness.model_copy(update={"online": True}), generation=generation,
     )
     try:
         await service.serve(stopped)

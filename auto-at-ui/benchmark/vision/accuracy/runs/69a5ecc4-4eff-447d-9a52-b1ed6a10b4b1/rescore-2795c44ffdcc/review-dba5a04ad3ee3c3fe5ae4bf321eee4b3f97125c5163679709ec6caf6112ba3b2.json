@@ -1,0 +1,11 @@
+{
+  "after_checksum": "69ad7d4da3d9cca020ab1120e2fad423ec7e41f8ffc5ad5925cc4f73811f99a8",
+  "before_checksum": "16fb83fc2345d27b898a61f8a6b66130199721b484d357edcaa1fb1dc4190fae",
+  "finding": "mct-57: previous arrow; before frame indicator 6 Hoi Sinh Tinh Hoa, after frame indicator 5 Vo Lam Chan Menh: one step backwards. Autoplay only advances forwards, so the backward step is the click result.",
+  "operation_id": "8e9a8674-8dbf-48cb-ac02-934d3546bea8",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_step",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { VisualLocator, VisualOperation, VisionHandoffBranch } from "../generation-types";
 import { CheckboxField, Disclosure, Hint, Panel } from "./agent-ui";
 import { operationLabel, operationStatus } from "./vision-operation-model";
+import { agentStepView } from "./vision-provider-model";
 
 export function VisionOperationLedger({ items, locators, branches, selectedId, onSelect, follow, onFollow }: {
   items: VisualOperation[]; locators: VisualLocator[];
@@ -20,6 +21,7 @@ export function VisionOperationLedger({ items, locators, branches, selectedId, o
   const selected = items.find((item) => item.id === selectedId);
   const index = visible.findIndex((item) => item.id === selectedId);
   const locator = locators.find((item) => item.id === selected?.locator_id);
+  const agent = selected ? agentStepView(selected) : null;
   return <Panel aria-label="Operation trace" tabIndex={0} title="Browser steps"
     className="outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 min-[900px]:h-[clamp(28rem,40vw,34rem)]"
     actions={<CheckboxField checked={follow} onCheckedChange={(checked) => { setBranchId(null); onFollow(checked); }}>Follow live</CheckboxField>}
@@ -59,6 +61,10 @@ export function VisionOperationLedger({ items, locators, branches, selectedId, o
     {selected && <div className="shrink-0 rounded-lg border bg-muted/40 px-3 py-2 text-xs" aria-label="Selected operation">
       <strong className="block text-sm font-medium [overflow-wrap:anywhere]">Operation {selected.sequence}: {operationLabel(selected, locator)}</strong>
       <p className="mt-0.5 text-muted-foreground">{operationStatus(selected.status)}</p>
+      {agent && <div aria-label="Agent step" className="mt-2 min-w-0 [overflow-wrap:anywhere]">
+        <dl className="grid gap-x-3 gap-y-1 min-[480px]:grid-cols-[auto_1fr]"><dt className="font-medium">Đánh giá bước trước</dt><dd className="text-muted-foreground">{agent.previous}</dd><dt className="font-medium">Memory</dt><dd className="text-muted-foreground">{agent.memory}</dd><dt className="font-medium">Mục tiêu kế</dt><dd className="text-muted-foreground">{agent.next}</dd></dl>
+        {agent.blocked.length > 0 && <><p className="mt-2 font-medium">Blocked</p><ul className="list-disc pl-4 text-muted-foreground">{agent.blocked.map((line, index) => <li key={index}>{line}</li>)}</ul></>}
+      </div>}
     </div>}
   </Panel>;
 }

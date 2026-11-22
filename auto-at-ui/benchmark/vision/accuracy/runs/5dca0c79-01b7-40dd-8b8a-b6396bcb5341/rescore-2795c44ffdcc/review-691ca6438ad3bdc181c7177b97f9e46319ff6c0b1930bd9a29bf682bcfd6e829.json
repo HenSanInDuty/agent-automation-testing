@@ -1,0 +1,11 @@
+{
+  "after_checksum": "3da57be6f9324788a6e6bff777efce5343198fafaf37dec4a78d2d18b3cfd6dd",
+  "before_checksum": "5a0b7bba493ebf9b2ff232a0f0cf75fdf80554f9d681f0e85c8e6d6474c686fd",
+  "finding": "mct-45: third character control becomes active and the Toan Chan panel is shown (before: Co Mo).",
+  "operation_id": "2263d1ad-8bff-481e-b9d6-f0ba0caae551",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

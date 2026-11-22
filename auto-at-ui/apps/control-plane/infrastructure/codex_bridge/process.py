@@ -8,7 +8,12 @@ import signal
 from collections.abc import Callable
 from pathlib import Path
 
-from auto_at.contracts.codex_bridge import CodexBridgeRequest, CodexUsage, parse_codex_output
+from auto_at.contracts.codex_bridge import (
+    CodexBridgeRequest,
+    CodexUsage,
+    parse_agent_output,
+    parse_codex_output,
+)
 from domain.codex_bridge import CLI_VERSION as CLI_VERSION
 from domain.codex_bridge import BridgeProcessResult
 from pydantic import ValidationError
@@ -149,7 +154,7 @@ class CodexProcess:
     async def run(
         self, request: CodexBridgeRequest, directory: Path, prompt: bytes,
         stop_reason: Callable[[], str | None], *, argv: list[str] | None = None,
-        output_parser: Callable = parse_codex_output,
+        output_parser: Callable | None = None,
     ) -> BridgeProcessResult:
         if os.name != "posix":
             return BridgeProcessResult(failure_code="bridge_cli_unsupported")
@@ -220,7 +225,11 @@ class CodexProcess:
             if len(data) > request.max_output_bytes:
                 raise ProcessRejected("bridge_output_limit")
             phase = "output"
-            output = output_parser(data)
+            # Agent jobs (prompt agent-loop-vN, which carries agent_context) use their own family.
+            parse = output_parser or (
+                parse_agent_output if request.agent_context is not None else parse_codex_output
+            )
+            output = parse(data)
             return BridgeProcessResult(
                 output=output, actual_model=reader.actual_model, usage=reader.usage,
             )
@@ -243,7 +252,8 @@ class CodexProcess:
                     [part if isinstance(part, int) or part in {
                         "result", "outcome", "candidates", "kind", "element_id", "x", "y",
                         "text", "delta_y", "duration_ms", "confidence", "expected_outcome",
-                        "reason", "stop", "need_screenshot",
+                        "reason", "stop", "need_screenshot", "agent_step", "actions", "ref",
+                        "evaluation_previous_goal", "memory", "next_goal",
                     } else "field" for part in e["loc"]]
                     for e in exc.errors(include_input=False, include_context=False,
                                         include_url=False)[:10]

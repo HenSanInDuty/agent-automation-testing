@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "ebef3368-aba2-4c76-9886-d3cb89047df3",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "eafb63ec3a9e0976533cc963c74c6d9b7dca4c56bfe21296f7ecca538292ad3a",
+  "after_checksum": "a6155dda6902712554232c5ed0e9bd79f44bf2908324fbd03c146888634e6e0b",
+  "finding": "Header DIEU KHOAN link (box equals oracle mct-04) rendered Tepaylink Terms of Service; matches independently reviewed 301 from declared id.tepaylink.vn/site/rules to id.tpl.vn/rules (redirect-review-20261117.json)."
+}

@@ -1,11 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { visualHttpHandler } from "./vision-http.js";
 import { VisualOperationWorker } from "./vision-operations.js";
 import { captureVisionScreen } from "./vision-screen.js";
-import { logVisionEvent, visionLogScope } from "./vision-observability.js";
+import { logVisionEvent, visionErrorDetails, visionLogScope } from "./vision-observability.js";
 import { inspectState, logStateMismatch, setInteractionScope } from "./vision-checkpoints.js";
 import { observeDom } from "./vision-dom.js";
 
@@ -143,6 +143,33 @@ test("state mismatch logs changed components without form values or fingerprints
   } finally { console.error = original; }
 });
 
+test("state mismatch tells a moved control from a swapped one with counts and tags only", async ({ page }) => {
+  await page.setContent('<button style="position:absolute;left:10px;top:0">Action</button>' +
+    '<div id="carousel" style="position:absolute;top:60px"><a href="#alpha-private">Slide alpha-private</a>' +
+    '<a href="#beta-private" hidden>Slide beta-private</a></div>');
+  const diagnose = async (change: () => Promise<void>) => {
+    const before = await inspectState(page);
+    await change();
+    const after = await inspectState(page);
+    const lines: string[] = [], original = console.error;
+    console.error = (line: string) => lines.push(line);
+    try { logStateMismatch(before, after, "prepare_start"); } finally { console.error = original; }
+    expect(lines[0]).not.toMatch(/private|Action/);
+    return JSON.parse(lines[0]);
+  };
+  // Autoplay: one slide link leaves, another enters; geometry of other controls is untouched.
+  expect(await diagnose(() => page.evaluate(() => document.querySelectorAll("#carousel a").forEach(a => a.toggleAttribute("hidden")))))
+    .toMatchObject({ interaction_changed: true, interaction_content_added: 1, interaction_content_removed: 1,
+      interaction_geometry_only: 0, interaction_changed_tags: { A: 2 }, interaction_count_before: 2, interaction_count_after: 2,
+      state_age_ms: expect.any(Number) });
+  // A sliding control keeps its content and only changes geometry.
+  expect(await diagnose(() => page.evaluate(() => { document.querySelector("button")!.style.left = "200px"; })))
+    .toMatchObject({ interaction_content_added: 0, interaction_content_removed: 0, interaction_geometry_only: 1, interaction_changed_tags: {} });
+  // The would-be target itself being relabelled is reported as BUTTON content.
+  expect(await diagnose(() => page.evaluate(() => { document.querySelector("button")!.textContent = "Renamed"; })))
+    .toMatchObject({ interaction_content_added: 1, interaction_content_removed: 1, interaction_changed_tags: { BUTTON: 2 } });
+});
+
 test("HTTP 200 operation failure is an explicit error event; ACK only reads the recorded result", async () => {
   const lines: string[] = [];
   const originalError = console.error, originalLog = console.log;
@@ -179,6 +206,38 @@ test("HTTP 200 operation failure is an explicit error event; ACK only reads the 
     VisualOperationWorker.prototype.prepare = originalPrepare;
     VisualOperationWorker.prototype.acknowledge = originalAck;
     console.error = originalError; console.log = originalLog;
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("unexpected_error logs name, Playwright origin and a message digest, never the message", async () => {
+  const lines: string[] = [];
+  const originalWarn = console.warn, originalPrepare = VisualOperationWorker.prototype.prepare;
+  console.warn = (line: string) => lines.push(line);
+  const message = "page.evaluate: ReferenceError: __name is not defined private-page-content https://shop.example/?token=private-token";
+  VisualOperationWorker.prototype.prepare = async () => { throw Object.assign(new ReferenceError(message), { stack: `${message}\n    at private-stack` }); };
+  const handler = visualHttpHandler("unused", () => "fixture");
+  const server = createServer((req, res) => { void handler(req, res); });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const session = randomUUID(), operation = randomUUID();
+  try {
+    const response = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/visual-explorations/${session}/operations/prepare`, {
+      method: "POST", headers: { "x-auto-at-vision-worker-secret": "fixture" },
+      body: JSON.stringify({ session_id: session, operation_id: operation }),
+    });
+    expect(response.status).toBe(422);
+    const entry = JSON.parse(lines[0]);
+    expect(entry).toMatchObject({ error_type: "unexpected_error", error_name: "ReferenceError", error_origin: "page.evaluate",
+      error_digest: createHash("sha256").update(message).digest("hex").slice(0, 8) });
+    expect(entry.error_digest).toMatch(/^[0-9a-f]{8}$/);
+    expect(lines.join("\n")).not.toMatch(/private-|__name|shop\.example/);
+    // Categorised failures keep their old shape: no extra fields.
+    expect(visionErrorDetails(new Error("Target page, context or browser has been closed"), "target_closed")).toEqual({});
+    expect(visionErrorDetails(Object.assign(new Error("boom private-page-content"), { name: "bad name <x>" }), "unexpected_error"))
+      .toEqual({ error_name: "Error", error_digest: expect.stringMatching(/^[0-9a-f]{8}$/) });
+  } finally {
+    console.warn = originalWarn; VisualOperationWorker.prototype.prepare = originalPrepare;
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

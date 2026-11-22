@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AgentStepGuard, resolve_agent_runtime
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.executor import VisualCandidateBatchOutcome, policy_to_step_guard
 from agents.vision.intent import decrypt_visual_intent
 from auto_at.contracts.codex_bridge import CodexConsentSnapshot
@@ -39,6 +40,11 @@ from application.vision_handoff import build_vision_handoff
 from application.vision_model_batch import VisionModelBatch, VisionModelSession
 from application.vision_operations import ExecuteVisualOperation, VisualOperationStopped, evolve
 from application.vision_origins import RecordVisualOrigins
+
+
+class BranchUnreachable(VisualOperationStopped):
+    """ADR-044: restoring this branch would need an unsafe replay. Raised before any
+    replay primitive; uncaught it is the historical terminal `unsafe_replay`."""
 
 
 @dataclass
@@ -94,7 +100,7 @@ class VisionTraceEventProcessor:
         calls = 0
         model_failure = None
         frozen_input = None
-        if record.provider == "codex_cli":
+        if is_bridge_provider(record.provider):
             try:
                 frozen_input = CodexConsentSnapshot.model_validate(record.model_input_policy)
             except ValueError:
@@ -111,7 +117,7 @@ class VisionTraceEventProcessor:
                 or not live.enabled
                 or current.fencing_token != lease.fencing_token
                 or (
-                    record.provider != "codex_cli"
+                    not is_bridge_provider(record.provider)
                     and (
                         not live.raw_screenshot_transfer_accepted
                         or live.raw_screenshot_transfer_provider != record.provider
@@ -146,7 +152,9 @@ class VisionTraceEventProcessor:
                             }
                         ),
                         "raw_screenshot_transfer_accepted": image_allowed,
-                        "raw_screenshot_transfer_provider": "codex_cli" if image_allowed else None,
+                        "raw_screenshot_transfer_provider": (
+                            record.provider if image_allowed else None
+                        ),
                     }
                 )
             if step_timeout is None and datetime.now(UTC) >= record.updated_at + timedelta(
@@ -242,6 +250,8 @@ class VisionTraceEventProcessor:
             active_page = None
             page_parents = {}
             page_revisions = {}
+            document_revisions = {}
+            observation_documents = {}
             requests, results = {}, {}
 
             async def primitive(
@@ -327,6 +337,10 @@ class VisionTraceEventProcessor:
                     if (action.kind in {"navigate", "back", "scroll", "type"}
                             or action.kind == "click" and active_page == before_page):
                         page_revisions[active_page] = page_revisions.get(active_page, 0) + 1
+                    if action.kind in {"navigate", "back"}:
+                        document_revisions[active_page] = (
+                            document_revisions.get(active_page, 0) + 1
+                        )
                     if action.kind == "click" and active_page != before_page:
                         page_parents[active_page] = before_page
                     if action.kind == "close_popup":
@@ -474,6 +488,7 @@ class VisionTraceEventProcessor:
                 observations[branch.state_id] = bound
                 observation_pages[branch.state_id] = active_page
                 observation_revisions[branch.state_id] = page_revisions.get(active_page, 0)
+                observation_documents[branch.state_id] = document_revisions.get(active_page, 0)
                 save_inventory(branch, bound)
                 return bound
 
@@ -515,6 +530,7 @@ class VisionTraceEventProcessor:
                     observations[branch.state_id] = observed.data
                     observation_pages[branch.state_id] = active_page
                     observation_revisions[branch.state_id] = page_revisions.get(active_page, 0)
+                    observation_documents[branch.state_id] = document_revisions.get(active_page, 0)
                     save_inventory(branch, observed.data)
                     return
 
@@ -534,8 +550,14 @@ class VisionTraceEventProcessor:
                 except CodexUnavailable as error:
                     raise VisualOperationStopped(error.reason) from None
                 bound = observations.get(branch.state_id)
+                # ADR-044: a restore by navigate/replay/Back can recreate the same visible
+                # state in a new document. Never propose from an older document's snapshot;
+                # its bindings would fail the exact-context preflight (visual_buttons only).
                 if (bound is None or observation_pages.get(branch.state_id) != active_page
-                        or bound.observation.state_fingerprint != fingerprint):
+                        or bound.observation.state_fingerprint != fingerprint
+                        or (target_scope == "visual_buttons"
+                            and observation_documents.get(branch.state_id)
+                            != document_revisions.get(active_page, 0))):
                     bound = await scan_page(branch)
                 bound = remaining_observation(branch.checkpoint, bound, attempted)
                 if not bound.observation.elements:
@@ -598,6 +620,7 @@ class VisionTraceEventProcessor:
                     observations[branch.state_id] = bound
                     observation_pages[branch.state_id] = active_page
                     observation_revisions[branch.state_id] = page_revisions.get(active_page, 0)
+                    observation_documents[branch.state_id] = document_revisions.get(active_page, 0)
                     save_inventory(branch, bound)
                     self.uow.progress(
                         operations.lease, "candidate.revalidated",
@@ -1031,7 +1054,7 @@ class VisionTraceEventProcessor:
                     # A later non-replayable click must not cause a navigation or
                     # any earlier action to be repeated before the safe stop.
                     if any(not results[source_id].replayable for source_id in branch.path):
-                        raise VisualOperationStopped("unsafe_replay")
+                        raise BranchUnreachable("unsafe_replay")
                     for index, source_id in enumerate(branch.path):
                         source, command = results[source_id], requests[source_id]
                         final = index == len(branch.path) - 1
@@ -1054,6 +1077,45 @@ class VisionTraceEventProcessor:
                     raise VisualOperationStopped("state_restore_failed")
                 self.uow.progress(operations.lease, "state.restored", f"restored:{sequence}")
                 current = branch
+
+            async def abandon_unreachable(branch, error, popped=None):
+                """ADR-044: skip one branch whose restoration needs an unsafe replay.
+
+                `restore` raised before any replay primitive. Its executed restore
+                primitives completed or were rejected/failed (an unknown outcome stops
+                the session in `primitive`). Retire only work queued on this exact
+                unreachable state: never-dispatched targets become pending again, edges
+                keep a terminal audit record. Descendants restore on their own merits.
+                Re-observe the live page read-only before any other branch."""
+                nonlocal current, stop_reason
+                stop_reason = stop_reason or str(error)
+                retired = [popped] if popped else []
+                retired += [item for item in queue if item[0].state_id == branch.state_id]
+                queue[:] = [item for item in queue if item[0].state_id != branch.state_id]
+                for source, _, old_edge, old_binding in retired:
+                    self.uow.finish_edge(operations.lease, replace(
+                        old_edge, status="terminal", outcome_code=str(error),
+                    ))
+                    if old_binding is None:
+                        continue
+                    key = target_key(source.checkpoint, old_binding.expected_descriptor)
+                    previous = attempted.get(key, {})
+                    if (previous.get("status") == "queued"
+                            and previous.get("proposal_id") == old_edge.proposal_id
+                            and previous.get("operation_id") is None):
+                        mark_target(source, old_binding, status="pending",
+                                    proposal_id=None, operation_id=None)
+                        attempted.pop(key)
+                pages[:] = [page for page in pages if page.state_id != branch.state_id]
+                scroll_pending.discard(branch.state_id)
+                self.uow.progress(
+                    operations.lease, "state.branch_unreachable", f"restore.unreachable:{sequence}",
+                )
+                if queue or pages:
+                    fresh = Branch(current.state_id, current.checkpoint, current.hop,
+                                   current.path, current.result)
+                    await refresh_page(fresh)
+                    current = fresh
 
             pinned_proposals = set()
 
@@ -1249,7 +1311,13 @@ class VisionTraceEventProcessor:
                         if not matches:
                             await refresh_scan_context(branch)
                     else:
-                        await restore(branch)
+                        try:
+                            await restore(branch)
+                        except BranchUnreachable as error:
+                            if not frozen_input:
+                                raise
+                            await abandon_unreachable(branch, error)
+                            continue
                     if scan_requested:
                         scroll_pending.discard(scan_source_id)
                         scroll_pending.discard(branch.state_id)
@@ -1347,6 +1415,14 @@ class VisionTraceEventProcessor:
                                 queue[index] = (source, command, queued_edge,
                                                 await fresh_binding(source, queued_binding))
                     pinned_proposals.discard(edge.proposal_id)
+                except BranchUnreachable as error:
+                    if not frozen_input:
+                        self.uow.progress(
+                            operations.lease, "state.restore_failed", f"restore.failed:{sequence}",
+                        )
+                        raise
+                    await abandon_unreachable(branch, error, (branch, action, edge, binding))
+                    continue
                 except Exception:
                     self.uow.progress(
                         operations.lease,
@@ -1438,6 +1514,8 @@ class VisionTraceEventProcessor:
                         observations[current.state_id] = previous
                         observation_pages[current.state_id] = active_page
                         observation_revisions[current.state_id] = page_revisions.get(active_page, 0)
+                        observation_documents[current.state_id] = document_revisions.get(
+                            active_page, 0)
                         save_inventory(current, previous)
                     else:
                         await scan_page(current)

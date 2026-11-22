@@ -7,7 +7,11 @@ from auto_at.contracts.codex_generation import GenerationProviderPolicy
 from config import Settings
 from pydantic import BaseModel, Field, model_validator
 
-from agents.shared.vision_providers import VisionProviderId, validate_vision_model
+from agents.shared.vision_providers import (
+    VisionProviderId,
+    is_bridge_provider,
+    validate_vision_model,
+)
 
 AGENT_RUNTIME_CONFIG_KEY = "agent.runtime.v1"
 
@@ -56,9 +60,13 @@ class VisionPolicy(BaseModel):
         elif self.provider == "huggingface" and self.raw_screenshot_transfer_provider is None:
             # Only legacy HF consent may infer a recipient.
             self.raw_screenshot_transfer_provider = "huggingface"
-        if self.enabled and self.provider == "codex_cli":
-            if not self.codex or not self.codex.dom_transfer_accepted:
-                raise ValueError("enabled Codex requires provider-bound DOM transfer consent")
+        if self.enabled and is_bridge_provider(self.provider):
+            if (not self.codex or not self.codex.dom_transfer_accepted
+                    or self.codex.dom_transfer_provider != self.provider):
+                raise ValueError("enabled bridge requires provider-bound DOM transfer consent")
+            if (self.raw_screenshot_transfer_accepted
+                    and self.raw_screenshot_transfer_provider != self.provider):
+                raise ValueError("bridge image consent must name the selected provider")
         elif self.enabled and (
             not self.raw_screenshot_transfer_accepted
             or self.raw_screenshot_transfer_provider != self.provider

@@ -1,0 +1,47 @@
+{
+ "changed_at": "2026-11-19T13:52:43.096902+00:00",
+ "authorization": "User direction 2026-11-19: run round 21 with Claude via claude -p to compare with Codex",
+ "method": "PUT /api/v1/vision/policy with local tenant administrator identity",
+ "before": {
+  "enabled": true,
+  "provider": "codex_cli",
+  "model": "gpt-6-luna",
+  "raw_screenshot_transfer_accepted": true,
+  "raw_screenshot_transfer_provider": "codex_cli",
+  "codex": {
+   "input_mode": "dom_first",
+   "dom_transfer_accepted": true,
+   "dom_transfer_provider": "codex_cli",
+   "max_dom_elements": 100,
+   "max_dom_bytes": 65536
+  },
+  "max_steps": 20,
+  "max_screenshot_bytes": 5000000,
+  "max_session_seconds": 120,
+  "max_cost_usd": 0.25,
+  "max_requests_per_minute": 5,
+  "input_policy_fingerprint": "4ce9f8ca6cd98a3b24c760f18f55dd28cc21f9f191f384201e851b456a65b6b6"
+ },
+ "after": {
+  "enabled": true,
+  "provider": "claude_cli",
+  "model": "claude-opus-5-5",
+  "raw_screenshot_transfer_accepted": true,
+  "raw_screenshot_transfer_provider": "claude_cli",
+  "codex": {
+   "input_mode": "dom_first",
+   "dom_transfer_accepted": true,
+   "dom_transfer_provider": "claude_cli",
+   "max_dom_elements": 100,
+   "max_dom_bytes": 65536
+  },
+  "max_steps": 20,
+  "max_screenshot_bytes": 5000000,
+  "max_session_seconds": 120,
+  "max_cost_usd": 0.25,
+  "max_requests_per_minute": 5,
+  "input_policy_fingerprint": "5408692c80bfda089f31a460c63d5c7ae1445d313566b3762616896255314b8d"
+ },
+ "limits_changed": false,
+ "historical_sessions_modified": false
+}

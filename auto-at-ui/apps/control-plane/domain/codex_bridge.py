@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from auto_at.contracts.codex_bridge import (
+    BRIDGE_PROVIDERS,
     CodexBridgeRequest,
     CodexBridgeResponse,
     CodexConsentSnapshot,
@@ -17,10 +18,13 @@ from auto_at.contracts.codex_bridge import (
 from auto_at.contracts.generation import GeneratedTestPlannerOutput, VisionGroundedPlannerOutput
 
 CLI_VERSION = "0.164.0"
+CLAUDE_CLI_VERSION = "2.1.328"
+# Pinned CLI version per bridge provider; heartbeats and responses must match.
+BRIDGE_CLI_VERSIONS = {"codex_cli": CLI_VERSION, "claude_cli": CLAUDE_CLI_VERSION}
 
 
 def input_snapshot(policy) -> CodexConsentSnapshot:
-    if policy.provider != "codex_cli" or policy.codex is None:
+    if policy.provider not in BRIDGE_PROVIDERS or policy.codex is None:
         raise ValueError("Codex input policy required")
     return CodexConsentSnapshot(
         **policy.codex.model_dump(),
@@ -30,7 +34,8 @@ def input_snapshot(policy) -> CodexConsentSnapshot:
 
 
 def input_fingerprint(policy) -> str | None:
-    return content_hash(input_snapshot(policy)) if policy.provider == "codex_cli" else None
+    return (content_hash(input_snapshot(policy))
+            if policy.provider in BRIDGE_PROVIDERS else None)
 
 
 @dataclass(frozen=True)

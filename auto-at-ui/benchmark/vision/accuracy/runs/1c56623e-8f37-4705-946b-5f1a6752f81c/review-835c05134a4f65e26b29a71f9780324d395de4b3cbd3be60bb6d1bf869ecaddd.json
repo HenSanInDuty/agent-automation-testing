@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "2dbc941f-a099-44f2-a9fc-0cedcac387ad",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "eafb63ec3a9e0976533cc963c74c6d9b7dca4c56bfe21296f7ecca538292ad3a",
+  "after_checksum": "5d42066ebb10f42bf429f733025ef8b78f4b6160f174dcf946a787d3b2983937",
+  "finding": "Header HO TRO link (box equals oracle mct-06) rendered the Tepaylink support center; matches independently reviewed 301 from declared support.tepaylink.vn to support.tpl.vn. No login performed."
+}

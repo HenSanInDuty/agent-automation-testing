@@ -1,0 +1,11 @@
+{
+  "after_checksum": "80a317914f5061153573d26eb8fe0fc879a7c982aebbd8f6cd27e78e7995007a",
+  "before_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "finding": "mct-51: after frame shows indicator 1 selected with matching slide Chuoi Nhiem Vu (before: indicator 4, Thu Cuoi Kinh Dien).",
+  "operation_id": "a6d1bbf1-9440-4f23-9611-076496d059f9",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}
