@@ -1,0 +1,11 @@
+{
+  "after_checksum": "7512ae6237294f421429ee5e5a199879bb9932dc1889e7b14432795dd762764d",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "finding": "Tepaylink Support Center (Trung tam ho tro) renders at support.tpl.vn, matching independently reviewed 301 redirect from declared support.tepaylink.vn.",
+  "operation_id": "817dbdf6-32f5-4785-a3d4-a0debfb66871",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

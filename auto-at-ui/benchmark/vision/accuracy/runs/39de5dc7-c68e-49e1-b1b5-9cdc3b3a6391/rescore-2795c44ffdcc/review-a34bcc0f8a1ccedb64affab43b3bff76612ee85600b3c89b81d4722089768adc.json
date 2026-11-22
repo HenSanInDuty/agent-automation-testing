@@ -1,0 +1,11 @@
+{
+  "after_checksum": "05bd482d8ee0b62d09624e1dec2bfc03c2df8aefddf24ee48167c09b3f70da93",
+  "before_checksum": "36bf101475707011a37c247943e7e70d135e7310cd3d347d8ab190391daa04d1",
+  "finding": "First character control is visibly active after click and matching Thieu Lam panel is displayed; before frame showed Dao Hoa/second selection.",
+  "operation_id": "296e614e-6933-48f1-b377-e2f2ef54b561",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

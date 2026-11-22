@@ -1,0 +1,11 @@
+{
+  "after_checksum": "a7e17fb90e054b117b20ee9ce92d9472cb9ae3590a3e12a0b62ea318603b3c2f",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "After frame explicitly shows carousel indicator 1 selected and matching slide Chuoi Nhiem Vu (before: indicator 6), following the verified bound selector click. Credit uses selection identity, not generic animation.",
+  "operation_id": "bc386f35-6c3b-43ed-8219-4d9823a8b781",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

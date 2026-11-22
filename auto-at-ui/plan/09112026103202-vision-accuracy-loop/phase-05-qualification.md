@@ -64,3 +64,8 @@ Qualification streak is 0/3. Return to phase 04; do not run attempts 2/3 blindly
 See `benchmark/vision/accuracy/QUALIFICATION-20261117-round17.md` and the canonical
 README handoff. This is an unsuccessful attempt, not final qualification.
 
+
+
+## Superseded 2026-11-22
+
+Qualification chuyển sang ngày 3 của `phase-06-sprint.md` (engine v4 + claude_cli, oracle v2). Attempt 1 (round 17) giữ nguyên là lượt fail.

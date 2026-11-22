@@ -1,13 +1,18 @@
 ---
 title: "Engine agent loop cho Vision (browser-agent closed loop)"
-status: pending
+status: paused
 created: 2026-11-19
 slug: browser-agent-loop
 auto_continue: false
-progress_url: ""
+progress_url: "https://claude.ai/artifact/5RS8oJxEt14WqDFgp2LsyG"
 ---
 
 # Engine agent loop cho Vision
+
+> **Tạm đóng băng 2026-11-22** (quyết định của người dùng). Benchmark độ chính xác quay về engine v4 với
+> `claude_cli` (xem `../09112026103202-vision-accuracy-loop/phase-06-sprint.md`). Handoff cuối của agent loop
+> (r21, calm mode ADR-043 chưa làm) nằm trong `../09112026103202-vision-accuracy-loop/history/`. Mở lại bằng
+> quyết định mới, với mốc điểm và mục tiêu trung gian riêng; không chặn plan độ chính xác.
 
 Artifact phạm vi & luồng (đã duyệt 2026-11-19, theo mọi đề xuất mục K/L): https://claude.ai/artifact/BCxug7E5uWx9zym2wxfZLd
 (file nguồn: `impact.html`). Khảo sát: `reports/survey/*.md`. Paper: `../../../docs/Ref/Building-Browser-Agent.pdf`.
@@ -77,13 +82,13 @@ chạy benchmark đặt 20). Mỗi lần gọi bridge đều tính vào trần, 
 
 | # | Phase | Trạng thái | Phụ thuộc | Owner | QA |
 |---|---|---|---|---|---|
-| 0 | [Ổn định nền](phase-00-baseline.md) | pending | — | be-developer-junior | skip |
-| 1 | [Contract + DB + chọn engine](phase-01-contract-db-engine.md) | pending | 0 | be-developer | required |
-| 2 | [Worker agent mode](phase-02-worker-agent-mode.md) | pending | 1 | be-developer | required |
-| 3 | [Prompt + bridge](phase-03-prompt-bridge.md) | pending | 1 | be-developer | required |
-| 4 | [Agent loop processor + safety](phase-04-agent-loop-processor.md) | pending | 1, 2, 3 | be-developer | required |
-| 5 | [Dashboard](phase-05-dashboard.md) | pending | 1, 4 | fe-developer-junior | required |
-| 6 | [End-to-end + benchmark + docs](phase-06-e2e-benchmark-docs.md) | pending | 2, 3, 4, 5 | be-developer | required |
+| 0 | [Ổn định nền](phase-00-baseline.md) | completed | — | be-developer-junior | skip |
+| 1 | [Contract + DB + chọn engine](phase-01-contract-db-engine.md) | completed | 0 | be-developer | required |
+| 2 | [Worker agent mode](phase-02-worker-agent-mode.md) | completed | 1 | be-developer | required |
+| 3 | [Prompt + bridge](phase-03-prompt-bridge.md) | completed | 1 | be-developer | required |
+| 4 | [Agent loop processor + safety](phase-04-agent-loop-processor.md) | completed | 1, 2, 3 | be-developer | required |
+| 5 | [Dashboard](phase-05-dashboard.md) | completed | 1, 4 | fe-developer-junior | required |
+| 6 | [End-to-end + benchmark + docs](phase-06-e2e-benchmark-docs.md) | in_progress (nợ AC6) | 2, 3, 4, 5 | be-developer | required |
 
 Phase 2 và 3 chạy song song được sau phase 1; phase 5 sau phase 4. Mỗi file chỉ thuộc một phase.
 
@@ -105,5 +110,28 @@ không cần user quyết — xem mục "Sửa sau review" cuối file).
 - Trần snapshot vào `config.py` (`vision_agent_snapshot_chars`).
 - Phase 0 ghi hash đối chứng v4; phase 3 đổi `qa: required`; phase 5 thêm e2e UI, bỏ ảnh chụp khỏi tiêu chí dev;
   phase 6 không sửa `run.py` (engine truyền qua helper chạy vòng).
+- (2026-11-20, user duyệt, theo `reports/phase-01/pm-r1.md`) `AgentRef` = `str` max 24 ký tự, không `pattern`; contract xuất
+  `AGENT_REF_PATTERN` để phase 4 trả `invalid_ref` theo từng action (AC2 giữ nguyên). Contract có `AGENT_REQUEST_MAX_BYTES = 131 072`
+  kiểm ở `valid_job` khi có `agent_context`. Cả hai làm ở phase 1 r2.
+- (2026-11-20, user duyệt) `infrastructure/codex_bridge/spool.py` vào phase 3: trần `request.json` 16 384 → 131 072 (đọc + ghi), vì
+  snapshot 24 000 ký tự tiếng Việt tới ~72 KB. Phase 3 prompt nêu định dạng ref `version:n`.
+- (2026-11-20, user duyệt sau phase 3) Codex vẫn dùng instructions v4 cố định (`process.py:62`): quyết ở phase 6 sau khi đo bằng
+  model thật; lệch thì mở phase nhỏ (`catalogue.py`, `doctor.py`, `Dockerfile`). QA gọi model thật qua bridge: dồn vào phase 6.
+  Ghi chú cho phase 4 (từ `reports/phase-03/`): giới hạn `allowed_hosts` để prompt ≤ 131 072 byte; `parse_agent_output` nhận ref sai
+  dạng nên phase 4 kiểm ref theo snapshot (AC2).
+- (2026-11-20, user duyệt sau review phase 4, theo `reports/phase-04/leader-r1.md`) phase 4 sửa thêm `infrastructure/persistence/repositories.py`
+  (thêm `agent_steps(scope)` vào `SqlAlchemyVisualTraceRepository`) và `vision_unit_of_work.py` (gọi lại repo) để `/trace` có `agent_step` ở production.
+- (2026-11-20, user duyệt sau live run r1 phase 6, theo `reports/phase-06/be-developer-r1.md`) phase 6 sửa thêm
+  `application/vision_agent_loop.py` + unit test của nó: worker từ chối `invalid_deadline` vì mở với deadline cả session (2400 s) mà
+  `max_session_seconds` = 120. Sửa: mở worker như v4 (`now + step_timeout`), giữ deadline session trong vòng lặp; fake worker trong test
+  áp quy tắc `deadline <= now + max_session_seconds`. Sau đó chạy lại đúng 1 vòng live.
+- (2026-11-20, user duyệt sau live r3, theo `reports/phase-06/be-developer-r3.md`) phase 6 sửa thêm parent tracking trong
+  `vision_agent_loop.py` (chỉ tiến `browser_parent` với operation worker nối ancestry) + luật parent cho `FakeWorker`. Trước live lần 4:
+  chạy khô vòng agent với worker thật + output model giả lập (helper `.pytest-artifacts/`, không tốn model) tới terminal reason hợp lệ.
+  Bridge `claude-bridge` đã rebuild từ source (r2 chạy image cũ).
+- (2026-11-20, user duyệt sau live r4) ĐÓNG plan với nợ AC6: 4 session live chưa tới terminal hợp lệ (r1 deadline, r2 bridge cũ,
+  r3 parent, r4 lease — cả 4 lỗi đã sửa + có test; r4 sửa lease sau khi chạy). Chưa có score.json, K1, quyết định Codex v4 instructions.
+  Plan sau: gợi ý off-origin cho model (r4: model click tiếp khi ngoài allowlist thay vì back/navigate) + live lại + chấm benchmark.
+  Phase 6 chốt với hồi quy, 3 bản sửa `vision_agent_loop.py`, báo cáo vòng, ADR-038, docs vận hành.
 - Giữ nguyên (đụng schema đã duyệt, chờ user nếu muốn đổi): cột `job_id`, `stop_reason` của `visual_agent_steps`;
   re-baseline form cho batch `type A → type B`.

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+  "before_checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+  "finding": "Before and after frames show empty search input (placeholder only), unchanged selected Cam Nang tab and identical 7-item list at same homepage URL, no error. Satisfies the frozen empty-input rule; no typed search claimed.",
+  "operation_id": "dc7a4f44-113a-4c43-a3f5-4444b19d8910",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "empty_search",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

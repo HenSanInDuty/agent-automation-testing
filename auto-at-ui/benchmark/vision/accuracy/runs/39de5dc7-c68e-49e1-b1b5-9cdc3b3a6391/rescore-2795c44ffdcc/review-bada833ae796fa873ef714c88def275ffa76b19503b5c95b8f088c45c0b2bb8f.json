@@ -1,0 +1,11 @@
+{
+  "after_checksum": "5de6521b1e59e73754f2f56a93674488ae693138a1e16f06fb647c5feee69fca",
+  "before_checksum": "4d8bd31c67203316bdf5bce409dcdd6821f4be286c5d25b8d03603cad02e4be9",
+  "finding": "Tin Tuc was already active and remains visibly active after the bound click, with the news article list shown; already-active selection is permitted.",
+  "operation_id": "56db3563-e90c-4f63-859d-67c889b64a57",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

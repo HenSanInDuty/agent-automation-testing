@@ -5,6 +5,8 @@ import json
 import re
 import unicodedata
 
+from metrics import oracle_paths
+
 ROLE = re.compile(r"^[a-z]{3,32}$")
 ROLE_BY_TAG = {"a": "link", "button": "button"}  # other oracle tags have no unambiguous role
 MIN_BOX_IOU = 0.8
@@ -212,7 +214,7 @@ def binding_error(oracle, target, binding, grounded, operation, root_page_id, re
     if context and expected_page and context["url_fingerprint"] != expected_page:
         return "off_page_url"
     if binding["path"] is not None:
-        return None if binding["path"] == target["reference_path"] else "path_mismatch"
+        return None if binding["path"] in oracle_paths(target) else "path_mismatch"
     return _role_binding_error(oracle, target, grounded, operation, root_page_id, context)
 
 
@@ -257,8 +259,9 @@ def derive_detection(oracle, pages):
     oracle example has them (several: ambiguous, left out of both sides). Other controls on the
     oracle page are unexpected. Completeness needs an unscrollable, untruncated, nothing-skipped
     observation of that page."""
-    by_key = {descriptor_key(item["reference_path"], version): item
-              for item in oracle["examples"] for version in ("v2", "v3")}
+    by_key = {descriptor_key(path, version): item
+              for item in oracle["examples"] for path in oracle_paths(item)
+              for version in ("v2", "v3")}
     page_url = source_fingerprint(oracle)
     on_page = [page for page in pages if page["url_fingerprint"] == page_url]
     identified, unexpected, ambiguous = set(), set(), 0

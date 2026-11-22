@@ -1,0 +1,11 @@
+{
+  "after_checksum": "22d3b663925de61d4c3f171233d36c388cd8d426f5b486f5d6a9f2e0fe1611a1",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "Tepaylink payment/top-up portal renders at pay.tpl.vn, matching independently reviewed 301 from declared pay.tepaylink.vn (redirect-review-20261117.json). No payment action submitted.",
+  "operation_id": "2220aa75-45e9-4e5e-bd7b-8d1f59fcab3b",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}
