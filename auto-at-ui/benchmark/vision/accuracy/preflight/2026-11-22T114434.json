@@ -1,0 +1,32 @@
+{
+  "at": "2026-11-22T11:44:34.287284+00:00",
+  "source_hash": "b2a06ed8f25d0c6ed0838abc7583792c3f6628acda4976e16c2e95985bc3def6",
+  "checks": {
+    "no_active_session": true,
+    "no_unresolved_iteration": true,
+    "claude_bridge_ready": true,
+    "agent_loop_flags_off": true,
+    "images_match_tree": true,
+    "worker_http_auth_required": true,
+    "claude_token_exported": true,
+    "claude_token_3h": true,
+    "worker_open_close": true
+  },
+  "agent_flags": {
+    "VISION_AGENT_LOOP_ENABLED": "unset",
+    "VISION_AGENT_CLICK_CONTEXT_ENABLED": "unset",
+    "VISION_AGENT_DOM_PATH_ENABLED": "unset",
+    "VISION_AGENT_INVENTORY_ENABLED": "unset"
+  },
+  "image:control-plane": "sha256:db8990c6e6c3cf3155fc2cd8269850a69794911a65908ecfb4ce85dda8058f50",
+  "image:temporal-worker": "sha256:b2ad32b0a4dbfc7a303688900663808a259beb769b2b2158a5131c21bab3e79b",
+  "image:playwright-worker": "sha256:e156dee320d37681752ce7731df05d2d370decf1afe5775c02c528882f8dc2b1",
+  "image_mismatches": [],
+  "claude_token_hours": 7.54,
+  "worker_open_close": {
+    "open": 200,
+    "open_ms": 1126,
+    "close": 200
+  },
+  "passed": true
+}

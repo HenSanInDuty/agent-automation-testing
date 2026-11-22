@@ -1,0 +1,264 @@
+<title>Tiến độ fix mct-47</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column; status table first, then the single phase section with evidence tables, residual-risk box last. */
+:root {
+  --bg: #f6f7f5; --panel: #ffffff; --ink: #1b2120; --muted: #5d6763; --line: #d8ddda;
+  --accent: #1d6b5a; --warn: #9a5b00; --warn-bg: #fdf1dc; --bad: #a3261d; --bad-bg: #fbe6e3; --ok: #1d6b3a; --ok-bg: #e2f2e7;
+  --code-bg: #eef1ef;
+  --f-body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121615; --panel: #1a201e; --ink: #e5ebe8; --muted: #9aa6a1; --line: #2b3431;
+  --accent: #5cc0a6; --warn: #f0b45c; --warn-bg: #352a17; --bad: #ff8b80; --bad-bg: #3a1d1a; --ok: #79d39a; --ok-bg: #18301f;
+  --code-bg: #222a27; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121615; --panel: #1a201e; --ink: #e5ebe8; --muted: #9aa6a1; --line: #2b3431;
+  --accent: #5cc0a6; --warn: #f0b45c; --warn-bg: #352a17; --bad: #ff8b80; --bad-bg: #3a1d1a; --ok: #79d39a; --ok-bg: #18301f;
+  --code-bg: #222a27; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.6; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 32px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.2rem; margin: 0 0 10px; text-wrap: balance; }
+h3 { font-size: 1rem; margin: 20px 0 6px; }
+p, li { max-width: 74ch; }
+p { margin: 0 0 10px; }
+.lede { color: var(--muted); margin-top: 6px; }
+code, .mono { font-family: var(--f-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+section { min-width: 0; }
+.pill { font-size: .78rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; letter-spacing: .02em; white-space: nowrap; }
+.p-warn { background: var(--warn-bg); color: var(--warn); } .p-bad { background: var(--bad-bg); color: var(--bad); }
+.p-ok { background: var(--ok-bg); color: var(--ok); }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.add { color: var(--ok); } .del { color: var(--bad); }
+.risk { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: 10px; padding: 14px 16px; }
+.risk h3 { margin-top: 0; color: var(--warn); }
+.kv { display: grid; grid-template-columns: 11rem 1fr; gap: 6px 14px; margin: 0; }
+.kv dt { color: var(--muted); font-size: .85rem; } .kv dd { margin: 0; min-width: 0; }
+@media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .kv dt { margin-top: 6px; } }
+.muted { color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Tiến độ fix skip khung video mct-47</h1>
+    <p class="lede">Plan h-fix 22/11/2026, hai phase: phase-01 A2 (ground lại khi đã chuyển động rồi dừng, duyệt lại DOM một lần) và phase-02 (giữ tín hiệu miss). Phạm vi ảnh hưởng nằm ở <a href="impact.html">impact.html</a>, kế hoạch ở <a href="plan.md">plan.md</a>. Chưa commit.</p>
+  </header>
+
+  <section>
+    <h2>Trạng thái tổng</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Phase</th><th>Nội dung</th><th>Leader</th><th>QA</th><th>Harness live</th><th>Bước tiếp</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">phase-01</td><td>A2: sửa <code>vision-dom.ts</code>, test T-loop, ADR-045, hash manifest</td>
+          <td><span class="pill p-ok">PASS</span></td><td><span class="pill p-ok">PASS</span></td>
+          <td><span class="pill p-ok">0 skip / 40, hai lần</span></td>
+          <td><span class="pill p-ok">Completed</span> (rủi ro QA xử lý ở phase-02)</td></tr>
+        <tr><td class="mono">phase-02</td><td>Giữ tín hiệu miss: tính lại skip khi ứng viên bị chuyển động hỏng không có bản tương đương bind được</td>
+          <td><span class="pill p-ok">PASS</span></td><td><span class="pill p-ok">PASS</span></td>
+          <td><span class="pill p-ok">0 skip / 160</span> <span class="pill p-warn">2 miss không skip</span></td>
+          <td><span class="pill p-warn">Chờ user quyết commit / qualification</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Phase-01: A2</h2>
+
+    <h3>Mục tiêu và người làm</h3>
+    <dl class="kv">
+      <dt>Mục tiêu</dt><dd>Hết skip im lặng khung video <code>a.video-frame</code> (mct-47) khi swiper nhân vật autoplay đang trượt. Chỉ đọc, không đổi contract hay control-plane. Hướng A đã trượt trên site (7/40 skip), A2 sửa hai điểm: ground lại khi đã chuyển động rồi dừng, và duyệt lại DOM đúng một lần khi ứng viên dừng ngoài viewport.</dd>
+      <dt>be-developer</dt><dd>Cài A2, viết T-loop-out và T-loop-jump, sửa ADR-045, sinh lại hash manifest. Báo cáo: <a href="reports/phase-01/be-developer-r1.md">be-developer-r1.md</a></dd>
+      <dt>leader</dt><dd>Review đối chiếu thiết kế, dispose handle, test. PASS, không BLOCKING. <a href="reports/phase-01/leader-r1.md">leader-r1.md</a></dd>
+      <dt>qa</dt><dd>20 case: 19 pass, 0 fail, 1 không kết luận. Chạy harness live lần 2. <a href="reports/phase-01/qa-r1.md">qa-r1.md</a></dd>
+    </dl>
+
+    <h3>Diff thật (so với HEAD)</h3>
+    <p class="muted">A2 xây trên hướng A chưa commit, nên số dòng dưới đây gồm cả A lẫn A2. Nguồn: <code>git diff --stat</code> và <code>git status --short</code>.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>File</th><th>Thao tác</th><th>+ / −</th><th>Tóm tắt</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">workers/playwright/src/vision-dom.ts</td><td>Sửa</td><td class="num"><span class="add">+110</span> / <span class="del">−50</span></td><td>Khối chờ chuyển động, ground lại khi <code>moving || displaced</code>, duyệt lại DOM một lần, log <code>motion_retraversals</code>.</td></tr>
+        <tr><td class="mono">workers/playwright/src/vision-dom.spec.ts</td><td>Sửa</td><td class="num"><span class="add">+171</span> / <span class="del">−1</span></td><td>Test chuyển động của A, thêm T-loop-out, T-loop-jump, đổi kỳ vọng TC-03.</td></tr>
+        <tr><td class="mono">benchmark/vision/codex/manifest.json</td><td>Sửa</td><td class="num"><span class="add">+2</span> / <span class="del">−2</span></td><td>Hai hash (<code>vision-dom.ts</code>, spec) sinh lại.</td></tr>
+        <tr><td class="mono">docs/adr/045-observe-moving-visual-buttons.md</td><td>Tạo (chưa theo dõi)</td><td class="num"><span class="add">+99</span></td><td>ADR mô tả A2, giới hạn, rủi ro, test. Số dòng đếm từ file, không phải từ git diff.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:8px">Có trong cây nhưng không thuộc phase: <code>plan/09112026103202-vision-accuracy-loop/log.md</code> (sửa +8) và <code>benchmark/vision/accuracy/preflight/2026-11-22T101912.json</code> (mới). Thư mục plan này cũng chưa theo dõi. Không xoá file nào.</p>
+
+    <h3>Database, contract</h3>
+    <p>Database: không đụng. Contract: không đổi (chữ ký <code>observeDom</code>, <code>DomSnapshot</code>, <code>equivalentState</code> giữ nguyên); chỉ thêm trường đếm <code>motion_retraversals</code> vào hai log event.</p>
+
+    <h3>Test (output thật)</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Lệnh (cwd <code>workers/playwright</code>)</th><th>Kết quả</th></tr></thead>
+      <tbody>
+        <tr><td><code>npx tsc --noEmit</code></td><td class="num">exit 0</td></tr>
+        <tr><td><code>playwright test src/vision-dom.spec.ts</code></td><td class="num">46 / 46 pass</td></tr>
+        <tr><td>8 test chuyển động + T-loop, <code>--repeat-each=20 --workers=1</code> (be-developer)</td><td class="num">160 / 160 pass (3,2 phút)</td></tr>
+        <tr><td>Như trên, <code>--workers=4</code> (be-developer và QA)</td><td class="num">160 / 160 pass (51,3 s và 51,8 s)</td></tr>
+        <tr><td><code>vision-visual-buttons.spec.ts</code></td><td class="num">3 pass</td></tr>
+        <tr><td><code>vision-operations.spec.ts</code></td><td class="num">99 pass</td></tr>
+        <tr><td><code>vision-settle-animation.spec.ts</code></td><td class="num">14 pass</td></tr>
+        <tr><td><code>run_offline.py ... -k manifest</code></td><td class="num">1 passed, 9 deselected</td></tr>
+        <tr><td>T-loop-out, T-loop-jump trên code A (dựng lại A)</td><td><span class="pill p-bad">đỏ</span> 2 failed, elements rỗng, đúng triệu chứng live</td></tr>
+        <tr><td>T-loop-out, T-loop-jump trên A2</td><td><span class="pill p-ok">xanh</span> 2 / 2</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:8px">QA không tự chạy lại phần đỏ trên code A và lượt <code>--workers=1</code>; hai mục đó dựa vào báo cáo be-developer. <code>eslint</code>: 0 lỗi ở <code>vision-dom.ts</code>; 6 lỗi <code>no-explicit-any</code> có sẵn từ trước trong spec (dòng 413-450), ngoài phạm vi.</p>
+
+    <h3>Harness live trên site (chỉ đọc, cổng chính)</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Mã nguồn</th><th>Quan sát</th><th>Skip</th><th>Video thấy nhưng chưa bind</th></tr></thead>
+      <tbody>
+        <tr><td>Code cũ (84213bd, 8e58cfa)</td><td class="num">30 mỗi bản</td><td class="num">1 / 30</td><td class="num">1</td></tr>
+        <tr><td>Hướng A</td><td class="num">40 (log khác: 20)</td><td class="num">7 / 40 (log khác: 5 / 20)</td><td class="num">7 (log khác: 5)</td></tr>
+        <tr><td>A2 lần 1 (phiên chính, <code>s4-ab-a2.log</code>)</td><td class="num">40</td><td class="num"><span class="pill p-ok">0</span></td><td class="num"><span class="pill p-warn">1</span></td></tr>
+        <tr><td>A2 lần 2 (QA, <code>s4-ab-a2-qa.log</code>)</td><td class="num">40</td><td class="num"><span class="pill p-ok">0</span></td><td class="num"><span class="pill p-ok">0</span></td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:8px">Cả hai dòng <code>AB SUMMARY</code> của A2: <code>errors: 0</code>, <code>errorCodes: []</code>. Lần 2 có 40/40 dòng 18 elements.</p>
+
+    <h3>Tài liệu QA</h3>
+    <p><a href="qa/phase-01/test-cases.md">test-cases.md</a> · <a href="qa/phase-01/test-report.md">test-report.md</a></p>
+
+    <h3>Convention, graph</h3>
+    <dl class="kv">
+      <dt>Convention</dt><dd>Theo <code>docs/code-standards.md</code> (chỉ mục sang AGENTS.md). Không lệch. 6 lỗi eslint <code>no-explicit-any</code> có sẵn từ trước trong spec, ngoài phạm vi.</dd>
+      <dt>Graph</dt><dd>Không có file mới; cả hai file đã thuộc graph <code>playwright-vision-worker</code>. <code>hgraph check</code> đầy đủ sạch. <code>hgraph check --changed</code> báo <code>uncovered-changed</code> sai do lệch tiền tố đường dẫn (đã biết).</dd>
+    </dl>
+
+    <h3>Ponytail</h3>
+    <ul>
+      <li>Không có <code>delete:</code>, <code>yagni:</code>, <code>stdlib:</code>, <code>native:</code>, không dependency mới, không <code>shrink:</code> chặn.</li>
+      <li><code>shrink:</code> (leader) <code>vision-dom.ts:49-52</code>: thân <code>traverse</code> không thụt lề để giữ diff nhỏ; thụt 2 space khi chạm file lần sau, không đổi hành vi.</li>
+      <li><code>shrink:</code> (leader) <code>vision-dom.spec.ts</code> khoảng dòng 252 và 345: wrapper <code>page.evaluate</code> bắt walk lặp ở <code>observeSliding</code> và <code>observeLoopSwiper</code>; có thể gom một helper.</li>
+      <li>Net: hai hạng mục shrink ở trên chưa làm. Diff so HEAD nặng +283 / −53 trên ba file sửa, cộng ADR mới.</li>
+      <li>Gợi ý ngoài phạm vi: tách <code>collectBatch</code> khỏi vòng <code>for (;;)</code> (~50 dòng thụt lại). Thêm test "duyệt lại vẫn skip, không có lần thứ ba" (OPTIONAL).</li>
+    </ul>
+
+    <h3>Kết luận</h3>
+    <dl class="kv">
+      <dt>Leader</dt><dd><span class="pill p-ok">PASS</span> Khớp bốn điểm thiết kế A2, dispose đúng, không BLOCKING. Cổng chính là harness live; PASS của leader chỉ là offline.</dd>
+      <dt>QA</dt><dd><span class="pill p-ok">PASS</span> Mọi tiêu chí "test phải thêm" và "kiểm chứng bắt buộc" mục 1-3 đạt; harness 0 skip / 40 hai lần liên tiếp.</dd>
+      <dt>Stack, preflight</dt><dd><code>playwright-worker</code> rebuild từ tree. Preflight lúc đó 7/8, trượt <code>claude_token_3h</code> (1,03 h); đã chạy lại sau phase-02 và đạt (xem phase-02).</dd>
+    </dl>
+
+    <div class="risk" style="margin-top:16px">
+      <h3>Rủi ro còn lại (QA, đã xử lý ở phase-02)</h3>
+      <p><code>vision-dom.ts:293</code>: lần duyệt lại gán <code>skipped = found.skipped</code> của lần hai, nên ghi đè dấu skip của lần đầu. Nếu lần hai cũng rơi vào lúc slide đang trượt, khung video bị bỏ mà không có tín hiệu nào.</p>
+      <p>Trước A2 mọi miss đều kèm skip. Sau A2 có 1 miss không tín hiệu trong 80 quan sát (1/80, so với 1/30 có tín hiệu trước đây). Chưa phân biệt được nguyên nhân (không tái hiện ở lần 2), nên QA không FAIL.</p>
+      <p>Hai hướng giảm rủi ro QA đề xuất:</p>
+      <ol>
+        <li>Sau duyệt lại, nếu số ứng viên ít hơn lần đầu (hoặc lần đầu đã có skip) thì giữ skip của lần đầu, hoặc báo <code>coverage_limited</code>.</li>
+        <li>Chờ hộp của <code>a.video-frame</code> ổn định trước lần duyệt đầu.</li>
+      </ol>
+      <p>Cả hai cần thêm fixture "duyệt giữa lúc trượt", hiện chưa có.</p>
+    </div>
+
+    <h3>Phase kế</h3>
+    <p>Phase-02 (bên dưới), đã xong. Rủi ro còn lại ở trên được user chọn xử lý ở phase-02.</p>
+  </section>
+
+  <section>
+    <h2>Phase-02: giữ tín hiệu miss</h2>
+
+    <h3>Mục tiêu và người làm</h3>
+    <dl class="kv">
+      <dt>Mục tiêu</dt><dd>Sau lần duyệt lại, ứng viên lần đầu bị chuyển động làm hỏng mà không có control tương đương nào bind được thì tính vào <code>skipped_count</code> (kèm <code>unbound_target</code>, <code>coverage_limited</code> được log). Có bản tương đương bind được thì không tính, để giữ thắng lợi của A2. Lý do: user chọn vá tín hiệu miss sau QA phase-01; sau đó user chọn giữ khoá tương đương thu gọn role+name+button_kind (CONVENTION_ISSUE của dev, khe <code>href</code> ghi trong ADR).</dd>
+      <dt>be-developer</dt><dd>Thêm danh sách <code>lost</code>, ghép twin sau vòng collection, test T-loop-lost và test đặc tả, mục A2.5 trong ADR, hash manifest. <a href="reports/phase-02/be-developer-r1.md">be-developer-r1.md</a></dd>
+      <dt>leader</dt><dd>PASS, không BLOCKING; khoá thu gọn đúng, khe <code>href</code> khớp quyết định user. <a href="reports/phase-02/leader-r1.md">leader-r1.md</a></dd>
+      <dt>qa</dt><dd>22 hàng: 21 pass, 0 fail, 1 dựa dev. Chạy harness bản sao 3 lần. <a href="reports/phase-02/qa-r1.md">qa-r1.md</a></dd>
+    </dl>
+
+    <h3>Diff thật</h3>
+    <p class="muted">Diff so HEAD gồm A + A2 + phase-02 (chưa commit). Cột phase-02 lấy từ báo cáo be-developer (so với trạng thái phase-01). Cột so HEAD lấy từ <code>git diff --numstat</code>; con số +377 / −303 đo lúc đầu là do file bị lưu sang CRLF; phiên chính đã chuyển <code>vision-dom.ts</code>, <code>vision-dom.spec.ts</code> về LF như HEAD (hash manifest không đổi vì chuẩn hoá LF), chạy lại <code>tsc</code> + test manifest (1 passed), rebuild worker và preflight (passed). Số dưới là sau khi chuẩn hoá.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>File</th><th>Thao tác</th><th>Delta phase-02</th><th>So HEAD (A + A2 + phase-02)</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">workers/playwright/src/vision-dom.ts</td><td>Sửa</td><td class="num"><span class="add">+18</span> / <span class="del">−4</span></td><td class="num"><span class="add">+125</span> / <span class="del">−51</span></td></tr>
+        <tr><td class="mono">workers/playwright/src/vision-dom.spec.ts</td><td>Sửa</td><td class="num"><span class="add">+31</span> / <span class="del">−4</span></td><td class="num"><span class="add">+198</span> / <span class="del">−1</span></td></tr>
+        <tr><td class="mono">docs/adr/045-observe-moving-visual-buttons.md</td><td>Sửa (file chưa theo dõi)</td><td class="num"><span class="add">+29</span></td><td class="num">128 dòng (đếm từ file)</td></tr>
+        <tr><td class="mono">benchmark/vision/codex/manifest.json</td><td>Sửa</td><td class="num">2 hash</td><td class="num"><span class="add">+2</span> / <span class="del">−2</span></td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:8px">Ngoài phase, có trong cây: <code>plan/09112026103202-vision-accuracy-loop/log.md</code> (sửa), hai file <code>benchmark/vision/accuracy/preflight/2026-11-22T101912.json</code> và <code>...T114111.json</code> (mới), thư mục plan này (chưa theo dõi). Không xoá file nào.</p>
+
+    <h3>Database, contract</h3>
+    <p>Database: không đụng. Contract: không đổi (chữ ký <code>observeDom</code>, <code>DomSnapshot</code>, response, env giữ nguyên); chỉ thêm trường log <code>motion_*</code>.</p>
+
+    <h3>Test (output thật)</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Lệnh (cwd <code>workers/playwright</code>)</th><th>Kết quả</th></tr></thead>
+      <tbody>
+        <tr><td><code>npx tsc --noEmit</code></td><td class="num">exit 0</td></tr>
+        <tr><td><code>playwright test src/vision-dom.spec.ts</code></td><td class="num">48 / 48 pass</td></tr>
+        <tr><td>10 test chuyển động + T-loop + đặc tả, <code>--repeat-each=20 --workers=1</code> (be-developer)</td><td class="num">200 / 200 pass (3,6 phút)</td></tr>
+        <tr><td>Như trên, <code>--workers=4</code> (be-developer và QA)</td><td class="num">200 / 200 pass (59,6 s)</td></tr>
+        <tr><td><code>vision-visual-buttons.spec.ts</code> / <code>vision-settle-animation.spec.ts</code></td><td class="num">3 pass / 14 pass</td></tr>
+        <tr><td><code>vision-operations.spec.ts</code></td><td class="num">99 pass</td></tr>
+        <tr><td><code>run_offline.py ... -k manifest</code></td><td class="num">1 passed</td></tr>
+        <tr><td>T-loop-lost trên code phase-01 (be-developer)</td><td><span class="pill p-bad">đỏ</span> Expected 1, Received 0</td></tr>
+        <tr><td>T-loop-lost sau phase-02</td><td><span class="pill p-ok">xanh</span></td></tr>
+        <tr><td>T-loop-out, T-loop-jump</td><td><span class="pill p-ok">xanh</span> skip 0, nằm trong 200 lượt lặp</td></tr>
+        <tr><td>Test đặc tả "duyệt giữa lúc trượt" (không ứng viên, không skip)</td><td><span class="pill p-ok">xanh</span> cả trên code phase-01 lẫn phase-02, đúng kỳ vọng</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:8px">QA không tự chạy lại phần đỏ trên code phase-01 và lượt <code>--workers=1</code> (dựa be-developer). <code>eslint</code>: <code>vision-dom.ts</code> sạch; 6 lỗi <code>no-explicit-any</code> có sẵn trong spec (dòng 440-477), ngoài phạm vi.</p>
+
+    <h3>Harness live trên site (chỉ đọc, cổng chính)</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Nguồn log</th><th>Quan sát</th><th>Skip</th><th>Lỗi</th><th>Video thấy nhưng chưa bind</th></tr></thead>
+      <tbody>
+        <tr><td>Phiên chính (<code>s4-ab-p2.log</code>)</td><td class="num">40</td><td class="num"><span class="pill p-ok">0</span></td><td class="num">0</td><td class="num"><span class="pill p-warn">1</span></td></tr>
+        <tr><td>QA lần 1 (<code>s4-ab-p2-qa-1.log</code>)</td><td class="num">40</td><td class="num"><span class="pill p-ok">0</span></td><td class="num">0</td><td class="num"><span class="pill p-ok">0</span></td></tr>
+        <tr><td>QA lần 2 (<code>s4-ab-p2-qa-2.log</code>)</td><td class="num">40</td><td class="num"><span class="pill p-ok">0</span></td><td class="num">0</td><td class="num"><span class="pill p-ok">0</span></td></tr>
+        <tr><td>QA lần 3 (<code>s4-ab-p2-qa-3.log</code>)</td><td class="num">40</td><td class="num"><span class="pill p-ok">0</span></td><td class="num">0</td><td class="num"><span class="pill p-warn">1</span></td></tr>
+        <tr><td><b>Tổng</b></td><td class="num">160</td><td class="num">0</td><td class="num">0</td><td class="num"><b>2 / 160</b></td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:8px">Luật phase-02 chạy đúng trên site: 6 / 120 lần quét QA có <code>lost:1</code> và một lần duyệt lại, cả 6 đều bind lại được bản tương đương, <code>skipped:0</code>. Phiên chính đạt mục "≥30 lần quét, 0 skip".</p>
+
+    <h3>Chẩn đoán QA (2 miss không skip)</h3>
+    <dl class="kv">
+      <dt>Kết luận</dt><dd>(a) "duyệt giữa lúc trượt": không bản sao nào nằm trọn viewport lúc walk, nên video không là ứng viên, không có <code>lost</code>, không skip. Không phải lỗi phase-01/02, không phải lệch đo. Giới hạn đã biết, ghi trong ADR-045, có từ code cũ và chung cho mọi scope; phase-02 cố ý không sửa.</dd>
+      <dt>Bằng chứng</dt><dd>Miss ở <code>s4-ab-p2-qa-3.log</code> dòng 127: walk đầu 17 ứng viên (thường 18); bản sao video đang trượt trái (977 → 754 px trong 374 ms); harness đo cách observe 3 ms.</dd>
+      <dt>Độ chắc</dt><dd>Suy luận từ vị trí trước/sau walk, chưa đo trực tiếp bên trong callback walk. Tần suất 2/160 (khoảng 1,3%); trước A2 khoảng 1/6 và đều có skip.</dd>
+    </dl>
+
+    <h3>Tài liệu QA</h3>
+    <p><a href="qa/phase-02/test-cases.md">test-cases.md</a> · <a href="qa/phase-02/test-report.md">test-report.md</a></p>
+
+    <h3>Convention, graph</h3>
+    <dl class="kv">
+      <dt>Convention</dt><dd>Theo <code>docs/code-standards.md</code> (chỉ mục sang AGENTS.md). Dev nêu CONVENTION_ISSUE: phase yêu cầu dùng đúng khoá của fingerprint <code>visual_buttons</code> nhưng khoá nằm trong callback trình duyệt, không export. User quyết giữ khoá thu gọn role+name+button_kind; khe <code>href</code> (hai link cùng chữ, cùng loại, khác <code>href</code> coi là twin, có thể che một miss) ghi trong ADR. Đóng khe cần export khoá từ <code>vision-checkpoints.ts</code>, ngoài phạm vi phase.</dd>
+      <dt>Graph</dt><dd>Không file mới, không đổi import. <code>hgraph check</code>: 6 graph, 474 file, không có vấn đề. <code>hgraph check --changed</code> vẫn báo <code>uncovered-changed</code> sai do lệch tiền tố đường dẫn (đã biết).</dd>
+    </dl>
+
+    <h3>Ponytail</h3>
+    <ul>
+      <li>Dev: không file, dependency hay helper export mới; <code>lost</code> là mảng cục bộ; twin dùng <code>indexOf</code> + <code>splice</code>. Loại: cộng skip mù (đảo ngược A2) và chế tiêu chí danh tính mới.</li>
+      <li>Leader: không có <code>delete:</code>, <code>yagni:</code>, <code>stdlib:</code>, <code>native:</code>.</li>
+      <li><code>shrink:</code> (leader) <code>vision-dom.ts</code> khoảng dòng 292-297: khoá twin nối chuỗi bằng dấu cách có thể va chạm nếu <code>name</code> chứa khoảng trắng đặc biệt; rủi ro rất thấp, chưa làm.</li>
+    </ul>
+
+    <h3>Kết luận</h3>
+    <dl class="kv">
+      <dt>Leader</dt><dd><span class="pill p-ok">PASS</span> Luật cộng skip, khoá thu gọn, không đếm đôi, dispose, contract đều đúng. Không BLOCKING.</dd>
+      <dt>QA</dt><dd><span class="pill p-ok">PASS</span> 21 pass, 0 fail, 1 dựa dev.</dd>
+      <dt>Stack, preflight</dt><dd>Phiên chính rebuild <code>playwright-worker</code> rồi chạy preflight: <code>passed: true</code>, 9/9 check, <code>images_match_tree</code> true, <code>token_hours</code> 7,6 (script preflight tự export token).</dd>
+    </dl>
+
+    <h3>Phase kế</h3>
+    <p>Không còn phase. Chờ user quyết việc commit và qualification mới.</p>
+  </section>
+</div>

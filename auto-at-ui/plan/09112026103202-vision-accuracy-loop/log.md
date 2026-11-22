@@ -117,3 +117,14 @@ Lịch sử trước 2026-11-22: `history/README-rounds-01-21-until-20261121.md`
 - `qualify_batch`: 0/5 lượt đạt, cùng candidate, safety 0 cả 5 lượt, 163 attempts. `qualify` (3 liên tiếp) không đạt.
 - Báo cáo `benchmark/vision/accuracy/QUALIFICATION-20261122-sprint.md` + `qualification-sprint-20261122.json`.
 - Ngân sách 7/8 đã dùng → không còn đủ cho loạt mới; sprint dừng theo điểm dừng, chờ người dùng quyết định.
+
+## 2026-11-22 — tìm control bị skip + plan sửa (h-fix, không tốn live run)
+
+- Control bị skip ở Q1–Q3 và live 1 = **mct-47** (khung video). Nguyên nhân: swiper nhân vật autoplay (3000/600 ms, `loop`)
+  trượt đúng lúc `observeDom`; grounding lấy tâm lúc đang trượt, nằm dưới lớp khác. Không phải hồi quy (A/B r21 = hiện tại).
+- Hướng A (chờ đứng yên + ground lại) đã qua leader/QA nhưng harness trên site vẫn skip 7/30 → chưa đạt.
+- Người dùng: ghi A2 vào plan, làm tiếp tối nay. Plan: `plan/20261122-1445-fix-visual-buttons-moving-carousel/plan.md`.
+  Code A chưa commit trong cây làm việc (vision-dom.ts, vision-dom.spec.ts, ADR-045, manifest).
+- Kết quả (h-cook, cùng ngày): A2 + phase-02 xong, leader/QA PASS. Harness trên site 0 skip/160 lần quét tới 1152
+  (code A 7/40, code cũ 1/30). Còn 2/160 miss khi lần duyệt rơi giữa lúc trượt (không bản sao nào nằm trọn viewport),
+  là giới hạn đã ghi trong ADR-045. Worker đã rebuild, preflight passed. Chưa chạy qualification mới (ngân sách 1/8).
