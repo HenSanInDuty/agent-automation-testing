@@ -1,0 +1,31 @@
+{
+  "purpose": "Diagnostic only: one declared Xem Toan Bo click and one Back; no model or qualification credit.",
+  "differences": {
+    "url_fingerprint": false,
+    "semantic_fingerprint": true,
+    "interaction_fingerprint": false,
+    "form_presence_fingerprint": false,
+    "scroll_x": false,
+    "scroll_y": false,
+    "fingerprint": false,
+    "privateForms": false
+  },
+  "scrolls": [
+    {
+      "stage": "before",
+      "x": 0,
+      "y": 576
+    },
+    {
+      "stage": "after_back",
+      "x": 0,
+      "y": 576
+    }
+  ],
+  "interaction_counts": [
+    19,
+    19
+  ],
+  "removed": [],
+  "added": []
+}

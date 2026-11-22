@@ -1,5 +1,23 @@
 import type { ExecutedClick, VisualLocator, VisualOperation } from "../generation-types";
 
+export function verifiedClickTarget(operation: VisualOperation | undefined, locator: VisualLocator | undefined, frameId?: string | null): VisualLocator["bounding_box"] {
+  const box = locator?.bounding_box;
+  if (!operation || operation.action_kind !== "click" || operation.status !== "completed" ||
+      !frameId || operation.before.id !== frameId || operation.before.availability !== "retained" ||
+      locator?.originating_frame_id !== frameId || locator.status !== "verified" ||
+      locator.id !== operation.locator_id || locator.operation_id !== operation.id || !box ||
+      ![box.x, box.y, box.width, box.height].every(Number.isFinite) || box.width <= 0 || box.height <= 0 ||
+      box.x < 0 || box.y < 0 || box.x + box.width > 1 || box.y + box.height > 1) return null;
+  return box;
+}
+
+export function verifiedTargetPosition(box: NonNullable<VisualLocator["bounding_box"]>, image: { width: number; height: number }, container: { width: number; height: number }) {
+  if (![image.width, image.height, container.width, container.height].every((value) => Number.isFinite(value) && value > 0)) return null;
+  const scale = Math.min(container.width / image.width, container.height / image.height);
+  const width = image.width * scale, height = image.height * scale;
+  return { left: (container.width - width) / 2 + box.x * width, top: (container.height - height) / 2 + box.y * height, width: box.width * width, height: box.height * height };
+}
+
 export function confirmedClickTarget(operation: VisualOperation | undefined, locator: VisualLocator | undefined, frameId?: string | null): VisualLocator["bounding_box"] {
   const click = confirmedClick(operation, frameId);
   const box = locator?.bounding_box;

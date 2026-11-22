@@ -1,0 +1,44 @@
+{
+  "cross_red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 14.846,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "cross_matrix": {
+    "passed": 15,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 233.227,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "final_cross": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 15.177,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "download_browser": {
+    "passed": 7,
+    "failed": 0,
+    "seconds": 16.7
+  },
+  "harness_metrics": {
+    "passed": 36,
+    "failed": 0,
+    "seconds": 0.73
+  },
+  "checks": {
+    "ruff": "passed",
+    "worker_typecheck": "passed",
+    "generated_contract": "passed"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "1a40aa0259a6150fa81f013c3fa73f9496f6f12879edf1b7c8286c2f00a7c315",
+  "before_checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+  "finding": "mct-54: indicator 4 with matching slide Thu Cuoi Kinh Dien before and after (already-active selection is the declared state).",
+  "operation_id": "d801e099-705b-4732-bd9a-4ec245d7af3b",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

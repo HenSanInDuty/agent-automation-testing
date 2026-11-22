@@ -1,0 +1,11 @@
+{
+  "after_checksum": "eb55c8f2e735e455216f18727bad8d97b27b1bced76bb698f951373bc418499c",
+  "before_checksum": "c4dfbd02ca29db5f31e5a1165b3fdd3dec463ec53a08c2ca120459427a330557",
+  "finding": "Before frame has first indicator/slide Chuoi Nhiem Vu; after frame has second indicator/slide Bang Chien Nay Lua. Verified next-arrow click and paired frames establish one next step.",
+  "operation_id": "7dea6d54-60d7-499d-b332-74d4f18f43a5",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_step",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

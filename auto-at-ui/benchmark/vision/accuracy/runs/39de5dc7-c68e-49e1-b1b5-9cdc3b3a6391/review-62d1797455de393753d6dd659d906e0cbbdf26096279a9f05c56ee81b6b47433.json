@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "a072a707-a311-4297-94aa-25b4b758cd36",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "after_checksum": "d551c17d178dfb90f9fa1805a56718ce561d848c7ca19e3e1578767472c83d89",
+  "finding": "After URL hash exactly matches declared Facebook group; screenshot shows VLCM public group landing behind login gate. No login performed."
+}

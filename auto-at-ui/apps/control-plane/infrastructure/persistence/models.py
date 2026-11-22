@@ -110,6 +110,10 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "idempotency_key"),
         UniqueConstraint("tenant_id", "project_id", "id", name="uq_visual_session_scope"),
+        CheckConstraint(
+            "exploration_engine IN ('planner', 'agent_loop')",
+            name="ck_visual_session_exploration_engine",
+        ),
     )
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -129,10 +133,14 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     max_states: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     max_screenshot_bytes: Mapped[int] = mapped_column(Integer)
     max_session_seconds: Mapped[int] = mapped_column(Integer)
+    step_timeout_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_cost_usd: Mapped[str] = mapped_column(String(32))
     max_requests_per_minute: Mapped[int] = mapped_column(Integer)
     trace_version: Mapped[str] = mapped_column(
         String(20), default="legacy", server_default="legacy"
+    )
+    exploration_engine: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="planner", server_default="planner"
     )
     lease_owner: Mapped[UUID | None] = mapped_column(nullable=True)
     fencing_token: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -187,7 +195,7 @@ class CodexBridgeJobModel(TenantRecord, Base):
              "visual_exploration_sessions.id"], name="fk_codex_job_session",
         ),
         UniqueConstraint("session_id", "request_sequence", name="uq_codex_job_sequence"),
-        CheckConstraint("request_sequence BETWEEN 1 AND 10 AND fencing_token > 0",
+        CheckConstraint("request_sequence BETWEEN 1 AND 20 AND fencing_token > 0",
                         name="ck_codex_job_sequence"),
         CheckConstraint("stage IN ('dom', 'image')", name="ck_codex_job_stage"),
         CheckConstraint(
@@ -239,6 +247,7 @@ class VisualExplorationStateModel(TenantRecord, Base):
     hop: Mapped[int] = mapped_column(Integer)
     screenshot_checksum: Mapped[str] = mapped_column(String(64))
     checkpoint: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    page_inventory: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
@@ -453,6 +462,39 @@ class VisualLocatorHandoffModel(TenantRecord, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # The reciprocal request FK is inserted after the immutable handoff exists.
     generation_request_id: Mapped[UUID | None] = mapped_column(nullable=True)
+
+
+class VisualAgentStepModel(TenantRecord, Base):
+    """One agent-loop step: the model's reasoning fields plus what the code ran or skipped."""
+
+    __tablename__ = "visual_agent_steps"
+    __table_args__ = (
+        UniqueConstraint("session_id", "step_index", name="uq_visual_agent_step_index"),
+        ForeignKeyConstraint(
+            ["tenant_id", "project_id", "session_id"],
+            [
+                "visual_exploration_sessions.tenant_id",
+                "visual_exploration_sessions.project_id",
+                "visual_exploration_sessions.id",
+            ],
+            name="fk_visual_agent_step_session",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    project_id: Mapped[UUID] = mapped_column()
+    session_id: Mapped[UUID] = mapped_column()
+    step_index: Mapped[int] = mapped_column(Integer)
+    snapshot_version: Mapped[int] = mapped_column(Integer)
+    evaluation_previous_goal: Mapped[str] = mapped_column(Text)
+    memory: Mapped[str] = mapped_column(Text)
+    next_goal: Mapped[str] = mapped_column(Text)
+    actions: Mapped[list[dict[str, object]]] = mapped_column(JSONB)
+    operation_ids: Mapped[list[str]] = mapped_column(JSONB)
+    stop_reason: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    job_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
 
 
 class GenerationRequestModel(TenantRecord, Base):

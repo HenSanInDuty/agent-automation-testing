@@ -90,6 +90,14 @@ file. The bridge has its own egress network, no application credentials, Docker
 socket, repository bind mount, host home or browser profile. The default Compose
 file starts no Codex service, and `.env.example` keeps both flags false.
 
+The overlay sets `CODEX_BRIDGE_SPOOL_OWNER_UID=1000` to match the non-root
+bridge user. Root application producers assign new spool files and job directories
+to that UID before publication, keeping files private (`0600`) and directories
+private (`0700`). Keep the host directory ACL restricted as described above.
+The mount probe checks both Windows publication and root Linux publication followed
+by non-root consumption, response, acknowledgement and cleanup. A transient
+producer-lock collision defers the consumer scan without stopping its heartbeat.
+
 Inspect `docker compose --env-file .env.example -f docker-compose.yml -f
 docker-compose.codex.yml --profile codex config --quiet` with the required path/ID
 variables supplied in the shell. This validates configuration without starting
@@ -157,6 +165,31 @@ launcher is available for diagnostics; Compose is the documented application pat
 
 ## Read progress and diagnose safe failures
 
+### Choose the draft-generation provider
+
+The Agent page has a **Test generation provider** section, separate from Vision
+settings. A tenant administrator can select **Codex** or **Hugging Face**, review
+text/evidence transfer, then **Save generation provider**. Codex uses `gpt-6-luna`
+and the same existing-account bridge; Hugging Face uses its server key and saved
+model. Each provider's model is remembered. No automatic fallback occurs.
+
+This setting covers both text-only drafts and drafts generated from Vision
+evidence. It does not change the exploration provider or past results. An active
+Codex generation stops if its policy changes. Failed generations are not retried
+by saving settings; start a new request or reload the exploration deliberately.
+
+Generation jobs contain redacted text and structured evidence, never images,
+and run sequentially through the same qualified container. One call is reserved
+durably per generation request before publication; queue/startup/model time share
+a maximum 120-second deadline. Existing account quotas apply, with no strict
+token/dollar ceiling. The `.generation` subdirectory is private to the bridge and
+application producers. See [ADR-011](adr/011-codex-draft-generation.md).
+
+Rebuild API, worker, bridge and dashboard with the same Compose overlay before
+enabling Codex generation. For rollback, select the previous Hugging Face model
+and save first, let active jobs stop, then deploy a compatible version. Never
+mount the login in the API/worker or reuse a failed generation request ID.
+
 | Display | Meaning and next action |
 | --- | --- |
 | Bridge disconnected | Missing/stale heartbeat, wrong scope, or stopped service; check the configured bridge and spool. |
@@ -186,6 +219,36 @@ period is introduced. A selected historical frame remains selected during progre
 updates. Terminal events stop live polling even if the result endpoint lags.
 
 ## Validation and release gates
+
+For a failed bridge handoff, query Loki by the exploration session ID:
+
+```logql
+{service="auto-at-temporal-worker"} |= "<session-id>" | json | event="codex.handoff.failed"
+```
+
+The event includes job/session/correlation IDs, request sequence, `phase`,
+`errno`/`errno_name`/`winerror`, and bounded module/function/line locations.
+`stages_read` means reading spool progress; `stages_persist` means applying those
+receipts to PostgreSQL. The registered/published/finished flags show how far the
+handoff got. Exception messages, absolute paths and payloads are excluded.
+Use its job ID to correlate lower-level file diagnostics:
+
+```logql
+{service=~"auto-at-temporal-worker|auto-at-codex-bridge"} |= "<job-id>" | json
+```
+
+`codex.spool.read_failed` identifies the allowlisted file name, byte limit and
+`io_operation` (`root_lstat`, `directory_lstat`, `file_lstat`, `open`, `fstat`,
+`read` or `close`). Normal missing optional receipts remain quiet. Actual I/O
+failures still stop the handoff and retain `bridge_io_error` as the durable cancel
+reason; they are not relabeled as policy revocation. These changes do not add
+automatic model/action retries or weaken file integrity checks.
+
+On 2026-11-01, isolated Windows/Docker bind-mount probes reproduced transient
+ENOENT during atomic replacement (already handled for progress polling). More
+than 7,000 successful reads did not reproduce the historical generic `OSError`
+from session `3d7be0ff-95d6-479f-aa9b-1d7eabf4a2a4`; its exact errno was not retained.
+The new diagnostics are needed to identify that failure if it recurs.
 
 ```powershell
 uv run python benchmark/vision/codex/run_offline.py -q --tb=short

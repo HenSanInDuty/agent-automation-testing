@@ -1,0 +1,66 @@
+{
+  "events": {
+    "httpx": 774,
+    "workflow.outbox.published": 1
+  },
+  "last_events": [
+    {
+      "timestamp": "2026-11-18T10:29:15.575554+00:00",
+      "event": "httpx",
+      "level": "info"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:16.663082+00:00",
+      "event": "httpx",
+      "level": "info"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:16.667777+00:00",
+      "event": "httpx",
+      "level": "info"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:20.771719+00:00",
+      "event": "httpx",
+      "level": "info"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:20.776590+00:00",
+      "event": "httpx",
+      "level": "info"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:20.891988+00:00",
+      "event": "httpx",
+      "level": "info"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:22.916125+00:00",
+      "event": "httpx",
+      "level": "info"
+    },
+    {
+      "timestamp": "2026-11-18T10:29:22.923369+00:00",
+      "event": "workflow.outbox.published",
+      "level": "info"
+    }
+  ],
+  "message_patterns": {
+    "ReadTimeout": 0,
+    "ConnectTimeout": 0,
+    "ClientError": 0,
+    "IntegrityError": 0,
+    "OperationalError": 0,
+    "duplicate key": 0,
+    "checksum": 0,
+    "AccessDenied": 0,
+    "TimeoutError": 0,
+    "frame": 170,
+    "artifact": 0,
+    "capture": 0,
+    "rollback": 0,
+    "upload": 0,
+    "worker_response_lost": 0,
+    "operation_unavailable": 0
+  }
+}

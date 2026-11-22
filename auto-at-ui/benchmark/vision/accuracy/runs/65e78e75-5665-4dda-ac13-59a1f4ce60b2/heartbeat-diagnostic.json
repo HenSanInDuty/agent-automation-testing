@@ -1,0 +1,12 @@
+{
+  "session_id": "1e594cca-e0ab-4bc6-977f-620fc08a1d62",
+  "event": "codex.heartbeat.rejected",
+  "timestamp": "2026-11-09T10:37:40.708454+00:00",
+  "service": "auto-at-ui-temporal-worker-1",
+  "phase": "file_read",
+  "age_seconds": null,
+  "read_duration_ms": 2,
+  "error_type": "FileNotFoundError",
+  "errno": 2,
+  "bridge_restart_count": 0
+}

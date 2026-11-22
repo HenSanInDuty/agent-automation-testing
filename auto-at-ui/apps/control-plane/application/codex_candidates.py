@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import logging
 import struct
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -12,9 +13,11 @@ from uuid import UUID
 from zlib import crc32
 
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.codex_service import task_context, validate_candidates
 from agents.vision.executor import VisualCandidateBatchOutcome
 from auto_at.contracts.codex_bridge import (
+    BRIDGE_PROVIDER_MODELS,
     CodexBoundObservation,
     CodexBridgeResponse,
     CodexTaskContext,
@@ -22,6 +25,8 @@ from auto_at.contracts.codex_bridge import (
 )
 
 from application.vision_model_batch import VisionModelSession
+
+logger = logging.getLogger(__name__)
 
 
 class CodexUnavailable(ValueError):
@@ -31,9 +36,10 @@ class CodexUnavailable(ValueError):
 
 
 def require_dom_policy(policy: VisionPolicy):
-    if (not policy.enabled or policy.provider != "codex_cli" or policy.model != "gpt-6-luna"
+    if (not policy.enabled or not is_bridge_provider(policy.provider)
+            or policy.model != BRIDGE_PROVIDER_MODELS[policy.provider]
             or policy.codex is None or not policy.codex.dom_transfer_accepted
-            or policy.codex.dom_transfer_provider != "codex_cli"):
+            or policy.codex.dom_transfer_provider != policy.provider):
         raise CodexUnavailable("policy_changed")
 
 
@@ -77,11 +83,7 @@ class CodexCallBudget:
         self.calls, self.last_call = 0, None
         self.clock, self.sleep = clock, sleep
 
-    async def reserve(self, evidence_bytes: int) -> int:
-        policy = self.check_policy()
-        require_dom_policy(policy)
-        if self.calls >= min(self.max_calls, policy.max_steps):
-            raise CodexUnavailable("step_limit")
+    async def wait_for_slot(self) -> None:
         while self.last_call is not None:
             policy = self.check_policy()
             require_dom_policy(policy)
@@ -92,10 +94,23 @@ class CodexCallBudget:
             if delay >= (self.deadline - datetime.now(UTC)).total_seconds():
                 raise CodexUnavailable("provider_timeout")
             await self.sleep(delay)
+
+    async def reserve(
+        self, evidence_bytes: int, *, check_state: Callable[[], Awaitable[bool]] | None = None,
+    ) -> int:
+        policy = self.check_policy()
+        require_dom_policy(policy)
+        if self.calls >= min(self.max_calls, policy.max_steps):
+            raise CodexUnavailable("step_limit")
+        await self.wait_for_slot()
         policy = self.check_policy()
         require_dom_policy(policy)
         if datetime.now(UTC) >= self.deadline:
             raise CodexUnavailable("provider_timeout")
+        # Rate waiting can outlive the observation. Do not consume a reservation
+        # for evidence already known to be stale before dispatch.
+        if check_state is not None and not await check_state():
+            raise CodexUnavailable("bridge_stale_result")
         if (self.calls >= min(self.max_calls, policy.max_steps)
                 or not self.guard.reserve_external_call(evidence_bytes=evidence_bytes)):
             raise CodexUnavailable("step_limit")
@@ -125,6 +140,10 @@ class CodexCandidateService:
         observed_actions: tuple[str, ...], max_candidates: int, budget: CodexCallBudget,
         check_state: Callable[[], Awaitable[bool]],
         capture_image: Callable[[], Awaitable[CodexImage]],
+        deterministic_viewports: bool = False,
+        revalidate_targets: Callable[
+            [tuple[str, ...]], Awaitable[CodexBoundObservation | None]
+        ] | None = None,
     ) -> VisualCandidateBatchOutcome:
         started = monotonic()
         initial_calls = budget.calls
@@ -147,35 +166,117 @@ class CodexCandidateService:
                 image = None
                 if stage == "image":
                     if (not policy.raw_screenshot_transfer_accepted
-                            or policy.raw_screenshot_transfer_provider != "codex_cli"):
+                            or policy.raw_screenshot_transfer_provider != policy.provider):
                         raise CodexUnavailable("image_consent_required")
                     # Reserve before capturing pixels, so exhaustion cannot leak an image.
-                    sequence = await budget.reserve(len(canonical_bytes(bound.observation)))
+                    sequence = await budget.reserve(
+                        len(canonical_bytes(bound.observation)), check_state=check_state,
+                    )
                     image = await capture_image()
                     image.validate(bound, policy.max_screenshot_bytes)
                     if not await check_state():
                         raise CodexUnavailable("bridge_stale_result")
                 else:
-                    sequence = await budget.reserve(len(canonical_bytes(bound.observation)))
+                    sequence = await budget.reserve(
+                        len(canonical_bytes(bound.observation)), check_state=check_state,
+                    )
                 if not await check_state():
                     raise CodexUnavailable("bridge_stale_result")
                 policy = budget.check_policy()
                 require_dom_policy(policy)
                 if image and (not policy.raw_screenshot_transfer_accepted
-                              or policy.raw_screenshot_transfer_provider != "codex_cli"):
+                              or policy.raw_screenshot_transfer_provider != policy.provider):
                     raise CodexUnavailable("policy_changed")
                 remaining = (budget.deadline - datetime.now(UTC)).total_seconds()
                 if remaining <= 0:
                     raise CodexUnavailable("provider_timeout")
-                async with asyncio.timeout(remaining):
-                    response = await self.exchange(
-                        session=session, bound=bound, context=context, policy=policy,
-                        sequence=sequence, deadline=budget.deadline, max_candidates=max_candidates,
-                        image=image, check_policy=budget.check_policy,
-                    )
+                for attempt in range(2):
+                    if attempt:
+                        # Only retry invalid model syntax, never an executed browser
+                        # action. Each attempt gets its own audited job and consumes
+                        # the same session call, rate, evidence and time budgets.
+                        if not await check_state():
+                            raise CodexUnavailable("bridge_stale_result")
+                        sequence = await budget.reserve(
+                            len(canonical_bytes(bound.observation)), check_state=check_state,
+                        )
+                        policy = budget.check_policy()
+                        require_dom_policy(policy)
+                        if not await check_state():
+                            raise CodexUnavailable("bridge_stale_result")
+                        if image and (
+                            not policy.raw_screenshot_transfer_accepted
+                            or policy.raw_screenshot_transfer_provider != policy.provider
+                        ):
+                            raise CodexUnavailable("policy_changed")
+                    remaining = (budget.deadline - datetime.now(UTC)).total_seconds()
+                    if remaining <= 0:
+                        raise CodexUnavailable("provider_timeout")
+                    async with asyncio.timeout(remaining):
+                        response = await self.exchange(
+                            session=session, bound=bound, context=context, policy=policy,
+                            sequence=sequence, deadline=budget.deadline,
+                            max_candidates=max_candidates, image=image,
+                            check_policy=budget.check_policy,
+                        )
+                    if response.failure_code != "bridge_malformed_output":
+                        break
                 require_dom_policy(budget.check_policy())
+                output = response.output
+                if (deterministic_viewports and stage == "dom" and not response.failure_code
+                        and output is not None and (
+                            (output.outcome == "stop" and output.reason == "no_safe_action")
+                            or (output.outcome == "candidates" and output.candidates
+                                and all(c.kind == "scroll" for c in output.candidates))
+                        )):
+                    # Discard every model scroll parameter, including when the
+                    # observation became stale. This is no accepted browser action.
+                    # The controller checks fresh worker context before scanning.
+                    validate_candidates(output, bound, stage=stage, max_candidates=max_candidates)
+                    return VisualCandidateBatchOutcome(
+                        status="completed", actions=[], target_bindings=(),
+                        viewport_scan_requested=True, calls_used=budget.calls - initial_calls,
+                        latency_seconds=monotonic() - started,
+                    )
                 if not await check_state():
-                    raise CodexUnavailable("bridge_stale_result")
+                    # Closed schema metadata only: never record DOM labels,
+                    # task text, typed values or the provider response body.
+                    output = response.output
+                    logger.info("Page changed while waiting for a Codex response.", extra={
+                        "event": "vision.codex.stale_response",
+                        "session_id": str(session.id),
+                        "correlation_id": str(session.correlation_id),
+                        "stage": stage, "call_sequence": sequence,
+                        "response_outcome": output.outcome if output else None,
+                        "candidate_kinds": sorted({c.kind for c in output.candidates})
+                        if output and output.outcome == "candidates" else [],
+                        "response_failed": response.failure_code is not None,
+                        "revalidation_available": revalidate_targets is not None,
+                    })
+                    # Only structured DOM targets can survive unrelated drift.
+                    # Never reinterpret image coordinates, stop/scroll decisions,
+                    # or malformed/failed responses against a different page.
+                    if (stage != "dom" or response.failure_code or revalidate_targets is None
+                            or response.output.outcome != "candidates"):
+                        raise CodexUnavailable("bridge_stale_result")
+                    original = validate_candidates(
+                        response.output, bound, stage=stage, max_candidates=max_candidates,
+                    )
+                    if not original.target_bindings or any(
+                        target is None for target in original.target_bindings
+                    ):
+                        raise CodexUnavailable("bridge_stale_result")
+                    ids = tuple(dict.fromkeys(t.element_id for t in original.target_bindings))
+                    fresh = await revalidate_targets(ids)
+                    if fresh is None or any(
+                        getattr(fresh.observation, key) != getattr(bound.observation, key)
+                        for key in ("tenant_id", "project_id", "session_id", "fencing_token")
+                    ):
+                        raise CodexUnavailable("bridge_stale_result")
+                    bound = fresh
+                    require_dom_policy(budget.check_policy())
+                    if not await check_state():
+                        raise CodexUnavailable("bridge_stale_result")
                 if response.failure_code:
                     raise CodexUnavailable(response.failure_code)
                 if response.output.outcome == "need_screenshot":

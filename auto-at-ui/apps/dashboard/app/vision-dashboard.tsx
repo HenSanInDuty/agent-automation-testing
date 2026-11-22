@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { VisionSessionDetail } from "./components/vision-session-detail";
 import { VisionProviderSettings } from "./components/vision-provider-settings";
-import { hasUnsavedVisionPolicy, hasVisionConsent, visionDisclosure, visionConfirmation, visionFailureMessage, visionProviderLabel } from "./components/vision-provider-model";
+import { bridgeVendor, engineRequestFields, explorationEngine, hasUnsavedVisionPolicy, hasVisionConsent, isBridgeProvider, visionDisclosure, visionConfirmation, visionFailureMessage, visionProviderLabel, type ExplorationEngine } from "./components/vision-provider-model";
 import { getVisionProviders, reloadVisualExploration } from "./generation-api";
 import type { VisionProvider } from "./generation-types";
 import { ConfirmDialog } from "./components/confirm-dialog";
@@ -20,7 +20,7 @@ import { projects, type Project } from "./run-api";
 
 const terminal = new Set(["completed", "unavailable", "cancelled"]);
 type ExplorationConfirmation = ReturnType<typeof visionConfirmation> & { disclosure: string } & (
-  | { kind: "new"; request: { project_id: string; target_url: string; task_intent: string } }
+  | { kind: "new"; request: { project_id: string; target_url: string; task_intent: string; engine?: "agent_loop" } }
   | { kind: "reload"; sessionId: string }
 );
 const message = (error: unknown) => error instanceof ControlPlaneError ? visionFailureMessage(error.code) ?? error.message : "The control plane is unavailable. Try again later.";
@@ -48,6 +48,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
   const [projectId, setProjectId] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
   const [taskIntent, setTaskIntent] = useState("");
+  const [engine, setEngine] = useState<ExplorationEngine>("planner");
   const [sessions, setSessions] = useState<VisualExploration[]>([]);
   const [selected, setSelected] = useState<VisualExploration | null>(null);
   const [actions, setActions] = useState<VisualAction[]>([]);
@@ -74,7 +75,9 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
   const refreshing = useRef<string | null>(null);
   contextRef.current = [apiUrl, projectId, selected?.id].join("|");
   const dirty = hasUnsavedVisionPolicy(savedPolicy, draftPolicy);
-  const enabled = Boolean(!settingsError && savedPolicy?.enabled && hasVisionConsent(savedPolicy) && (savedPolicy.provider !== "codex_cli" || savedPolicy.input_policy_fingerprint) && providers.find((item) => item.id === savedPolicy.provider)?.configured);
+  const agentLoopAvailable = savedPolicy?.agent_loop_enabled === true;
+  const chosenEngine: ExplorationEngine = agentLoopAvailable ? engine : "planner";
+  const enabled = Boolean(!settingsError && savedPolicy?.enabled && hasVisionConsent(savedPolicy) && (!isBridgeProvider(savedPolicy.provider) || savedPolicy.input_policy_fingerprint) && providers.find((item) => item.id === savedPolicy.provider)?.configured);
   const active = useMemo(() => selected !== null && !terminal.has(selected.state), [selected]);
   useEffect(() => { onProjectChange?.(projectId); }, [projectId, onProjectChange]);
 
@@ -87,11 +90,11 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
     return () => { disposed = true; };
   }, [apiUrl, settingsRefresh]);
   useEffect(() => {
-    if (draftPolicy?.provider !== "codex_cli") return;
+    if (!isBridgeProvider(draftPolicy?.provider)) return;
     let disposed = false;
     const timer = setInterval(() => {
       void getVisionProviders(apiUrl).then((catalogue) => { if (!disposed) setProviders(catalogue.items); }).catch(() => {
-        if (!disposed) setProviders((items) => items.map((item) => item.id === "codex_cli" ? { ...item, configured: false, bridge_readiness: null } : item));
+        if (!disposed) setProviders((items) => items.map((item) => item.id === draftPolicy?.provider ? { ...item, configured: false, bridge_readiness: null } : item));
       });
     }, 5000);
     return () => { disposed = true; clearInterval(timer); };
@@ -175,7 +178,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
     event.preventDefault(); setNotice("");
     if (dirty || saving) { setNotice("Save or discard your Vision settings changes before starting an exploration."); return; }
     if (!enabled) { setNotice("Vision exploration is disabled by tenant policy."); return; }
-    if (savedPolicy) setConfirmation({ ...visionConfirmation(savedPolicy), disclosure: visionDisclosure(savedPolicy), kind: "new", request: { project_id: projectId, target_url: targetUrl, task_intent: taskIntent } });
+    if (savedPolicy) setConfirmation({ ...visionConfirmation(savedPolicy), disclosure: visionDisclosure(savedPolicy), kind: "new", request: { project_id: projectId, target_url: targetUrl, task_intent: taskIntent, ...engineRequestFields(chosenEngine) } });
   }
   function requestReload() {
     if (!selected || active || !enabled || dirty || saving || submitting || !savedPolicy) return;
@@ -247,6 +250,8 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
         <label className="field">Project<select required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Choose a project</option>{options.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
         <label className="field">Target URL<input required type="url" value={targetUrl} onChange={(event) => setTargetUrl(event.target.value)} /></label>
         <label className="field form-grid--full">Exploration intent<textarea required value={taskIntent} onChange={(event) => setTaskIntent(event.target.value)} /></label>
+        {agentLoopAvailable && <label className="field">Exploration engine<select id="vision-engine" value={engine} onChange={(event) => setEngine(explorationEngine(event.target.value))}><option value="planner">Planner</option><option value="agent_loop">Agent loop</option></select></label>}
+        {agentLoopAvailable && <p className="form-grid--full">{engine === "agent_loop" ? "Agent loop: the model proposes actions step by step and the platform runs only guarded ones. Advisory only; any test draft still needs approval." : "Planner: advisory, model proposals only. Any test draft still needs approval."}</p>}
         {!enabled && <p className="form-grid--full">Vision is unavailable until a tenant administrator enables an available provider and accepts its required data-transfer disclosure in Vision settings below.</p>}
         <div className="form-actions form-grid--full"><button className="button" disabled={!projectId || !enabled || dirty || saving || submitting}>Start advisory exploration</button></div>
       </form>
@@ -268,7 +273,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
     </details>
     {selected && selected.trace_version !== "v4" && <><section className="workspace-section" aria-label="Selected visual exploration"><div className="section-heading"><h2>Advisory session</h2><StatusBadge status={selected.state} /></div><ul className="detail-list"><li>Correlation: <code>{selected.correlation_id}</code></li><li>Bounded to {selected.max_hops} hops, {selected.max_states} states, and {selected.max_session_seconds} seconds.</li><li>Stop condition: state/depth limit, time limit, policy guard, provider failure, or model stop.</li>{selected.safe_failure_reason && <li>Safe failure: {selected.safe_failure_reason}</li>}</ul>{active && <LoadingState title="Visual exploration is in progress" />}<VisionProgressTimeline apiUrl={apiUrl} sessionId={selected.id} live={active} onActivity={() => refreshSelected(selected.id)} /><h3>Visual replay</h3><p>Frames may contain target-page data. They are private evidence retained until an authorized deletion, visible only to project readers, and never change a deterministic verdict.</p>{frames.length ? <><div className="stack-list" role="list">{frames.map((frame) => <button type="button" key={frame.id} className="button button--secondary" onClick={() => setSelectedFrame(frame)}>State {frame.sequence} · {frame.checksum.slice(0, 12)} · retained</button>)}</div>{selectedFrame && <><p>State {selectedFrame.sequence}, captured {new Date(selectedFrame.captured_at).toLocaleString()}: model proposals only; these were not executed test steps.</p>{frameUrl ? <div className="vision-replay-image">{frameImageSize && selectedFrame.actions.map((item) => { const position = replayMarkerPosition(item.action, frameImageSize); return position ? <span key={item.sequence} className="vision-replay-marker" style={position}>model proposal</span> : null; })}<img src={frameUrl} alt={`Captured visual exploration state ${selectedFrame.sequence}`} onLoad={(event) => setFrameImageSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} /></div> : frameError ? <p role="status">Replay frame unavailable.</p> : <LoadingState title="Loading replay frame" />}<ul className="stack-list">{selectedFrame.actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ul></>}</> : <p>No replay frame was retained for this exploration.</p>}<h3>Safe action candidates</h3>{actions.length ? <ul className="stack-list">{actions.map((action) => <SafeAction key={action.sequence} item={action} />)}</ul> : <p>No action candidate has been recorded.</p>}{draftId && <p><Link href={`/agent?draft=${encodeURIComponent(draftId)}`}>Review the resulting Playwright draft</Link></p>}<h3>Tenant-admin diagnostic evidence</h3><p>Available only to tenant administrators. Open it only when needed; do not copy sensitive content.</p><button type="button" className="button button--secondary" onClick={() => void inspectDebugEvidence()}>Inspect diagnostic evidence</button>{debugEvidence && <><p>Expires: {debugEvidence.retention_until}</p><pre>{debugEvidence.payload}</pre></>}</section></>}
     {selected && canDeleteReplay && frames.length > 0 && <section className="workspace-section" aria-label="Replay deletion"><h2>Delete replay evidence</h2><p>Only tenant administrators can permanently delete these private frames.</p>{selectedFrame && <button type="button" className="button button--danger" onClick={() => setReplayDeletion("frame")}>Delete selected frame</button>} <button type="button" className="button button--danger" onClick={() => setReplayDeletion("all")}>Delete all replay frames</button></section>}
-    <ConfirmDialog open={confirmation !== null} title={confirmation?.expected_provider === "codex_cli" ? "Send page elements to OpenAI?" : `Send screenshots to ${visionProviderLabel(confirmation?.expected_provider ?? "")}?`} description={`${confirmation?.disclosure ?? ""} Model: ${confirmation?.expected_model ?? ""}. ${confirmation?.kind === "reload" ? "Reload starts a new session with the saved target and intent; the previous session stays in history." : "This starts an advisory exploration."} Any resulting test draft requires approval before execution.`} confirmLabel={confirmation?.kind === "reload" ? "Start new session" : "Start advisory exploration"} onConfirm={() => void submitExploration()} onCancel={() => setConfirmation(null)} busy={submitting} />
+    <ConfirmDialog open={confirmation !== null} title={isBridgeProvider(confirmation?.expected_provider) ? `Send page elements to ${bridgeVendor(confirmation?.expected_provider ?? "")}?` : `Send screenshots to ${visionProviderLabel(confirmation?.expected_provider ?? "")}?`} description={`${confirmation?.disclosure ?? ""} Model: ${confirmation?.expected_model ?? ""}. ${confirmation?.kind === "reload" ? "Reload starts a new session with the saved target and intent; the previous session stays in history." : "This starts an advisory exploration."} Any resulting test draft requires approval before execution.`} confirmLabel={confirmation?.kind === "reload" ? "Start new session" : "Start advisory exploration"} onConfirm={() => void submitExploration()} onCancel={() => setConfirmation(null)} busy={submitting} />
     <ConfirmDialog open={replayDeletion !== null} title={replayDeletion === "all" ? "Delete all replay frames?" : "Delete this replay frame?"} description="This permanently removes private replay evidence. It does not change the advisory session, generated draft, or deterministic test verdict." confirmLabel="Delete replay evidence" onConfirm={() => void deleteReplay()} onCancel={() => setReplayDeletion(null)} busy={deletingReplay} />
   </div>;
 }

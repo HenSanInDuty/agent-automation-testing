@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "f8abbd63-649c-4ffc-8c15-9cadc22ff2ea",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "navigation_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "after_checksum": "eafb63ec3a9e0976533cc963c74c6d9b7dca4c56bfe21296f7ecca538292ad3a",
+  "finding": "State page_url is declared /cam-nang; screenshot renders CAM NANG heading, selected Cam Nang tab and guide list. Query-sensitive hash differs; destination path and content independently match."
+}

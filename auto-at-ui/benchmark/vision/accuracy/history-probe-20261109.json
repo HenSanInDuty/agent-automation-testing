@@ -1,0 +1,141 @@
+{
+  "purpose": "Diagnostic navigation probe only; no model, no qualification credit, one Home click, one Events click, one Back.",
+  "steps": [
+    {
+      "stage": "initial",
+      "url": "https://mongchiton.vn/",
+      "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+      "current_index": 1,
+      "entries": [
+        {
+          "id": 2,
+          "url": "about:blank",
+          "url_sha256": "4fa72d735a519ee13d4174f6b71c7ea92a1faa30cb445faf2dcacdf1ac343354",
+          "transition": "typed"
+        },
+        {
+          "id": 4,
+          "url": "https://mongchiton.vn/",
+          "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+          "transition": "typed"
+        }
+      ]
+    },
+    {
+      "stage": "after_home_self_link",
+      "url": "https://mongchiton.vn/",
+      "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+      "current_index": 1,
+      "entries": [
+        {
+          "id": 2,
+          "url": "about:blank",
+          "url_sha256": "4fa72d735a519ee13d4174f6b71c7ea92a1faa30cb445faf2dcacdf1ac343354",
+          "transition": "typed"
+        },
+        {
+          "id": 4,
+          "url": "https://mongchiton.vn/",
+          "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+          "transition": "typed"
+        }
+      ]
+    },
+    {
+      "stage": "after_events_link",
+      "url": "https://mongchiton.vn/su-kien",
+      "url_sha256": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+      "current_index": 3,
+      "entries": [
+        {
+          "id": 2,
+          "url": "about:blank",
+          "url_sha256": "4fa72d735a519ee13d4174f6b71c7ea92a1faa30cb445faf2dcacdf1ac343354",
+          "transition": "typed"
+        },
+        {
+          "id": 4,
+          "url": "https://mongchiton.vn/",
+          "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+          "transition": "typed"
+        },
+        {
+          "id": 6,
+          "url": "https://mongchiton.vn/su-kien",
+          "url_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+          "transition": "link"
+        },
+        {
+          "id": 7,
+          "url": "https://mongchiton.vn/su-kien",
+          "url_sha256": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+          "transition": "link"
+        }
+      ]
+    },
+    {
+      "stage": "after_one_back",
+      "url": "https://mongchiton.vn/su-kien",
+      "url_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+      "current_index": 2,
+      "entries": [
+        {
+          "id": 2,
+          "url": "about:blank",
+          "url_sha256": "4fa72d735a519ee13d4174f6b71c7ea92a1faa30cb445faf2dcacdf1ac343354",
+          "transition": "typed"
+        },
+        {
+          "id": 4,
+          "url": "https://mongchiton.vn/",
+          "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+          "transition": "typed"
+        },
+        {
+          "id": 6,
+          "url": "https://mongchiton.vn/su-kien",
+          "url_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+          "transition": "link"
+        },
+        {
+          "id": 7,
+          "url": "https://mongchiton.vn/su-kien",
+          "url_sha256": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+          "transition": "link"
+        }
+      ]
+    },
+    {
+      "stage": "after_back_observation",
+      "url": "https://mongchiton.vn/su-kien",
+      "url_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+      "current_index": 2,
+      "entries": [
+        {
+          "id": 2,
+          "url": "about:blank",
+          "url_sha256": "4fa72d735a519ee13d4174f6b71c7ea92a1faa30cb445faf2dcacdf1ac343354",
+          "transition": "typed"
+        },
+        {
+          "id": 4,
+          "url": "https://mongchiton.vn/",
+          "url_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+          "transition": "typed"
+        },
+        {
+          "id": 6,
+          "url": "https://mongchiton.vn/su-kien",
+          "url_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+          "transition": "link"
+        },
+        {
+          "id": 7,
+          "url": "https://mongchiton.vn/su-kien",
+          "url_sha256": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f",
+          "transition": "link"
+        }
+      ]
+    }
+  ]
+}

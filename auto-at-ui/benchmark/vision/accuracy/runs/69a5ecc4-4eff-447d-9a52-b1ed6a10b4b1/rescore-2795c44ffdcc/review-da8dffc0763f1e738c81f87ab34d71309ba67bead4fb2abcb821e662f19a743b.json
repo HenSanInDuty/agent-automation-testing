@@ -1,0 +1,11 @@
+{
+  "after_checksum": "94516706ff01e454339e48f1cb552d51909399fb7da777a25c4fa43b8893c741",
+  "before_checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+  "finding": "mct-42: Machine rule: after-state page URL https://h5.mongchiton.vn equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "27c73550-0ff1-48a0-8dbe-774bdbed6363",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

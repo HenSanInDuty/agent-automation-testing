@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "f6ecf02b-0e67-41aa-9db7-658b7183a9c2",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_selection",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+  "after_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "After frame explicitly shows carousel indicator 6 selected and matching slide Hoi Sinh Tinh Hoa, following the verified bound selector click. Credit uses selection identity, not generic animation."
+}

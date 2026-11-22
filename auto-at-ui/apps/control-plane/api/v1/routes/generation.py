@@ -92,13 +92,13 @@ class DecisionRequest(BaseModel):
 
 class PolicyRequest(BaseModel):
     allowed_origins: list[str] = Field(min_length=1, max_length=100)
-    vision_max_hops: int = Field(default=5, ge=1, le=10)
+    vision_max_hops: int = Field(default=5, ge=1, le=20)
     vision_max_states: int = Field(default=50, ge=1, le=200)
 
 
 class PolicyResponse(BaseModel):
     allowed_origins: list[str] = Field(default_factory=list, max_length=100)
-    vision_max_hops: int = Field(default=5, ge=1, le=10)
+    vision_max_hops: int = Field(default=5, ge=1, le=20)
     vision_max_states: int = Field(default=50, ge=1, le=200)
 
 

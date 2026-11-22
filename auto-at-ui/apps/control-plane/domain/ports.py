@@ -24,6 +24,7 @@ from auto_at.contracts.vision import (
 )
 from auto_at.contracts.vision_worker import (
     VisualWorkerAck,
+    VisualWorkerCheckTarget,
     VisualWorkerDomObservation,
     VisualWorkerExecute,
     VisualWorkerIdentity,
@@ -32,6 +33,7 @@ from auto_at.contracts.vision_worker import (
     VisualWorkerOperationResult,
     VisualWorkerOriginObservations,
     VisualWorkerPrepare,
+    VisualWorkerTargetCheck,
 )
 
 from domain.activity import ActivityEvent
@@ -230,6 +232,8 @@ class VisualTraceUnitOfWork(Protocol):
 
     def proposals(self, lease: VisualSessionLease, state_id: UUID, candidates: list) -> None: ...
 
+    def page_inventory(self, lease: VisualSessionLease, inventory) -> None: ...
+
     def finish_edge(self, lease: VisualSessionLease, edge: VisualTrajectoryEdgeRecord) -> None: ...
 
     def read_frame(self, scope: VisualSessionScope, frame_id: UUID) -> bytes: ...
@@ -242,6 +246,8 @@ class VisualTraceUnitOfWork(Protocol):
 
 
 class VisualWorkerTransport(Protocol):
+    async def check_target(self, request: VisualWorkerCheckTarget) -> VisualWorkerTargetCheck: ...
+
     async def observe_dom(self, request: VisualWorkerObserveDom) -> VisualWorkerDomObservation: ...
 
     async def origins(self, identity: VisualWorkerIdentity) -> VisualWorkerOriginObservations: ...

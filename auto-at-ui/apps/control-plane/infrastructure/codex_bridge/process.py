@@ -2,12 +2,18 @@
 
 import asyncio
 import json
+import logging
 import os
 import signal
 from collections.abc import Callable
 from pathlib import Path
 
-from auto_at.contracts.codex_bridge import CodexBridgeRequest, CodexUsage, parse_codex_output
+from auto_at.contracts.codex_bridge import (
+    CodexBridgeRequest,
+    CodexUsage,
+    parse_agent_output,
+    parse_codex_output,
+)
 from domain.codex_bridge import CLI_VERSION as CLI_VERSION
 from domain.codex_bridge import BridgeProcessResult
 from pydantic import ValidationError
@@ -52,10 +58,13 @@ def restricted_config(directory: Path) -> list[str]:
     return [part for value in values for part in ("-c", value)]
 
 
-def command(executable: str, directory: Path, request: CodexBridgeRequest) -> list[str]:
+def command(
+    executable: str, directory: Path, request: CodexBridgeRequest,
+    *, instructions_path: Path = INSTRUCTIONS_PATH,
+) -> list[str]:
     args = [
         executable, *restricted_config(directory),
-        "-c", "model_instructions_file=" + json.dumps(INSTRUCTIONS_PATH.as_posix()),
+        "-c", "model_instructions_file=" + json.dumps(instructions_path.as_posix()),
         # User-authorized container mode. Tool availability stays disabled;
         # doctor verifies the outer container because --yolo bypasses CLI sandboxing.
         "exec", "--yolo", "--ignore-user-config",
@@ -145,6 +154,7 @@ class CodexProcess:
     async def run(
         self, request: CodexBridgeRequest, directory: Path, prompt: bytes,
         stop_reason: Callable[[], str | None], *, argv: list[str] | None = None,
+        output_parser: Callable | None = None,
     ) -> BridgeProcessResult:
         if os.name != "posix":
             return BridgeProcessResult(failure_code="bridge_cli_unsupported")
@@ -164,6 +174,8 @@ class CodexProcess:
         process = None
         tasks = []
         reader = EventReader()
+        phase = "stream"
+        data = b""
         try:
             spawn = asyncio.create_task(asyncio.create_subprocess_exec(
                 *(argv if argv is not None else command(self.executable, directory, request)),
@@ -212,13 +224,44 @@ class CodexProcess:
                 data = result_file.read(request.max_output_bytes + 1)
             if len(data) > request.max_output_bytes:
                 raise ProcessRejected("bridge_output_limit")
-            output = parse_codex_output(data)
+            phase = "output"
+            # Agent jobs (prompt agent-loop-vN, which carries agent_context) use their own family.
+            parse = output_parser or (
+                parse_agent_output if request.agent_context is not None else parse_codex_output
+            )
+            output = parse(data)
             return BridgeProcessResult(
                 output=output, actual_model=reader.actual_model, usage=reader.usage,
             )
         except ProcessRejected as exc:
+            logging.getLogger(__name__).warning("Codex rejection: %s", json.dumps({
+                "job_id": str(request.job_id), "phase": phase, "code": exc.code,
+            }))
             return BridgeProcessResult(failure_code=exc.code)
-        except (ValueError, ValidationError, BrokenPipeError, ConnectionResetError):
+        except (ValueError, ValidationError, BrokenPipeError, ConnectionResetError) as exc:
+            # Keep only library error categories, never model output or exception text.
+            logging.getLogger(__name__).warning("Codex invalid response: %s", json.dumps({
+                "job_id": str(request.job_id), "phase": phase,
+                "error_type": type(exc).__name__,
+                "output_bytes": len(data) if phase == "output" else None,
+                "json_error_offset": exc.pos if isinstance(exc, json.JSONDecodeError) else None,
+                "json_error_line": exc.lineno if isinstance(exc, json.JSONDecodeError) else None,
+                "json_error_column": exc.colno if isinstance(exc, json.JSONDecodeError) else None,
+                "fenced": phase == "output" and data.lstrip().startswith(b"```"),
+                "validation_paths": [
+                    [part if isinstance(part, int) or part in {
+                        "result", "outcome", "candidates", "kind", "element_id", "x", "y",
+                        "text", "delta_y", "duration_ms", "confidence", "expected_outcome",
+                        "reason", "stop", "need_screenshot", "agent_step", "actions", "ref",
+                        "evaluation_previous_goal", "memory", "next_goal",
+                    } else "field" for part in e["loc"]]
+                    for e in exc.errors(include_input=False, include_context=False,
+                                        include_url=False)[:10]
+                ] if isinstance(exc, ValidationError) else [],
+                "validation_types": sorted({e["type"] for e in exc.errors(include_input=False,
+                    include_context=False, include_url=False)}) if isinstance(exc, ValidationError)
+                    else [],
+            }))
             return BridgeProcessResult(failure_code="bridge_malformed_output")
         except OSError:
             return BridgeProcessResult(failure_code="bridge_io_error")

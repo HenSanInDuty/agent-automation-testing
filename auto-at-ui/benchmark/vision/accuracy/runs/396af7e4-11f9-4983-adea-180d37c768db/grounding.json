@@ -1,0 +1,279 @@
+{
+  "schema_version": "vision-accuracy-grounding-v1",
+  "session_id": "22187cc7-4247-426b-83ec-446de3682f5c",
+  "trace_revision": "870cd3649df7ff60fd739c000a7e7ed69258f586e3ced1262fd5af10e5f549ec",
+  "locators": {
+    "0f9d5d7a-97e9-48df-b73a-0aa1541998a8": {
+      "operation_id": "b400ed7a-9fe3-4c2f-83b4-5bcb47e4ad46",
+      "status": "verified",
+      "role": "button",
+      "name": "Cẩm Nang",
+      "box": {
+        "x": 0.57109375,
+        "y": 0.7077401902940538,
+        "width": 0.12135419845581055,
+        "height": 0.05536744859483507
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.6322595567979135,
+        "y": 0.7364394993045897
+      }
+    },
+    "2b0ce3f3-a883-486c-bc41-3123800083d1": {
+      "operation_id": "8db43649-700b-4f17-94e8-8f549dcf75b6",
+      "status": "verified",
+      "role": "link",
+      "name": "CẨM NANG",
+      "box": {
+        "x": 0.5022786617279053,
+        "y": 0.015379051367441813,
+        "width": 0.11297202110290527,
+        "height": 0.050708915127648246
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.5599765613546961,
+        "y": 0.042169679686820886
+      }
+    },
+    "4f173ee4-7a21-44fa-acd6-f595765752c5": {
+      "operation_id": "f48f00fe-3b9a-478d-ad55-40d291e96c9a",
+      "status": "verified",
+      "role": "link",
+      "name": "ĐIỀU KHOẢN",
+      "box": {
+        "x": 0.623583984375,
+        "y": 0.015379051367441813,
+        "width": 0.11297202110290527,
+        "height": 0.050708915127648246
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.6813760597879203,
+        "y": 0.042169679686820886
+      }
+    },
+    "59f08098-668d-44a7-9122-be38e9f9a45b": {
+      "operation_id": "36d0198a-4a01-4966-95e7-bb3147ed4b45",
+      "status": "verified",
+      "role": "link",
+      "name": "HỖ TRỢ",
+      "box": {
+        "x": 0.8661947250366211,
+        "y": 0.015379051367441813,
+        "width": 0.11297197341918945,
+        "height": 0.050708915127648246
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.9241829783400117,
+        "y": 0.042169679686820886
+      }
+    },
+    "75f666db-976a-4b67-a239-d823e53b3cd0": {
+      "operation_id": "1af186e6-9093-47c0-a206-c6fa004ff078",
+      "status": "verified",
+      "role": "button",
+      "name": "Sự Kiện",
+      "box": {
+        "x": 0.44140625,
+        "y": 0.7077401902940538,
+        "width": 0.12135419845581055,
+        "height": 0.05536744859483507
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.502470659221682,
+        "y": 0.7364394993045897
+      }
+    },
+    "76a5ad00-c085-429f-9e0b-6c9c6e4aa173": {
+      "operation_id": "70aed08a-44c4-44ab-8a5c-edfad52db34a",
+      "status": "verified",
+      "role": "button",
+      "name": "Sự Kiện",
+      "box": {
+        "x": 0.44140625,
+        "y": 0.7077401902940538,
+        "width": 0.12135419845581055,
+        "height": 0.05536744859483507
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.502470659221682,
+        "y": 0.7364394993045897
+      }
+    },
+    "b65cd5cf-0229-481d-a616-36abb2c72935": {
+      "operation_id": "1078e3a3-21f5-4d64-90bc-98cbe624f2f5",
+      "status": "verified",
+      "role": "link",
+      "name": "CỘNG ĐỒNG",
+      "box": {
+        "x": 0.7448893547058105,
+        "y": 0.015379051367441813,
+        "width": 0.11297197341918945,
+        "height": 0.050708915127648246
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.8027834321857896,
+        "y": 0.042169679686820886
+      }
+    },
+    "d7e62781-ac15-4788-b5a1-057b1d3f3be4": {
+      "operation_id": "95a0eade-0548-44da-93d6-e53fdd63e9b8",
+      "status": "verified",
+      "role": "button",
+      "name": "Tin Tức",
+      "box": {
+        "x": 0.31171875,
+        "y": 0.7077401902940538,
+        "width": 0.12135419845581055,
+        "height": 0.05536744859483507
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.3726817855059495,
+        "y": 0.7364394993045897
+      }
+    },
+    "e966490d-226c-4ef0-8ec4-dbfe553c0940": {
+      "operation_id": "f592bc37-8273-421f-ace5-e8771c7af753",
+      "status": "verified",
+      "role": "link",
+      "name": "SỰ KIỆN",
+      "box": {
+        "x": 0.3809733152389526,
+        "y": 0.015379051367441813,
+        "width": 0.11297199726104737,
+        "height": 0.050708915127648246
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.438577015200474,
+        "y": 0.042169679686820886
+      }
+    },
+    "f574e626-cd5f-44e0-a196-97bc415bb068": {
+      "operation_id": "75eca175-08ea-4e59-b037-2e08f28a8c47",
+      "status": "verified",
+      "role": "link",
+      "name": "TRANG CHỦ",
+      "box": {
+        "x": 0.25966796875,
+        "y": 0.015379051367441813,
+        "width": 0.11297202110290527,
+        "height": 0.050708915127648246
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "click": {
+        "x": 0.3171774929067509,
+        "y": 0.042169679686820886
+      }
+    }
+  },
+  "contexts": {
+    "f592bc37-8273-421f-ace5-e8771c7af753": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687"
+    },
+    "95a0eade-0548-44da-93d6-e53fdd63e9b8": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f"
+    },
+    "b400ed7a-9fe3-4c2f-83b4-5bcb47e4ad46": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "8b80c6e058bb4882dcf5da96088b56237fa32f20a42a3a91683f83f09ee9cbf7"
+    },
+    "70aed08a-44c4-44ab-8a5c-edfad52db34a": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "ec7ff30b06b0e115dcf72ae633ae1809ac4f9625870546f5da4131091bbff454"
+    },
+    "1af186e6-9093-47c0-a206-c6fa004ff078": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f"
+    },
+    "f48f00fe-3b9a-478d-ad55-40d291e96c9a": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f"
+    },
+    "1078e3a3-21f5-4d64-90bc-98cbe624f2f5": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f"
+    },
+    "36d0198a-4a01-4966-95e7-bb3147ed4b45": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f"
+    },
+    "8db43649-700b-4f17-94e8-8f549dcf75b6": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "376a361c7c4dc3768b8003db43afa25db786f625f53d19f8e6b22dc7fa74de5f"
+    },
+    "75eca175-08ea-4e59-b037-2e08f28a8c47": {
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url_fingerprint": "ec7ff30b06b0e115dcf72ae633ae1809ac4f9625870546f5da4131091bbff454"
+    }
+  }
+}

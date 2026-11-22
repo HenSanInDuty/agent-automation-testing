@@ -1,0 +1,119 @@
+{
+  "round": 20,
+  "iteration_id": "a4030533-71e3-43cd-8e4d-6816c7e7dd55",
+  "session_id": "45473832-0221-4266-a54a-4669b3d39aca",
+  "state": "unavailable",
+  "reason": "operation_unavailable",
+  "source_hash": "2cd003097edc26d20dea1320ed9c58b0896c4d0a43b519fe2005ea9363849578",
+  "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "passed": false,
+  "qualification_streak": 0,
+  "runtime_verdict_unchanged": true,
+  "operations": 85,
+  "attempts": 31,
+  "attempt_statuses": {
+    "completed": 30,
+    "unknown": 1
+  },
+  "coverage_optimistic_ceiling": {
+    "numerator": 31,
+    "denominator": 47,
+    "percent": 65.95744680851064,
+    "assumption": "Even the unresolved click being correct cannot meet >95% coverage"
+  },
+  "completed_positive_bindings": 30,
+  "outcome_accuracy": "not_established",
+  "score_interpretation": "Saved zero-credit score is an unreviewed conservative lower bound, not actual accuracy/coverage. Coverage ceiling and one unknown operation independently fail the round.",
+  "detection": {
+    "detection_precision": {
+      "numerator": 46,
+      "denominator": 47,
+      "percent": 97.87234042553192,
+      "above_95": true
+    },
+    "detection_recall": {
+      "numerator": 46,
+      "denominator": 47,
+      "percent": 97.87234042553192,
+      "above_95": true
+    }
+  },
+  "sampling": {
+    "attempts": 10,
+    "statuses": {
+      "sampled": 6,
+      "settle_deadline": 2,
+      "error": 2
+    },
+    "reused": 6,
+    "successful_duration_ms": [
+      412,
+      400,
+      451,
+      412,
+      350,
+      421
+    ],
+    "targets": [
+      "mct-51",
+      "mct-52",
+      "mct-53",
+      "mct-54",
+      "mct-55",
+      "mct-56"
+    ],
+    "prior_round19_reused": 0,
+    "prior_round19_attempts": 23,
+    "limitations": "Reuse/timing verified; no live carousel outcome images reviewed. Different run lengths prevent whole-run speed comparison."
+  },
+  "target_preflight": {
+    "preflight_checks": 135,
+    "preflight_target_misses": 0,
+    "preflight_context_misses": 0,
+    "retired_proposals": 0
+  },
+  "restoration": "No restore rejection before the stop; new no-dispatch recovery and stale-target replan were not exercised live.",
+  "timing": {
+    "measurement": "first operation start to last operation end",
+    "operation_window_seconds": 440.536003,
+    "frames_verified": 169,
+    "frames_unavailable": 1
+  },
+  "model_jobs": 5,
+  "reported_tokens": {
+    "input": 28787,
+    "output": 3001
+  },
+  "monetary_cost_usd": null,
+  "terminal_operation": {
+    "id": "a1dc5255-ee88-4f9d-9cca-ccfaecd14d07",
+    "sequence": 85,
+    "target_id": "mct-13",
+    "label": "CHƠI NGAY",
+    "stored_status": "unknown",
+    "stored_code": "worker_response_lost",
+    "worker_execute_status": "completed",
+    "worker_execute_http": 200,
+    "worker_frame_http": 200,
+    "storage_probe": {
+      "db_frame_rows": 1,
+      "state_count": 37,
+      "max_recorded_hop": 11,
+      "after_object_exists": true,
+      "bytes": 1023509,
+      "sha256": "b28d19829eadffc8eaa1c6969f25c2c809bf1bcf401bb4a520a4e46864fcca46",
+      "metadata_sha256": "b28d19829eadffc8eaa1c6969f25c2c809bf1bcf401bb4a520a4e46864fcca46"
+    },
+    "interpretation": "Worker returned success and the after PNG reached RustFS, but no durable after-frame row exists. The exact exception in frame verification/read-back/DB commit is not logged; do not call this a proven network timeout or successful controller operation.",
+    "physical_retry_authorized": false
+  },
+  "validation_reused": "85 isolated integration + 210 Python + affected worker validations from pre-round20-validation-20261118.json; same candidate source. Build/deploy healthy; changed runtime file checksums matched in each consumer.",
+  "active_sessions": 0,
+  "active_round_processes": 0,
+  "round21_submitted": false,
+  "next_step": "Reproduce/instrument the after-frame durable commit failure using retained operation/staging/object metadata. Preserve unknown verdict, do not repeat the physical click, and do not run round21 before a scoped red/green fix.",
+  "operator_notes": [
+    "First diagnostic helper hit Windows default text encoding; UTF-8 corrected. First read-only storage probe used the default PostgreSQL driver; switched to the application engine helper. Neither issue changed the live run."
+  ]
+}

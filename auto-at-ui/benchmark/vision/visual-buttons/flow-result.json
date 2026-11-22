@@ -1,0 +1,11 @@
+{
+  "schema_version": "visual-button-flow-evaluation-v1",
+  "environment": "isolated_local_fixture",
+  "live_model_calls": 0,
+  "expected_clicks": 47,
+  "confirmed_clicks": 47,
+  "negative_targets_clicked": 0,
+  "operations": 99,
+  "model_batches": 6,
+  "state": "completed"
+}

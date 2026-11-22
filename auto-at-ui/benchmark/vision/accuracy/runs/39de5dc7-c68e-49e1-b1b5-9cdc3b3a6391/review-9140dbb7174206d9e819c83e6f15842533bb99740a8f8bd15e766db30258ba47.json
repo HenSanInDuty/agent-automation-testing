@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "86aab107-edf9-41fe-ae95-4a621208b351",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "after_checksum": "f60a26ab8a689616123377a62d89e8206b2861458734dd2a1e7c12e455871af0",
+  "finding": "After URL hash exactly matches declared YouTube playlist URL including identity query; page shows playlist VLCM: Mong Chi Ton Mobile - TPL by TEPAYLINK. Credit is destination navigation only, no playback claim."
+}

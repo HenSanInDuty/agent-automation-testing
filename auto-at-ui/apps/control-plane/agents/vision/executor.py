@@ -13,6 +13,7 @@ from auto_at.contracts.vision import VisualAction
 from agents.prompts.vision import VISION_BATCH_IMAGE_INSTRUCTION, VISION_SINGLE_IMAGE_INSTRUCTION
 from agents.shared.models import LanguageModel
 from agents.shared.runtime import AgentStepGuard, VisionPolicy
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.diagnostics import (
     VisionProviderFailure,
     VisualDiagnosticCapture,
@@ -46,6 +47,9 @@ class VisualCandidateBatchOutcome:
     failure_reason: str | None = None
     target_bindings: tuple[CodexProposalBinding | None, ...] | None = None
     calls_used: int = 1
+    # Advisory abstention only; the controller must verify fresh context and
+    # independently authorize a bounded viewport scan. Contains no model delta.
+    viewport_scan_requested: bool = False
 
 
 async def execute_visual_action(
@@ -227,7 +231,8 @@ def policy_to_step_guard(policy: VisionPolicy):
         max_steps_per_run=policy.max_steps,
         max_evidence_bytes_per_step=max(
             policy.max_screenshot_bytes,
-            policy.codex.max_dom_bytes if policy.provider == "codex_cli" and policy.codex else 0,
+            policy.codex.max_dom_bytes
+            if is_bridge_provider(policy.provider) and policy.codex else 0,
         ),
         max_concurrency=1,
     )

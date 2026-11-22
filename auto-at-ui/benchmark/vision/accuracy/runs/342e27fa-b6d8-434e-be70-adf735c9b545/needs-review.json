@@ -1,0 +1,154 @@
+[
+  {
+    "sequence": 15,
+    "status": "completed",
+    "target": "mct-51",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "580fd5e5-60d9-4a6e-9475-60e8af0218a9",
+      "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+      "availability": "retained",
+      "byte_count": 790452
+    },
+    "after": {
+      "id": "723176f4-a4c9-4daa-bb85-2fb729b95ff1",
+      "checksum": "80a317914f5061153573d26eb8fe0fc879a7c982aebbd8f6cd27e78e7995007a",
+      "availability": "retained",
+      "byte_count": 1241252
+    }
+  },
+  {
+    "sequence": 19,
+    "status": "completed",
+    "target": "mct-52",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "a9746691-c680-4087-9291-94e2dfae4969",
+      "checksum": "f3f6f93eb7f1807ed133b245a1c4ed60aa9dbb63609a1c703e516dfa6939ff6c",
+      "availability": "retained",
+      "byte_count": 758421
+    },
+    "after": {
+      "id": "02e095e8-318d-400e-acc7-5e2e0b31b18b",
+      "checksum": "e9c64deb6986f24d3cfd469f1e5c649981c0d325b0571a925c88b732e39add44",
+      "availability": "retained",
+      "byte_count": 1203367
+    }
+  },
+  {
+    "sequence": 21,
+    "status": "completed",
+    "target": "mct-53",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "6173c258-af45-4711-982b-1a9f53b295b2",
+      "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+      "availability": "retained",
+      "byte_count": 780157
+    },
+    "after": {
+      "id": "ee1d5f1e-c1e0-408e-8b03-542ae6345296",
+      "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+      "availability": "retained",
+      "byte_count": 780157
+    }
+  },
+  {
+    "sequence": 23,
+    "status": "completed",
+    "target": "mct-54",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "d69437ba-e5b4-4ddc-9914-b5dbf640ce9d",
+      "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+      "availability": "retained",
+      "byte_count": 790452
+    },
+    "after": {
+      "id": "37aea549-1c47-44f9-b93b-510dd6b33eeb",
+      "checksum": "0b2f4d06aa21344110715d4d7fd8a4e5f761f0d44082e9655d99a69e3bb136ae",
+      "availability": "retained",
+      "byte_count": 1216548
+    }
+  },
+  {
+    "sequence": 25,
+    "status": "completed",
+    "target": "mct-55",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "5b3c883e-4624-4ea4-a8dd-a4e4f9c3cd17",
+      "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+      "availability": "retained",
+      "byte_count": 798710
+    },
+    "after": {
+      "id": "b9d6c1b6-abf0-4532-abc1-72a655c556b0",
+      "checksum": "e628af288058206053c4925754e65f847c7efef0f7426317d8c230310d251ccd",
+      "availability": "retained",
+      "byte_count": 1234654
+    }
+  },
+  {
+    "sequence": 27,
+    "status": "completed",
+    "target": "mct-56",
+    "kind": "carousel_selection",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "93885b99-d364-41bf-ae46-c90f07079e2c",
+      "checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+      "availability": "retained",
+      "byte_count": 803561
+    },
+    "after": {
+      "id": "827a7882-f0b3-4c66-97b1-471757175caa",
+      "checksum": "8f3eede26642374e2831d484c054c5aa169de15c3793f5d61ba713fb682c75bf",
+      "availability": "retained",
+      "byte_count": 812792
+    }
+  },
+  {
+    "sequence": 29,
+    "status": "completed",
+    "target": "mct-43",
+    "kind": "scroll_top",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "546f4495-5fca-479e-b2b8-a30381c4a7fb",
+      "checksum": "1ad6a30208c2aa02c868756b41cb243a67611bb12f556aa2a4ff03952148982e",
+      "availability": "retained",
+      "byte_count": 783148
+    },
+    "after": {
+      "id": "a10dcc0f-77a4-4958-b63e-cb671884dc46",
+      "checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+      "availability": "retained",
+      "byte_count": 1009785
+    }
+  },
+  {
+    "sequence": 47,
+    "status": "completed",
+    "target": "mct-40",
+    "kind": "popup_destination",
+    "why": "no machine rule proves the outcome: review before/after images",
+    "before": {
+      "id": "72db4de3-61a0-4d05-b3ee-06d544ed30d1",
+      "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+      "availability": "retained",
+      "byte_count": 798710
+    },
+    "after": {
+      "id": "1bc268b2-0273-461c-be20-c7d5355d75dc",
+      "checksum": "f34179dff377b8403149b97770a35aa18e364acaf18a1188fb20910518ad7674",
+      "availability": "retained",
+      "byte_count": 47393
+    }
+  }
+]

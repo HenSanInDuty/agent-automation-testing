@@ -1,0 +1,8 @@
+{
+  "outcome_accuracy": "not_established",
+  "score_interpretation": "Conservative verified lower bound: unreviewed outcomes receive no credit.",
+  "maximum_possible_covered_targets": 15,
+  "oracle_positive_count": 47,
+  "reason": "Even all attempts being correct cannot meet required unique-target coverage.",
+  "pending_operations": 0
+}

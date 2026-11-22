@@ -1,0 +1,23 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 2,
+    "seconds": 1.81
+  },
+  "host": {
+    "passed": 56,
+    "skipped": 16,
+    "seconds": 9.47,
+    "skip_reason": "Linux-only process, flock and symlink tests"
+  },
+  "linux": {
+    "passed": 72,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 11.561,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "ruff": "passed"
+}

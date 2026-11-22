@@ -1,0 +1,31 @@
+{
+  "reviews": [
+    {
+      "sequence": 18,
+      "review_hash": "d235624ccaf8426aa86b6c8304de9f055cec166cf9543cddbb52f0c8e6a7188f"
+    },
+    {
+      "sequence": 22,
+      "review_hash": "4e3103d0034005a24f182b871c17605a1ac2db7592ab36cea61446f9d92af52e"
+    },
+    {
+      "sequence": 24,
+      "review_hash": "673408eca5801b074f8736ff5638abf59b55f85bf7c056ca7118d902bffef25a"
+    },
+    {
+      "sequence": 26,
+      "review_hash": "ec97752b0e3eaf1286ceac8ab194856e7dc348fd0e2b317c4df41c8c24a3bb36"
+    },
+    {
+      "sequence": 28,
+      "review_hash": "df26b1c341c7775304cc9e2326abb3c3843073d824ddfc72698e55ae99584aeb"
+    },
+    {
+      "sequence": 30,
+      "review_hash": "2125ef792bc4df472a75fb4f59795f306ebc25705e254ba6832968bf2ca364bb"
+    }
+  ],
+  "score_unchanged": true,
+  "reason": "Original conservative failed assessment retained. Supplemental image reviews do not overturn the binding-based nonqualification proof.",
+  "video_101": "Opens a video overlay with VLCM Origin title; different DOM path from frozen mct-47. Exact declared video identity is not established."
+}

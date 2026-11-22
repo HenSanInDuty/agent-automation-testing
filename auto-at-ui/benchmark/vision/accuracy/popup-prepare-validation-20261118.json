@@ -1,0 +1,58 @@
+{
+  "scope": "ADR-035 popup preparation recovery and ADR-034 sample timing telemetry",
+  "red": {
+    "test": "undispatched_popup / prepare_once",
+    "failed": 1,
+    "expected": "unavailable instead of completed",
+    "log": ".pytest-artifacts/popup-prepare-red-20261118.log"
+  },
+  "green": {
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 188.302,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "worker": {
+    "passed": 8,
+    "duration_seconds": 26.3,
+    "typecheck": "passed",
+    "log": ".pytest-artifacts/outcome-telemetry-20261118.log"
+  },
+  "python_contracts_metrics_domain": {
+    "passed": 107,
+    "duration_seconds": 1.17
+  },
+  "manifest_tests": {
+    "passed": 2
+  },
+  "ruff": "full repository passed",
+  "full_suite": "not rerun for this source; required before qualification",
+  "probe": {
+    "read_only": true,
+    "dom_nodes": 575,
+    "inspect_ms": [
+      613,
+      703,
+      114
+    ],
+    "settle_ms": 544,
+    "settled": false,
+    "png_ms": 427,
+    "png_bytes": 812795
+  },
+  "operator_errors_retained": [
+    "PowerShell npm.ps1 execution-policy rejection; .cmd invocation passed",
+    "two pytest selections used nonexistent filenames and collected no tests; corrected selections passed"
+  ],
+  "unchanged": [
+    "model",
+    "prompt",
+    "oracle",
+    "policy limits",
+    "execution contracts",
+    "500ms sample budget"
+  ]
+}

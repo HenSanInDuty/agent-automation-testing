@@ -80,7 +80,7 @@ def test_only_exact_disabled_host_startup_warning_is_nonfatal():
     ("stderr_overflow", "bridge_output_limit"), ("wrong_model", "bridge_model_unavailable"),
     ("hang", "bridge_cancelled"), ("child", "bridge_cancelled"),
 ])
-async def test_fake_process_lifecycle(tmp_path, mode, expected):
+async def test_fake_process_lifecycle(tmp_path, mode, expected, caplog):
     req, _, _ = job()
     began = time.monotonic()
     def stop():
@@ -94,6 +94,21 @@ async def test_fake_process_lifecycle(tmp_path, mode, expected):
     assert result.failure_code == expected
     assert time.monotonic() - began < 5
     assert not (tmp_path / "raw-output.json").exists()
+    if mode in {"malformed", "fenced_json", "extra_fields"}:
+        diagnostic = json.loads(caplog.records[-1].getMessage().split(": ", 1)[1])
+        assert diagnostic["phase"] == "output"
+        assert diagnostic["fenced"] is (mode == "fenced_json")
+        assert diagnostic["output_bytes"] > 0
+        if mode in {"malformed", "fenced_json"}:
+            assert diagnostic["json_error_offset"] == 0
+            assert diagnostic["json_error_line"] == 1
+            assert diagnostic["json_error_column"] == 1
+        assert "execute_script" not in caplog.text
+        assert '"forbidden"' not in caplog.text
+        assert "not JSON" not in caplog.text
+        if mode == "extra_fields":
+            assert "extra_forbidden" in diagnostic["validation_types"]
+            assert any("field" in path for path in diagnostic["validation_paths"])
     if expected is None:
         assert result.output.outcome == "stop"
         assert result.usage.input_tokens == 2

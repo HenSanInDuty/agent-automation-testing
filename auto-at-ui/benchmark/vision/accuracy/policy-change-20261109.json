@@ -1,0 +1,21 @@
+{
+  "project_id": "8f2d5531-f00d-4ce9-981e-f4b626657818",
+  "changed_at": "2026-11-09T09:21:53.943109+00:00",
+  "authorization": "Explicit user approval of 100 states and 20 hops in this conversation",
+  "method": "PUT project policy API with local project administrator identity",
+  "before": {
+    "allowed_origins": [
+      "https://mongchiton.vn"
+    ],
+    "vision_max_hops": 10,
+    "vision_max_states": 50
+  },
+  "after": {
+    "allowed_origins": [
+      "https://mongchiton.vn"
+    ],
+    "vision_max_hops": 20,
+    "vision_max_states": 100
+  },
+  "historical_sessions_modified": false
+}

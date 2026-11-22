@@ -1,0 +1,11 @@
+{
+  "after_checksum": "87e365e03aaa4d598d562c2d6ea9d9a2a0a49ccfc01f8e88e280835d39dfe27d",
+  "before_checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+  "finding": "mct-41: Machine rule: after-state page URL https://www.youtube.com/playlist equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "91f9fabe-cdc1-4523-886c-3ecdc420bd93",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

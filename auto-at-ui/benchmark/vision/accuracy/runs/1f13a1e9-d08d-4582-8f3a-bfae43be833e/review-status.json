@@ -1,0 +1,18 @@
+{
+  "outcome_accuracy": {
+    "numerator": 5,
+    "denominator": 15,
+    "percent": 33.333333333333336,
+    "above_95": false
+  },
+  "coverage": {
+    "numerator": 5,
+    "denominator": 47,
+    "percent": 10.638297872340425,
+    "above_95": false
+  },
+  "reviewed_correct_operations": 5,
+  "remaining_interactions": 10,
+  "review_method": "independent retained carousel image review",
+  "limitations": "Conservative lower bound: five of six carousel outcomes verified, operation 24 requires slide 3 but shows slide 4. Other nine click outcomes unreviewed after coverage gate failed (15/47 maximum even before outcome checks). Runtime stopped on popup-close preparation form drift; no wrong physical target or business success claim."
+}

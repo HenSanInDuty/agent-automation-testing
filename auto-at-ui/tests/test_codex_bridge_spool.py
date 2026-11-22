@@ -1,13 +1,16 @@
 """Filesystem behavior with synthetic data; no CLI or app database is used."""
 
+import errno
 import hashlib
+import json
 import os
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from auto_at.contracts.codex_bridge import canonical_bytes
-from infrastructure.codex_bridge.spool import FileSpool, SpoolError
+from infrastructure.codex_bridge.spool import RECEIPT_CLOCK_SKEW, FileSpool, SpoolError
+from infrastructure.observability.logging import JsonFormatter
 from test_codex_bridge_contracts import observation, request, response
 
 
@@ -40,6 +43,74 @@ def test_atomic_publication_integrity_and_exclusive_claim(published):
     with pytest.raises(FileExistsError):
         spool.claim(req)
     assert not spool.has_file(req, "screenshot.png")
+
+
+@pytest.mark.parametrize("name", [".atomic-fixture", "raw-output.json"])
+def test_request_scan_survives_consumed_temporary_file(published, monkeypatch, name):
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    transient = spool.path(req.job_id) / name
+    transient.write_bytes(b"private synthetic output")
+    original = module._plain
+
+    def racing(path, **kwargs):
+        if path == transient and path.exists():
+            path.unlink()
+        return original(path, **kwargs)
+
+    monkeypatch.setattr(module, "_plain", racing)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=8))
+    assert spool.load(req.job_id) == req
+
+
+def test_missing_progress_waits_but_malformed_receipt_fails(published, monkeypatch):
+    spool, req = published
+    spool.claim(req)
+    spool.record_stage(req, "claimed")
+    original = spool.read_file
+    pending = True
+
+    def read(directory, name, limit):
+        nonlocal pending
+        if name == "events.jsonl" and pending:
+            pending = False
+            raise FileNotFoundError("synthetic shared filesystem race")
+        return original(directory, name, limit)
+
+    monkeypatch.setattr(spool, "read_file", read)
+    assert spool.stages(req) == ()
+    assert spool.stages(req)[0].stage == "claimed"
+    (spool.path(req.job_id) / "events.jsonl").write_bytes(b"malformed\n")
+    with pytest.raises(ValueError):
+        spool.stages(req)
+
+
+def test_file_io_diagnostic_identifies_operation_without_leaking_payloads(
+    published, monkeypatch, caplog,
+):
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    failure = OSError(errno.EIO, "private-secret-message", "/private/path/events.jsonl")
+
+    def failed_fstat(_fd):
+        raise failure
+
+    monkeypatch.setattr(module.os, "fstat", failed_fstat)
+    with pytest.raises(OSError) as caught:
+        spool.read_file(spool.path(req.job_id), "request.json", 16_384)
+    assert caught.value is failure
+    record = next(r for r in caplog.records if getattr(r, "event", None)
+                  == "codex.spool.read_failed")
+    encoded = JsonFormatter("synthetic", "test").format(record)
+    payload = json.loads(encoded)
+    assert payload["job_id"] == str(req.job_id)
+    assert payload["io_operation"] == "fstat" and payload["file_name"] == "request.json"
+    assert payload["errno"] == errno.EIO and payload["errno_name"] == "EIO"
+    assert payload["code_locations"][-1]["function"] == "read_file"
+    assert "private-secret" not in encoded and "/private/path" not in encoded
+    assert "task_intent" not in encoded
 
 
 def test_cancel_and_stale_authorization_prevent_launch(published):
@@ -186,3 +257,58 @@ def test_symlink_job_and_input_never_read_or_delete_outside(tmp_path):
     with pytest.raises(SpoolError):
         spool._remove(spool.path(req.job_id))
     assert sentinel.read_text() == "keep"
+
+
+def _aged_job(tmp_path):
+    """Request created 30 s ago so a lagging `now` is not rejected as pre-creation."""
+    now = datetime.now(UTC)
+    obs = observation(captured_at=now - timedelta(seconds=30))
+    schema = b'{"type":"object"}'
+    req = request(obs, created_at=now - timedelta(seconds=30),
+                  deadline=now + timedelta(seconds=120))
+    req = req.model_copy(update={"inputs": req.inputs.model_copy(update={
+        "schema_sha256": hashlib.sha256(schema).hexdigest(), "schema_bytes": len(schema),
+    })})
+    spool = FileSpool(tmp_path / "jobs", req.bridge_id, req.tenant_id)
+    spool.publish(req, canonical_bytes(obs), schema)
+    return spool, req
+
+
+def test_reauthorization_between_poll_clock_and_read_is_not_revoked(tmp_path):
+    # r9: the bridge samples `now`, then the control plane rewrites the receipt
+    # (recorded_at > now) before the bridge reads it. That is a healthy handoff.
+    spool, req = _aged_job(tmp_path)
+    sampled = datetime.now(UTC)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    assert spool.stop_reason(req, sampled) is None
+
+
+def test_receipt_recorded_far_in_the_future_is_revoked(tmp_path):
+    spool, req = _aged_job(tmp_path)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    lagging = datetime.now(UTC) - RECEIPT_CLOCK_SKEW - timedelta(seconds=1)
+    assert spool.stop_reason(req, lagging) == "bridge_policy_revoked"
+
+
+def test_expired_missing_and_overdue_authorization_still_stop(tmp_path):
+    spool, req = _aged_job(tmp_path)
+    assert spool.stop_reason(req, datetime.now(UTC)) == "bridge_policy_revoked"  # missing
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    expired = datetime.now(UTC) + timedelta(seconds=3)
+    assert spool.stop_reason(req, expired) == "bridge_policy_revoked"
+    assert spool.stop_reason(req, req.deadline) == "bridge_deadline_exceeded"
+
+
+def test_receipt_with_excessive_ttl_is_revoked(tmp_path, monkeypatch):
+    spool, req = _aged_job(tmp_path)
+    spool.authorize(req, datetime.now(UTC) + timedelta(seconds=2))
+    original = spool._receipt
+
+    def long_ttl(request, status, expiry, nonce):
+        return original(request, status, req.deadline, nonce)
+
+    monkeypatch.setattr(spool, "_receipt", long_ttl)
+    spool._write(spool.path(req.job_id), "authorization.json",
+                 canonical_bytes(long_ttl(req, "queued", None, UUID(int=0))))
+    monkeypatch.undo()
+    assert spool.stop_reason(req, datetime.now(UTC)) == "bridge_policy_revoked"

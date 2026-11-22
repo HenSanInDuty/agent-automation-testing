@@ -1,0 +1,7 @@
+{
+  "113": "Before/after frames show active feature slide 3 (Chinh Phuc PvE) moving exactly one position left to slide 2 (Bang Chien Nay Lua); verified left-arrow locator and retained immediate click evidence.",
+  "139": "Before/after frames show active feature slide 4 (Thu Cuoi Kinh Dien) advancing exactly one position right to slide 5 (Vo Lam Chan Menh); verified right-arrow locator and immediate retained click evidence.",
+  "18": "Retained after-frame shows indicator 1 active and the corresponding Chuoi Nhiem Vu slide; verified locator binds oracle mct-51.",
+  "22": "Retained after-frame shows indicator 2 active and the corresponding Bang Chien Nay Lua slide; verified locator binds oracle mct-52.",
+  "24": "Retained after-frame shows indicator 3 active and the corresponding Chinh Phuc PvE slide; verified locator binds oracle mct-53."
+}

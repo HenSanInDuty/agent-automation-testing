@@ -1,0 +1,90 @@
+{
+  "schema_version": "vision-accuracy-score-v1",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "coverage": {
+    "numerator": 0,
+    "denominator": 47,
+    "percent": 0.0,
+    "above_95": false
+  },
+  "accuracy": {
+    "numerator": 0,
+    "denominator": 26,
+    "percent": 0.0,
+    "above_95": false
+  },
+  "detection_precision": {
+    "numerator": 46,
+    "denominator": 47,
+    "percent": 97.87234042553192,
+    "above_95": true
+  },
+  "detection_recall": {
+    "numerator": 46,
+    "denominator": 47,
+    "percent": 97.87234042553192,
+    "above_95": true
+  },
+  "inventory_complete": true,
+  "correct_operations": [],
+  "covered_targets": [],
+  "remaining_targets": [
+    "mct-01",
+    "mct-02",
+    "mct-03",
+    "mct-04",
+    "mct-05",
+    "mct-06",
+    "mct-07",
+    "mct-08",
+    "mct-09",
+    "mct-10",
+    "mct-11",
+    "mct-12",
+    "mct-13",
+    "mct-14",
+    "mct-15",
+    "mct-16",
+    "mct-18",
+    "mct-19",
+    "mct-20",
+    "mct-21",
+    "mct-29",
+    "mct-30",
+    "mct-31",
+    "mct-32",
+    "mct-33",
+    "mct-34",
+    "mct-35",
+    "mct-36",
+    "mct-37",
+    "mct-38",
+    "mct-39",
+    "mct-40",
+    "mct-41",
+    "mct-42",
+    "mct-43",
+    "mct-44",
+    "mct-45",
+    "mct-46",
+    "mct-47",
+    "mct-51",
+    "mct-52",
+    "mct-53",
+    "mct-54",
+    "mct-55",
+    "mct-56",
+    "mct-57",
+    "mct-58"
+  ],
+  "unsafe_operations": [],
+  "unsettled_operations": [],
+  "operation_statuses": {
+    "completed": 78
+  },
+  "interaction_statuses": {
+    "completed": 26
+  },
+  "passed": false,
+  "business_outcome": "unverified"
+}

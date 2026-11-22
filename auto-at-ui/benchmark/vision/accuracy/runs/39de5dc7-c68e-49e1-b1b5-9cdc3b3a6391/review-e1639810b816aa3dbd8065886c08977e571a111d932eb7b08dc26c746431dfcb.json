@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "7ec316c8-a1ee-4699-9505-e74eeec4f52f",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_tab",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "79c8719ba0b3ac0a065d3dc4a73ea4dba7197809d01a368681e0bd7247fce432",
+  "after_checksum": "f8eab092597efb48232c3badd0754546fee8239a33d81c486073b00af10fafc4",
+  "finding": "Cam Nang tab is visibly active after the bound click and its guide article list replaces the event list."
+}

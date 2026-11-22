@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -53,6 +54,25 @@ def service(spool, req, process=None, *, ready=True):
     )
 
 
+@pytest.mark.parametrize("offset,ready", [(0.5, True), (2, False), (-10, False)])
+def test_readiness_uses_end_of_read_without_relaxing_future_or_stale_limits(
+    published, monkeypatch, offset, ready,
+):
+    from infrastructure.codex_bridge.doctor import FileReadiness
+
+    spool, req = published
+    bridge = service(spool, req)
+    bridge.settings.codex_bridge_container_spool = str(spool.root)
+    spool.heartbeat(bridge.readiness.model_dump(mode="json"))
+    now = datetime.now(UTC)
+    data = json.loads((spool.root / ".heartbeat.json").read_text())
+    data["recorded_at"] = (now + timedelta(seconds=offset)).isoformat()
+    spool._write(spool.root, ".heartbeat.json", json.dumps(data).encode())
+    ticks = iter([100.0, 101.0])
+    monkeypatch.setattr("infrastructure.codex_bridge.doctor.monotonic", lambda: next(ticks, 101.0))
+    assert FileReadiness(bridge.settings).read(req.tenant_id, now).ready is ready
+
+
 @pytest.mark.asyncio
 async def test_duplicate_delivery_does_not_relaunch(published):
     spool, req = published
@@ -61,6 +81,68 @@ async def test_duplicate_delivery_does_not_relaunch(published):
     assert await bridge.run_once() == 0
     assert bridge.process.calls == 1
     assert spool.result(req).output.reason == "complete"
+
+
+@pytest.mark.parametrize("stage", ["plain", "open"])
+@pytest.mark.parametrize("variant", [
+    "transient", "persistent", "permission", "stale", "future", "foreign", "malformed", "offline",
+])
+def test_readiness_retries_only_missing_heartbeat_and_revalidates_every_field(
+    published, monkeypatch, stage, variant,
+):
+    from pathlib import Path
+
+    from infrastructure.codex_bridge import doctor
+    from infrastructure.codex_bridge import spool as spool_module
+
+    spool, req = published
+    bridge = service(spool, req)
+    bridge.settings.codex_bridge_container_spool = str(spool.root)
+    spool.heartbeat(bridge.readiness.model_dump(mode="json"))
+    heartbeat = spool.root / ".heartbeat.json"
+    data = json.loads(heartbeat.read_text())
+    now = datetime.now(UTC)
+    if variant in {"stale", "future"}:
+        data["recorded_at"] = (now + timedelta(
+            seconds=-60 if variant == "stale" else 60,
+        )).isoformat()
+    elif variant == "foreign":
+        data["tenant_id"] = "foreign"
+    elif variant == "offline":
+        data["readiness"]["online"] = False
+    heartbeat.write_text("{" if variant == "malformed" else json.dumps(data))
+    attempts, sleeps = [], []
+    monkeypatch.setattr(doctor, "sleep", sleeps.append, raising=False)
+
+    def inject(path):
+        if path == heartbeat:
+            attempts.append(path)
+            if variant == "permission":
+                raise PermissionError(13, "fixture")
+            if len(attempts) == 1 or variant == "persistent":
+                raise FileNotFoundError(2, "fixture")
+
+    if stage == "plain":
+        original = spool_module._plain
+
+        def plain(path, **kwargs):
+            inject(path)
+            return original(path, **kwargs)
+
+        monkeypatch.setattr(spool_module, "_plain", plain)
+    else:
+        original = Path.open
+
+        def opened(path, *args, **kwargs):
+            inject(path)
+            return original(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "open", opened)
+    result = doctor.FileReadiness(bridge.settings).read(req.tenant_id, now)
+    assert result.ready is (variant == "transient")
+    assert len(attempts) == (3 if variant == "persistent" else 1 if variant == "permission" else 2)
+    assert sleeps == ([.01, .01] if variant == "persistent" else
+                      [] if variant == "permission" else [.01])
 
 
 @pytest.mark.asyncio
@@ -123,6 +205,33 @@ async def test_missing_authorization_waits_then_can_start(published):
     assert await bridge.run_once() == 0
     spool.authorize(req, datetime.now(UTC) + timedelta(seconds=5))
     assert await bridge.run_once() == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.name == "nt", reason="Linux Compose producer flock contention")
+async def test_publication_lock_contention_defers_scan_without_losing_readiness(published):
+    spool, req = published
+    bridge = service(spool, req)
+    with spool.lock():
+        assert await bridge.run_once() == 0
+    assert bridge.readiness.ready
+    assert bridge.process.calls == 0
+    assert await bridge.run_once() == 1
+    assert bridge.process.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_permission_failure_is_not_treated_as_lock_contention(published, monkeypatch):
+    spool, req = published
+    bridge = service(spool, req)
+
+    def denied(_now):
+        raise PermissionError("synthetic permission failure")
+
+    monkeypatch.setattr(spool, "reconcile", denied)
+    with pytest.raises(PermissionError):
+        await bridge.run_once()
+    assert bridge.process.calls == 0
 
 
 @pytest.mark.asyncio

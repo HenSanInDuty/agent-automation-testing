@@ -1,0 +1,17 @@
+{
+  "operations": 1,
+  "frames_verified": 1,
+  "frames_unavailable": 1,
+  "model_jobs": 0,
+  "downloads": 0,
+  "diagnosis": {
+    "categories": [],
+    "missing_evidence_operations": [
+      "aaefce23-ce8a-44e0-b40c-82d569bdc4ca"
+    ],
+    "reason": "initial_capture_failed",
+    "physical_retry_authorized": false
+  },
+  "state": "unavailable",
+  "reason": "initial_capture_failed"
+}

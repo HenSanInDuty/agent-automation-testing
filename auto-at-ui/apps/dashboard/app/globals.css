@@ -163,6 +163,12 @@ h3 { font-size: 1rem; }
 .vision-screen-activity--stopped { border-color: #e6d5ac; border-left-color: var(--color-warning); background: var(--color-warning-bg); }
 .vision-screen-activity--stopped small, .vision-screen-activity--stopped span { color: #705016; }
 .vision-click-target { position: absolute; border: 2px solid #facc15; border-radius: 4px; background: rgb(250 204 21 / .18); box-shadow: 0 0 0 1px #172033, 0 0 0 3px rgb(255 255 255 / .8); pointer-events: none; }
+.vision-page-inventory { margin-block: 1rem; }
+.vision-page-inventory summary { cursor: pointer; overflow-wrap: anywhere; line-height: 1.6; }
+.vision-page-inventory li { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.vision-last-click { margin-top: 1rem; }
+.vision-last-click summary { cursor: pointer; margin-bottom: .6rem; }
+.vision-last-click .vision-screen-viewport { max-height: 280px; }
 .vision-click-marker { position: absolute; z-index: 1; width: 32px; height: 32px; border: 3px solid #facc15; border-radius: 50%; background: rgb(250 204 21 / .15); box-shadow: 0 0 0 2px #172033, 0 0 0 4px rgb(255 255 255 / .9); transform: translate(-50%, -50%); pointer-events: none; }
 .vision-click-marker::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: #172033; transform: translate(-50%, -50%); }
 .vision-click-marker--pulse { animation: vision-click-pulse .6s ease-out 2; }

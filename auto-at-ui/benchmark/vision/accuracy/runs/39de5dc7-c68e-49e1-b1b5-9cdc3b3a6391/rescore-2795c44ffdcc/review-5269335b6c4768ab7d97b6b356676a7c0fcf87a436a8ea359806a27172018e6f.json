@@ -1,0 +1,11 @@
+{
+  "after_checksum": "7336944746e0e0f3b7bea1040b0b545f3d99fc25801639573bdd9517e6e9d14f",
+  "before_checksum": "1596e80f3623ebeab8600ce08b0fc133fd250684d67ec9e527e937054ab6c213",
+  "finding": "Third character control is visibly active and matching Toan Chan panel is displayed.",
+  "operation_id": "2047dd4d-eb3b-4f50-988d-8c4beeece7bb",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

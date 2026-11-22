@@ -1,0 +1,52 @@
+{
+  "session_id": "c2cb227d-6c27-4323-971d-da27bbe67fcc",
+  "source_hash": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3",
+  "images": {
+    "control-plane": "sha256:e0d14d64868e51a28a03a2b14c10c2be8aac70df14fb4fa369a37fe7aff7955a",
+    "temporal-worker": "sha256:5fac6978b97d80761458a20d436561930c5b5f1b4aa80fc395b095d7da3e2cc6",
+    "playwright-worker": "sha256:f347db8a087e7fdf799b968cfa7c9a8bf2e4e917a9690b3771ab203137d61495",
+    "codex-bridge": "sha256:d5cbc0aec49efcaf4157d726b206c201024f47810c1610d1569cce52d23693bd",
+    "dashboard": "sha256:8de1616616aa83002555b133ce2c4b46c2da644daa6ff09d92f6c5d4c7aa2212"
+  },
+  "deployed_source_checks": {
+    "control-plane:apps/control-plane/application/vision_trace_events.py": "4bc9725f4b40666f790639957e3004683bef2c365b57daf991b9e1eb235d54c3",
+    "control-plane:apps/control-plane/infrastructure/codex_bridge/doctor.py": "f158d4540f5045003b8bf1dc1b27364a6049a5d42c5d6c37f28a844d668a0e0a",
+    "control-plane:apps/control-plane/api/v1/routes/generation.py": "692e8a1a02cbfba299d170c885fed6e41688bb73350241ac43801b4b0fef0331",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "temporal-worker:apps/control-plane/application/vision_trace_events.py": "4bc9725f4b40666f790639957e3004683bef2c365b57daf991b9e1eb235d54c3",
+    "temporal-worker:apps/control-plane/infrastructure/codex_bridge/doctor.py": "f158d4540f5045003b8bf1dc1b27364a6049a5d42c5d6c37f28a844d668a0e0a",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "playwright-worker:workers/playwright/src/vision-operations.ts": "353505369efd2633a1beac5cc4906261f4d79dd8839af8baf741d850c9905417",
+    "playwright-worker:workers/playwright/src/vision.ts": "870a7117b89aacad5459d05c7c4edf124d28c87daeadd1e52938cebcf8af1380",
+    "playwright-worker:workers/playwright/src/vision-dom.ts": "b6b4f4f03697160841b50583c58aa959d54fea43eb0acfc75768a4fe3156d1a6",
+    "playwright-worker:workers/playwright/src/vision-history.ts": "d7021992377589c2a3e51137426e3ad3cdabc9c499b6d0349c24703d194962b3",
+    "playwright-worker:workers/playwright/src/vision-contract.generated.ts": "d13ed057a1d6126b3af22143821dc67ed0faacb75e64a745d9369f8beb2fe32f"
+  },
+  "prompt_version": "codex-dom-v11",
+  "playwright_version": "1.50.1",
+  "chromium_version": "133.0.6943.16",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "runtime_policy": {
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "prompt_version": "codex-dom-v11",
+    "max_steps": 20,
+    "max_requests_per_minute": 5,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": "0.25"
+  },
+  "hypothesis": "qualification-01-frozen-candidate-20261117"
+}

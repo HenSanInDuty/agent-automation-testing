@@ -1,7 +1,7 @@
 """Private v4 worker transport. Browser input values exist only in request/session RAM."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -17,7 +17,7 @@ from auto_at.contracts.vision import (
     VisualOperation,
     VisualOperationFrame,
 )
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 
 class VisualWorkerIdentity(BaseModel):
@@ -35,12 +35,39 @@ class VisualWorkerOpen(VisualWorkerIdentity):
     allowed_origins: tuple[str, ...] = Field(min_length=0, max_length=100)
     deadline: datetime
     max_session_seconds: int = Field(ge=1, le=3600)
+    step_timeout_seconds: int | None = Field(default=None, ge=1, le=3600)
     max_states: int = Field(ge=1, le=200)
-    max_hops: int = Field(ge=1, le=10)
+    max_hops: int = Field(ge=1, le=20)
     max_screenshot_bytes: int = Field(ge=1024, le=5_000_000)
-    required_capabilities: tuple[Literal["dom-observation-v1"], ...] = Field(
-        default=(), max_length=1,
+    interaction_scope: Literal["all", "buttons", "visual_buttons"] = "all"
+    required_capabilities: tuple[Literal[
+        "dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1",
+        "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1",
+        "click-context-v1", "agent-dom-path-v1",
+    ], ...] = Field(
+        default=(), max_length=9,
     )
+    # Agent-loop engine only: relaxes worker guards behind one flag and carries the single
+    # source of sensitive-control terms (owned by the control plane).
+    agent_mode: bool = False
+    blocked_action_terms: tuple[Annotated[str, Field(min_length=1, max_length=40)], ...] = Field(
+        default=(), max_length=40,
+    )
+
+
+class VisualWorkerCheckTarget(VisualWorkerIdentity):
+    """Read-only validation of an approved target; allocates no operation or snapshot."""
+
+    snapshot_id: UUID
+    element_id: ElementId
+    checkpoint_id: UUID
+    allow_restored_document: bool = False
+
+
+class VisualWorkerTargetCheck(VisualWorkerCheckTarget):
+    matches_current: StrictBool
+    context_matches: StrictBool
+    same_document: StrictBool
 
 
 class VisualWorkerObserveDom(VisualWorkerIdentity):
@@ -49,6 +76,23 @@ class VisualWorkerObserveDom(VisualWorkerIdentity):
     snapshot_id: UUID
     max_elements: int = Field(default=100, ge=1, le=100)
     max_bytes: int = Field(default=65_536, ge=1024, le=65_536)
+    revalidate_snapshot_id: UUID | None = None
+    revalidate_element_ids: tuple[ElementId, ...] = Field(default=(), max_length=10)
+    revalidate_context_only: bool = False
+
+    @model_validator(mode="after")
+    def revalidation_pair(self):
+        if self.revalidate_context_only and (
+            not self.revalidate_snapshot_id or self.revalidate_element_ids
+        ):
+            raise ValueError("context-only revalidation requires a snapshot and no targets")
+        if not self.revalidate_context_only and (
+            bool(self.revalidate_snapshot_id) != bool(self.revalidate_element_ids)
+        ):
+            raise ValueError("revalidation requires a snapshot and targets")
+        if len(set(self.revalidate_element_ids)) != len(self.revalidate_element_ids):
+            raise ValueError("duplicate revalidation target")
+        return self
 
 
 class VisualWorkerDomObservation(VisualWorkerIdentity):
@@ -118,7 +162,9 @@ class VisualWorkerAction(BaseModel):
 
 
 class VisualWorkerPrepare(VisualWorkerIdentity):
+    step_deadline: datetime | None = None
     operation_id: UUID
+    refresh_observation: bool = False
     purpose: Literal["explore", "restore", "replay", "setup"]
     action: VisualWorkerAction
     expected_state_fingerprint: Fingerprint
@@ -128,6 +174,7 @@ class VisualWorkerPrepare(VisualWorkerIdentity):
     checkpoint_id: UUID | None = None
     checkpoint_state_id: UUID | None = None
     restore_checkpoint_id: UUID | None = None
+    history_checkpoint_id: UUID | None = None
     replay_operation_id: UUID | None = None
     expected_locator: VisualLocatorDescriptor | None = None
     dom_snapshot_id: UUID | None = None
@@ -135,10 +182,24 @@ class VisualWorkerPrepare(VisualWorkerIdentity):
 
     @model_validator(mode="after")
     def references(self) -> "VisualWorkerPrepare":
+        if self.history_checkpoint_id and (
+            self.purpose != "restore" or self.action.kind != "back"
+            or self.restore_checkpoint_id or self.checkpoint_id or self.replay_operation_id
+        ):
+            raise ValueError("history selection requires a saved checkpoint and restore Back")
+        if self.refresh_observation and (
+            self.purpose != "setup" or self.action.kind != "wait" or not self.checkpoint_id
+            or self.proposal_id or self.dom_snapshot_id or self.expected_locator
+            or self.restore_checkpoint_id or self.replay_operation_id
+        ):
+            raise ValueError("observation refresh requires a new read-only setup checkpoint")
         if (self.dom_snapshot_id is None) != (self.dom_element_id is None):
             raise ValueError("DOM prepare requires snapshot and element together")
         if self.dom_snapshot_id and self.action.kind not in {"click", "type"}:
             raise ValueError("DOM binding requires a target action")
+        if (self.expected_locator and self.expected_locator.strategy == "dom_path"
+                and not self.dom_snapshot_id):
+            raise ValueError("ephemeral locator requires its live DOM snapshot")
         if self.action.kind in {"click", "type"} and not (self.state_id and self.proposal_id):
             raise ValueError("target action requires state and proposal")
         if (self.checkpoint_id is None) != (self.checkpoint_state_id is None):
@@ -164,6 +225,7 @@ class VisualWorkerAck(VisualWorkerIdentity):
 
 class VisualWorkerOperationResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
+    history_restore_available: bool = False
 
     operation: VisualOperation
     frames: tuple[VisualOperationFrame, ...] = Field(max_length=2)
@@ -175,10 +237,19 @@ class VisualWorkerOperationResult(BaseModel):
     duration_ms: int = Field(ge=0, le=3_600_000)
     acknowledged: bool
     replayable: bool
+    # Older workers provide no dispatch proof; absence never authorizes recovery.
+    dispatch_started: bool | None = None
+    failure_stage: Literal["prepare", "before_dispatch"] | None = None
 
     @model_validator(mode="after")
     def evidence_scope(self) -> "VisualWorkerOperationResult":
         op = self.operation
+        if self.failure_stage is not None and (
+            self.dispatch_started is not False or op.status != "rejected"
+        ):
+            raise ValueError("pre-dispatch failure requires a rejected, undispatched operation")
+        if self.dispatch_started is False and op.status in {"completed", "executing", "unknown"}:
+            raise ValueError("operation status conflicts with dispatch proof")
         if len({frame.role for frame in self.frames}) != len(self.frames):
             raise ValueError("duplicate frame role")
         for item in (*self.frames, *((self.locator,) if self.locator else ())):

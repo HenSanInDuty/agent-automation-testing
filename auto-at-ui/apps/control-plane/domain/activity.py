@@ -50,6 +50,23 @@ _VISION_PROGRESS = {
         "Visual action candidates were received.",
         frozenset({"state_sequence", "candidate_count"}),
     ),
+    "viewport.scan_ready": (
+        "info", "Fresh browser context verified for deterministic viewport discovery.",
+        frozenset({"state_sequence"}),
+    ),
+    "candidate.revalidated": (
+        "info", "DOM targets were revalidated against fresh browser evidence.",
+        frozenset({"state_sequence", "candidate_count"}),
+    ),
+    "candidate.revalidation_rejected": (
+        "info", "Changed DOM targets or context prevented proposal reuse.",
+        frozenset({"reason_code"}),
+    ),
+    "inventory.completed": (
+        "info",
+        "Initial page inventory was recorded before executing button actions.",
+        frozenset({"state_sequence", "candidate_count"}),
+    ),
     "candidate.unavailable": (
         "info", "No new candidates accepted; validated queued candidates may continue.",
         frozenset({"reason_code"}),
@@ -116,6 +133,12 @@ _VISION_PROGRESS = {
     "unavailable": (
         "unavailable", "Visual exploration is unavailable.", frozenset({"reason_code"}),
     ),
+    # Agent-loop engine: one event per model step; never carries goals, memory or typed text.
+    "agent.step": (
+        "running", "Agent loop step was recorded.",
+        frozenset({"step_index", "snapshot_version", "action_count", "executed_count",
+                   "reason_code"}),
+    ),
 }
 
 for _stage, _summary in {
@@ -130,6 +153,7 @@ for _stage, _summary in {
     "state.restore_started": "Browser state restoration started.",
     "state.restored": "Browser state restoration was verified.",
     "state.restore_failed": "Browser state restoration failed.",
+    "state.branch_unreachable": "A branch was skipped: restoring it would need an unsafe replay.",
     "handoff.ready": "Verified exploration evidence is ready for generation.",
     "handoff.unavailable": "Exploration handoff is unavailable.",
 }.items():
@@ -243,9 +267,15 @@ class ActivityEvent:
         if "reason_code" in safe_metadata and safe_metadata["reason_code"] not in {
             "handoff_branch_limit", "handoff_incomplete", "no_eligible_branches",
             "generation_request_unavailable",
-            "policy_disabled", "session_timeout", "image_delivery_auth_required",
+            "policy_disabled", "session_timeout", "step_timeout", "image_delivery_auth_required",
             "visual_exploration_unavailable", "step_limit",
             "initial_capture_failed", "capture_failed",
+            "exploration_call_limit", "exploration_coverage_incomplete",
+            "stale_dom_context", "stale_dom_target", "stale_dom_snapshot",
+            "state_mismatch", "state_changed_during_observation", "dom_snapshot_limit",
+            "unattributed_popup", "dom_observation_unavailable",
+            "agent_done", "agent_stopped", "agent_step_limit", "invalid_ref", "stale_ref",
+            "origin_blocked", "sensitive_action_blocked",
             *VISION_MODEL_FAILURE_REASONS,
         }:
             raise ValueError("vision progress reason is invalid")
@@ -258,10 +288,16 @@ class ActivityEvent:
                 UUID(str(safe_metadata["job_id"]))
             if "mode" in safe_metadata and safe_metadata["mode"] not in {"dom", "image"}:
                 raise ValueError("invalid Codex mode")
-            for name, upper in (("call_sequence", 10), ("elapsed_ms", 3_600_000)):
+            for name, upper in (("call_sequence", 20), ("elapsed_ms", 3_600_000)):
                 if name in safe_metadata and (type(safe_metadata[name]) is not int
                                               or not 0 <= safe_metadata[name] <= upper):
                     raise ValueError("invalid Codex count")
+        if stage == "agent.step":
+            for name, upper in (("step_index", 20), ("snapshot_version", 1_000_000),
+                                ("action_count", 10), ("executed_count", 10)):
+                if name in safe_metadata and (type(safe_metadata[name]) is not int
+                                              or not 0 <= safe_metadata[name] <= upper):
+                    raise ValueError("invalid agent step count")
         if "purpose" in safe_metadata and safe_metadata["purpose"] not in {
             "setup", "explore", "restore", "replay",
         }:

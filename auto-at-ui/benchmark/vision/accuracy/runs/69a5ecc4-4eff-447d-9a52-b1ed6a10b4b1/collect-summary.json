@@ -1,0 +1,24 @@
+{
+  "operations": 169,
+  "frames_verified": 336,
+  "frames_unavailable": 2,
+  "model_jobs": 18,
+  "downloads": 2,
+  "diagnosis": {
+    "categories": [
+      {
+        "operation_id": "139ea396-90d3-49d4-b6b0-be4dfef2f3c6",
+        "category": "operation_failure",
+        "code": "history_checkpoint_unavailable",
+        "purpose": "restore"
+      }
+    ],
+    "missing_evidence_operations": [
+      "139ea396-90d3-49d4-b6b0-be4dfef2f3c6"
+    ],
+    "reason": "exploration_coverage_incomplete",
+    "physical_retry_authorized": false
+  },
+  "state": "unavailable",
+  "reason": "exploration_coverage_incomplete"
+}

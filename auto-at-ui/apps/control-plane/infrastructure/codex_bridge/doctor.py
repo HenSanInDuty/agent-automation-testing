@@ -1,16 +1,20 @@
 """Offline container, version, authentication and fallback sandbox checks; no inference."""
 
 import json
+import logging
 import os
 import socket
 import subprocess
 import tempfile
 from pathlib import Path
+from time import monotonic, sleep
 
-from auto_at.contracts.codex_bridge import CodexBridgeReadiness
+from auto_at.contracts.codex_bridge import BRIDGE_PROVIDER_MODELS, CodexBridgeReadiness
 from config import Settings
+from domain.codex_bridge import BRIDGE_CLI_VERSIONS, CLAUDE_CLI_VERSION
 
 from infrastructure.codex_bridge.catalogue import validate_catalogue, validate_instructions
+from infrastructure.codex_bridge.claude_process import read_token
 from infrastructure.codex_bridge.process import (
     CLI_VERSION,
     DISABLED_FEATURES,
@@ -29,11 +33,52 @@ def container_flags_qualified(*, uid: int, root_read_only: bool, status: str) ->
         return False
 
 
+def claude_doctor(settings: Settings, configured: bool) -> CodexBridgeReadiness:
+    """Offline checks for the `claude -p` engine; no inference, never prints the token."""
+    fail = CodexBridgeReadiness(
+        provider="claude_cli", configured=configured, failure_code="bridge_cli_unsupported",
+    )
+    executable = settings.codex_bridge_executable
+    if (os.name != "posix" or not Path("/.dockerenv").is_file()
+            or executable != "/usr/local/bin/claude"):
+        return fail
+    try:
+        if not container_flags_qualified(
+            uid=os.geteuid(), root_read_only=bool(os.statvfs("/").f_flag & os.ST_RDONLY),
+            status=Path("/proc/self/status").read_text(),
+        ):
+            return fail
+        environment = {"HOME": "/bridge-home", "PATH": "/usr/local/bin:/usr/bin:/bin",
+                       "LANG": "C.UTF-8", "DISABLE_AUTOUPDATER": "1"}
+        version = subprocess.run([executable, "--version"], capture_output=True, text=True,
+                                 timeout=20, env=environment)
+        if version.returncode or version.stdout.split()[:1] != [CLAUDE_CLI_VERSION]:
+            return fail
+        help_text = subprocess.run([executable, "--help"], capture_output=True, text=True,
+                                   timeout=20, env=environment)
+        for flag in ("--tools", "--strict-mcp-config", "--setting-sources", "--json-schema",
+                     "--no-session-persistence", "--disable-slash-commands",
+                     "--input-format", "--system-prompt", "--effort"):
+            if help_text.returncode or flag not in help_text.stdout:
+                return fail
+        authenticated = read_token(settings.claude_bridge_token_file) is not None
+        return CodexBridgeReadiness(
+            provider="claude_cli", configured=configured, online=False,
+            authenticated=authenticated, capabilities_qualified=True,
+            model_access="unverified",
+            failure_code=None if authenticated else "bridge_login_required",
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return fail
+
+
 def doctor(settings: Settings) -> CodexBridgeReadiness:
     configured = bool(
         settings.codex_bridge_enabled and settings.codex_bridge_id
         and settings.codex_bridge_allowed_tenant and settings.codex_bridge_host_spool
     )
+    if settings.codex_bridge_engine == "claude":
+        return claude_doctor(settings, configured)
     fail = CodexBridgeReadiness(configured=configured, failure_code="bridge_cli_unsupported")
     # Offline filesystem probes and feature flags cannot certify model tool
     # isolation. The pinned CLI's full wire protocol must also be qualified.
@@ -128,26 +173,55 @@ class FileReadiness:
         self.settings = settings
 
     def read(self, tenant_id, now):
-        from datetime import datetime
+        from datetime import datetime, timedelta
+
+        started = monotonic()
 
         settings = self.settings
         if not settings.codex_bridge_enabled or tenant_id != settings.codex_bridge_allowed_tenant:
             return CodexBridgeReadiness()
+        phase, age = "file_read", None
         try:
             root = Path(settings.codex_bridge_container_spool)
             from infrastructure.codex_bridge.spool import _plain
             _plain(root, directory=True)
             file = root / ".heartbeat.json"
-            _plain(file)
-            with file.open("rb") as source:
-                data = json.loads(source.read(4097))
-            age = (now - datetime.fromisoformat(data["recorded_at"])).total_seconds()
-            if (not 0 <= age < settings.codex_bridge_stale_seconds
-                    or data["tenant_id"] != tenant_id
-                    or data["bridge_id"] != str(settings.codex_bridge_id)
-                    or data["model"] != "gpt-6-luna" or data["protocol"] != "v1"
-                    or data["cli_version"] != CLI_VERSION):
+            for attempt in range(3):
+                try:
+                    _plain(file)
+                    with file.open("rb") as source:
+                        data = json.loads(source.read(4097))
+                    break
+                except FileNotFoundError:
+                    # Some shared mounts briefly hide the old name during
+                    # atomic replacement. Retry only this read race; never use
+                    # cached readiness or relax freshness/identity validation.
+                    if attempt == 2:
+                        raise
+                    sleep(.01)
+            # An atomic heartbeat replacement may occur during filesystem I/O.
+            # Compare against the end of this read, retaining the caller's clock
+            # and the same stale/future limits; do not mistake that race for revocation.
+            checked_at = now + timedelta(seconds=monotonic() - started)
+            age = (checked_at - datetime.fromisoformat(data["recorded_at"])).total_seconds()
+            phase = "freshness"
+            if not 0 <= age < settings.codex_bridge_stale_seconds:
                 raise ValueError("stale heartbeat")
-            return CodexBridgeReadiness.model_validate(data["readiness"])
-        except (OSError, ValueError, KeyError, TypeError):
+            phase = "identity"
+            readiness = CodexBridgeReadiness.model_validate(data["readiness"])
+            if (data["tenant_id"] != tenant_id
+                    or data["bridge_id"] != str(settings.codex_bridge_id)
+                    or data["model"] != BRIDGE_PROVIDER_MODELS[readiness.provider]
+                    or data["protocol"] != "v1"
+                    or data["cli_version"] != BRIDGE_CLI_VERSIONS[readiness.provider]):
+                raise ValueError("stale heartbeat")
+            phase = "readiness"
+            return readiness
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            logging.getLogger(__name__).warning("Bridge heartbeat validation failed.", extra={
+                "event": "codex.heartbeat.rejected", "phase": phase,
+                "age_seconds": round(age, 6) if age is not None else None,
+                "read_duration_ms": round((monotonic() - started) * 1000),
+                "error_type": type(error).__name__, "errno": getattr(error, "errno", None),
+            })
             return CodexBridgeReadiness(configured=True, failure_code="bridge_offline")

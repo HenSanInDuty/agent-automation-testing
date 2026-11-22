@@ -74,6 +74,19 @@ def test_siblings_are_distinct_complete_paths_without_restoration():
     assert all(b.status == "ready" for b in package.branches)
 
 
+def test_trailing_read_only_refresh_does_not_hide_a_completed_branch():
+    scope, snapshot, _ = branch_fixture()
+    root, left, right = snapshot["operations"]
+    refresh = evolve(right, id=uuid4(), purpose="setup", action_kind="wait",
+                     parent_operation_id=right.id, locator_id=None, proposal_id=None, sequence=4)
+    package = build_vision_handoff(scope, snapshot | {
+        "operations": (*snapshot["operations"], refresh),
+    })
+    assert [[s.operation_id for s in b.steps] for b in package.branches] == [
+        [root.id, left.id], [root.id, right.id],
+    ]
+
+
 def test_typed_branches_keep_unbound_references_and_cannot_be_ready():
     _, _, package = branch_fixture(input_branch=True)
     assert all(
@@ -82,6 +95,19 @@ def test_typed_branches_keep_unbound_references_and_cannot_be_ready():
         and b.steps[-1].input_reference
         for b in package.branches
     )
+
+
+def test_live_dom_path_cannot_be_handed_off_as_a_durable_test_locator():
+    scope, snapshot, _ = branch_fixture(names=("Synthetic",))
+    locator = snapshot["locators"][0].model_copy(update={
+        "descriptor": VisualLocatorDescriptor(
+            schema_version="v2", strategy="dom_path",
+            value="html > body:nth-of-type(1) > button:nth-of-type(1)",
+        ),
+    })
+    package = build_vision_handoff(scope, snapshot | {"locators": (locator,)})
+    assert package.branches[0].status == "blocked"
+    assert package.branches[0].reason_code == "ephemeral_locator"
 
 
 def test_unknown_outcome_is_retained_as_a_blocked_branch():

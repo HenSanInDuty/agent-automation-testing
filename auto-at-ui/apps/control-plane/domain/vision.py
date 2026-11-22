@@ -11,6 +11,18 @@ class VisionImageAuthorizationRequired(RuntimeError):
     """Image delivery requires renewed authorization; no provider details escape."""
 
 
+class VisionObservationUnavailable(RuntimeError):
+    """Closed worker failure categories; never carry raw HTTP diagnostics."""
+
+    def __init__(self, code: str):
+        self.code = code if code in {
+            "state_mismatch", "state_changed_during_observation", "dom_snapshot_limit",
+            "unattributed_popup",
+            "stale_dom_context", "stale_dom_target", "stale_dom_snapshot",
+        } else "dom_observation_unavailable"
+        super().__init__(self.code)
+
+
 VISION_MODEL_FAILURE_REASONS = frozenset({
     "provider_not_configured", "provider_auth_failed", "provider_billing_required",
     "provider_rate_limited", "provider_model_unavailable", "provider_timeout",

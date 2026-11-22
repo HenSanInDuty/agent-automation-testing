@@ -1,0 +1,40 @@
+[
+  {
+    "session_id": "3ec3b50d-3f9c-4375-b894-696ed9d1f370",
+    "operation_id": "b193297b-2c45-45d6-9d53-bc77cf12708c",
+    "destination_hashes": [
+      "c6601674bc24390a6e37fb1d3982731a21eb3f0fedd06a7840b3250fae548226"
+    ],
+    "truncated": false,
+    "status": "completed",
+    "navigation_chain": [
+      {
+        "url_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+        "redirected_from_sha256": null
+      },
+      {
+        "url_sha256": "c6601674bc24390a6e37fb1d3982731a21eb3f0fedd06a7840b3250fae548226",
+        "redirected_from_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3"
+      }
+    ]
+  },
+  {
+    "session_id": "3ec3b50d-3f9c-4375-b894-696ed9d1f370",
+    "operation_id": "4f8bef60-1aa8-4ee5-801a-37091dd38088",
+    "destination_hashes": [
+      "6b761113630a1f3046fdc2a0e94cfaeefb1e1aacf9da90a3e47fdd5853ea1cf9"
+    ],
+    "truncated": false,
+    "status": "completed",
+    "navigation_chain": [
+      {
+        "url_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+        "redirected_from_sha256": null
+      },
+      {
+        "url_sha256": "6b761113630a1f3046fdc2a0e94cfaeefb1e1aacf9da90a3e47fdd5853ea1cf9",
+        "redirected_from_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3"
+      }
+    ]
+  }
+]

@@ -1,0 +1,2700 @@
+{
+  "schema_version": "visual-button-dataset-v1",
+  "source_url": "https://mongchiton.vn/",
+  "captured_on": "2026-11-01",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "classification": "public_web_ui_metadata",
+  "annotation_method": "Manual screenshot review and DOM cross-check; labels independent of production classifier",
+  "scope": "Homepage desktop scroll-through only. UI positions, including floating duplicates, are separate targets. No hidden tab/mobile completeness claim.",
+  "positives": 47,
+  "negatives": 14,
+  "examples": [
+    {
+      "id": "mct-01",
+      "split": "site_regression",
+      "expected": true,
+      "group": "header",
+      "label": "TRANG CHỦ",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "linear-gradient(0deg, rgb(205, 139, 33) 0%, rgb(155, 91, 34) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 162.6796875,
+          "height": 41.07421875,
+          "onclick": true,
+          "label": "TRANG CHỦ"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1410,
+          "height": 66,
+          "onclick": false,
+          "label": "TRANG CHỦ\n\nSỰ KIỆN\n\nCẨM NANG\n\nĐIỀU KHOẢN\n\nCỘNG ĐỒNG\n\nHỖ TRỢ",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 374,
+        "y": 11,
+        "width": 163,
+        "height": 41
+      },
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-dark-brown-linear border-palette-light-brown -translate-y-0.5"
+    },
+    {
+      "id": "mct-02",
+      "split": "site_regression",
+      "expected": true,
+      "group": "header",
+      "label": "SỰ KIỆN",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "linear-gradient(0deg, rgb(245, 224, 186) 0%, rgb(250, 183, 89) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 162.6796875,
+          "height": 41.07421875,
+          "onclick": true,
+          "label": "SỰ KIỆN"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1410,
+          "height": 66,
+          "onclick": false,
+          "label": "TRANG CHỦ\n\nSỰ KIỆN\n\nCẨM NANG\n\nĐIỀU KHOẢN\n\nCỘNG ĐỒNG\n\nHỖ TRỢ",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 549,
+        "y": 12,
+        "width": 163,
+        "height": 41
+      },
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-ligh"
+    },
+    {
+      "id": "mct-03",
+      "split": "site_regression",
+      "expected": true,
+      "group": "header",
+      "label": "CẨM NANG",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "linear-gradient(0deg, rgb(245, 224, 186) 0%, rgb(250, 183, 89) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 162.6796875,
+          "height": 41.07421875,
+          "onclick": true,
+          "label": "SỰ KIỆN"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1410,
+          "height": 66,
+          "onclick": false,
+          "label": "TRANG CHỦ\n\nSỰ KIỆN\n\nCẨM NANG\n\nĐIỀU KHOẢN\n\nCỘNG ĐỒNG\n\nHỖ TRỢ",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 723,
+        "y": 12,
+        "width": 163,
+        "height": 41
+      },
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-ligh"
+    },
+    {
+      "id": "mct-04",
+      "split": "site_regression",
+      "expected": true,
+      "group": "header",
+      "label": "ĐIỀU KHOẢN",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "linear-gradient(0deg, rgb(245, 224, 186) 0%, rgb(250, 183, 89) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 162.6796875,
+          "height": 41.07421875,
+          "onclick": true,
+          "label": "SỰ KIỆN"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1410,
+          "height": 66,
+          "onclick": false,
+          "label": "TRANG CHỦ\n\nSỰ KIỆN\n\nCẨM NANG\n\nĐIỀU KHOẢN\n\nCỘNG ĐỒNG\n\nHỖ TRỢ",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 898,
+        "y": 12,
+        "width": 163,
+        "height": 41
+      },
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-ligh"
+    },
+    {
+      "id": "mct-05",
+      "split": "site_regression",
+      "expected": true,
+      "group": "header",
+      "label": "CỘNG ĐỒNG",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "linear-gradient(0deg, rgb(245, 224, 186) 0%, rgb(250, 183, 89) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 162.6796875,
+          "height": 41.07421875,
+          "onclick": true,
+          "label": "SỰ KIỆN"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1410,
+          "height": 66,
+          "onclick": false,
+          "label": "TRANG CHỦ\n\nSỰ KIỆN\n\nCẨM NANG\n\nĐIỀU KHOẢN\n\nCỘNG ĐỒNG\n\nHỖ TRỢ",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 1073,
+        "y": 12,
+        "width": 163,
+        "height": 41
+      },
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-ligh"
+    },
+    {
+      "id": "mct-06",
+      "split": "site_regression",
+      "expected": true,
+      "group": "header",
+      "label": "HỖ TRỢ",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "linear-gradient(0deg, rgb(245, 224, 186) 0%, rgb(250, 183, 89) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 162.6796875,
+          "height": 41.07421875,
+          "onclick": true,
+          "label": "SỰ KIỆN"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1410,
+          "height": 66,
+          "onclick": false,
+          "label": "TRANG CHỦ\n\nSỰ KIỆN\n\nCẨM NANG\n\nĐIỀU KHOẢN\n\nCỘNG ĐỒNG\n\nHỖ TRỢ",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 1247,
+        "y": 12,
+        "width": 163,
+        "height": 41
+      },
+      "reference_class": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-ligh"
+    },
+    {
+      "id": "mct-07",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_actions",
+      "label": "NẠP THẺ",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 92.4140625,
+          "height": 76.74609375,
+          "onclick": true,
+          "label": "NẠP THẺ"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 92.4140625,
+          "height": 76.74609375,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 859,
+        "y": 571,
+        "width": 92,
+        "height": 77
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-08",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_actions",
+      "label": "ĐĂNG KÝ",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 92.4140625,
+          "height": 76.74609375,
+          "onclick": true,
+          "label": "NẠP THẺ"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 92.4140625,
+          "height": 76.74609375,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 957,
+        "y": 571,
+        "width": 92,
+        "height": 77
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-09",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_actions",
+      "label": "APPSTORE",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": true,
+          "label": "GOOGLE PLAY"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 548,
+        "y": 571,
+        "width": 137,
+        "height": 33
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-10",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_actions",
+      "label": "GOOGLE PLAY",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": true,
+          "label": "GOOGLE PLAY"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 694,
+        "y": 571,
+        "width": 137,
+        "height": 33
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-11",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_actions",
+      "label": "TRÊN WINDOW",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": true,
+          "label": "GOOGLE PLAY"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 548,
+        "y": 615,
+        "width": 137,
+        "height": 33
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-12",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_actions",
+      "label": "APK",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": true,
+          "label": "GOOGLE PLAY"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 137.0859375,
+          "height": 33.22265625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 694,
+        "y": 615,
+        "width": 137,
+        "height": 33
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-13",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_actions",
+      "label": "CHƠI NGAY",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 147.5318603515625,
+          "height": 113.34002685546875,
+          "onclick": true,
+          "label": "CHƠI NGAY"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 147.5318603515625,
+          "height": 113.34002685546875,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 360,
+        "y": 552,
+        "width": 149,
+        "height": 115
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-14",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_social",
+      "label": "Facebook",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 30.1640625,
+          "height": 29.015625,
+          "onclick": true,
+          "label": "Facebook"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 30.1640625,
+          "height": 29.015625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1084,
+        "y": 637,
+        "width": 30,
+        "height": 29
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-15",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_social",
+      "label": "Group Facebook",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 30.1640625,
+          "height": 29.015625,
+          "onclick": true,
+          "label": "Facebook"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 30.1640625,
+          "height": 29.015625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1118,
+        "y": 637,
+        "width": 30,
+        "height": 29
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-16",
+      "split": "site_regression",
+      "expected": true,
+      "group": "hero_social",
+      "label": "Youtube",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 30.1640625,
+          "height": 29.015625,
+          "onclick": true,
+          "label": "Facebook"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 30.1640625,
+          "height": 29.015625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1151,
+        "y": 637,
+        "width": 30,
+        "height": 29
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-17",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "thumbnail",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 474.75,
+          "height": 249,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "relative",
+          "width": 474.75,
+          "height": 249,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 247,
+        "y": 970,
+        "width": 475,
+        "height": 249
+      },
+      "reference_class": "w-full h-full mb-2.5"
+    },
+    {
+      "id": "mct-18",
+      "split": "site_regression",
+      "expected": true,
+      "group": "news_actions",
+      "label": "Tin Tức",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "url(\"https://mongchiton.vn/assets/bg-news-secondary-active.png\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 161.25,
+          "height": 39.328125,
+          "onclick": true,
+          "label": "Tin Tức"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 39.328125,
+          "onclick": false,
+          "label": "Tin Tức\nSự Kiện\nCẩm Nang",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 935,
+        "width": 161,
+        "height": 39
+      },
+      "reference_class": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secon"
+    },
+    {
+      "id": "mct-19",
+      "split": "site_regression",
+      "expected": true,
+      "group": "news_actions",
+      "label": "Sự Kiện",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "url(\"https://mongchiton.vn/assets/bg-news-secondary-active.png\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 161.25,
+          "height": 39.328125,
+          "onclick": true,
+          "label": "Tin Tức"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 39.328125,
+          "onclick": false,
+          "label": "Tin Tức\nSự Kiện\nCẩm Nang",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 899,
+        "y": 935,
+        "width": 161,
+        "height": 39
+      },
+      "reference_class": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secon"
+    },
+    {
+      "id": "mct-20",
+      "split": "site_regression",
+      "expected": true,
+      "group": "news_actions",
+      "label": "Cẩm Nang",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "url(\"https://mongchiton.vn/assets/bg-news-secondary-active.png\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 161.25,
+          "height": 39.328125,
+          "onclick": true,
+          "label": "Tin Tức"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 39.328125,
+          "onclick": false,
+          "label": "Tin Tức\nSự Kiện\nCẩm Nang",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 1066,
+        "y": 935,
+        "width": 161,
+        "height": 39
+      },
+      "reference_class": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secon"
+    },
+    {
+      "id": "mct-21",
+      "split": "site_regression",
+      "expected": true,
+      "group": "news_actions",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "url(\"https://mongchiton.vn/assets/btn-search.png\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 42,
+          "height": 32.25,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgb(233, 216, 187)",
+          "border": "0px",
+          "radius": "11px",
+          "cursor": "auto",
+          "position": "relative",
+          "width": 495.75,
+          "height": 32.015625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 1186,
+        "y": 987,
+        "width": 42,
+        "height": 32
+      },
+      "reference_class": " lg:bg-[url('/assets/btn-search.png')] bg-[url('/btn-search-mobile.png')] hover:lg:bg-[url('/assets/btn-search-active.png')] hover:bg-[url('/btn-search-mobile-active.png')] bg-no-repeat transition-all duration-200 ease-i"
+    },
+    {
+      "id": "mct-22",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px 0px 1px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 495.75,
+          "height": 33.75,
+          "onclick": true,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 236.25,
+          "onclick": false,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10\n\n[Công Bố",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 1029,
+        "width": 496,
+        "height": 34
+      },
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main"
+    },
+    {
+      "id": "mct-23",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "[Công Bố Kết Quả] Vinh Danh Bảng Vàng Đua Top Máy Chủ S12 | VLCM Origin",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px 0px 1px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 495.75,
+          "height": 33.75,
+          "onclick": true,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 236.25,
+          "onclick": false,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10\n\n[Công Bố",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 1063,
+        "width": 496,
+        "height": 34
+      },
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main"
+    },
+    {
+      "id": "mct-24",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "Thông Báo Thay Đổi Giftcode TÂN THỦ Mới | VLCM Origin",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px 0px 1px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 495.75,
+          "height": 33.75,
+          "onclick": true,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 236.25,
+          "onclick": false,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10\n\n[Công Bố",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 1097,
+        "width": 496,
+        "height": 34
+      },
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main"
+    },
+    {
+      "id": "mct-25",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "Khai Mở Server Mới S12 Mộc Long | VLCM Origin",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px 0px 1px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 495.75,
+          "height": 33.75,
+          "onclick": true,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 236.25,
+          "onclick": false,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10\n\n[Công Bố",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 1130,
+        "width": 496,
+        "height": 34
+      },
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main"
+    },
+    {
+      "id": "mct-26",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "QUY TỤ ANH HÙNG - CHÍNH SÁCH HỖ TRỢ OFFLINE VÕ LÂM CHÂN MỆNH ORIGIN",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px 0px 1px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 495.75,
+          "height": 33.75,
+          "onclick": true,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 236.25,
+          "onclick": false,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10\n\n[Công Bố",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 1164,
+        "width": 496,
+        "height": 34
+      },
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main"
+    },
+    {
+      "id": "mct-27",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "[Công Bố Kết Quả] Vinh Danh Bảng Vàng Đua Top Máy Chủ S11 | VLCM Origin",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px 0px 1px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 495.75,
+          "height": 33.75,
+          "onclick": true,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 236.25,
+          "onclick": false,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10\n\n[Công Bố",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 1198,
+        "width": 496,
+        "height": 34
+      },
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main"
+    },
+    {
+      "id": "mct-28",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "Thông Báo Thay Đổi Giftcode TÂN THỦ Mới Toàn Máy Chủ | VLCM Origin",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px 0px 1px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 495.75,
+          "height": 33.75,
+          "onclick": true,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 236.25,
+          "onclick": false,
+          "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin\n28/10\n\n[Công Bố",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 731,
+        "y": 1232,
+        "width": 496,
+        "height": 34
+      },
+      "reference_class": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main"
+    },
+    {
+      "id": "mct-29",
+      "split": "site_regression",
+      "expected": true,
+      "group": "news_actions",
+      "label": "",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "url(\"https://mongchiton.vn/assets/btn-more.png\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 132,
+          "height": 33.29296875,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 495.75,
+          "height": 336.09375,
+          "onclick": false,
+          "label": "Tin Tức\nSự Kiện\nCẩm Nang\n\nKhai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | V",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 1098,
+        "y": 1274,
+        "width": 132,
+        "height": 33
+      },
+      "reference_class": "transition-all duration-200 ease-in-out absolute bg-[url('/assets/btn-more-mobile.png')] hover:bg-[url('/assets/btn-more-mobile-active.png')] lg:bg-[url('/assets/btn-more.png')] lg:hover:bg-[url('/assets/btn-more-active."
+    },
+    {
+      "id": "mct-30",
+      "split": "site_regression",
+      "expected": true,
+      "group": "characters",
+      "label": "NHÂN VẬT",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "linear-gradient(0deg, rgb(205, 139, 33) 0%, rgb(155, 91, 34) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 164.25,
+          "height": 41.25,
+          "onclick": true,
+          "label": "NHÂN VẬT"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "url(\"https://mongchiton.vn/assets/characters/character-title.webp\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 532.5,
+          "height": 57,
+          "onclick": false,
+          "label": "NHÂN VẬT\nTHÚ CƯỠI",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 553,
+        "y": 1432,
+        "width": 164,
+        "height": 41
+      },
+      "reference_class": "button-common button-character-title active"
+    },
+    {
+      "id": "mct-31",
+      "split": "site_regression",
+      "expected": true,
+      "group": "characters",
+      "label": "THÚ CƯỠI",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "linear-gradient(0deg, rgb(205, 139, 33) 0%, rgb(155, 91, 34) 100%)",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "1px",
+          "radius": "65.57px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 164.25,
+          "height": 41.25,
+          "onclick": true,
+          "label": "NHÂN VẬT"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "url(\"https://mongchiton.vn/assets/characters/character-title.webp\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 532.5,
+          "height": 57,
+          "onclick": false,
+          "label": "NHÂN VẬT\nTHÚ CƯỠI",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 723,
+        "y": 1432,
+        "width": 164,
+        "height": 41
+      },
+      "reference_class": "button-common button-character-title "
+    },
+    {
+      "id": "mct-32",
+      "split": "site_regression",
+      "expected": true,
+      "group": "characters",
+      "label": "",
+      "tag": "div",
+      "features": {
+        "self": {
+          "tag": "div",
+          "background": "url(\"https://mongchiton.vn/assets/characters/shaolin.webp\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 118.46949768066406,
+          "height": 114.1875,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 112.5,
+          "height": 435,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 157,
+        "y": 1588,
+        "width": 113,
+        "height": 109
+      },
+      "reference_class": "character-switcher lg:-ml-5 ml-12"
+    },
+    {
+      "id": "mct-33",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "NẠP THẺ",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 87.75,
+          "height": 54.75,
+          "onclick": true,
+          "label": "NẠP THẺ"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 87.75,
+          "height": 54.75,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1258,
+        "y": 2705,
+        "width": 88,
+        "height": 55
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-34",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "ĐĂNG KÝ",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 87.75,
+          "height": 54.75,
+          "onclick": true,
+          "label": "NẠP THẺ"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 87.75,
+          "height": 54.75,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1349,
+        "y": 2705,
+        "width": 88,
+        "height": 55
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-35",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "APPSTORE",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": true,
+          "label": "APPSTORE"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1275,
+        "y": 2545,
+        "width": 145,
+        "height": 35
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-36",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "GOOGLE PLAY",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": true,
+          "label": "APPSTORE"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1275,
+        "y": 2583,
+        "width": 145,
+        "height": 35
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-37",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "WINDOW",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": true,
+          "label": "APPSTORE"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1275,
+        "y": 2621,
+        "width": 145,
+        "height": 35
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-38",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "APK",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": true,
+          "label": "APPSTORE"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 144.75,
+          "height": 35.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1275,
+        "y": 2660,
+        "width": 145,
+        "height": 35
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-39",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "Facebook",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 27.375,
+          "height": 26.25,
+          "onclick": true,
+          "label": "Facebook"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 27.375,
+          "height": 26.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1296,
+        "y": 2769,
+        "width": 27,
+        "height": 26
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-40",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "Group Facebook",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 27.375,
+          "height": 26.25,
+          "onclick": true,
+          "label": "Facebook"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 27.375,
+          "height": 26.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1333,
+        "y": 2769,
+        "width": 27,
+        "height": 26
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-41",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "Youtube",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 27.375,
+          "height": 26.25,
+          "onclick": true,
+          "label": "Facebook"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 27.375,
+          "height": 26.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1370,
+        "y": 2769,
+        "width": 27,
+        "height": 26
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-42",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "CHƠI NGAY",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 106.018310546875,
+          "height": 81.87179565429688,
+          "onclick": true,
+          "label": "CHƠI NGAY"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 106.018310546875,
+          "height": 81.87179565429688,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1292,
+        "y": 2801,
+        "width": 111,
+        "height": 86
+      },
+      "reference_class": "absolute inset-0"
+    },
+    {
+      "id": "mct-43",
+      "split": "site_regression",
+      "expected": true,
+      "group": "floating",
+      "label": "TOP",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 30,
+          "height": 35.625,
+          "onclick": true,
+          "label": "TOP"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 30,
+          "height": 35.625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": true
+        }
+      },
+      "source_box": {
+        "x": 1332,
+        "y": 2893,
+        "width": 30,
+        "height": 36
+      },
+      "reference_class": "absolute inset-0 cursor-pointer"
+    },
+    {
+      "id": "mct-44",
+      "split": "site_regression",
+      "expected": true,
+      "group": "characters",
+      "label": "",
+      "tag": "div",
+      "features": {
+        "self": {
+          "tag": "div",
+          "background": "url(\"https://mongchiton.vn/assets/characters/peach-blossom.webp\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 112.828125,
+          "height": 108.75,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 112.5,
+          "height": 435,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 109,
+        "y": 1694,
+        "width": 118,
+        "height": 114
+      },
+      "reference_class": "character-switcher lg:-ml-35 ml-0 active"
+    },
+    {
+      "id": "mct-45",
+      "split": "site_regression",
+      "expected": true,
+      "group": "characters",
+      "label": "",
+      "tag": "div",
+      "features": {
+        "self": {
+          "tag": "div",
+          "background": "url(\"https://mongchiton.vn/assets/characters/peach-blossom.webp\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 112.828125,
+          "height": 108.75,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 112.5,
+          "height": 435,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 112,
+        "y": 1805,
+        "width": 113,
+        "height": 109
+      },
+      "reference_class": "character-switcher lg:-ml-35 ml-0"
+    },
+    {
+      "id": "mct-46",
+      "split": "site_regression",
+      "expected": true,
+      "group": "characters",
+      "label": "",
+      "tag": "div",
+      "features": {
+        "self": {
+          "tag": "div",
+          "background": "url(\"https://mongchiton.vn/assets/characters/ancient-tomb.webp\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 112.828125,
+          "height": 108.75,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "absolute",
+          "width": 112.5,
+          "height": 435,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 151,
+        "y": 1914,
+        "width": 113,
+        "height": 109
+      },
+      "reference_class": "character-switcher lg:-ml-9 ml-8"
+    },
+    {
+      "id": "mct-47",
+      "split": "site_regression",
+      "expected": true,
+      "group": "characters",
+      "label": "",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "url(\"https://mongchiton.vn/assets/characters/video-frame.webp\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 330.75,
+          "height": 222.75,
+          "onclick": false,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 0,
+          "height": 0,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 848,
+        "y": 1865,
+        "width": 331,
+        "height": 223
+      },
+      "reference_class": "video-frame group z-10"
+    },
+    {
+      "id": "mct-48",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "update logo võ lâm chân mệnh",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 498.96002197265625,
+          "height": 373.590087890625,
+          "onclick": false,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "grab",
+          "position": "relative",
+          "width": 498.96002197265625,
+          "height": 373.590087890625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 169,
+        "y": 2232,
+        "width": 499,
+        "height": 374
+      },
+      "reference_class": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300"
+    },
+    {
+      "id": "mct-49",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "update logo võ lâm chân mệnh 5",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 594,
+          "height": 444.75,
+          "onclick": false,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "grab",
+          "position": "relative",
+          "width": 594,
+          "height": 444.75,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 423,
+        "y": 2196,
+        "width": 594,
+        "height": 445
+      },
+      "reference_class": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300"
+    },
+    {
+      "id": "mct-50",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "update logo võ lâm chân mệnh 4",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 498.96002197265625,
+          "height": 373.590087890625,
+          "onclick": false,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "grab",
+          "position": "relative",
+          "width": 498.96002197265625,
+          "height": 373.590087890625,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 772,
+        "y": 2232,
+        "width": 499,
+        "height": 374
+      },
+      "reference_class": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300"
+    },
+    {
+      "id": "mct-51",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "none",
+          "color": "rgb(55, 35, 19)",
+          "border": "0px",
+          "radius": "3.35544e+07px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 9,
+          "height": 9,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 129.4453125,
+          "height": 9,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 658,
+        "y": 2672,
+        "width": 9,
+        "height": 9
+      },
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]"
+    },
+    {
+      "id": "mct-52",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "none",
+          "color": "rgb(55, 35, 19)",
+          "border": "0px",
+          "radius": "3.35544e+07px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 30.75,
+          "height": 9,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 129.4453125,
+          "height": 9,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 677,
+        "y": 2672,
+        "width": 31,
+        "height": 9
+      },
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[41px]  w-[23px]"
+    },
+    {
+      "id": "mct-53",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "none",
+          "color": "rgb(55, 35, 19)",
+          "border": "0px",
+          "radius": "3.35544e+07px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 9,
+          "height": 9,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 129.4453125,
+          "height": 9,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 717,
+        "y": 2672,
+        "width": 9,
+        "height": 9
+      },
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]"
+    },
+    {
+      "id": "mct-54",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "none",
+          "color": "rgb(55, 35, 19)",
+          "border": "0px",
+          "radius": "3.35544e+07px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 9,
+          "height": 9,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 129.4453125,
+          "height": 9,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 736,
+        "y": 2672,
+        "width": 9,
+        "height": 9
+      },
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]"
+    },
+    {
+      "id": "mct-55",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "none",
+          "color": "rgb(55, 35, 19)",
+          "border": "0px",
+          "radius": "3.35544e+07px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 9,
+          "height": 9,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 129.4453125,
+          "height": 9,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 754,
+        "y": 2672,
+        "width": 9,
+        "height": 9
+      },
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]"
+    },
+    {
+      "id": "mct-56",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "none",
+          "color": "rgb(55, 35, 19)",
+          "border": "0px",
+          "radius": "3.35544e+07px",
+          "cursor": "pointer",
+          "position": "static",
+          "width": 9,
+          "height": 9,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 129.4453125,
+          "height": 9,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 773,
+        "y": 2672,
+        "width": 9,
+        "height": 9
+      },
+      "reference_class": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]"
+    },
+    {
+      "id": "mct-57",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "url(\"https://mongchiton.vn/assets/btn-feat-left.png\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 51.8671875,
+          "height": 66,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "relative",
+          "width": 825,
+          "height": 485.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 233,
+        "y": 2381,
+        "width": 52,
+        "height": 66
+      },
+      "reference_class": "transition-all rotate-180 duratin-200 ease-in-out absolute  -left-6 lg:-left-25 top-1/2 lg:top-[45%] -translate-y-1/2 scale-x-[-1] cursor-pointer z-30 w-[21.51px] h-[36.67px] lg:w-[69.16px] lg:h-[88px] hover:bg-[url('/as"
+    },
+    {
+      "id": "mct-58",
+      "split": "site_regression",
+      "expected": true,
+      "group": "carousel",
+      "label": "",
+      "tag": "button",
+      "features": {
+        "self": {
+          "tag": "button",
+          "background": "url(\"https://mongchiton.vn/assets/btn-feat-left.png\")",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "absolute",
+          "width": 51.8671875,
+          "height": 66,
+          "onclick": true,
+          "label": ""
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "relative",
+          "width": 825,
+          "height": 485.25,
+          "onclick": false,
+          "label": "",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 1156,
+        "y": 2381,
+        "width": 52,
+        "height": 66
+      },
+      "reference_class": "rotate-180 transition-all duratin-200 ease-in-out absolute -right-6 lg:-right-25 top-1/2 lg:top-[45%] -translate-y-1/2 cursor-pointer z-30 w-[21.51px] h-[36.67px] lg:w-[69.16px] lg:h-[88px] hover:bg-[url('/assets/btn-fea"
+    },
+    {
+      "id": "mct-59",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "FANPAGE",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 67.46484375,
+          "height": 22.5,
+          "onclick": true,
+          "label": "FANPAGE"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1440,
+          "height": 22.5,
+          "onclick": false,
+          "label": "FANPAGE\nGROUP\nYOUTUBE",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 550,
+        "y": 2994,
+        "width": 67,
+        "height": 23
+      },
+      "reference_class": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:aft"
+    },
+    {
+      "id": "mct-60",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "GROUP",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 52.46484375,
+          "height": 22.5,
+          "onclick": true,
+          "label": "GROUP"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1440,
+          "height": 22.5,
+          "onclick": false,
+          "label": "FANPAGE\nGROUP\nYOUTUBE",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 692,
+        "y": 2994,
+        "width": 52,
+        "height": 23
+      },
+      "reference_class": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:aft"
+    },
+    {
+      "id": "mct-61",
+      "split": "site_regression",
+      "expected": false,
+      "group": "content_link",
+      "label": "YOUTUBE",
+      "tag": "a",
+      "features": {
+        "self": {
+          "tag": "a",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "pointer",
+          "position": "relative",
+          "width": 70.32421875,
+          "height": 22.5,
+          "onclick": true,
+          "label": "YOUTUBE"
+        },
+        "parent": {
+          "tag": "div",
+          "background": "none",
+          "color": "rgba(0, 0, 0, 0)",
+          "border": "0px",
+          "radius": "0px",
+          "cursor": "auto",
+          "position": "static",
+          "width": 1440,
+          "height": 22.5,
+          "onclick": false,
+          "label": "FANPAGE\nGROUP\nYOUTUBE",
+          "sprite_sibling": false
+        }
+      },
+      "source_box": {
+        "x": 820,
+        "y": 2994,
+        "width": 70,
+        "height": 23
+      },
+      "reference_class": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:aft"
+    }
+  ]
+}

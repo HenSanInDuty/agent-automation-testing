@@ -3,6 +3,7 @@ import type { VisionResult } from "../generation-types";
 import { visionResultExportUrl } from "../generation-api";
 import { visionResultLabel } from "./vision-operation-model";
 import { visionFailureMessage } from "./vision-provider-model";
+import { VisionConclusion } from "./vision-conclusion";
 
 const outcomeLabels: Record<string, string> = {
   unsupported_target: "No supported control at the proposed position",
@@ -11,23 +12,25 @@ const outcomeLabels: Record<string, string> = {
   state_mismatch: "Page changed before the action",
   target_not_actionable: "Control is hidden, disabled or not editable",
   observed: "Action recorded; business outcome unverified",
+  download_started: "Download initiated; transfer cancelled after detection. File content unverified.",
 };
 
 export function VisionResultSummary({ result, apiUrl, compact = false }: { result: VisionResult; apiUrl: string; compact?: boolean }) {
   const report = result.exploration_report;
-  const finished = ["completed", "unavailable", "cancelled"].includes(result.exploration_state);
+  const partial = ["exploration_call_limit", "exploration_coverage_incomplete"].includes(result.completion_reason ?? "");
+  const stateLabel = partial ? "Partial exploration" : visionResultLabel(result.exploration_state);
   if (compact) return <section className="workspace-section vision-result-compact" aria-label="Exploration summary">
-    <div className="section-heading"><h2>{visionResultLabel(result.exploration_state)}</h2>{report && <span>{report.summary.controls_acted_on} control actions recorded</span>}</div>
+    <VisionConclusion conclusion={report?.conclusion} />
+    <div className="section-heading"><h2>{stateLabel}</h2>{report && <span>{report.summary.controls_acted_on} control actions recorded</span>}</div>
     {result.completion_reason && <p>{visionFailureMessage(result.completion_reason) ?? result.completion_reason.replaceAll("_", " ")}</p>}
-    <p>{finished ? "Partial coverage. Recorded actions are not passed tests." : "Following recorded browser actions."}</p>
     {result.evidence_status === "legacy_evidence_only" && <p>Legacy evidence only. Verified locators were not recorded for this session.</p>}
     {result.links.generation.state === "failed" && <p>Draft generation failed. Exploration evidence is still available.</p>}
     <div className="button-row">{(["draft", "run", "report"] as const).map((key) => result.links[key].href && <Link key={key} href={result.links[key].href!}>{key === "draft" ? "Review draft" : key === "run" ? "View run" : "View execution report"}</Link>)}</div>
   </section>;
   return <section id={`vision-report-${result.session_id}`} className="workspace-section vision-exploration-report" aria-label="Vision result">
     <div className="section-heading"><h2>Exploration report</h2><a className="button button--secondary" href={visionResultExportUrl(apiUrl, result.session_id)}>Download report JSON</a></div>
-    <p><strong>{finished ? "Partial coverage - full page coverage is not established." : "Exploration in progress - report updates as actions finish."}</strong></p>
-    <p>Session: <code>{result.session_id}</code> · {visionResultLabel(result.exploration_state)}</p>
+    <VisionConclusion conclusion={report?.conclusion} />
+    <p>Session: <code>{result.session_id}</code> · {stateLabel}</p>
     <p>{visionFailureMessage(result.completion_reason) ?? result.completion_reason?.replaceAll("_", " ")}</p>
     {report && <>
       <dl className="vision-counts">
@@ -37,7 +40,7 @@ export function VisionResultSummary({ result, apiUrl, compact = false }: { resul
         <div><dt>Scrolls completed</dt><dd>{report.summary.scrolls_completed}</dd></div>
         <div><dt>Candidates not attempted</dt><dd>{report.summary.candidates_not_attempted}</dd></div>
       </dl>
-      <p>Session limits: {report.limits.max_steps} model requests, {report.limits.max_session_seconds} seconds, {report.limits.max_hops} hops, {report.limits.max_states} states. A stopped session does not mean the bottom of the page was reached.</p>
+      <p>Session limits: {report.limits.max_steps} model requests, {report.limits.step_timeout_seconds != null ? `${report.limits.step_timeout_seconds} seconds per step (no session time limit)` : `${report.limits.max_session_seconds} seconds per session`}, {report.limits.max_hops} hops, {report.limits.max_states} states. A stopped session does not mean the bottom of the page was reached.</p>
       {report.findings.length ? <div className="table-wrap"><table>
         <caption>Recorded exploration actions</caption>
         <thead><tr><th>Operation</th><th>Control / action</th><th>Result</th><th>Observation</th></tr></thead>

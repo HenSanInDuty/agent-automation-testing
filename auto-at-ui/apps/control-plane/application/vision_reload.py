@@ -4,6 +4,7 @@ from hashlib import sha256
 from uuid import UUID
 
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, resolve_agent_runtime
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.intent import VisualIntentUnavailableError, decrypt_visual_intent
 from auto_at.contracts.codex_bridge import CodexConsentSnapshot, content_hash
 from config import Settings
@@ -52,7 +53,7 @@ class ReloadVisualExploration:
                 raise VisionStateError("idempotency key belongs to a different exploration")
             if (existing.provider, existing.model) != (expected_provider, expected_model):
                 raise VisionPolicyChanged("vision_policy_changed")
-            if existing.provider == "codex_cli" and (
+            if is_bridge_provider(existing.provider) and (
                 not existing.model_input_policy or expected_input_policy_fingerprint
                 != content_hash(CodexConsentSnapshot.model_validate(existing.model_input_policy))
             ):
@@ -77,6 +78,8 @@ class ReloadVisualExploration:
             intent_encryption_key=self.settings.vision_intent_encryption_key,
             intent_retention_days=self.settings.vision_intent_retention_days,
             trace_v4_enabled=self.settings.vision_trace_v4_enabled,
+            engine=original.exploration_engine,
+            agent_loop_enabled=self.settings.vision_agent_loop_enabled,
             expected_provider=expected_provider, expected_model=expected_model,
             expected_input_policy_fingerprint=expected_input_policy_fingerprint,
         )

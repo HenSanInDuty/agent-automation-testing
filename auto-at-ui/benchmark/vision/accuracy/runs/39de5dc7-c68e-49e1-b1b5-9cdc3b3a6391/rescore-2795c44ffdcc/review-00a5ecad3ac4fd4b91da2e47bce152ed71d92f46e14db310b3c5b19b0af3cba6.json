@@ -1,0 +1,11 @@
+{
+  "after_checksum": "2cd3bdb05271a272e84334893e094d284af8d481642b805ff16164e0309d3a18",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "finding": "State page_url is declared /su-kien; screenshot renders SU KIEN heading, selected Su Kien tab and event list. Query-sensitive hash differs; destination path and content independently match.",
+  "operation_id": "6090ff16-96cd-431a-8909-053f01c1c699",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "navigation_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

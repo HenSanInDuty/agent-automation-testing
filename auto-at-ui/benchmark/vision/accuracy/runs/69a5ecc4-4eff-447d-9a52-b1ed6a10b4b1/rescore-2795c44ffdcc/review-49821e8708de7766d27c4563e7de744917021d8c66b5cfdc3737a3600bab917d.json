@@ -1,0 +1,11 @@
+{
+  "after_checksum": "a530d75f7b86225e3a2d2404cc9f34236f48d92626bf6cab61a6abb507477186",
+  "before_checksum": "d216b59a08306bee6fbf2e90ff5ffc6c5f21fbc7d647ac77576bbeddb25022e2",
+  "finding": "mct-31: THU CUOI tab becomes active and the mount panel (Dich Lo) replaces the character panel.",
+  "operation_id": "495e490b-f774-46ec-b658-b44ecc0c636b",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

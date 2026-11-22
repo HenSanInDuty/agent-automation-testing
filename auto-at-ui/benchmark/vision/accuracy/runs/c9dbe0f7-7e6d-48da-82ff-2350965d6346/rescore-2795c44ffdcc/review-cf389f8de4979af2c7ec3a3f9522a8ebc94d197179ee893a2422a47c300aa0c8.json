@@ -1,0 +1,11 @@
+{
+  "after_checksum": "db41b07348b9d567fc21cbabcd49c323ba18e3f76076ac66d3fd44b05e9768ba",
+  "before_checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+  "finding": "mct-51: after frame shows indicator 1 selected with matching slide Chuoi Nhiem Vu (before: indicator 3, Chinh Phuc PvE).",
+  "operation_id": "5614962b-2e20-47ca-92a8-4c4b69b5e95c",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

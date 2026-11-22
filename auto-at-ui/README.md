@@ -94,6 +94,10 @@ The benchmark target is copied into its image, so startup does not depend on
 Docker Desktop mounting this checkout's drive. Rebuild it after editing its files.
 
 For an active v4 exploration, select **Follow live** to see browser screenshots.
+New explorations allow 120 seconds per browser step or planning batch by default,
+with no total session time limit. Existing model-call, rate, state and depth caps
+still apply. Historical sessions retain their recorded timing policy; Reload
+creates a session using the new policy. See [ADR-013](docs/adr/013-vision-step-timeouts.md).
 The dashboard requests the next image one second after the previous request
 finishes; capture and network time add to the refresh interval. Preview images
 are served through the authenticated application and do not trigger model calls.
@@ -322,12 +326,21 @@ Tenant administrators can choose **Gehihi (Google Gemini)** with
 accept Google screenshot transfer and save the tenant policy. The catalogue
 reports key presence only. Gemini sends images inline and needs no Drive OAuth;
 Hugging Face retains its existing image-delivery path. Defaults stay HF/disabled.
+**Claude (claude -p, local bridge)** with `claude-opus-5-5` uses the same
+DOM-first bridge protocol as Codex, run by the `claude-bridge` container and the
+existing Claude Code login (no Anthropic API key). See
+[Claude local bridge](docs/claude-local-bridge.md).
 
 Only approved synthetic data is permitted for this local evaluation. Screenshots
 are raw, and free-tier terms/quota must be checked before a live demo. Saved
 settings determine the run confirmation; unsaved edits block submission. The
-session keeps its original provider/model. Text draft generation uses its separate
-provider and may fail independently. See [Gehihi setup and rollback](docs/vision-agent-operations.md#gehihi-google-gemini-local-setup)
+session keeps its original provider/model. Draft generation uses its separate
+provider and may fail independently. In `/agent` → **Test generation provider**,
+tenant administrators can switch between **Codex** and **Hugging Face**, accept
+text/evidence transfer, and save. Both text drafts and drafts from Vision evidence
+use this saved setting; generated drafts still require human approval.
+See [Codex generation setup](docs/codex-local-bridge.md) and
+[Gehihi setup and rollback](docs/vision-agent-operations.md#gehihi-google-gemini-local-setup)
 and [offline evaluation evidence](benchmark/vision/gehihi/README.md). A live
 provider canary has not been run.
 
@@ -344,3 +357,11 @@ remain explicit limitations. See the [Vision runbook](docs/vision-agent-operatio
 and [synthetic v2 manifest](benchmark/vision/v2/manifest.json) for validation and
 rollback. This change does not enable a tenant, alter image retention or certify a
 real-provider canary.
+
+The separately authorized Mongchiton continuation is recorded in
+[the November 8 validation report](benchmark/vision/sequential/RESUME-20261108.md).
+Its controller-owned viewport scanning is specified in
+[ADR-020](docs/adr/020-deterministic-viewport-discovery.md).
+
+The [November 9 continuation](benchmark/vision/sequential/COMPLETION-20261109.md)
+records the recovered live outcome, popup restoration fix and current validation.

@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "47c10144-e9a5-4468-850f-53b3228d028a",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_tab",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "f98728073b82dbde27a1d21e3c39ac9c345fc7c35e87a00b35ffc4259fe5841b",
+  "after_checksum": "e2bce115041c23a97cf204f53530fe62cb867505b65bf679736fb26e4027654b",
+  "finding": "NHAN VAT tab is visibly selected; the character selector controls and Thieu Lam panel are visible."
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "a1c78f8d-a39e-4252-bc35-aefbefcdd6a0",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "empty_search",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+  "after_checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+  "finding": "Before and after frames show empty search input with placeholder and unchanged selected Guide tab/list at same homepage URL. This satisfies the frozen empty-input search rule; no typed search behavior is claimed."
+}

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "541a6da8f5e05a5831ee30749841a5208271675ba1ea74bcc240be8939b8d027",
+  "before_checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+  "finding": "mct-53: after frame shows indicator 3 selected with matching slide Chinh Phuc PvE; the same slide was already active before the bound click (already-active selection is the declared state).",
+  "operation_id": "cb73832e-5c48-42ef-9454-d4e6a72aa899",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

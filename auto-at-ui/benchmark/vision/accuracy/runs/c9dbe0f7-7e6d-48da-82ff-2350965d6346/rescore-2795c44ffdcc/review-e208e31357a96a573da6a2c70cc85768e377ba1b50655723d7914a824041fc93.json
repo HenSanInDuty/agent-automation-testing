@@ -1,0 +1,11 @@
+{
+  "after_checksum": "f36e73fe764e168ad2a292d12fe11f0981e08b7075a497c61a2b326478a6e33d",
+  "before_checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+  "finding": "mct-36: Machine rule: after-state page URL https://play.google.com/store/apps/details equals the declared destination or its independently reviewed redirect (query values ignored). Destination only.",
+  "operation_id": "3170f325-8174-425f-a1e4-beee719c2757",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

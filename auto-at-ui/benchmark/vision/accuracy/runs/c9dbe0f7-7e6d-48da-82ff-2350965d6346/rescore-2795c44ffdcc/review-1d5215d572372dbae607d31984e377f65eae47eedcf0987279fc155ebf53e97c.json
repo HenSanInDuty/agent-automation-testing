@@ -1,0 +1,11 @@
+{
+  "after_checksum": "f13f3d0ab82af5efd5073f3988c663bedf5af1570a83274c8e81d9de09097e6e",
+  "before_checksum": "70d719df7a4a165284105480d9a12d4d7a571842ba82c7bec1cef9652d8036df",
+  "finding": "mct-45: third character control becomes active and the Toan Chan panel is shown (before: Thieu Lam mid-transition).",
+  "operation_id": "e35626ef-7d1d-446e-b470-88b8b34cd623",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

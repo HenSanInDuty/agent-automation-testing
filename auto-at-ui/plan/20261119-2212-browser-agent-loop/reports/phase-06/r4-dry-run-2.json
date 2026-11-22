@@ -1,0 +1,304 @@
+{
+ "outcome": "unavailable",
+ "state": "unavailable",
+ "reason": "agent_done",
+ "seconds": 56.373807,
+ "model_calls": 7,
+ "script": [
+  {
+   "call": 1,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 2,
+   "rows": 13,
+   "buttons": 4,
+   "links": 9,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 3,
+   "rows": 4,
+   "buttons": 3,
+   "links": 1,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 4,
+   "rows": 8,
+   "buttons": 0,
+   "links": 8,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc"
+  },
+  {
+   "call": 5,
+   "rows": 8,
+   "buttons": 0,
+   "links": 8,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc"
+  },
+  {
+   "call": 6,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  },
+  {
+   "call": 7,
+   "rows": 7,
+   "buttons": 0,
+   "links": 7,
+   "editable": 0,
+   "page": "page: https://mongchiton.vn/"
+  }
+ ],
+ "operations": [
+  {
+   "seq": 1,
+   "purpose": "setup",
+   "kind": "navigate",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "changed",
+   "parent": "None",
+   "after_frame": "5a96dd48-a9b9-4fc8-b74b-2c31267f0633",
+   "before_frame": "e1f386ef-49c8-47d6-805e-474609c49724",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 2,
+   "purpose": "explore",
+   "kind": "click",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "7892bdb9",
+   "after_frame": "38e28a66-d089-4d0b-acd6-c1370718a776",
+   "before_frame": "453c31c5-7cbb-4b2a-b10e-1a45c48aa1a6",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 3,
+   "purpose": "explore",
+   "kind": "scroll",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "7892bdb9",
+   "after_frame": "68753ed4-8c39-4df1-8a22-c4dda0b6a1ae",
+   "before_frame": "8ca4bf0f-3404-42ec-95b5-8be061860ff6",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 4,
+   "purpose": "explore",
+   "kind": "scroll",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "7892bdb9",
+   "after_frame": "2ac7d4df-6b90-42c5-98c5-39697b643af2",
+   "before_frame": "5d1d4563-9e8b-4251-9962-4a077bd07e35",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 5,
+   "purpose": "explore",
+   "kind": "click",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "changed",
+   "parent": "7892bdb9",
+   "after_frame": "a9995383-d167-4c73-b4a2-859909d6cf6f",
+   "before_frame": "99e3b925-50fd-4d49-a106-08a2d524db5f",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 6,
+   "purpose": "explore",
+   "kind": "back",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "7892bdb9",
+   "after_frame": "cba8c501-a3f8-4b31-89e9-1712d76e366c",
+   "before_frame": "2f2db7e8-1e61-4a9e-9425-a1cc79859d37",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 7,
+   "purpose": "explore",
+   "kind": "navigate",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "changed",
+   "parent": "None",
+   "after_frame": "f671a37d-afa6-4328-8412-15181f41ec81",
+   "before_frame": "37700be8-79ef-4144-9992-47f9580c9552",
+   "after_why": null,
+   "before_why": null
+  },
+  {
+   "seq": 8,
+   "purpose": "explore",
+   "kind": "wait",
+   "status": "completed",
+   "outcome": "observed",
+   "url_change": "unchanged",
+   "parent": "7892bdb9",
+   "after_frame": "6bdf4c1e-9b34-4685-8028-5640905ee0ec",
+   "before_frame": "c790c794-adb4-4396-a837-3151bfaa8442",
+   "after_why": null,
+   "before_why": null
+  }
+ ],
+ "steps": [
+  {
+   "i": 1,
+   "stop": "state_changed",
+   "actions": [
+    {
+     "kind": "click",
+     "ref": "1:1",
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    },
+    {
+     "kind": "scroll",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 2,
+   "stop": "state_changed",
+   "actions": [
+    {
+     "kind": "type",
+     "ref": "2:1",
+     "skipped": "sensitive_action_blocked",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    },
+    {
+     "kind": "click",
+     "ref": "0:1",
+     "skipped": "stale_ref",
+     "stop_cause": null,
+     "result": null,
+     "status": null,
+     "url_change": null
+    },
+    {
+     "kind": "scroll",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 3,
+   "stop": "url_change",
+   "actions": [
+    {
+     "kind": "click",
+     "ref": "3:1",
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "changed"
+    },
+    {
+     "kind": "wait",
+     "ref": null,
+     "skipped": "batch_stopped",
+     "stop_cause": "url_change",
+     "result": null,
+     "status": null,
+     "url_change": null
+    }
+   ]
+  },
+  {
+   "i": 4,
+   "stop": null,
+   "actions": [
+    {
+     "kind": "back",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 5,
+   "stop": "url_change",
+   "actions": [
+    {
+     "kind": "navigate",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "changed"
+    }
+   ]
+  },
+  {
+   "i": 6,
+   "stop": null,
+   "actions": [
+    {
+     "kind": "wait",
+     "ref": null,
+     "skipped": null,
+     "stop_cause": null,
+     "result": "observed",
+     "status": "completed",
+     "url_change": "unchanged"
+    }
+   ]
+  },
+  {
+   "i": 7,
+   "stop": "agent_done",
+   "actions": []
+  }
+ ]
+}

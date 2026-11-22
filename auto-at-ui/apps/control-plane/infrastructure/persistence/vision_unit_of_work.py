@@ -1,12 +1,15 @@
 """Fenced short transactions; never retain an ORM session across browser/model awaits."""
 
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
 from hashlib import sha256
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
+from agents.shared.redaction import redact_value
+from agents.shared.vision_providers import is_bridge_provider
 from auto_at.contracts.vision import (
     VisualCheckpoint,
     VisualLocatorEvidence,
@@ -24,6 +27,7 @@ from sqlalchemy.orm import Session
 from infrastructure.persistence.codex_bridge_repository import SqlAlchemyCodexBridgeJobRepository
 from infrastructure.persistence.models import (
     VisualActionProposalModel,
+    VisualAgentStepModel,
     VisualExplorationStateModel,
     VisualOperationModel,
 )
@@ -37,6 +41,20 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyVisualTraceRepository,
 )
 from infrastructure.persistence.session import transactional_session
+
+
+@contextmanager
+def failure_stage(name: str):
+    """Tag an exception with the first (innermost) allowlisted stage that raised it."""
+    try:
+        yield
+    except Exception as error:
+        if getattr(error, "failure_stage", None) is None:
+            try:
+                error.failure_stage = name
+            except Exception:  # pragma: no cover - exotic exception without __dict__
+                pass
+        raise
 
 
 class SqlAlchemyVisualTraceUnitOfWork:
@@ -77,6 +95,21 @@ class SqlAlchemyVisualTraceUnitOfWork:
         with transactional_session(self._factory) as session:
             self._progress(session, lease, stage, key, metadata)
 
+    def page_inventory(self, lease, inventory):
+        from auto_at.contracts.vision_coverage import VisualPageInventory
+        inventory = VisualPageInventory.model_validate(inventory.model_dump())
+        with transactional_session(self._factory) as session:
+            repository = SqlAlchemyVisualTraceRepository(session)
+            repository._fence(lease)
+            state = repository._legacy_ref(
+                VisualExplorationStateModel, lease.scope, inventory.state_id,
+            )
+            if state is None or not state.checkpoint or (
+                state.checkpoint["id"] != str(inventory.checkpoint_id)
+            ):
+                raise ValueError("inventory checkpoint mismatch")
+            state.page_inventory = inventory.model_dump(mode="json")
+
     @staticmethod
     def _progress(session, lease, stage, key, metadata=None):
         record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
@@ -95,8 +128,8 @@ class SqlAlchemyVisualTraceUnitOfWork:
     def running(self, lease, prompt_version):
         with transactional_session(self._factory) as session:
             record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
-            if record.provider == "codex_cli" and (record.state == "running"
-                                                   or lease.fencing_token > 1):
+            if is_bridge_provider(record.provider) and (record.state == "running"
+                                                        or lease.fencing_token > 1):
                 SqlAlchemyCodexBridgeJobRepository(session).interrupt_pending(lease.scope)
             if record.state == "queued":
                 record.state, record.updated_at = "running", datetime.now(UTC)
@@ -108,7 +141,7 @@ class SqlAlchemyVisualTraceUnitOfWork:
         with transactional_session(self._factory) as session:
             record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
             repository = SqlAlchemyVisionRepository(session)
-            if record.provider == "codex_cli":
+            if is_bridge_provider(record.provider):
                 SqlAlchemyCodexBridgeJobRepository(session).interrupt_pending(lease.scope)
             for edge in repository.list_trajectory_edges(record.tenant_id, record.id):
                 if edge.status == "proposed":
@@ -176,8 +209,10 @@ class SqlAlchemyVisualTraceUnitOfWork:
                 "unavailable" if reason else "completed",
                 "unavailable" if reason else "completed",
                 {"reason_code": reason} if reason in VISION_MODEL_FAILURE_REASONS | {
-                    "policy_disabled", "session_timeout", "image_delivery_auth_required",
+                    "policy_disabled", "session_timeout", "step_timeout",
+                    "image_delivery_auth_required",
                     "initial_capture_failed", "capture_failed",
+                    "exploration_call_limit", "exploration_coverage_incomplete",
                 } else None,
             )
             SqlAlchemyAuditEventRepository(session).append(
@@ -320,25 +355,32 @@ class SqlAlchemyVisualTraceUnitOfWork:
             raise ValueError("private operation evidence store unavailable")
         # Store implements create-only writes. A failed DB commit leaves a known, deterministic
         # orphan key; callers retain staging until this method acknowledges the commit.
-        self._store.write_operation_frame(record, content)
-        if self._store.read_operation_frame(record) != content:
-            raise ValueError("durable operation frame failed read-back verification")
-        with transactional_session(self._factory) as session:
+        with failure_stage("store_write"):
+            self._store.write_operation_frame(record, content)
+        with failure_stage("store_readback"):
+            if self._store.read_operation_frame(record) != content:
+                raise ValueError("durable operation frame failed read-back verification")
+        with failure_stage("db_commit"), transactional_session(self._factory) as session:
             repository = SqlAlchemyVisualTraceRepository(session)
-            repository.add_frame(lease, record)
+            with failure_stage("db_frame"):
+                repository.add_frame(lease, record)
             if locator is not None:
-                repository.add_locator(lease, locator)
-            saved = repository.save_operation(lease, operation)
-            self._observe(session, lease, saved, checkpoint, semantic_change, duration_ms)
+                with failure_stage("db_locator"):
+                    repository.add_locator(lease, locator)
+            with failure_stage("db_operation"):
+                saved = repository.save_operation(lease, operation)
+            with failure_stage("db_observe"):
+                self._observe(session, lease, saved, checkpoint, semantic_change, duration_ms)
             if locator:
                 stage = "locator.verified" if locator.status == "verified" else "locator.unresolved"
-                self._progress(
-                    session,
-                    lease,
-                    stage,
-                    f"{stage}:{operation.id}",
-                    {"operation_id": str(operation.id)},
-                )
+                with failure_stage("db_progress"):
+                    self._progress(
+                        session,
+                        lease,
+                        stage,
+                        f"{stage}:{operation.id}",
+                        {"operation_id": str(operation.id)},
+                    )
             return saved
 
     def commit_operation(
@@ -390,14 +432,18 @@ class SqlAlchemyVisualTraceUnitOfWork:
                         screenshot_checksum=after.metadata.checksum,
                     )
                 )
-            repository.save_checkpoint(lease, checkpoint)
+            with failure_stage("db_checkpoint"):
+                repository.save_checkpoint(lease, checkpoint)
             child = checkpoint.state_id
         if operation.edge_id:
-            edge = next(
-                e
-                for e in legacy.list_trajectory_edges(lease.scope.tenant_id, lease.scope.session_id)
-                if e.id == operation.edge_id
-            )
+            with failure_stage("db_edge"):
+                edge = next(
+                    e
+                    for e in legacy.list_trajectory_edges(
+                        lease.scope.tenant_id, lease.scope.session_id
+                    )
+                    if e.id == operation.edge_id
+                )
             if edge.status == "proposed":
                 unchanged = (
                     operation.url_change == "unchanged"
@@ -431,6 +477,46 @@ class SqlAlchemyVisualTraceUnitOfWork:
     ) -> VisualLocatorHandoff:
         with transactional_session(self._factory) as session:
             return SqlAlchemyVisualTraceRepository(session).add_handoff(lease, handoff)
+
+    def record_agent_step(
+        self,
+        lease: VisualSessionLease,
+        *,
+        step_index: int,
+        snapshot_version: int,
+        evaluation_previous_goal: str,
+        memory: str,
+        next_goal: str,
+        actions: list[dict],
+        operation_ids: list[UUID],
+        stop_reason: str | None = None,
+        job_id: UUID | None = None,
+    ):
+        """Fenced append of one agent step. Model-authored text is redacted before storage."""
+        if len(operation_ids) > len(actions):
+            raise ValueError("agent step cannot have more operations than actions")
+        with transactional_session(self._factory) as session:
+            record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
+            step = VisualAgentStepModel(
+                id=uuid4(), tenant_id=record.tenant_id, project_id=record.project_id,
+                session_id=record.id, step_index=step_index, snapshot_version=snapshot_version,
+                evaluation_previous_goal=redact_value(evaluation_previous_goal),
+                memory=redact_value(memory), next_goal=redact_value(next_goal),
+                actions=redact_value(actions),
+                operation_ids=[str(operation_id) for operation_id in operation_ids],
+                stop_reason=stop_reason, job_id=job_id,
+            )
+            session.add(step)
+            session.flush()
+            return self._detached(step)
+
+    def agent_steps(self, scope: VisualSessionScope):
+        """Steps of one session in `step_index` order; scoped by tenant, project and session."""
+        with transactional_session(self._factory) as session:
+            return [
+                self._detached(step)
+                for step in SqlAlchemyVisualTraceRepository(session).agent_steps(scope)
+            ]
 
     def read_snapshot(self, scope: VisualSessionScope) -> dict[str, tuple]:
         with transactional_session(self._factory) as session:

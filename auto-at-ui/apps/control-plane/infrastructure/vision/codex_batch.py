@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
@@ -12,6 +13,7 @@ from agents.vision.codex_service import output_schema
 from application.codex_candidates import CodexImage, CodexUnavailable, require_dom_policy
 from application.vision_model_batch import VisionModelSession
 from auto_at.contracts.codex_bridge import (
+    AgentLoopContext,
     CodexBoundObservation,
     CodexBridgeRequest,
     CodexBridgeResponse,
@@ -22,6 +24,9 @@ from auto_at.contracts.codex_bridge import (
 )
 from domain.codex_bridge import validate_response
 from domain.ports import CodexBridgeReadinessPort, CodexBridgeSpool, CodexJobGateway
+
+from infrastructure.codex_bridge.diagnostics import exception_details
+from infrastructure.observability.logging import log_event
 
 
 class CodexModelBatch:
@@ -36,9 +41,13 @@ class CodexModelBatch:
 
     async def __call__(
         self, *, session: VisionModelSession, bound: CodexBoundObservation,
-        context: CodexTaskContext, policy: VisionPolicy, sequence: int, deadline: datetime,
+        policy: VisionPolicy, sequence: int, deadline: datetime,
         max_candidates: int, image: CodexImage | None,
         check_policy: Callable[[], VisionPolicy],
+        context: CodexTaskContext | None = None,
+        # Optional prompt family. Defaults reproduce the v4 job byte for byte.
+        prompt_version: str = PROMPT_VERSION, schema_bytes: bytes | None = None,
+        stage: str | None = None, agent_context: AgentLoopContext | None = None,
     ) -> CodexBridgeResponse:
         require_dom_policy(policy)
         observation = bound.observation
@@ -50,7 +59,7 @@ class CodexModelBatch:
                 or (session.provider, session.model) != (policy.provider, policy.model)):
             raise CodexUnavailable("bridge_stale_result")
         dom = canonical_bytes(observation)
-        schema = output_schema(max_candidates)
+        schema = schema_bytes if schema_bytes is not None else output_schema(max_candidates)
         if image:
             image.validate(bound, policy.max_screenshot_bytes)
         consent = CodexConsentSnapshot(
@@ -62,12 +71,13 @@ class CodexModelBatch:
             **{key: getattr(observation, key) for key in (
                 "tenant_id", "project_id", "session_id", "fencing_token", "observation_id",
                 "snapshot_id", "state_fingerprint",
-            )}, job_id=uuid4(), bridge_id=self.bridge_id, correlation_id=session.correlation_id,
-            request_sequence=sequence, prompt_version=PROMPT_VERSION,
-            stage="image" if image else "dom",
+            )}, provider=policy.provider, model=policy.model,
+            job_id=uuid4(), bridge_id=self.bridge_id, correlation_id=session.correlation_id,
+            request_sequence=sequence, prompt_version=prompt_version,
+            stage=stage or ("image" if image else "dom"),
             created_at=datetime.now(UTC), deadline=deadline, consent=consent,
             consent_hash=content_hash(consent), candidate_limit=max_candidates, context=context,
-            dom_element_count=len(observation.elements),
+            agent_context=agent_context, dom_element_count=len(observation.elements),
             inputs={
                 "dom_sha256": hashlib.sha256(dom).hexdigest(), "dom_bytes": len(dom),
                 "schema_sha256": hashlib.sha256(schema).hexdigest(), "schema_bytes": len(schema),
@@ -83,38 +93,52 @@ class CodexModelBatch:
                     or len(dom) > live.codex.max_dom_bytes
                     or len(observation.elements) > live.codex.max_dom_elements
                     or image and (not live.raw_screenshot_transfer_accepted
-                                  or live.raw_screenshot_transfer_provider != "codex_cli"
+                                  or live.raw_screenshot_transfer_provider != live.provider
                                   or len(image.data) > live.max_screenshot_bytes)):
                 raise CodexUnavailable("policy_changed")
             if datetime.now(UTC) >= deadline:
                 raise CodexUnavailable("provider_timeout")
-            if not self.readiness.read(session.tenant_id, datetime.now(UTC)).ready:
+            readiness = self.readiness.read(session.tenant_id, datetime.now(UTC))
+            if not readiness.ready or readiness.provider != session.provider:
                 raise CodexUnavailable("bridge_offline")
 
         check()
         registered = published = finished = False
+        phase = "register"
         try:
             async with asyncio.timeout((deadline - datetime.now(UTC)).total_seconds()):
                 await self.gateway.register(request)
                 registered = True
+                phase = "policy_check"
                 check()
+                phase = "publish"
                 self.spool.publish(request, dom, schema, image.data if image else None)
                 published = True
                 last_authorization = None
                 while True:
+                    phase = "policy_check"
                     check()
-                    await self.gateway.poll(request, self.spool.stages(request))
+                    phase = "stages_read"
+                    stages = self.spool.stages(request)
+                    phase = "stages_persist"
+                    await self.gateway.poll(request, stages)
                     now = datetime.now(UTC)
                     if (last_authorization is None
                             or (now - last_authorization).total_seconds() >= 2):
+                        phase = "authorize"
                         self.spool.authorize(request, min(now + timedelta(seconds=8), deadline))
                         last_authorization = now
+                    phase = "result"
                     response = self.spool.result(request)
                     if response is not None:
+                        phase = "result_validate"
                         validate_response(request, response, now=datetime.now(UTC))
+                        phase = "policy_check"
                         check()
+                        phase = "finish"
                         await self.gateway.finish(request, response)
                         finished = True
+                        phase = "acknowledge"
                         self.spool.acknowledge(request)
                         return response
                     await asyncio.sleep(self.poll_seconds)
@@ -122,13 +146,22 @@ class CodexModelBatch:
             await self._cancel(request, published, registered and not finished, "bridge_cancelled")
             raise
         except Exception as exc:
+            failure = ("bridge_malformed_output" if isinstance(exc, ValueError)
+                       else "bridge_io_error")
+            log_event(logging.getLogger(__name__), logging.WARNING,
+                      "codex.handoff.failed", "Codex handoff failed.",
+                      job_id=str(request.job_id), session_id=str(request.session_id),
+                      correlation_id=str(request.correlation_id), tenant_id=request.tenant_id,
+                      bridge_id=str(request.bridge_id), request_sequence=request.request_sequence,
+                      phase=phase, registered=registered, published=published, finished=finished,
+                      failure_code=exc.reason if isinstance(exc, CodexUnavailable) else failure,
+                      **exception_details(exc))
             await self._cancel(request, published, registered and not finished,
-                               "bridge_policy_revoked")
+                               "bridge_policy_revoked" if isinstance(exc, CodexUnavailable)
+                               else failure)
             if isinstance(exc, CodexUnavailable):
                 raise
-            raise CodexUnavailable(
-                "bridge_malformed_output" if isinstance(exc, ValueError) else "bridge_io_error",
-            ) from exc
+            raise CodexUnavailable(failure) from exc
 
     async def _cancel(self, request, published, registered, reason):
         try:

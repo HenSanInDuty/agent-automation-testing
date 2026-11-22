@@ -1,0 +1,11 @@
+{
+  "after_checksum": "fe5b1f97f6aae258cac45afbafdc50acf3e7e1c23f6d6b1b6b4528e3080a96d1",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "finding": "After URL hash exactly matches declared Facebook page; screenshot shows VLCM Origin - TPL page identity behind login gate. No login performed.",
+  "operation_id": "d09c68ff-eb06-4ee3-9bba-521bca32d112",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

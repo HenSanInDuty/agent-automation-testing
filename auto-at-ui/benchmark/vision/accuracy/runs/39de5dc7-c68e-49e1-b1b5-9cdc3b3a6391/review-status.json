@@ -1,0 +1,18 @@
+{
+  "outcome_accuracy": {
+    "numerator": 45,
+    "denominator": 47,
+    "percent": 95.74468085106383,
+    "above_95": true
+  },
+  "coverage": {
+    "numerator": 45,
+    "denominator": 47,
+    "percent": 95.74468085106383,
+    "above_95": true
+  },
+  "reviewed_correct_operations": 45,
+  "remaining_interactions": 2,
+  "review_method": "independent retained-image/checkpoint/redirect/download evidence review",
+  "limitations": "Navigation-only credit for YouTube shells; no business completion/playback claim. Op 128 (mct-57 previous arrow) after-frame shows the same carousel state as before (indicator 5): no credit. Unmatched video-copy click 109 (mct-47 missing) is denominator-only. Runtime restoration failure unchanged."
+}

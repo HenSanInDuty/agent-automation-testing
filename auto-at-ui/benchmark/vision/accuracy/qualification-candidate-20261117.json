@@ -1,0 +1,8 @@
+{
+  "frozen_at": "2026-11-17T05:48:29.395687+00:00",
+  "source_hash": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3",
+  "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "phase04_passing_iteration": "fd3ddda4-ca69-4abb-818b-a8ac1ad594d8",
+  "qualification_plan": "Full final-source offline suite, relevant final-source worker checks, then three fresh consecutive live sessions; no selection/omission of failures."
+}

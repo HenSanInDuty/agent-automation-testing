@@ -1,0 +1,105 @@
+{
+  "recorded_at": "2026-11-17T14:46:50.127203+00:00",
+  "source_hash": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3",
+  "offline": {
+    "passed": 1151,
+    "failed": 0,
+    "skipped": 2,
+    "errors": 0,
+    "duration_seconds": 1609.153,
+    "exit_code": 0,
+    "synthetic_measurements": [
+      {
+        "mode": "dom",
+        "responses": "fake_cli",
+        "cli_calls": 1,
+        "image_calls": 0,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 7.807,
+        "input_tokens_synthetic": 2,
+        "output_tokens_synthetic": 3
+      },
+      {
+        "mode": "image",
+        "responses": "fake_cli",
+        "cli_calls": 2,
+        "image_calls": 1,
+        "verified_actions": 2,
+        "unique_branch_actions": 2,
+        "deterministic_rerun": "passed",
+        "exploration_seconds": 8.245,
+        "input_tokens_synthetic": 4,
+        "output_tokens_synthetic": 6
+      }
+    ]
+  },
+  "offline_log": ".pytest-artifacts/qualification-final-full-20261117.log",
+  "skip_reason": "Two RustFS checks require Docker host unavailable inside isolated suite. Separate host runs retained below.",
+  "rustfs": [
+    {
+      "path": ".pytest-artifacts/qualification-rustfs-repeat.xml",
+      "suites": [
+        {
+          "tests": "2",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "4.507"
+        }
+      ]
+    },
+    {
+      "path": ".pytest-artifacts/qualification-rustfs-stability-1.xml",
+      "suites": [
+        {
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "2.727"
+        }
+      ]
+    },
+    {
+      "path": ".pytest-artifacts/qualification-rustfs-stability-2.xml",
+      "suites": [
+        {
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "2.845"
+        }
+      ]
+    },
+    {
+      "path": ".pytest-artifacts/qualification-rustfs-stability-3.xml",
+      "suites": [
+        {
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "2.682"
+        }
+      ]
+    },
+    {
+      "path": ".pytest-artifacts/qualification-rustfs.xml",
+      "suites": [
+        {
+          "tests": "2",
+          "failures": "1",
+          "errors": "0",
+          "skipped": "0",
+          "time": "5.989"
+        }
+      ]
+    }
+  ],
+  "ruff": "uv run ruff check .: passed",
+  "worker_validation": "retained-target-stability-validation-20261117.json",
+  "watcher_tests": "16 passed; operator-only script outside frozen runtime source hash"
+}

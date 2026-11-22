@@ -1,0 +1,26 @@
+{
+  "session_id": "4a1f649e-ec7a-4980-8bef-4fb7cccbb855",
+  "source_hash": "f11a953c7497acfebd6a4f1b11930eb9bd370f7342a6de46ccd8f5263d966f85",
+  "engine": "v4",
+  "oracle": "oracle-mongchiton-1280-v2.json",
+  "preflight_at": "2026-11-22T04:35:28.226637+00:00",
+  "hypothesis": "Sprint trial 1/8: current tree (ADR-042 settle tolerance applies to v4) under oracle v2; expect r21-like coverage with mct-47 credited",
+  "images": {
+    "image:control-plane": "sha256:a927fc94d08a0afaf7c1b7078a71ac0c4858f9952178c980f3579663047462b7",
+    "image:temporal-worker": "sha256:82ff4203b9c249439e239d4cb6904252b2cd2fb74c3629d1c49643424ad8d3d1",
+    "image:playwright-worker": "sha256:53f0837906853b5d56fe7939361706b271a0514aaf4eb635d5e7d8fa834a70a1"
+  },
+  "agent_flags": {
+    "VISION_AGENT_LOOP_ENABLED": "unset",
+    "VISION_AGENT_CLICK_CONTEXT_ENABLED": "unset",
+    "VISION_AGENT_DOM_PATH_ENABLED": "unset",
+    "VISION_AGENT_INVENTORY_ENABLED": "unset"
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  }
+}

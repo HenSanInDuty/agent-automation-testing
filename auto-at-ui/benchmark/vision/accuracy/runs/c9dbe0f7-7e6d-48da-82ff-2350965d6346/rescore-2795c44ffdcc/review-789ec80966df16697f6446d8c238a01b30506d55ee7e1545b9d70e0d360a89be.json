@@ -1,0 +1,11 @@
+{
+  "after_checksum": "acc4f096327e28f5ff465cfb938009a73733e2229a016693e60e05707c922cbe",
+  "before_checksum": "3cf6aade1cb52cd3fa0a6aee1b53635da10239b723f6f6b189ebe14dc02619c8",
+  "finding": "mct-46: BORDERLINE. Fourth character portrait (Co Mo) shows the active ring before and after; only the lower part of the panel is in frame (red boots and platform matching Co Mo), the name block is above the viewport. Credited as an already-selected character with a partly visible matching panel; flagged for user spot-check.",
+  "operation_id": "d0f021a9-9f8b-4df3-88c0-24cfa53a3c69",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "c5066e10-8f0c-4de2-a133-ecbb2dfa863c",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "popup_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "after_checksum": "695369070cf6e2d7f3e3cd6199de5d2fc52f37959976bea0c29f372ed4d7a9cf",
+  "finding": "After URL hash exactly matches declared Facebook group; its group identity is visible behind login gate. No membership or login action performed."
+}

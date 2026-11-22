@@ -6,10 +6,12 @@ from copy import deepcopy
 from pathlib import Path
 
 from agents.prompts.codex_exploration import INSTRUCTIONS
+from agents.prompts.codex_generation import INSTRUCTIONS as GENERATION_INSTRUCTIONS
 from domain.codex_bridge import CLI_VERSION
 
 CATALOGUE_PATH = Path("/app/codex-model-catalogue.json")
 INSTRUCTIONS_PATH = Path("/app/codex-proposal-instructions.txt")
+GENERATION_INSTRUCTIONS_PATH = Path("/app/codex-generation-instructions.txt")
 
 
 def restricted_catalogue(bundled: dict) -> dict:
@@ -44,6 +46,9 @@ def validate_instructions() -> None:
     if (INSTRUCTIONS_PATH.is_symlink() or not INSTRUCTIONS_PATH.is_file()
             or INSTRUCTIONS_PATH.read_text() != INSTRUCTIONS):
         raise ValueError("missing or changed centralized proposal instructions")
+    if (GENERATION_INSTRUCTIONS_PATH.is_symlink() or not GENERATION_INSTRUCTIONS_PATH.is_file()
+            or GENERATION_INSTRUCTIONS_PATH.read_text() != GENERATION_INSTRUCTIONS):
+        raise ValueError("missing or changed centralized generation instructions")
 
 
 if __name__ == "__main__":
@@ -57,3 +62,5 @@ if __name__ == "__main__":
     CATALOGUE_PATH.chmod(0o444)
     INSTRUCTIONS_PATH.write_text(INSTRUCTIONS, encoding="utf-8")
     INSTRUCTIONS_PATH.chmod(0o444)
+    GENERATION_INSTRUCTIONS_PATH.write_text(GENERATION_INSTRUCTIONS, encoding="utf-8")
+    GENERATION_INSTRUCTIONS_PATH.chmod(0o444)

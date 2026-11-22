@@ -1,0 +1,57 @@
+[
+  {
+    "session_id": "45473832-0221-4266-a54a-4669b3d39aca",
+    "checkpoint_id": "a49827a7-7bfe-4751-a689-8a22effeff99",
+    "state_id": "1ca43cf4-c5ac-411f-b36f-eb078e5d562b",
+    "url_changed": true,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": false
+  },
+  {
+    "session_id": "45473832-0221-4266-a54a-4669b3d39aca",
+    "checkpoint_id": "a49827a7-7bfe-4751-a689-8a22effeff99",
+    "state_id": "1ca43cf4-c5ac-411f-b36f-eb078e5d562b",
+    "url_changed": true,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": false
+  },
+  {
+    "session_id": "45473832-0221-4266-a54a-4669b3d39aca",
+    "checkpoint_id": "08b28618-fb7a-4666-b5ab-6a8aa1ea9c7f",
+    "state_id": "ec1bd5f7-a383-4c7e-90ba-5e08a2f83bfc",
+    "url_changed": true,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": false
+  },
+  {
+    "session_id": "45473832-0221-4266-a54a-4669b3d39aca",
+    "checkpoint_id": "08b28618-fb7a-4666-b5ab-6a8aa1ea9c7f",
+    "state_id": "ec1bd5f7-a383-4c7e-90ba-5e08a2f83bfc",
+    "url_changed": false,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": true
+  },
+  {
+    "session_id": "45473832-0221-4266-a54a-4669b3d39aca",
+    "checkpoint_id": "08b28618-fb7a-4666-b5ab-6a8aa1ea9c7f",
+    "state_id": "ec1bd5f7-a383-4c7e-90ba-5e08a2f83bfc",
+    "url_changed": false,
+    "interaction_changed": true,
+    "visual_semantics_changed": true,
+    "form_presence_changed": false,
+    "form_values_changed": false,
+    "scroll_changed": true
+  }
+]

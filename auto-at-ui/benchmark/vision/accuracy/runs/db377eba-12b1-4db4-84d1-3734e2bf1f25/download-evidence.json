@@ -1,0 +1,11 @@
+[
+  {
+    "session_id": "63b8b5fa-e230-4fa4-b8d0-ef39c0d3889f",
+    "operation_id": "f92898da-f608-4af1-a8d8-e40391f03840",
+    "destination_hashes": [
+      "05f9066b6ee37a10f8e5b4486f25c6be96055735efa5ff1171f061fc7c771218"
+    ],
+    "truncated": false,
+    "status": "completed"
+  }
+]

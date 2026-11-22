@@ -238,6 +238,44 @@ def test_deadline_and_operation_budget_stop_before_new_intent(trace_database):
     assert not uow.read_snapshot(scope)["operations"] and worker.executions == 0
 
 
+def test_step_budget_ignores_elapsed_session_with_shared_operation_deadline(trace_database):
+    _, scope, uow, _, intent, worker, service, request = setup(trace_database)
+    service.deadline = datetime.now(UTC) - timedelta(minutes=10)
+    service.step_timeout_seconds = 1
+    original_prepare = worker.prepare
+
+    async def prepare(command):
+        assert command.step_deadline > datetime.now(UTC)
+        await asyncio.sleep(0.05)
+        return await original_prepare(command)
+
+    worker.prepare = prepare
+    result = asyncio.run(service.execute(intent, request))
+    assert result.operation.status == "completed" and worker.executions == 1
+    assert service.operation_deadline is None
+    assert len(uow.read_snapshot(scope)["frames"]) == 2
+
+
+def test_hung_step_has_own_timeout_and_duplicate_request_cannot_repeat_action(trace_database):
+    _, scope, uow, _, intent, worker, service, request = setup(trace_database)
+    service.step_timeout_seconds = 0.5
+
+    async def hung_execute(command):
+        worker.executions += 1
+        await asyncio.Event().wait()
+
+    worker.execute = hung_execute
+    with pytest.raises(VisualOperationStopped, match="step_timeout"):
+        asyncio.run(service.execute(intent, request))
+    saved = uow.read_snapshot(scope)["operations"][0]
+    assert saved.status == "unknown" and worker.executions == 1
+    assert saved.outcome_code == "step_timeout"
+    assert service.operation_deadline is None
+    with pytest.raises(VisualOperationStopped):
+        asyncio.run(service.execute(intent, request))
+    assert worker.executions == 1
+
+
 def test_wrong_worker_result_identity_is_rejected_before_execute(trace_database):
     _, scope, uow, _, intent, worker, service, request = setup(trace_database)
     worker.intent = evolve(intent, id=uuid4())
@@ -360,6 +398,15 @@ def live_browser_worker():
 
         with ThreadPoolExecutor(max_workers=1) as executor:
             metadata = json.loads(executor.submit(process.stdout.readline).result(timeout=20))
+        # Structured worker logs continue after the one-line startup handshake.
+        # Drain both pipes so Windows' small pipe buffers cannot block the server.
+        from collections import deque
+        from threading import Thread
+
+        readers = [Thread(target=lambda stream=stream: deque(stream, maxlen=100), daemon=True)
+                   for stream in (process.stdout, process.stderr)]
+        for reader in readers:
+            reader.start()
         yield metadata
     finally:
         process.terminate()

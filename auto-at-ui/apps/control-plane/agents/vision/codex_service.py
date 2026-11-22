@@ -8,6 +8,7 @@ from auto_at.contracts.codex_bridge import (
     CodexOutput,
     CodexProposalBinding,
     CodexTaskContext,
+    agent_loop_output_schema,
 )
 from auto_at.contracts.vision import StopAction, VisualAction, validate_locator_value
 from pydantic import TypeAdapter
@@ -56,6 +57,11 @@ def output_schema(max_candidates: int) -> bytes:
                 strict(child)
     strict(schema)
     return json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+
+
+def agent_output_schema() -> bytes:
+    """Strict schema bytes for `agent-loop-v1`; `output_schema()` stays the v4 identity."""
+    return agent_loop_output_schema()
 
 
 def validate_candidates(

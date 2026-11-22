@@ -67,15 +67,25 @@ def test_startup_rejects_missing_or_changed_catalogue(tmp_path, monkeypatch):
 
 def test_startup_requires_exact_centralized_instructions(tmp_path, monkeypatch):
     from agents.prompts.codex_exploration import INSTRUCTIONS
+    from agents.prompts.codex_generation import INSTRUCTIONS as GENERATION_INSTRUCTIONS
     path = tmp_path / "instructions.txt"
+    generation_path = tmp_path / "generation-instructions.txt"
     monkeypatch.setattr("infrastructure.codex_bridge.catalogue.INSTRUCTIONS_PATH", path)
+    monkeypatch.setattr("infrastructure.codex_bridge.catalogue.GENERATION_INSTRUCTIONS_PATH",
+                        generation_path)
     with pytest.raises(ValueError):
         validate_instructions()
     path.write_text("altered role")
     with pytest.raises(ValueError):
         validate_instructions()
     path.write_text(INSTRUCTIONS)
+    with pytest.raises(ValueError):
+        validate_instructions()
+    generation_path.write_text(GENERATION_INSTRUCTIONS)
     validate_instructions()
+    generation_path.write_text("changed generation role")
+    with pytest.raises(ValueError):
+        validate_instructions()
 
 
 def test_additional_tools_and_nested_namespaces_are_counted():

@@ -1,0 +1,13 @@
+{
+  "outcome_accuracy": "not_established",
+  "score_interpretation": "Conservative verified lower bound: unreviewed outcomes receive no credit.",
+  "maximum_possible_covered_targets": 46,
+  "accuracy_upper_bound": {
+    "numerator": 46,
+    "denominator": 49,
+    "percent": 93.87755102040816
+  },
+  "oracle_positive_count": 47,
+  "reason": "Even every completed positive oracle binding having a correct outcome cannot meet accuracy. Unmatched paths and rejected attempts cannot earn credit under frozen oracle rules.",
+  "pending_operations": 0
+}

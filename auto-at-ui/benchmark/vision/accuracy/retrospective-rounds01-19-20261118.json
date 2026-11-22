@@ -1,0 +1,1914 @@
+{
+  "schema_version": "vision-rounds-retrospective-v1",
+  "date": "2026-11-18",
+  "scope": "19 numbered live rounds; excludes imported historical baseline",
+  "excluded_baseline_iteration": "51a086ac-8612-4808-8fbe-ca091955f44c",
+  "terminal_families": {
+    "restoration_or_stale_checkpoint": [
+      3,
+      5,
+      6,
+      7,
+      10,
+      12,
+      14,
+      15,
+      16,
+      17,
+      19
+    ],
+    "popup_hydration_race": [
+      1,
+      4,
+      8,
+      18
+    ],
+    "bridge_provider_or_readiness": [
+      9,
+      11,
+      13
+    ],
+    "capacity": [
+      2
+    ]
+  },
+  "classification_note": "Terminal family is not the complete set of scoring failures; families are evidence-based audit annotations.",
+  "repeated_unmatched_video_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+  "repeated_unmatched_video_rounds": [
+    15,
+    16,
+    17,
+    19
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "iteration_id": "7b45b398-fd6a-442b-b534-0ce0f79365de",
+      "session_id": "79a9170d-1882-4b6a-abbf-5325c06e5174",
+      "source_hash": "39675e7a705a354298420b4b0aa4a391a20497245c745295cd8b8f4e34ccd78d",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 10,
+        "max_states": 50,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "state_restore_failed",
+      "terminal_family": "popup_hydration_race",
+      "operations": 64,
+      "attempts": 22,
+      "attempt_statuses": {
+        "completed": 22
+      },
+      "eligible_completed_bindings": 22,
+      "maximum_unique_bound_targets": 22,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-12",
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 22,
+      "ceiling_denominator": 22,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 22,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "state_mismatch": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "9de7fa1ce2bace87e7c15ef6c183c000e941e082672a3aaf135da16048745cd7",
+        "evidence.json": "2c222bfb04ffc39eac6dfe41a8a75d4379b2c160efcc1d40bcfb52882a8f0af1",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "3bb6525afc135767b40af8eda1ad346bb16b2a94bf455534c750787fec461d7b",
+        "assessments.json": "d095f9895e687295d24cd9e8309e22369f8f320c678c19bc62fadb115867539d",
+        "review-status.json": "b11ee9f6eea124351d02fc0df13a6af9292312c35122169d3b6c9dcae2061b30"
+      }
+    },
+    {
+      "round": 2,
+      "iteration_id": "d2c0d660-1309-4dab-85f3-fbb777e2b19d",
+      "session_id": "378d318d-ecca-4637-ae22-cbd8bf5619fc",
+      "source_hash": "9527fe43b3862f5929f03ef4944b90dff1e34ddadaa235d6efc5b26c4385621a",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 10,
+        "max_states": 50,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "exploration_coverage_incomplete",
+      "terminal_family": "capacity",
+      "operations": 78,
+      "attempts": 26,
+      "attempt_statuses": {
+        "completed": 26
+      },
+      "eligible_completed_bindings": 26,
+      "maximum_unique_bound_targets": 26,
+      "missing_completed_positive_bindings": [
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-07",
+        "mct-09",
+        "mct-10",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 26,
+      "ceiling_denominator": 26,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 26,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {},
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "7f6016d011c2bb150e9872ed62e51ec8e9d11d19c980080afc62074d53c303ea",
+        "evidence.json": "c549d53417d6f2c28849ee41ad4553bfced08e27ca1f62710013314e149c1000",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "7d7701341748fab0a4f243300965919d79c599465c74efc1345c63f6c613e26e",
+        "assessments.json": "a02d405b593b25b7eb3e21d247d189172b85c0816b4b0d4c62e22c16dd2101f0",
+        "review-status.json": "46c1bd6641dc82a571e68b7114c0c53f969296ec1e44a98f4e8e9cc71f62901d"
+      }
+    },
+    {
+      "round": 3,
+      "iteration_id": "dab64d78-48cd-4b3b-ae85-4f34bf482a30",
+      "session_id": "548b4945-ad5e-44e2-a215-1e8394a56517",
+      "source_hash": "1a4cf32dc0bfd8b21fe4e5cce1c30ec70f32919ddeb951df46dbdb46e620f96f",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 10,
+        "max_states": 50,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 54,
+      "attempts": 20,
+      "attempt_statuses": {
+        "completed": 20
+      },
+      "eligible_completed_bindings": 20,
+      "maximum_unique_bound_targets": 20,
+      "missing_completed_positive_bindings": [
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-07",
+        "mct-08",
+        "mct-09",
+        "mct-10",
+        "mct-12",
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 20,
+      "ceiling_denominator": 20,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 20,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {},
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "10c9ca164735c2a4faa14de0b288c9d9fe1301cfbfaa4437a76f7471fa71d929",
+        "evidence.json": "8389d7c31e2dbc86146db62367ccb9a38f46225e36d43faf2b1e313d6d3d8aa4",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "e029920d5e5e143e9436553ada339a6605b19182a87c2c52e2b2876bc53fd14c",
+        "assessments.json": "4854fa6337d481942caa69a2999d4a52730ad33f6a08aaff32d2493c23b92cc1",
+        "review-status.json": "b270ad80ddb13db0bd6df03aad2a14122feb340c5b3c9f0197096520889b3d11"
+      }
+    },
+    {
+      "round": 4,
+      "iteration_id": "aee8f4a3-d93f-4e81-b3fd-3627f36dce48",
+      "session_id": "c1c2bd97-5c11-4e06-87e2-536dd56183de",
+      "source_hash": "4fac3a21651f01c005d248016bd79004ee4912f53b5ad42a99fd2738e189a98f",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 10,
+        "max_states": 50,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "state_changed_during_prepare",
+      "terminal_family": "popup_hydration_race",
+      "operations": 31,
+      "attempts": 10,
+      "attempt_statuses": {
+        "completed": 10
+      },
+      "eligible_completed_bindings": 10,
+      "maximum_unique_bound_targets": 10,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-07",
+        "mct-08",
+        "mct-09",
+        "mct-10",
+        "mct-11",
+        "mct-12",
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-42",
+        "mct-43",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-52",
+        "mct-53",
+        "mct-54",
+        "mct-55",
+        "mct-56",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 10,
+      "ceiling_denominator": 10,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 10,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "state_changed_during_prepare": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "f72a0e4cb117661937b1f2b358631c1e7742cdfa42fbbbdc16c53bfd05b6a28f",
+        "evidence.json": "da585d798385146272b25ea32f6301ff79e980c3d4de49f6bdceac7a1cf5b5c4",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "795910e8fe3f57149eea64f8b4cbf394083e601faed88379e895ce70f523b201",
+        "assessments.json": "1bfa36a1f819a5bc4467c49d8709d510a97242c1d21db33227174cb0a85562a0",
+        "review-status.json": "e811254101c614758d7d42e851aea7ea1ccda1c8c6bb6e185f4effff78955330"
+      }
+    },
+    {
+      "round": 5,
+      "iteration_id": "b06acee8-f9c9-4d80-bc09-10ddd6f524d0",
+      "session_id": "f5280096-0c1a-4499-b395-837984da4c8f",
+      "source_hash": "502192bf9ec281e3f9f766a7a3343556de6cc761c511993b956a2135ee2ef5a6",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 10,
+        "max_states": 50,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 99,
+      "attempts": 35,
+      "attempt_statuses": {
+        "completed": 35
+      },
+      "eligible_completed_bindings": 35,
+      "maximum_unique_bound_targets": 35,
+      "missing_completed_positive_bindings": [
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 35,
+      "ceiling_denominator": 35,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 35,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "c50c5e728b73b955c92226a3d92bf17ed1c4053de552d9423b528e0a53fd0556",
+        "evidence.json": "dbbabba956e4f83774ab30b677005438dde2b9015326808c7b82377cee9b6f25",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "9a9017b13bc8ec46e89cf309bfc1d4e5deea7935c965a4094ad3a9a97b745d29",
+        "assessments.json": "043d4f953b42850c598df4b7e738b4152cfbc1e42206be4ab63e3d955b71425e",
+        "review-status.json": "bc29a6c8b43348d2a73b5c28498ab885107ae972c26745c8ec3e66e6125ab23e"
+      }
+    },
+    {
+      "round": 6,
+      "iteration_id": "f37c0b20-bf2f-4e24-a125-0ba8f820f186",
+      "session_id": "ccad7a7d-737a-4de8-b071-16ce457c9753",
+      "source_hash": "7062d7e611a5d50fd44e3d5a414cbfb6634e8e264ab87e8df193de3efd156e03",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 110,
+      "attempts": 37,
+      "attempt_statuses": {
+        "completed": 37
+      },
+      "eligible_completed_bindings": 37,
+      "maximum_unique_bound_targets": 37,
+      "missing_completed_positive_bindings": [
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 37,
+      "ceiling_denominator": 37,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 37,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "27467f30a6bd995cb4a7465526184d1294b0eccabbd650e70d39e17df5a68d14",
+        "evidence.json": "aa8f0d2b36896fd9e859126dfb84a1df01170f49a1040ea390ba25059c7a27fb",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "4bb7807d146d92a2526be2b2775fbe683e300b1f058d1ab916eb6b4c35a93dd8",
+        "assessments.json": "cf9afadb4b74177d5f8d1cb3b33edeaf401d442f1cb164164f20d947d1438231",
+        "review-status.json": "8c7632e8b03346bf92ec15dc4a881fa0b8bb7980af614068ac6553730de56708"
+      }
+    },
+    {
+      "round": 7,
+      "iteration_id": "e1f4a3a4-56fb-40ec-b423-4c0e231eb78b",
+      "session_id": "3957038a-9c7e-490c-90e8-7a8661e5c260",
+      "source_hash": "6f68c4d1ecfc3eb525c9437d4a4a9f6083f1446efa98407c2dd21bb13f9b49ed",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 95,
+      "attempts": 33,
+      "attempt_statuses": {
+        "completed": 33
+      },
+      "eligible_completed_bindings": 33,
+      "maximum_unique_bound_targets": 33,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-15",
+        "mct-16",
+        "mct-29",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 33,
+      "ceiling_denominator": 33,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 33,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "77cada7c8b0d1520989b372f1ee3d26450e826c830b7bafe40ac47d8dec972ab",
+        "evidence.json": "b53611cdeaea8739f4e9f8e972a9060c62a8cdffbb64c8d3f5c11082d87182b6",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "24614decc89b167297ecccc889957be6de30edb01904c6eec59b8bb276a0f74d",
+        "assessments.json": "239dca6562609cbe2cfb5056ea089e4b79fe526b2f10b29dccdfc215fa3438f5",
+        "review-status.json": "9fcf15ec84d4720b4aa5de0ac4a22aa4d4ff8c4f5a36843b1c956b458553e24c"
+      }
+    },
+    {
+      "round": 8,
+      "iteration_id": "db377eba-12b1-4db4-84d1-3734e2bf1f25",
+      "session_id": "63b8b5fa-e230-4fa4-b8d0-ef39c0d3889f",
+      "source_hash": "c5c38afb7300d43fa63d2942758e6c6c5c3bd42d3f7c19adda7a0965e515f9a2",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "state_mismatch",
+      "terminal_family": "popup_hydration_race",
+      "operations": 42,
+      "attempts": 15,
+      "attempt_statuses": {
+        "completed": 15
+      },
+      "eligible_completed_bindings": 15,
+      "maximum_unique_bound_targets": 15,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-07",
+        "mct-08",
+        "mct-09",
+        "mct-10",
+        "mct-11",
+        "mct-12",
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-42",
+        "mct-43",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 15,
+      "ceiling_denominator": 15,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 15,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "state_mismatch": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "ccd6dfb382e0757e5f50d2dc47b125795d80a7b898c552af5bca8195f337487d",
+        "evidence.json": "a6fd6730d3d5664e299944e31e1887ab697d0ca79fa670f6708bf3f089679ef8",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "12a5222b7c785977c73256f467c24bf9ed272fc70a4ee0515efd6b6c99655511",
+        "assessments.json": "af9a4ea19abf73095c53ff8a27d1d46cded6177c270392fe53bd85cfa50b7c12",
+        "review-status.json": "fbe61cf5060584264e17ad61f2a5f5e217919a1892f1ab3aac8b8c50060d9bae"
+      }
+    },
+    {
+      "round": 9,
+      "iteration_id": "65e78e75-5665-4dda-ac13-59a1f4ce60b2",
+      "session_id": "1e594cca-e0ab-4bc6-977f-620fc08a1d62",
+      "source_hash": "951ecf1ae3d1dccc209396df3e4a9556f285d580723074952b9a817f9d71a13a",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "bridge_offline",
+      "terminal_family": "bridge_provider_or_readiness",
+      "operations": 69,
+      "attempts": 26,
+      "attempt_statuses": {
+        "completed": 26
+      },
+      "eligible_completed_bindings": 26,
+      "maximum_unique_bound_targets": 26,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 26,
+      "ceiling_denominator": 26,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 26,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 48,
+        "percent": 95.83333333333333,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {},
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "3ede1bd774ba1019513a222ef770b3bbe374e71e1d4166671f1bafbff6d1c9ce",
+        "evidence.json": "692dfed0c1b45500175589aadb6dca4888baa2fb679ea452197caff63a410ece",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "76a494515ea87dcbd631fcf91479be00cab2a67bf97fd160072c94086ea08635",
+        "assessments.json": "1ab3d729225fb83a40458af2199b8b46eda24a7ad59f81abbc3f069a7bb843fe",
+        "review-status.json": "46c1bd6641dc82a571e68b7114c0c53f969296ec1e44a98f4e8e9cc71f62901d"
+      }
+    },
+    {
+      "round": 10,
+      "iteration_id": "90e66243-ed11-4163-85bd-ae0ea401b9eb",
+      "session_id": "e7b676d6-da37-49c5-b1f9-44c6ac28ea7c",
+      "source_hash": "0575ee9892ce24faa59fc9faf57cbe06321bc754a59b19ce4ebf987da131d44f",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 103,
+      "attempts": 39,
+      "attempt_statuses": {
+        "completed": 34,
+        "rejected": 5
+      },
+      "eligible_completed_bindings": 34,
+      "maximum_unique_bound_targets": 34,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-15",
+        "mct-16",
+        "mct-21",
+        "mct-29",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47"
+      ],
+      "outcome_adjusted_ceiling": 34,
+      "ceiling_denominator": 39,
+      "ceiling_percent": 87.17948717948718,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 39,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 48,
+        "percent": 95.83333333333333,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "stale_dom_target": 5,
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [
+        {
+          "sequence": 73,
+          "operation_id": "5bfae398-0a73-482a-88a1-d33e1ad2b855",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        },
+        {
+          "sequence": 92,
+          "operation_id": "7c94bdf4-0c1b-4f31-b09a-f364295476ad",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        },
+        {
+          "sequence": 93,
+          "operation_id": "6a51ef83-64e3-41bb-8f75-9f2ad47c8c95",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        },
+        {
+          "sequence": 94,
+          "operation_id": "35935eac-5f38-4c0f-9ea1-0be8d6f44931",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        },
+        {
+          "sequence": 95,
+          "operation_id": "3f9913bb-bc43-4109-b2c8-871ff1e26228",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        }
+      ],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "13e3e8993429cc4a2873f6babcbbe47179b10872148d88b6ea805092df716a2c",
+        "evidence.json": "1f07cb0b33846ade102fa1ec55c0e648a838ca51538c0515d5f3d241b6c9cd45",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "4dbac00953a8377a002ce44eb28353df46274804febf364173b4d6e13a2b8bc4",
+        "assessments.json": "47d8c7119a79e0826787cf3e6fec2cb206df8bff4915c12884fb808326594fa3",
+        "review-status.json": "4c6af3829ce51baa8a1234722da7ea234447dc1471ed293e46a7629d071b7b3c"
+      }
+    },
+    {
+      "round": 11,
+      "iteration_id": "827a7e61-5752-4ab5-b8ab-43e69bd70ffc",
+      "session_id": "579fdb87-8745-433c-aed0-c079960ae124",
+      "source_hash": "10733549bd1df56ad1ccdcece5fdf32cbcc54083072fc26cee0f901f985c8ef0",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "bridge_provider_unavailable",
+      "terminal_family": "bridge_provider_or_readiness",
+      "operations": 47,
+      "attempts": 17,
+      "attempt_statuses": {
+        "completed": 17
+      },
+      "eligible_completed_bindings": 17,
+      "maximum_unique_bound_targets": 17,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-07",
+        "mct-08",
+        "mct-09",
+        "mct-10",
+        "mct-11",
+        "mct-12",
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 17,
+      "ceiling_denominator": 17,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 17,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 46,
+        "percent": 100.0,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {},
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "035dc228504c59ba3a07e1a006feb61019be2998a2df99f2b16fb0ba6551009d",
+        "evidence.json": "e5529fcd96daab5789656af5e98414ef5e19edff47af508bb8fc2b1a3df2d7c0",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "eca02287d55abb707c0d7b2f068db460f6c53294edf7c7552f0a6b941482dd3e",
+        "assessments.json": "7aacf95dcb79a1aa8bea534fd3890e8e6147189498a0a54e55f0cabcf6e7178b",
+        "review-status.json": "392f47086413dbd9a58968e4b18cb971b4e8738d2b361bee6e781ce38f0759e1"
+      }
+    },
+    {
+      "round": 12,
+      "iteration_id": "15967ed1-c9b7-43ad-8878-41e68b414d23",
+      "session_id": "3ec3b50d-3f9c-4375-b894-696ed9d1f370",
+      "source_hash": "10733549bd1df56ad1ccdcece5fdf32cbcc54083072fc26cee0f901f985c8ef0",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 107,
+      "attempts": 35,
+      "attempt_statuses": {
+        "completed": 35
+      },
+      "eligible_completed_bindings": 35,
+      "maximum_unique_bound_targets": 35,
+      "missing_completed_positive_bindings": [
+        "mct-13",
+        "mct-15",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-47"
+      ],
+      "outcome_adjusted_ceiling": 35,
+      "ceiling_denominator": 35,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 35,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 46,
+        "percent": 100.0,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {},
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "cf31b68974147afacc46993058331be4c05af981046a180d1d9a3858315e4a92",
+        "evidence.json": "be8ac8689e75d9eae5fa35ff9747b7b1a8714ce814f3150f3a1698c4dc6f4927",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "3774fae4ba946b1e0ee03b9631eb40fd9413d4dea390d5e223ffba16ac4276d7",
+        "assessments.json": "3661bcc3c1a166178d9ab4a414fb13af0f416bf25dde068a8373a95d9b80b83c",
+        "review-status.json": "bc29a6c8b43348d2a73b5c28498ab885107ae972c26745c8ec3e66e6125ab23e"
+      }
+    },
+    {
+      "round": 13,
+      "iteration_id": "5556d5db-bae4-4571-b2bb-d99d171ab8da",
+      "session_id": "472aa413-dde2-4bcd-a28e-66bd6e975d82",
+      "source_hash": "02e8bf18ab41e38eee39b88518e3ef116beaf2730364b2332dbc891991ed299d",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "visual_exploration_unavailable",
+      "terminal_family": "bridge_provider_or_readiness",
+      "operations": 0,
+      "attempts": 0,
+      "attempt_statuses": {},
+      "eligible_completed_bindings": 0,
+      "maximum_unique_bound_targets": 0,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-07",
+        "mct-08",
+        "mct-09",
+        "mct-10",
+        "mct-11",
+        "mct-12",
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-33",
+        "mct-34",
+        "mct-35",
+        "mct-36",
+        "mct-37",
+        "mct-38",
+        "mct-39",
+        "mct-40",
+        "mct-41",
+        "mct-42",
+        "mct-43",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-51",
+        "mct-52",
+        "mct-53",
+        "mct-54",
+        "mct-55",
+        "mct-56",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 0,
+      "ceiling_denominator": 0,
+      "ceiling_percent": null,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 0,
+        "percent": null,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 0,
+        "denominator": 0,
+        "percent": null,
+        "above_95": false
+      },
+      "detection_recall": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {},
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "d30ea257d648f306e636de291f35ee2f7485d662fe295c0cb508d26335a83cf9",
+        "evidence.json": "1f2e8a17bcbe61905ab7208862386e8e53ef7482316843adcd3759ba3f635356",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "9297ebec4b00110a0d5ae64453813c639ef660df6713900f95de937f100b1993",
+        "assessments.json": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+        "review-status.json": "1bd8c72db29a3f1cab774b77e6e9a6ef06b9b8d468b1e97e4c73299b8242aaa6",
+        "checkpoint-diagnostics.json": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f"
+      }
+    },
+    {
+      "round": 14,
+      "iteration_id": "1de7b316-99d0-4a3a-9e02-dd684a23df60",
+      "session_id": "8037d765-3ac4-420d-8793-47d932f861c0",
+      "source_hash": "02e8bf18ab41e38eee39b88518e3ef116beaf2730364b2332dbc891991ed299d",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 85,
+      "attempts": 30,
+      "attempt_statuses": {
+        "completed": 30
+      },
+      "eligible_completed_bindings": 30,
+      "maximum_unique_bound_targets": 30,
+      "missing_completed_positive_bindings": [
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 30,
+      "ceiling_denominator": 30,
+      "ceiling_percent": 100.0,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 30,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 46,
+        "percent": 100.0,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "state_changed_during_prepare": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "856a733359dea01fdcbbbfd9a902660c650097f722c5b81c2fc017140fc78098",
+        "evidence.json": "b339a21459c032c311e6387d369f70cae10c5f83fea3073e3044c5484c195773",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "016e3cf7899c04364b0654f3be601fda8f7890c3bdddad533c911db8920cffa5",
+        "assessments.json": "c5c5c1c32ff62e489c453d1a4f34f8f6d3ec532a9d5a6e4e66c5635ac397a21b",
+        "review-status.json": "a3c766cba955a1d8d95641f8292df4b8c5877e1e43a2059b545410ec9480a0d6",
+        "checkpoint-diagnostics.json": "5e1514d2b802b4d2873adea5cfe87b1b3935536e360c117d04238d56c74be1d2"
+      }
+    },
+    {
+      "round": 15,
+      "iteration_id": "aded2b83-bfc6-4c99-8461-d829e002a9b6",
+      "session_id": "7b15d7fc-8a90-4076-b972-90f50ae2c2c6",
+      "source_hash": "0c477dc99e299bcdaeaa3fd7f9af2cb1ab96410d6bbe9c8965982ce2a8f1ecbd",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 146,
+      "attempts": 49,
+      "attempt_statuses": {
+        "completed": 47,
+        "rejected": 2
+      },
+      "eligible_completed_bindings": 46,
+      "maximum_unique_bound_targets": 46,
+      "missing_completed_positive_bindings": [
+        "mct-47"
+      ],
+      "outcome_adjusted_ceiling": 46,
+      "ceiling_denominator": 49,
+      "ceiling_percent": 93.87755102040816,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 49,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 47,
+        "denominator": 49,
+        "percent": 95.91836734693878,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 47,
+        "denominator": 47,
+        "percent": 100.0,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "unsupported_target": 1,
+        "stale_dom_target": 1,
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [
+        {
+          "sequence": 101,
+          "operation_id": "b14ba89c-6a11-48af-ae0e-18347d1fc234",
+          "status": "completed",
+          "code": "observed",
+          "bound_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+          "target_id": null
+        },
+        {
+          "sequence": 111,
+          "operation_id": "c58b474e-2ce4-4be8-b3ef-7a0b7074b6c4",
+          "status": "rejected",
+          "code": "unsupported_target",
+          "bound_path": null,
+          "target_id": null
+        },
+        {
+          "sequence": 123,
+          "operation_id": "70de6166-9c1f-4d97-b19b-5cddbfa14aac",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        }
+      ],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "45f9793ea2c35c97265ce8fe8cc2b3aceaeda37193e0c6815e55772ae931929e",
+        "evidence.json": "99454cb8e07914afb9a9664f3e0563f8315f49005b7356f07b9ed1dcce9a1513",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "f969ba8efaffafa7791f784dfbef6f971bc08d26bc2a1d9676c2703a4fd887a6",
+        "assessments.json": "bfeca16c757359317fc2404924e6923607b355d7245aad4ffa16e640f924c2f5",
+        "review-status.json": "257c6706b332e35f0c3aaeaa3ab20b6926c040082109006e760006d32fe04eeb",
+        "supplemental-review-status.json": "8cd7d587dd9684a0c6ff872b464b4fa5606496e4b8b68eb75640843f9baf33da",
+        "checkpoint-diagnostics.json": "7e2e33930e85e5725160cccb220be2ee815d3b720a86c78a5c571d22a302c50d"
+      }
+    },
+    {
+      "round": 16,
+      "iteration_id": "fd3ddda4-ca69-4abb-818b-a8ac1ad594d8",
+      "session_id": "58e2ad72-d3ee-4c52-9e13-820960468a46",
+      "source_hash": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 148,
+      "attempts": 48,
+      "attempt_statuses": {
+        "completed": 47,
+        "rejected": 1
+      },
+      "eligible_completed_bindings": 46,
+      "maximum_unique_bound_targets": 46,
+      "missing_completed_positive_bindings": [
+        "mct-47"
+      ],
+      "outcome_adjusted_ceiling": 46,
+      "ceiling_denominator": 48,
+      "ceiling_percent": 95.83333333333333,
+      "saved_verified_correct": 46,
+      "saved_accuracy": {
+        "numerator": 46,
+        "denominator": 48,
+        "percent": 95.83333333333333,
+        "above_95": true
+      },
+      "saved_coverage": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 48,
+        "percent": 95.83333333333333,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": true,
+      "noncompleted_operation_codes": {
+        "state_changed_during_prepare": 1,
+        "unsupported_target": 1,
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [
+        {
+          "sequence": 104,
+          "operation_id": "3ce6b1a5-94d3-4899-a9c5-04096edaf3c0",
+          "status": "completed",
+          "code": "observed",
+          "bound_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+          "target_id": null
+        },
+        {
+          "sequence": 114,
+          "operation_id": "3eb3426c-7483-4474-b791-472388bf84ce",
+          "status": "rejected",
+          "code": "unsupported_target",
+          "bound_path": null,
+          "target_id": null
+        }
+      ],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "fc89e8e8ea4f769a487ca01e96c8235f020374084764b0b2ce27f8e24df90dac",
+        "evidence.json": "0a0029ec71d0e48cf7f524801b8ed2e30d3c6fe7c8dd5658ba6b1743afd3312a",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "333aecd42e5c697ff14c3d987ef18c3571be8abb5b7657cf77b123d0233f72bd",
+        "assessments.json": "eaf1cea2c99baf3d89cf87cb2c26cebff725293ca9df6712c630f0d8bc7b045c",
+        "review-status.json": "81d232f8f52033dda84e036cedda8332e1588db8a8ef230273844c9a8bef7261",
+        "checkpoint-diagnostics.json": "ac5c93e06fffeb300bd683df99ce7329dd4414dea3aca9d00b5d9bf52559a403"
+      }
+    },
+    {
+      "round": 17,
+      "iteration_id": "56e50d4d-2be0-433b-98ad-2eab68d7773f",
+      "session_id": "c2cb227d-6c27-4323-971d-da27bbe67fcc",
+      "source_hash": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 145,
+      "attempts": 47,
+      "attempt_statuses": {
+        "completed": 46,
+        "rejected": 1
+      },
+      "eligible_completed_bindings": 45,
+      "maximum_unique_bound_targets": 45,
+      "missing_completed_positive_bindings": [
+        "mct-21",
+        "mct-47"
+      ],
+      "outcome_adjusted_ceiling": 44,
+      "ceiling_denominator": 47,
+      "ceiling_percent": 93.61702127659575,
+      "saved_verified_correct": 5,
+      "saved_accuracy": {
+        "numerator": 5,
+        "denominator": 47,
+        "percent": 10.638297872340425,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 5,
+        "denominator": 47,
+        "percent": 10.638297872340425,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 47,
+        "denominator": 48,
+        "percent": 97.91666666666667,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 47,
+        "denominator": 47,
+        "percent": 100.0,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "stale_dom_target": 1,
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [
+        {
+          "sequence": 102,
+          "operation_id": "13a143a6-a9cb-45f1-9fd6-8ad84822a948",
+          "status": "completed",
+          "code": "observed",
+          "bound_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+          "target_id": null
+        },
+        {
+          "sequence": 111,
+          "operation_id": "f2b4d895-c78b-4638-a9da-ad9014a5895c",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        }
+      ],
+      "retained_carousel_mismatch": {
+        "operation_id": "2ff3cd93-01f8-4e6e-b14a-f4e583b921b8",
+        "sequence": 26,
+        "target_id": "mct-54",
+        "expected_active_index": 4,
+        "before_observed_index": 4,
+        "after_observed_index": 5,
+        "before_slide": "Thu Cuoi Kinh Dien",
+        "after_slide": "Vo Lam Chan Menh",
+        "before": {
+          "id": "adbf3a80-c9bb-4395-b3f9-6cc8d2bdb3e9",
+          "checksum": "60ff498dac4e7cc61c52f1fe30d172a639d03443882d93d1a799e1de99bab474",
+          "availability": "retained",
+          "byte_count": 790452
+        },
+        "after": {
+          "id": "fca9e5d4-9385-4242-b8f0-8e200e84a4f5",
+          "checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+          "availability": "retained",
+          "byte_count": 798710
+        },
+        "verdict": "unverified",
+        "finding": "Verified locator targets indicator 4, but retained after-frame shows indicator 5. The frozen oracle requires matching immediate selected slide. No credit; autoplay/capture timing is a hypothesis, not proof of wrong physical target.",
+        "accuracy_upper_bound_with_available_evidence": {
+          "numerator": 44,
+          "denominator": 47,
+          "percent": 93.61702127659575
+        },
+        "review_scope": "Five positive outcomes independently reviewed. Other eligible outcomes remain unreviewed after this necessary qualification gate failed; raw evidence preserved.",
+        "qualification_passed": false
+      },
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "4029e455b1bee64b69df245493d4a39e13d84d0624ef41934e232293ba1d78eb",
+        "evidence.json": "1d954b0e8e1c05fde7a97c92017923e76e5d05ba8afd52148d4b11cb355889f5",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "30e9c1a676df758eb8b18d5ce6b0a2d89a61e0be66ad1c7bf04efad3e069df81",
+        "assessments.json": "ac50bb33c4209bd499650cad4ae7cfa0e2c503ba9c040d3ba6861d108b7c282a",
+        "review-status.json": "60d1d25ed6b72403fd5ad9c031c7b14a3158f57e275c1e565debdef2280db049",
+        "carousel-outcome-mismatch.json": "4a88928cd4b44b1de2ade5ca67e47c7849171a1e5b81014d8ea4b626780847dd",
+        "checkpoint-diagnostics.json": "8fe90b6cbe0c06965b644d713a8a1ab591432408abc38e7bd1b737475a90d655"
+      }
+    },
+    {
+      "round": 18,
+      "iteration_id": "1f13a1e9-d08d-4582-8f3a-bfae43be833e",
+      "session_id": "3d30c88c-9d4d-499a-b4d8-11e8e6739b81",
+      "source_hash": "4b67094dfd3603e3f55e99e90717b7d8c77a6d068884c3bd6a5be4aa05aaf6fc",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "state_restore_failed",
+      "terminal_family": "popup_hydration_race",
+      "operations": 41,
+      "attempts": 15,
+      "attempt_statuses": {
+        "completed": 15
+      },
+      "eligible_completed_bindings": 15,
+      "maximum_unique_bound_targets": 15,
+      "missing_completed_positive_bindings": [
+        "mct-01",
+        "mct-02",
+        "mct-03",
+        "mct-04",
+        "mct-05",
+        "mct-06",
+        "mct-07",
+        "mct-08",
+        "mct-09",
+        "mct-10",
+        "mct-11",
+        "mct-12",
+        "mct-13",
+        "mct-14",
+        "mct-15",
+        "mct-16",
+        "mct-18",
+        "mct-19",
+        "mct-20",
+        "mct-21",
+        "mct-29",
+        "mct-30",
+        "mct-31",
+        "mct-32",
+        "mct-42",
+        "mct-43",
+        "mct-44",
+        "mct-45",
+        "mct-46",
+        "mct-47",
+        "mct-57",
+        "mct-58"
+      ],
+      "outcome_adjusted_ceiling": 14,
+      "ceiling_denominator": 15,
+      "ceiling_percent": 93.33333333333333,
+      "saved_verified_correct": 5,
+      "saved_accuracy": {
+        "numerator": 5,
+        "denominator": 15,
+        "percent": 33.333333333333336,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 5,
+        "denominator": 47,
+        "percent": 10.638297872340425,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 46,
+        "denominator": 47,
+        "percent": 97.87234042553192,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "state_changed_during_prepare": 1
+      },
+      "denominator_only_operations": [],
+      "retained_carousel_mismatch": {
+        "operation_id": "5f988cae-b3ab-4fc8-b15a-1a3d73ba4b16",
+        "sequence": 24,
+        "target_id": "mct-53",
+        "expected_index": 3,
+        "observed_after_index": 4,
+        "observed_slide": "Thu Cuoi Kinh Dien",
+        "verdict": "unverified",
+        "before": {
+          "id": "29bc03fe-a625-462c-9623-a4295bd71de8",
+          "checksum": "15ae2475e4bd8a1a142973caf4a2d1ad06b5b0968fabb486bdcfceeb0942e985",
+          "availability": "retained",
+          "byte_count": 780157
+        },
+        "after": {
+          "id": "d6723260-9b02-46a1-92ab-930b3aa4b82d",
+          "checksum": "6010227a4f99f696173c51db5911d59daff65c0954c9eed7675f2b349e8f9f6e",
+          "availability": "retained",
+          "byte_count": 776268
+        },
+        "finding": "The third indicator proposal has a verified binding but retained after-frame shows fourth slide; no outcome credit. ADR-034 does not yet establish reliable live carousel evidence.",
+        "coverage_upper_bound_ignoring_outcomes": {
+          "numerator": 15,
+          "denominator": 47
+        },
+        "coverage_upper_bound_with_available_evidence": {
+          "numerator": 14,
+          "denominator": 47
+        },
+        "review_scope": "Six carousel outcomes inspected; five matching and one unverified. Other nine click outcomes remain unreviewed after coverage gate failed."
+      },
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "fa0ca42c7e287bffc9543ec3a27ab65c3f123d58d53e0dddace68e3578230a34",
+        "evidence.json": "08090c58caeaf90757474437b36bf98bff14bfb4eb892f43c8b2497e2c279181",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "eb73a36b7f6798768f6d218e6c0ec4649a49bd81a23b64194d01959dbf2d6af3",
+        "assessments.json": "4b43186a545f8acb0b38390f0d5753d9ecf5d2922e66c8c30e012f9447f09235",
+        "review-status.json": "0b3d63fcb86ca9682cbe2c4545ba66f8ed9baf4f5e664c07b08bdce02944363c",
+        "carousel-outcome-mismatch.json": "1d6e5ec4eb3ed0c5b106e99e2026a0061f265ea441fe685a0ac176112e7e3b76"
+      }
+    },
+    {
+      "round": 19,
+      "iteration_id": "9f84261c-0d0f-47c6-894c-d476f72d9bf1",
+      "session_id": "0d652d30-c4c7-4bde-82e4-69a6fbbf1e4e",
+      "source_hash": "2337ebf96b2ff59e1c34d5c3cae4404590850597362b384534e99e93be4ebce4",
+      "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+      "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+      "observed_policy": {
+        "max_steps": 20,
+        "max_hops": 20,
+        "max_states": 100,
+        "max_session_seconds": 120,
+        "step_timeout_seconds": 120
+      },
+      "terminal_reason": "unsafe_replay",
+      "terminal_family": "restoration_or_stale_checkpoint",
+      "operations": 146,
+      "attempts": 49,
+      "attempt_statuses": {
+        "completed": 47,
+        "rejected": 2
+      },
+      "eligible_completed_bindings": 46,
+      "maximum_unique_bound_targets": 46,
+      "missing_completed_positive_bindings": [
+        "mct-47"
+      ],
+      "outcome_adjusted_ceiling": 46,
+      "ceiling_denominator": 49,
+      "ceiling_percent": 93.87755102040816,
+      "saved_verified_correct": 0,
+      "saved_accuracy": {
+        "numerator": 0,
+        "denominator": 49,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "saved_coverage": {
+        "numerator": 0,
+        "denominator": 47,
+        "percent": 0.0,
+        "above_95": false
+      },
+      "detection_precision": {
+        "numerator": 47,
+        "denominator": 49,
+        "percent": 95.91836734693878,
+        "above_95": true
+      },
+      "detection_recall": {
+        "numerator": 47,
+        "denominator": 47,
+        "percent": 100.0,
+        "above_95": true
+      },
+      "passed": false,
+      "noncompleted_operation_codes": {
+        "stale_dom_target": 1,
+        "unsupported_target": 1,
+        "history_checkpoint_unavailable": 1
+      },
+      "denominator_only_operations": [
+        {
+          "sequence": 101,
+          "operation_id": "ecc66a5e-ad7c-4046-944f-8b4a16fdd55c",
+          "status": "completed",
+          "code": "observed",
+          "bound_path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+          "target_id": null
+        },
+        {
+          "sequence": 117,
+          "operation_id": "35de1b55-5765-488e-82d9-1c2faddec7b3",
+          "status": "rejected",
+          "code": "stale_dom_target",
+          "bound_path": null,
+          "target_id": null
+        },
+        {
+          "sequence": 133,
+          "operation_id": "39cf1dd7-ffe0-41e8-ab33-364f36dcab0e",
+          "status": "rejected",
+          "code": "unsupported_target",
+          "bound_path": null,
+          "target_id": null
+        }
+      ],
+      "retained_carousel_mismatch": null,
+      "interpretation": "Upper bounds are not measured accuracy; unreviewed outcomes cannot earn credit.",
+      "input_sha256": {
+        "manifest.json": "e886049285060794a67254b6ae0e8dd98745ff97e1eb0a405e2b3eb55a791b85",
+        "evidence.json": "0d1569182f4e35b7c6f719fafbe41701deff4bd555e437ac1b05ae6a8a7d35b1",
+        "oracle.json": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+        "score.json": "9f33e72e4de4a2782696a0bf99259b03046be0adab3c45c90cc6bfdf52c282a8",
+        "assessments.json": "ce01aefdf3e7af631940554f5f152a5c29b97aa7883261cb93676e16fc64871a",
+        "review-status.json": "257c6706b332e35f0c3aaeaa3ab20b6926c040082109006e760006d32fe04eeb",
+        "sample-timing.json": "71c14fbb28bffe6658e815a3ac1867a4d65f7cec6862023587649fa148e52930",
+        "sample-capture-failures.json": "0cc3b1d993f03a08dace35569f260ce252df14dacf66ad348aada857e826555d",
+        "checkpoint-diagnostics.json": "ed440de1273441887c082bace9b976465eedbcd7fd96ad45682652084f0d336d"
+      }
+    }
+  ],
+  "corrections": [
+    {
+      "round": 9,
+      "canonical_readme_completed_clicks": 25,
+      "evidence_completed_clicks": 26,
+      "basis": "evidence.json, assessments.json and review-status.json agree on 26; original artifacts unchanged"
+    }
+  ]
+}

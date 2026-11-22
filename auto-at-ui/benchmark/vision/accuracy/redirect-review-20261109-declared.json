@@ -1,0 +1,30 @@
+{
+  "checked_at": "2026-11-09T06:23:49.224854+00:00",
+  "purpose": "Public homepage href hash match plus independent HEAD redirect review; not operation outcome proof alone.",
+  "rows": [
+    {
+      "target_id": "mct-04",
+      "status": "declared_href_not_in_server_html"
+    },
+    {
+      "target_id": "mct-06",
+      "status": "declared_href_not_in_server_html"
+    },
+    {
+      "target_id": "mct-07",
+      "status": "declared_href_not_in_server_html"
+    },
+    {
+      "target_id": "mct-08",
+      "status": "declared_href_not_in_server_html"
+    },
+    {
+      "target_id": "mct-16",
+      "status": "declared_href_not_in_server_html"
+    },
+    {
+      "target_id": "mct-47",
+      "status": "declared_href_not_in_server_html"
+    }
+  ]
+}

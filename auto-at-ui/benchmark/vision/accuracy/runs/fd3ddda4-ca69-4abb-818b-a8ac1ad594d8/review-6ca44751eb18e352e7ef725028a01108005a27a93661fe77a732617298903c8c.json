@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "3f45915c-435f-4f97-a9a7-a0a15d8ee03f",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_tab",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "79c8719ba0b3ac0a065d3dc4a73ea4dba7197809d01a368681e0bd7247fce432",
+  "after_checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+  "finding": "Guide tab is visibly active and its guide article list is shown after the bound click."
+}

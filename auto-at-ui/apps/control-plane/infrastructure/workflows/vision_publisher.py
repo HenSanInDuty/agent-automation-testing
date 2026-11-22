@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import httpx
+from application.vision_agent_loop import VisionAgentLoopProcessor
 from application.vision_trace_events import VisionTraceEventProcessor
 
 from infrastructure.artifacts.rustfs import RustFSArtifactStore
@@ -19,13 +20,18 @@ async def publish_vision_once(factory, settings, *, handler=None):
     with transactional_session(factory) as session:
         events = SqlAlchemyOutboxEventRepository(session).list_unpublished(100)
     published = 0
-    async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+    # The application owns each step deadline, including streamed evidence.
+    # A fixed 30s socket cap must not shorten a configured 120s browser step.
+    async with httpx.AsyncClient(timeout=httpx.Timeout(None, connect=10),
+                                follow_redirects=False) as client:
+        worker = HttpVisualWorker(client, settings.playwright_worker_url,
+                                  settings.vision_worker_secret)
+        codex = codex_candidate_factory(settings, factory)
         processor = handler or VisionTraceEventProcessor(
-            uow,
-            HttpVisualWorker(client, settings.playwright_worker_url, settings.vision_worker_secret),
-            settings,
-            VisionModelBatch(settings),
-            codex_candidates=codex_candidate_factory(settings, factory),
+            uow, worker, settings, VisionModelBatch(settings), codex_candidates=codex,
+        )
+        agent_processor = handler or VisionAgentLoopProcessor(
+            uow, worker, settings, (lambda lease: codex(lease).exchange) if codex else None,
         )
         for event in events:
             if event.event_type != "agent.visual_exploration.requested.v1":
@@ -36,7 +42,10 @@ async def publish_vision_once(factory, settings, *, handler=None):
             if record is None or record.trace_version != "v4":
                 continue
             # This await is deliberately outside the outbox read/write transactions.
-            outcome = await processor.execute(event)
+            engine = getattr(record, "exploration_engine", "planner")
+            outcome = await (agent_processor if engine == "agent_loop" else processor).execute(
+                event
+            )
             if outcome == "busy":
                 continue
             with transactional_session(factory) as session:

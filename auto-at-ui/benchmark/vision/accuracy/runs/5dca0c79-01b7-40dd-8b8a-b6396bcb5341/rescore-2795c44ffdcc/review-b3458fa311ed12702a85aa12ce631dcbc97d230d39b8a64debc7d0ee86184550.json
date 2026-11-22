@@ -1,0 +1,11 @@
+{
+  "after_checksum": "f8eab092597efb48232c3badd0754546fee8239a33d81c486073b00af10fafc4",
+  "before_checksum": "f1eecde81d933a62fded88d18db0e4bf9352cd001c5beece73d57e8a7c3f006b",
+  "finding": "mct-21: empty search input; before and after frames show the identical unfiltered Cam Nang list, same URL (url_change unchanged, scroll 576), no error, no form mutation.",
+  "operation_id": "247eb51f-c497-46c7-94d9-02b02a15bc9a",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "empty_search",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

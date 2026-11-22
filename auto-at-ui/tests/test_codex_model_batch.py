@@ -1,4 +1,6 @@
 import asyncio
+import errno
+import json
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -8,6 +10,7 @@ from application.codex_candidates import CodexUnavailable
 from application.vision_model_batch import VisionModelSession
 from auto_at.contracts.codex_bridge import CodexBridgeReadiness, canonical_bytes
 from infrastructure.codex_bridge.spool import FileSpool
+from infrastructure.observability.logging import JsonFormatter
 from infrastructure.vision.codex_batch import CodexModelBatch
 from test_codex_bridge_contracts import response
 from test_codex_candidate_service import bound_observation, codex_policy
@@ -79,7 +82,7 @@ async def test_durable_registration_precedes_publication_and_result_is_acknowled
     task = asyncio.create_task(batch(**args))
     req = await wait_authorized(spool)
     assert gateway.events[0] == ("registered", req)
-    assert req.context == args["context"] and req.prompt_version == "codex-dom-v6"
+    assert req.context == args["context"] and req.prompt_version == "codex-dom-v11"
     assert not spool.has_file(req, "screenshot.png")
     result = response(req, started_at=datetime.now(UTC), completed_at=datetime.now(UTC))
     spool.complete(req, result)
@@ -147,3 +150,37 @@ async def test_task_cancellation_cancels_owned_file_job(harness):
         await task
     assert gateway.events[-1][0] == "cancelled"
     assert spool.has_file(req, "cancel.json")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("phase", ["stages_read", "stages_persist"])
+async def test_io_failure_logs_phase_errno_and_scope_and_keeps_actual_cancel_reason(
+    harness, monkeypatch, caplog, phase,
+):
+    batch, args, spool, gateway, _ready = harness
+    failure = OSError(errno.EIO, "sensitive-provider-message", "/secret/credentials.json")
+
+    def read_stages(_request):
+        raise failure
+
+    async def persist_stages(*_args):
+        raise failure
+
+    if phase == "stages_read":
+        monkeypatch.setattr(spool, "stages", read_stages)
+    else:
+        monkeypatch.setattr(gateway, "poll", persist_stages)
+    monkeypatch.setattr(spool, "cancellation_acknowledged", lambda _: True)
+    with pytest.raises(CodexUnavailable, match="bridge_io_error"):
+        await batch(**args)
+    event = next(r for r in caplog.records if getattr(r, "event", None)
+                 == "codex.handoff.failed")
+    encoded = JsonFormatter("synthetic", "test").format(event)
+    payload = json.loads(encoded)
+    assert payload["phase"] == phase
+    assert payload["errno"] == errno.EIO and payload["errno_name"] == "EIO"
+    assert payload["session_id"] == str(args["session"].id)
+    assert payload["correlation_id"] == str(args["session"].correlation_id)
+    assert payload["published"] and payload["registered"] and not payload["finished"]
+    assert gateway.events[-1] == ("cancelled", "bridge_io_error")
+    assert "sensitive-provider" not in encoded and "/secret/credentials" not in encoded

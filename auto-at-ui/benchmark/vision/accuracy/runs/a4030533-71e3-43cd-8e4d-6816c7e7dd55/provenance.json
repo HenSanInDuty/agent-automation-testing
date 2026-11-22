@@ -1,0 +1,54 @@
+{
+  "session_id": "45473832-0221-4266-a54a-4669b3d39aca",
+  "source_hash": "2cd003097edc26d20dea1320ed9c58b0896c4d0a43b519fe2005ea9363849578",
+  "images": {
+    "control-plane": "sha256:24c02d268da54e130fc60f9683d5a1c02de9249ae72f64281d7b84b0b440ffda",
+    "temporal-worker": "sha256:956e65003108b86223a3a3994554be14ca324a4a73af4f828cbbd7d339e9563c",
+    "playwright-worker": "sha256:d057a538fcc0d36f622e26a309a0ee8e024aeaf708409bb8eab229be6399a71f",
+    "codex-bridge": "sha256:d5cbc0aec49efcaf4157d726b206c201024f47810c1610d1569cce52d23693bd",
+    "dashboard": "sha256:8de1616616aa83002555b133ce2c4b46c2da644daa6ff09d92f6c5d4c7aa2212"
+  },
+  "deployed_source_checks": {
+    "control-plane:apps/control-plane/application/vision_trace_events.py": "894a25c7b3d4a4af5a2e27f6dcf3902513beb5210d1783eaf0c9dfcf5df8a669",
+    "control-plane:apps/control-plane/domain/vision_restoration.py": "ed1b0a074644ec34c75c386d42e1811c295a37d616ef57bfb92b41ef3f0bdb8e",
+    "control-plane:apps/control-plane/infrastructure/codex_bridge/doctor.py": "f158d4540f5045003b8bf1dc1b27364a6049a5d42c5d6c37f28a844d668a0e0a",
+    "control-plane:apps/control-plane/api/v1/routes/generation.py": "692e8a1a02cbfba299d170c885fed6e41688bb73350241ac43801b4b0fef0331",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision_worker.py": "3d4ca93610ccca37852b759d99d92ac86ff3e5aef05d8269bf7341ac0235b954",
+    "temporal-worker:apps/control-plane/application/vision_trace_events.py": "894a25c7b3d4a4af5a2e27f6dcf3902513beb5210d1783eaf0c9dfcf5df8a669",
+    "temporal-worker:apps/control-plane/domain/vision_restoration.py": "ed1b0a074644ec34c75c386d42e1811c295a37d616ef57bfb92b41ef3f0bdb8e",
+    "temporal-worker:apps/control-plane/infrastructure/codex_bridge/doctor.py": "f158d4540f5045003b8bf1dc1b27364a6049a5d42c5d6c37f28a844d668a0e0a",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision_worker.py": "3d4ca93610ccca37852b759d99d92ac86ff3e5aef05d8269bf7341ac0235b954",
+    "playwright-worker:workers/playwright/src/vision-operations.ts": "56fe09578ff926ba9c48bb9909699ce3ec8ff46f55e3437acbb2966b66952855",
+    "playwright-worker:workers/playwright/src/vision.ts": "870a7117b89aacad5459d05c7c4edf124d28c87daeadd1e52938cebcf8af1380",
+    "playwright-worker:workers/playwright/src/vision-dom.ts": "99d295f2ebdacea5ed32e6408036c8d28ddcbdebed55930ca479c659ffed5655",
+    "playwright-worker:workers/playwright/src/vision-history.ts": "d7021992377589c2a3e51137426e3ad3cdabc9c499b6d0349c24703d194962b3",
+    "playwright-worker:workers/playwright/src/vision-contract.generated.ts": "a3eead9cf86d0a9692e25c5b1dc676a979ad1bfe06801002b1677ed1b97499b9"
+  },
+  "prompt_version": "codex-dom-v11",
+  "playwright_version": "1.50.1",
+  "chromium_version": "133.0.6943.16",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "runtime_policy": {
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "prompt_version": "codex-dom-v11",
+    "max_steps": 20,
+    "max_requests_per_minute": 5,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": "0.25"
+  },
+  "hypothesis": "ADR-036: revalidate queued target identity and retire stale proposals; retain early outcome samples within unchanged 500ms budget; unify positive no-dispatch restoration proof. Compare with round19 without changing model/prompt/oracle/policy."
+}

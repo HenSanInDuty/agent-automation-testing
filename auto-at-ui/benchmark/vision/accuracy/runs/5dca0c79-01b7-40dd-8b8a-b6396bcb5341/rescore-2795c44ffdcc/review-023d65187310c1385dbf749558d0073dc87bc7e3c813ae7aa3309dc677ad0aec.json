@@ -1,0 +1,11 @@
+{
+  "after_checksum": "11c2586ad9672536dbf4f5ab7804aa7640e638b58d6de34c06a017d370e2e3cf",
+  "before_checksum": "57c393d86233dcd9c97a65462a7edce6656638bce9a4ac799cab677af3ec29dc",
+  "finding": "mct-44: second character control becomes active and the Dao Hoa panel is shown (before: Toan Chan).",
+  "operation_id": "b316a78c-9d55-4149-ae6a-258ea770b62d",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_character",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

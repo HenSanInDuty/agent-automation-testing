@@ -1,0 +1,86 @@
+{
+  "checked_at": "2026-11-09T06:23:13.213271+00:00",
+  "purpose": "Independent public redirect review; not operation outcome proof by itself.",
+  "rows": [
+    {
+      "target_id": "mct-09",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-ios",
+          "url_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+          "status": 307
+        },
+        {
+          "url": "https://testflight.apple.com/join/f86aG3mh",
+          "url_sha256": "83c618e0cf4273ce0d3b61fdae1a0bbc2109574b91778da7fc0621ab24cec5d4",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-10",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-ggplay",
+          "url_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+          "status": 307
+        },
+        {
+          "url": "https://play.google.com/store/apps/details",
+          "url_sha256": "b61e02a5ffed19f49ec7030d55028a0bd7ec66d22962b50a0168148bbeb0ac50",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-11",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-pc",
+          "url_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+          "status": 307
+        },
+        {
+          "url": "https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc",
+          "url_sha256": "0e022d6bf57b046cf7bb37d395f0fa60682b8df4eff8a7e886269d65a5c59033",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-12",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-apk",
+          "url_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+          "status": 307
+        },
+        {
+          "url": "https://cdn-mct.tepaylink.vn/launcher/VlcmMobile_v0.1.1(99)_direct_simulator.apk",
+          "url_sha256": "62d8f6dd299154c35031d5664d4f491823c59b5119d732f812256f836c5fb4ce",
+          "status": 200
+        }
+      ],
+      "content_type": "application/octet-stream"
+    },
+    {
+      "target_id": "mct-13",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://h5.mongchiton.vn/",
+          "url_sha256": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    }
+  ]
+}

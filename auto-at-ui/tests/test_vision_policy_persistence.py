@@ -46,7 +46,8 @@ def test_http_success_commits_policy_snapshot_and_audit_before_response(policy_d
         "X-Tenant-Id": "tenant-a", "X-Actor-Id": "fixture-admin",
     })
     assert response.status_code == 200
-    saved_policy = {k: v for k, v in response.json().items() if k != "input_policy_fingerprint"}
+    saved_policy = {k: v for k, v in response.json().items()
+                    if k not in {"input_policy_fingerprint", "agent_loop_enabled"}}
     with factory() as session:
         event, = session.scalars(select(AuditEventModel)).all()
         configs = SqlAlchemyConfigurationRepository(session)

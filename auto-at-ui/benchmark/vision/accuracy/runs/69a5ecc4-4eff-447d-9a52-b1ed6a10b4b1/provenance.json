@@ -1,0 +1,26 @@
+{
+  "session_id": "1eecc684-a049-4165-9b5e-d3f1a91e9856",
+  "source_hash": "53c575f61e6db8105e6439ba4c2205d73b6d7854cbd8537133c9fd175e2b6217",
+  "engine": "v4",
+  "oracle": "oracle-mongchiton-1280-v2.json",
+  "preflight_at": "2026-11-22T06:45:06.436687+00:00",
+  "hypothesis": "Qualification batch run 2/5 (sprint live 4/8): frozen candidate 53c575f61e6d, oracle v2",
+  "images": {
+    "image:control-plane": "sha256:db8990c6e6c3cf3155fc2cd8269850a69794911a65908ecfb4ce85dda8058f50",
+    "image:temporal-worker": "sha256:b2ad32b0a4dbfc7a303688900663808a259beb769b2b2158a5131c21bab3e79b",
+    "image:playwright-worker": "sha256:53f0837906853b5d56fe7939361706b271a0514aaf4eb635d5e7d8fa834a70a1"
+  },
+  "agent_flags": {
+    "VISION_AGENT_LOOP_ENABLED": "unset",
+    "VISION_AGENT_CLICK_CONTEXT_ENABLED": "unset",
+    "VISION_AGENT_DOM_PATH_ENABLED": "unset",
+    "VISION_AGENT_INVENTORY_ENABLED": "unset"
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  }
+}

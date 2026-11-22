@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "c967a2ac-fcad-4fba-a174-f50621890981",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_character",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "c14cd523a412c6623f68277a6df260f2b2ac14289fe76eab42a3c58224e3b21b",
+  "after_checksum": "0cb105a9b9a101108e597918a183deb735f092be51b823af4498dca2c3393635",
+  "finding": "Third character control is visibly active and matching Toan Chan character panel is displayed."
+}

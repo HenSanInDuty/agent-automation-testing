@@ -1,0 +1,11 @@
+{
+  "after_checksum": "a6155dda6902712554232c5ed0e9bd79f44bf2908324fbd03c146888634e6e0b",
+  "before_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "finding": "Tepaylink Terms of Service renders at id.tpl.vn/rules, matching independently reviewed 301 redirect from declared id.tepaylink.vn/site/rules.",
+  "operation_id": "292800fe-8b55-4dfa-a9f4-060efeb7c426",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

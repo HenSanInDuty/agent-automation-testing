@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from agents.prompts.codex_exploration import PROMPT_VERSION as CODEX_PROMPT_VERSION
 from agents.prompts.vision import VISION_PROMPT_VERSION
 from agents.shared.runtime import AGENT_RUNTIME_CONFIG_KEY, AgentRuntimeConfig
+from agents.shared.vision_providers import is_bridge_provider
 from agents.vision.intent import encrypt_visual_intent
 from auto_at.contracts.codex_bridge import CodexConsentSnapshot, content_hash
 from auto_at.contracts.generation import (
@@ -43,7 +44,8 @@ class RequestVisualExploration:
             tenant_id=tenant_id, project_id=project_id, actor=principal.subject, runtime=runtime,
             intent_encryption_key=self.settings.vision_intent_encryption_key,
             intent_retention_days=self.settings.vision_intent_retention_days,
-            trace_v4_enabled=self.settings.vision_trace_v4_enabled, **request,
+            trace_v4_enabled=self.settings.vision_trace_v4_enabled,
+            agent_loop_enabled=self.settings.vision_agent_loop_enabled, **request,
         )
 
 
@@ -73,6 +75,8 @@ class SubmitVisualExploration:
         intent_encryption_key: str | None,
         intent_retention_days: int,
         trace_v4_enabled: bool = False,
+        engine: str = "planner",
+        agent_loop_enabled: bool = False,
         expected_provider: str | None = None,
         expected_model: str | None = None,
         expected_input_policy_fingerprint: str | None = None,
@@ -94,14 +98,15 @@ class SubmitVisualExploration:
                 or (correlation_id is not None and existing.correlation_id != correlation_id)
                 or existing.target_url != target_url
                 or existing.intent_hash != intent_hash
+                or existing.exploration_engine != engine
             ):
                 raise VisionStateError("idempotency key belongs to a different exploration")
             if expected_provider is not None and (expected_provider, expected_model) != (
                 existing.provider, existing.model
             ):
                 raise VisionPolicyChanged("vision_policy_changed")
-            if existing.provider == "codex_cli" and (
-                expected_provider != "codex_cli" or not existing.model_input_policy
+            if is_bridge_provider(existing.provider) and (
+                expected_provider != existing.provider or not existing.model_input_policy
                 or expected_input_policy_fingerprint != content_hash(
                     CodexConsentSnapshot.model_validate(existing.model_input_policy)
                 )
@@ -113,17 +118,26 @@ class SubmitVisualExploration:
         ):
             raise VisionPolicyChanged("vision_policy_changed")
         if policy.provider == "gemini" and expected_provider is None:
-            raise VisionStateError("expected_provider and expected_model are required for Gemini")
-        if policy.provider == "codex_cli":
+            raise VisionStateError(
+                "expected_provider and expected_model are required for this provider"
+            )
+        if engine not in {"planner", "agent_loop"}:
+            raise VisionStateError("unknown exploration engine")
+        if engine == "agent_loop":
+            if not agent_loop_enabled:
+                raise VisionStateError("agent_loop engine is disabled")
+            if not is_bridge_provider(policy.provider):
+                raise VisionStateError("agent_loop engine requires a Codex or Claude bridge")
+        if is_bridge_provider(policy.provider):
             if not trace_v4_enabled:
                 raise VisionStateError("Codex requires v4 exploration")
-            if (expected_provider != "codex_cli" or not expected_input_policy_fingerprint
+            if (expected_provider != policy.provider or not expected_input_policy_fingerprint
                     or expected_input_policy_fingerprint != input_fingerprint(policy)):
                 raise VisionPolicyChanged("vision_policy_changed")
             consented = policy.codex and policy.codex.dom_transfer_accepted
-            if self._readiness is None or not self._readiness.read(
-                tenant_id, datetime.now(UTC),
-            ).ready:
+            readiness = (self._readiness.read(tenant_id, datetime.now(UTC))
+                         if self._readiness is not None else None)
+            if readiness is None or not readiness.ready or readiness.provider != policy.provider:
                 raise VisionStateError("bridge_offline")
         else:
             consented = (policy.raw_screenshot_transfer_accepted
@@ -137,8 +151,10 @@ class SubmitVisualExploration:
             raise VisionStateError("target URL must be HTTP(S) without credentials") from None
         if project_policy is None:
             raise VisionStateError("project exploration limits are not configured")
+        # v4 planner sessions enforce the allowlist in the worker; the agent browses freely
+        # between pages, so its starting target must already be inside it.
         if (
-            not trace_v4_enabled and (not project_policy.allowed_origins
+            (engine == "agent_loop" or not trace_v4_enabled) and (not project_policy.allowed_origins
             or not ProjectExecutionPolicy(
                 project_id=project_id, allowed_origins=project_policy.allowed_origins
             ).allows(target_url))
@@ -165,16 +181,18 @@ class SubmitVisualExploration:
             policy_version=AGENT_RUNTIME_CONFIG_KEY,
             provider=policy.provider,
             model=policy.model,
-            prompt_version=(CODEX_PROMPT_VERSION if policy.provider == "codex_cli"
+            prompt_version=(CODEX_PROMPT_VERSION if is_bridge_provider(policy.provider)
                             else VISION_PROMPT_VERSION),
             model_input_policy=(input_snapshot(policy).model_dump(mode="json")
-                                if policy.provider == "codex_cli" else None),
+                                if is_bridge_provider(policy.provider) else None),
             trace_version="v4" if trace_v4_enabled else "legacy",
+            exploration_engine=engine,
             max_steps=policy.max_steps,
             max_hops=project_policy.vision_max_hops,
             max_states=project_policy.vision_max_states,
             max_screenshot_bytes=policy.max_screenshot_bytes,
             max_session_seconds=policy.max_session_seconds,
+            step_timeout_seconds=policy.max_session_seconds if trace_v4_enabled else None,
             max_cost_usd=str(policy.max_cost_usd),
             max_requests_per_minute=policy.max_requests_per_minute,
             safe_failure_reason=None,

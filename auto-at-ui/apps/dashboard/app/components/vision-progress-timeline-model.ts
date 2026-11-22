@@ -41,6 +41,7 @@ const stages: Record<string, string> = {
   "state.restore_started": "Returning to the previous state",
   "state.restored": "Previous state verified",
   "state.restore_failed": "Could not restore the previous state",
+  "state.branch_unreachable": "Skipped a branch that cannot be restored safely",
   "handoff.ready": "Evidence ready for draft generation",
   "handoff.unavailable": "Insufficient evidence for draft generation",
   completed: "Advisory exploration completed",

@@ -1,0 +1,1687 @@
+{
+  "schema_version": "visual-button-live-audit-v2",
+  "checked_at": "2026-11-09T04:32:52.510Z",
+  "source_url": "https://mongchiton.vn/",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "dataset_sha256": "9fa2969a77c2273e5abb9387d508ac83acdd45a5f39fc9cc2e852327c911e644",
+  "browser_version": "133.0.6943.16",
+  "model_calls": 0,
+  "clicks": 0,
+  "expected": 47,
+  "identified": 46,
+  "bound": 47,
+  "skipped": 0,
+  "failures": [],
+  "bottom_reached": true,
+  "missing": [
+    "mct-47"
+  ],
+  "unexpected": [],
+  "false_positives": [],
+  "matches": [
+    {
+      "expected_id": "mct-01",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-02",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(2)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-03",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(3)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-04",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(4)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-05",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(5)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-06",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(6)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-07",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-08",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-09",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-10",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-11",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(5) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-12",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(6) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-13",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(7) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-14",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(8) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-15",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(9) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-16",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(10) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-18",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-19",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-20",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-21",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-29",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-33",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-34",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-35",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-36",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-37",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(5) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-38",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(6) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-39",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(7) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-40",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(8) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-41",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(9) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-42",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(10) > a:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-43",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(11) > button:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-30",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-31",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-32",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-44",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(2)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-45",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(3)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-46",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(4)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-57",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-58",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-51",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-52",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-53",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-54",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(4)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-55",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(5)",
+      "bound": true
+    },
+    {
+      "expected_id": "mct-56",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(6)",
+      "bound": true
+    }
+  ],
+  "review_matches": [
+    {
+      "expected_id": "mct-01",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-02",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-03",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(3)"
+    },
+    {
+      "expected_id": "mct-04",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(4)"
+    },
+    {
+      "expected_id": "mct-05",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(5)"
+    },
+    {
+      "expected_id": "mct-06",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(6)"
+    },
+    {
+      "expected_id": "mct-07",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-08",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-09",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(3) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-10",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(4) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-11",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(5) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-12",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(6) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-13",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(7) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-14",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(8) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-15",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(9) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-16",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(10) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-33",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-34",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-35",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-36",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-37",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(5) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-38",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(6) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-39",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(7) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-40",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(8) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-41",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(9) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-42",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(10) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-43",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(11) > button:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-17",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-18",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-19",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-20",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)"
+    },
+    {
+      "expected_id": "mct-21",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-22",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-23",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-24",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(3)"
+    },
+    {
+      "expected_id": "mct-25",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(4)"
+    },
+    {
+      "expected_id": "mct-26",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(5)"
+    },
+    {
+      "expected_id": "mct-27",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(6)"
+    },
+    {
+      "expected_id": "mct-28",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(7)"
+    },
+    {
+      "expected_id": "mct-29",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-30",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-31",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-32",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-44",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-45",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(3)"
+    },
+    {
+      "expected_id": "mct-46",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(4)"
+    },
+    {
+      "expected_id": "mct-47",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-48",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-49",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-50",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-57",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-58",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-51",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-52",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-53",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)"
+    },
+    {
+      "expected_id": "mct-54",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(4)"
+    },
+    {
+      "expected_id": "mct-55",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(5)"
+    },
+    {
+      "expected_id": "mct-56",
+      "expected": true,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(6)"
+    },
+    {
+      "expected_id": "mct-59",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)"
+    },
+    {
+      "expected_id": "mct-60",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(2)"
+    },
+    {
+      "expected_id": "mct-61",
+      "expected": false,
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(3)"
+    }
+  ],
+  "review_missing": [],
+  "public_elements": [
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-dark-brown-linear border-palette-light-brown -translate-y-0.5",
+      "actionable": true,
+      "href_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+      "label": "TRANG CHỦ",
+      "tag": "a",
+      "href": "https://mongchiton.vn/",
+      "target": null,
+      "box": {
+        "x": 332,
+        "y": 10,
+        "width": 145,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(2)",
+      "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "actionable": true,
+      "href_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+      "label": "SỰ KIỆN",
+      "tag": "a",
+      "href": "https://mongchiton.vn/su-kien",
+      "target": null,
+      "box": {
+        "x": 488,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(3)",
+      "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "actionable": true,
+      "href_sha256": "5f73a3fff26056154a6bd62585f906565f20b86c49c7edd754905bfd8aa59acc",
+      "label": "CẨM NANG",
+      "tag": "a",
+      "href": "https://mongchiton.vn/cam-nang",
+      "target": null,
+      "box": {
+        "x": 643,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(4)",
+      "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "actionable": true,
+      "href_sha256": "07dce36ed842f5ca4ad898b5fe5d6aba59e45d4e5284f8383f6e3a54be2dba81",
+      "label": "ĐIỀU KHOẢN",
+      "tag": "a",
+      "href": "https://id.tepaylink.vn/site/rules",
+      "target": "_blank",
+      "box": {
+        "x": 798,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(5)",
+      "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "actionable": true,
+      "href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "label": "CỘNG ĐỒNG",
+      "tag": "a",
+      "href": "https://www.facebook.com/groups/mongchiton.vn",
+      "target": "_blank",
+      "box": {
+        "x": 953,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > nav:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(6)",
+      "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown hover:bg-palette-dark-brown-linear hover:border-palette-light-brown hover:-translate-y-0.5",
+      "actionable": true,
+      "href_sha256": "59b5f6fafd2bf8b01e753a8241e5c95543fa5c07da0c7cd1a78966119e16d7f0",
+      "label": "HỖ TRỢ",
+      "tag": "a",
+      "href": "https://support.tepaylink.vn/",
+      "target": "_blank",
+      "box": {
+        "x": 1109,
+        "y": 11,
+        "width": 145,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "ce035d7ba0aec01a51dd0ef5bb0ea220a2487e12a8226a5c2fbbb4e0b7e5de63",
+      "label": "NẠP THẺ",
+      "tag": "a",
+      "href": "https://pay.tepaylink.vn/",
+      "target": "_blank",
+      "box": {
+        "x": 764,
+        "y": 508,
+        "width": 82,
+        "height": 68
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "6f0a3a56995847f32d36898c592e69507c36ad7023c3388b6d7ec166582d0a88",
+      "label": "ĐĂNG KÝ",
+      "tag": "a",
+      "href": "https://id.tepaylink.vn/register",
+      "target": "_blank",
+      "box": {
+        "x": 851,
+        "y": 508,
+        "width": 82,
+        "height": 68
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+      "label": "APPSTORE",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-ios",
+      "target": "_blank",
+      "box": {
+        "x": 487,
+        "y": 508,
+        "width": 122,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+      "label": "GOOGLE PLAY",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-ggplay",
+      "target": "_blank",
+      "box": {
+        "x": 617,
+        "y": 508,
+        "width": 122,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(5) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+      "label": "TRÊN WINDOW",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-pc",
+      "target": "_blank",
+      "box": {
+        "x": 487,
+        "y": 546,
+        "width": 122,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(6) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+      "label": "APK",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-apk",
+      "target": "_blank",
+      "box": {
+        "x": 617,
+        "y": 546,
+        "width": 122,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(7) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+      "label": "CHƠI NGAY",
+      "tag": "a",
+      "href": "https://h5.mongchiton.vn/",
+      "target": "_blank",
+      "box": {
+        "x": 321,
+        "y": 491,
+        "width": 131,
+        "height": 100
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(8) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+      "label": "Facebook",
+      "tag": "a",
+      "href": "https://www.facebook.com/mongchiton.vn",
+      "target": "_blank",
+      "box": {
+        "x": 963,
+        "y": 566,
+        "width": 27,
+        "height": 26
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(9) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "label": "Group Facebook",
+      "tag": "a",
+      "href": "https://www.facebook.com/groups/mongchiton.vn",
+      "target": "_blank",
+      "box": {
+        "x": 993,
+        "y": 566,
+        "width": 26,
+        "height": 25
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(10) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+      "label": "Youtube",
+      "tag": "a",
+      "href": "https://www.youtube.com/playlist",
+      "target": "_blank",
+      "box": {
+        "x": 1023,
+        "y": 566,
+        "width": 26,
+        "height": 25
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "ce035d7ba0aec01a51dd0ef5bb0ea220a2487e12a8226a5c2fbbb4e0b7e5de63",
+      "label": "NẠP THẺ",
+      "tag": "a",
+      "href": "https://pay.tepaylink.vn/",
+      "target": "_blank",
+      "box": {
+        "x": 1118,
+        "y": 2484,
+        "width": 78,
+        "height": 49
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "6f0a3a56995847f32d36898c592e69507c36ad7023c3388b6d7ec166582d0a88",
+      "label": "ĐĂNG KÝ",
+      "tag": "a",
+      "href": "https://id.tepaylink.vn/register",
+      "target": "_blank",
+      "box": {
+        "x": 1199,
+        "y": 2484,
+        "width": 78,
+        "height": 49
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+      "label": "APPSTORE",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-ios",
+      "target": "_blank",
+      "box": {
+        "x": 1133,
+        "y": 2342,
+        "width": 129,
+        "height": 31
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+      "label": "GOOGLE PLAY",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-ggplay",
+      "target": "_blank",
+      "box": {
+        "x": 1133,
+        "y": 2376,
+        "width": 129,
+        "height": 31
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(5) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+      "label": "WINDOW",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-pc",
+      "target": "_blank",
+      "box": {
+        "x": 1133,
+        "y": 2410,
+        "width": 129,
+        "height": 31
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(6) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+      "label": "APK",
+      "tag": "a",
+      "href": "https://mongchiton.vn/s/vlcm-apk",
+      "target": "_blank",
+      "box": {
+        "x": 1133,
+        "y": 2444,
+        "width": 129,
+        "height": 31
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(7) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+      "label": "Facebook",
+      "tag": "a",
+      "href": "https://www.facebook.com/mongchiton.vn",
+      "target": "_blank",
+      "box": {
+        "x": 1152,
+        "y": 2541,
+        "width": 24,
+        "height": 23
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(8) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "label": "Group Facebook",
+      "tag": "a",
+      "href": "https://www.facebook.com/groups/mongchiton.vn",
+      "target": "_blank",
+      "box": {
+        "x": 1185,
+        "y": 2541,
+        "width": 24,
+        "height": 23
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(9) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+      "label": "Youtube",
+      "tag": "a",
+      "href": "https://www.youtube.com/playlist",
+      "target": "_blank",
+      "box": {
+        "x": 1218,
+        "y": 2541,
+        "width": 24,
+        "height": 23
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(10) > a:nth-of-type(1)",
+      "classes": "absolute inset-0",
+      "actionable": true,
+      "href_sha256": "28b9666052b686ab8ba53bdb6226773d21630bac7f941d4293b2735c4939f73c",
+      "label": "CHƠI NGAY",
+      "tag": "a",
+      "href": "https://h5.mongchiton.vn/",
+      "target": "_blank",
+      "box": {
+        "x": 1150,
+        "y": 2570,
+        "width": 96,
+        "height": 74
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(11) > button:nth-of-type(1)",
+      "classes": "absolute inset-0 cursor-pointer",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "TOP",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 1184,
+        "y": 2651,
+        "width": 27,
+        "height": 32
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "w-full h-full mb-2.5",
+      "actionable": true,
+      "href_sha256": "a21c4cf7e5975779dd3a0dd2a618726df7dab4587ee0547fbcd9f242b0c11687",
+      "label": "",
+      "tag": "a",
+      "href": "https://mongchiton.vn/",
+      "target": null,
+      "box": {
+        "x": 219,
+        "y": 862,
+        "width": 422,
+        "height": 221
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "classes": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secondary-active.png')] bg-no-repeat bg-center bg-cover !bg-[url('/bg-button-news-mobile-active.png')] lg:!bg-[url('/assets/bg-news-secondary-active.png')] w-[111px] h-[32px] lg:w-[215.53px] lg:h-[52.44px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "Tin Tức",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 831,
+        "width": 143,
+        "height": 35
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "classes": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secondary-active.png')] bg-no-repeat bg-center bg-cover w-[111px] h-[32px] lg:w-[215.53px] lg:h-[52.44px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "Sự Kiện",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 799,
+        "y": 831,
+        "width": 143,
+        "height": 35
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+      "classes": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-news-secondary.png')] hover:lg:bg-[url('/assets/bg-news-secondary-active.png')] bg-no-repeat bg-center bg-cover w-[111px] h-[32px] lg:w-[215.53px] lg:h-[52.44px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "Cẩm Nang",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 947,
+        "y": 831,
+        "width": 143,
+        "height": 35
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1)",
+      "classes": " lg:bg-[url('/assets/btn-search.png')] bg-[url('/btn-search-mobile.png')] hover:lg:bg-[url('/assets/btn-search-active.png')] hover:bg-[url('/btn-search-mobile-active.png')] bg-no-repeat transition-all duration-200 ease-in-out bg-center bg-cover w-[42px] h-[32px] lg:w-[56px] lg:h-[43px] cursor-pointer  absolute -right-[1px] top-0  flex items-center justify-center",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 1054,
+        "y": 877,
+        "width": 37,
+        "height": 29
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "actionable": true,
+      "href_sha256": "f36349a16b396c4d74f208991634dcfb2cdad701018be7638e6bb571eadea1a4",
+      "label": "Khai Mở Máy Chủ S13 Tài Long – Duy Nhất Trên Trình Duyệt Web | VLCM Origin28/10",
+      "tag": "a",
+      "href": "https://mongchiton.vn/khai-mo-may-chu-s13-tai-long-duy-nhat-tren-trinh-duyet-web-vlcm-origin",
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 915,
+        "width": 441,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(2)",
+      "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "actionable": true,
+      "href_sha256": "ddec1a248eb85b115744547230f20e6dffe7c80bd4a59f0d1eca14e447b99e80",
+      "label": "[Công Bố Kết Quả] Vinh Danh Bảng Vàng Đua Top Máy Chủ S12 | VLCM Origin19/09",
+      "tag": "a",
+      "href": "https://mongchiton.vn/cong-bo-ket-qua-vinh-danh-bang-vang-dua-top-may-chu-s12-vlcm-origin",
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 945,
+        "width": 441,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(3)",
+      "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "actionable": true,
+      "href_sha256": "caf746ad266a319baac904acacd93f24918247a10da7defa8cd9ae350e8526e3",
+      "label": "Thông Báo Thay Đổi Giftcode TÂN THỦ Mới | VLCM Origin03/09",
+      "tag": "a",
+      "href": "https://mongchiton.vn/thong-bao-thay-doi-giftcode-tan-thu-moi-vlcm-origin",
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 975,
+        "width": 441,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(4)",
+      "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "actionable": true,
+      "href_sha256": "2137c13f79fdeba422fe46ac1c9b4746171628c1f446a11e0a96706c86ab908c",
+      "label": "Khai Mở Server Mới S12 Mộc Long | VLCM Origin29/08",
+      "tag": "a",
+      "href": "https://mongchiton.vn/khai-mo-server-moi-s12-moc-long-vlcm-origin",
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 1005,
+        "width": 441,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(5)",
+      "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "actionable": true,
+      "href_sha256": "362fa70bcffdca8702fe4a601248885d05d0be00986a08e4e9a117ffd108fbf4",
+      "label": "QUY TỤ ANH HÙNG - CHÍNH SÁCH HỖ TRỢ OFFLINE VÕ LÂM CHÂN MỆNH ORIGIN19/08",
+      "tag": "a",
+      "href": "https://mongchiton.vn/quy-tu-anh-hung-chinh-sach-ho-tro-offline-vo-lam-chan-menh-origin",
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 1035,
+        "width": 441,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(6)",
+      "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "actionable": true,
+      "href_sha256": "d854e0c318f6c86aef207447bc714d5371befb72f143adce77874bc123338e2d",
+      "label": "[Công Bố Kết Quả] Vinh Danh Bảng Vàng Đua Top Máy Chủ S11 | VLCM Origin08/08",
+      "tag": "a",
+      "href": "https://mongchiton.vn/cong-bo-ket-qua-vinh-danh-bang-vang-dua-top-may-chu-s11-vlcm-origin",
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 1065,
+        "width": 441,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(7)",
+      "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+      "actionable": true,
+      "href_sha256": "1f1be45b63c9f9dfd7c7222099c39477e9c4805b7ad881416a841a4de21943ef",
+      "label": "Thông Báo Thay Đổi Giftcode TÂN THỦ Mới Toàn Máy Chủ | VLCM Origin21/07",
+      "tag": "a",
+      "href": "https://mongchiton.vn/thong-bao-thay-doi-giftcode-tan-thu-moi-toan-may-chu-vlcm-origin",
+      "target": null,
+      "box": {
+        "x": 650,
+        "y": 1095,
+        "width": 441,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "classes": "transition-all duration-200 ease-in-out absolute bg-[url('/assets/btn-more-mobile.png')] hover:bg-[url('/assets/btn-more-mobile-active.png')] lg:bg-[url('/assets/btn-more.png')] lg:hover:bg-[url('/assets/btn-more-active.png')] bg-no-repeat bg-center bg-cover left-[15px] bottom-3 lg:left-auto lg:-right-1 lg:-bottom-27.5 lg:w-[176px] lg:h-[44.4px] w-[353px] h-[23px]",
+      "actionable": true,
+      "href_sha256": "ba03dccca03ef065c56e42a8e2ad3053799bd295a73cbb787c278db9da75499c",
+      "label": "",
+      "tag": "a",
+      "href": "https://mongchiton.vn/tin-tuc",
+      "target": null,
+      "box": {
+        "x": 976,
+        "y": 1132,
+        "width": 117,
+        "height": 30
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "classes": "button-common button-character-title active",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "NHÂN VẬT",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 491,
+        "y": 1273,
+        "width": 146,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "classes": "button-common button-character-title ",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "THÚ CƯỠI",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 643,
+        "y": 1273,
+        "width": 146,
+        "height": 37
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1)",
+      "classes": "character-switcher lg:-ml-5 ml-12",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "div",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 139,
+        "y": 1411,
+        "width": 100,
+        "height": 97
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(2)",
+      "classes": "character-switcher lg:-ml-35 ml-0 active",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "div",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 97,
+        "y": 1506,
+        "width": 105,
+        "height": 102
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(3)",
+      "classes": "character-switcher lg:-ml-35 ml-0",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "div",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 99,
+        "y": 1605,
+        "width": 100,
+        "height": 97
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(4)",
+      "classes": "character-switcher lg:-ml-9 ml-8",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "div",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 134,
+        "y": 1701,
+        "width": 100,
+        "height": 97
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "video-frame group z-10",
+      "actionable": false,
+      "href_sha256": "07edbdafad4f9951b9bd35cb136a80c85c6870145434ede42e7d3628dc678046",
+      "label": "",
+      "tag": "a",
+      "href": "https://www.youtube.com/watch",
+      "target": null,
+      "box": {
+        "x": -546,
+        "y": 1658,
+        "width": 294,
+        "height": 198
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "video-frame group z-10",
+      "actionable": false,
+      "href_sha256": "07edbdafad4f9951b9bd35cb136a80c85c6870145434ede42e7d3628dc678046",
+      "label": "",
+      "tag": "a",
+      "href": "https://www.youtube.com/watch",
+      "target": null,
+      "box": {
+        "x": 754,
+        "y": 1658,
+        "width": 294,
+        "height": 198
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "video-frame group z-10",
+      "actionable": false,
+      "href_sha256": "07edbdafad4f9951b9bd35cb136a80c85c6870145434ede42e7d3628dc678046",
+      "label": "",
+      "tag": "a",
+      "href": "https://www.youtube.com/watch",
+      "target": null,
+      "box": {
+        "x": 2054,
+        "y": 1658,
+        "width": 294,
+        "height": 198
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "video-frame group z-10",
+      "actionable": false,
+      "href_sha256": "07edbdafad4f9951b9bd35cb136a80c85c6870145434ede42e7d3628dc678046",
+      "label": "",
+      "tag": "a",
+      "href": "https://www.youtube.com/watch",
+      "target": null,
+      "box": {
+        "x": 3354,
+        "y": 1658,
+        "width": 294,
+        "height": 198
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1)",
+      "classes": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "actionable": false,
+      "href_sha256": "b14ebc6876e7ceafc1451a2115b7528182a39fed0f5c4ff6ddd8372bdcd2b509",
+      "label": "",
+      "tag": "a",
+      "href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/cd882e33-93de-4eb7-85ab-0d3a5eb6b972.webp",
+      "target": null,
+      "box": {
+        "x": -491,
+        "y": 1981,
+        "width": 453,
+        "height": 339
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "classes": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "actionable": false,
+      "href_sha256": "ee3aa38778fa88aa52065eb5fd24d23a9c85753d8ea29ae60b75ac0c8caeace0",
+      "label": "",
+      "tag": "a",
+      "href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/d6813323-a3b6-4990-9153-5cc06d4a12ea.webp",
+      "target": null,
+      "box": {
+        "x": 150,
+        "y": 1984,
+        "width": 444,
+        "height": 332
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)",
+      "classes": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "actionable": false,
+      "href_sha256": "85069897584f86273bdd8f8d7365398b0ca463b5db5c82e214ee1dbdd687d927",
+      "label": "",
+      "tag": "a",
+      "href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/24154288-c66f-4881-922f-77aa935c09f6.webp",
+      "target": null,
+      "box": {
+        "x": 376,
+        "y": 1952,
+        "width": 528,
+        "height": 395
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4) > a:nth-of-type(1)",
+      "classes": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "actionable": false,
+      "href_sha256": "da881d43cedeb2cb369b5428db7956c53d6c06d4d47f2abcc332330b538c51fa",
+      "label": "",
+      "tag": "a",
+      "href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/e9583bb8-9c53-4f42-892b-cd0049ebc720.webp",
+      "target": null,
+      "box": {
+        "x": 686,
+        "y": 1984,
+        "width": 444,
+        "height": 332
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(5) > a:nth-of-type(1)",
+      "classes": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "actionable": false,
+      "href_sha256": "d85c80271847876781a63676892dd614d02927855e144082c71fe5d9a64ca788",
+      "label": "",
+      "tag": "a",
+      "href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/37030703-fd5a-463e-9d65-e8e2fe9ff15e.webp",
+      "target": null,
+      "box": {
+        "x": 1319,
+        "y": 1981,
+        "width": 453,
+        "height": 339
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(6) > a:nth-of-type(1)",
+      "classes": "relative block w-[317px] h-[238px] lg:w-[792px] lg:h-[593px] overflow-hidden transform transition-all duration-300",
+      "actionable": false,
+      "href_sha256": "d1fc8ef515ce565d6ba9360a693c719b35e0872bd38f7ebe5ba78f91f4696624",
+      "label": "",
+      "tag": "a",
+      "href": "https://cdn-imgx.tpl.vn/MCT/MCT-HOME/25052026/10b638b6-7f06-43dc-b24d-bd19a2be57b0.webp",
+      "target": null,
+      "box": {
+        "x": 1696,
+        "y": 1993,
+        "width": 422,
+        "height": 316
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "classes": "transition-all rotate-180 duratin-200 ease-in-out absolute  -left-6 lg:-left-25 top-1/2 lg:top-[45%] -translate-y-1/2 scale-x-[-1] cursor-pointer z-30 w-[21.51px] h-[36.67px] lg:w-[69.16px] lg:h-[88px] hover:bg-[url('/assets/btn-feat-left-mobile-active.png')] bg-[url('/assets/btn-feat-left-mobile.png')] hover:lg:bg-[url('/assets/btn-feat-left-active.png')] lg:bg-[url('/assets/btn-feat-left.png')] bg-no-repeat bg-center bg-cover",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 207,
+        "y": 2116,
+        "width": 46,
+        "height": 59
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "classes": "rotate-180 transition-all duratin-200 ease-in-out absolute -right-6 lg:-right-25 top-1/2 lg:top-[45%] -translate-y-1/2 cursor-pointer z-30 w-[21.51px] h-[36.67px] lg:w-[69.16px] lg:h-[88px] hover:bg-[url('/assets/btn-feat-left-mobile-active.png')] bg-[url('/assets/btn-feat-left-mobile.png')] lg:hover:bg-[url('/assets/btn-feat-left-active.png')] lg:bg-[url('/assets/btn-feat-left.png')] bg-no-repeat bg-center bg-cover",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 1027,
+        "y": 2116,
+        "width": 46,
+        "height": 59
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "classes": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 585,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+      "classes": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 602,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+      "classes": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[41px]  w-[23px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 618,
+        "y": 2375,
+        "width": 27,
+        "height": 8
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(4)",
+      "classes": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 654,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(5)",
+      "classes": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 670,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(6)",
+      "classes": " h-[7px] lg:h-[12px] opacity-100 rounded-full transition-all duration-300 ease-in-out bg-[#372313] cursor-pointer bg-cover lg:mx-1 mx-[0.5px]  lg:w-[12px] w-[7px]",
+      "actionable": true,
+      "href_sha256": null,
+      "label": "",
+      "tag": "button",
+      "href": null,
+      "target": null,
+      "box": {
+        "x": 687,
+        "y": 2375,
+        "width": 8,
+        "height": 8
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(1)",
+      "classes": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:after:hidden lg:after:right-[-50px] after:right-[-25px]",
+      "actionable": true,
+      "href_sha256": "9629254104f6b6f6081104d7b76491dad42641912c563c581f046ab742424837",
+      "label": "FANPAGE",
+      "tag": "a",
+      "href": "https://www.facebook.com/mongchiton.vn",
+      "target": "_blank",
+      "box": {
+        "x": 488,
+        "y": 2661,
+        "width": 61,
+        "height": 20
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(2)",
+      "classes": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:after:hidden lg:after:right-[-50px] after:right-[-25px]",
+      "actionable": true,
+      "href_sha256": "0b9091bd35aeb0e91ad7ffa57ef1420fa2564a40e8030ab6385a8d6c4301ad5a",
+      "label": "GROUP",
+      "tag": "a",
+      "href": "https://www.facebook.com/groups/mongchiton.vn",
+      "target": "_blank",
+      "box": {
+        "x": 615,
+        "y": 2661,
+        "width": 47,
+        "height": 20
+      }
+    },
+    {
+      "path": "html > body:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > footer:nth-of-type(1) > div:nth-of-type(2) > a:nth-of-type(3)",
+      "classes": "text-[#FEAF52] text-[12px] lg:text-[20px] font-roboto font-medium relative after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:w-[2px] after:h-[12px] lg:after:h-[18px] after:bg-[#FEAF52] last:after:hidden lg:after:right-[-50px] after:right-[-25px]",
+      "actionable": true,
+      "href_sha256": "3bb5e5526fa88ff9fa5abbedbe7401a307b03746569efe84715b60972b79d637",
+      "label": "YOUTUBE",
+      "tag": "a",
+      "href": "https://www.youtube.com/playlist",
+      "target": "_blank",
+      "box": {
+        "x": 729,
+        "y": 2661,
+        "width": 63,
+        "height": 20
+      }
+    }
+  ],
+  "screenshot_file": "audit-1280-20261109-oracle.png",
+  "screenshot_sha256": "7d3a7f6bb70df18b5421406d74c9970c367159a60bd588b69c7bc299df46316c",
+  "scope": "Read-only homepage desktop scroll-through; detection evidence only, not click correctness."
+}

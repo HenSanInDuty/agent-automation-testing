@@ -1,0 +1,26 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 14.232,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "integration": {
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 103.322,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "worker_regression_passed": 89,
+  "final_history_deadline_passed": 8,
+  "contract_passed": 42,
+  "ruff": "passed",
+  "typecheck": "passed",
+  "contract_check": "passed"
+}

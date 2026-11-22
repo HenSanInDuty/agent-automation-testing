@@ -7,7 +7,48 @@ const sessionA = "00000000-0000-4000-8000-000000000001";
 const sessionB = "00000000-0000-4000-8000-000000000002";
 const sessionC = "00000000-0000-4000-8000-000000000004";
 const project = "00000000-0000-4000-8000-000000000003";
+
+for (const condition of ["completed", "partial", "cancelled", "in_progress", "legacy"] as const) {
+  test(`exploration conclusion is visible and does not claim functional success: ${condition}`, async ({ page }) => {
+    const state = await fixture(page);
+    state.exploration = condition === "in_progress" ? "running" : condition === "partial" ? "unavailable" : condition === "legacy" ? "completed" : condition;
+    state.report = {
+      status: condition === "completed" ? "completed" : "partial",
+      coverage: condition === "completed" ? "observed_controls_completed" : "not_established",
+      stop_reason: null,
+      limits: { max_steps: 20, max_hops: 10, max_states: 50, max_session_seconds: 120 },
+      summary: { controls_acted_on: 15, actions_rejected: 0, actions_failed: 0, actions_unknown: 0, scrolls_completed: 47, candidates_not_attempted: 0 },
+      findings: [],
+      ...(condition === "legacy" ? {} : { conclusion: {
+        status: condition, coverage: condition === "completed" ? "observed_controls_completed" : "not_established",
+        interaction_scope: "buttons", observed_controls: 15, completed_controls: condition === "completed" ? 15 : 12,
+        remaining_controls: condition === "completed" ? 0 : 3, inventory_limited: false,
+        operations_completed: 78, operations_failed: condition === "partial" ? 1 : 0,
+        operations_rejected: 0, operations_unknown: 0, operations_pending: 0,
+        candidates_not_attempted: 0, business_outcome: "unverified",
+      } }),
+    };
+    await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+    const summary = page.getByRole("region", { name: "Exploration summary", exact: true });
+    await expect(summary.getByRole("heading", { name: "Kết luận", exact: true })).toBeVisible();
+    await expect(summary).not.toContainText("Partial coverage");
+    const expected = {
+      completed: "15/15 nút", partial: "1 lỗi", cancelled: "Phiên đã bị hủy",
+      in_progress: "chưa có kết luận cuối cùng", legacy: "Chưa đủ dữ liệu",
+    }[condition];
+    await expect(summary).toContainText(expected);
+    await expect(summary).toContainText(condition === "legacy" ? "chưa xác nhận chức năng" : "Chức năng website: chưa được xác nhận đúng/sai.");
+    await page.getByRole("link", { name: "View exploration report", exact: true }).click();
+    const report = page.getByRole("region", { name: "Vision result", exact: true });
+    await expect(report.getByRole("heading", { name: "Kết luận", exact: true })).toBeVisible();
+    await expect(report).toContainText(expected);
+    await expect(report).not.toContainText("Partial coverage - full page coverage is not established.");
+    expect(state.writes).toHaveLength(0);
+  });
+}
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1kAAAAASUVORK5CYII=", "base64");
+const agentStep = { step_index: 1, evaluation_previous_goal: "Đã mở trang sản phẩm", memory: "Đã thử nút chi tiết; " + "SyntheticLongToken".repeat(40), next_goal: "Mở chi tiết sản phẩm",
+  skipped_actions: [{ index: 2, kind: "click", ref: "1:9", skipped_reason: "stale_ref" }] };
 
 let clickBefore: Buffer, clickAfter: Buffer;
 test.beforeAll(async ({ browser }) => {
@@ -21,11 +62,11 @@ test.beforeAll(async ({ browser }) => {
 
 async function fixture(page: Page, legacy = false) {
   page.on("pageerror", (error) => { console.log("Fixture dashboard error:", error.message); });
-  const state = { highlight: false, progressStage: null as string | null, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
+  const state = { highlight: false, agentStep: false, progressStage: null as string | null, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
     codexReadiness: { configured: true, online: true, authenticated: true, capabilities_qualified: true, model_access: "unverified", failure_code: null, busy: false } as NonNullable<VisionProvider["bridge_readiness"]>,
     progressEvents: null as VisionProgressActivity[] | null,
     policy: { enabled: false, provider: "huggingface", model: "custom/hf-model", raw_screenshot_transfer_accepted: true, raw_screenshot_transfer_provider: "huggingface", max_steps: 3, max_screenshot_bytes: 1000, max_session_seconds: 120, max_cost_usd: 0, max_requests_per_minute: 5 } as VisionPolicy };
-  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60 });
+  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60, ...(id === sessionB && state.agentStep ? { engine: "agent_loop" } : {}) });
   const frame = (id: string) => ({ id, availability: "retained", reason_code: null });
   const operation = (number: number, id: string) => ({ id: `${id}-op${number}`, sequence: number, purpose: number === 1 ? "setup" : number === 3 ? "restore" : "explore", action_kind: number === 1 ? "navigate" : number === 3 ? "back" : "click", status: "completed", started_at: "2026-09-08T12:00:00Z", outcome_code: "observed", state_id: "root", locator_id: `${id}-locator${number}`, executed_click: state.highlight && number !== 1 && number !== 3 ? { x: 320 / 1279, y: 240 / 719, viewport_width: 1280, viewport_height: 720, before_frame_id: id + "-before" + number, confirmed_at: "2026-09-08T12:00:01Z" } : null, before: frame(`${id}-before${number}`), after: state.missingCapture ? { id: null, availability: "missing", reason_code: "capture_failed" } : frame(`${id}-after${number}`) });
   const locators = (id: string) => [2, 4].map((n) => ({ id: `${id}-locator${n}`, operation_id: `${id}-op${n}`, status: "verified", reason_code: null, verified_at: "2026-09-08T12:00:00Z", descriptor: { strategy: "role", role: "button", value: n === 2 ? "Branch A" : "Branch B", scope: [] }, bounding_box: state.highlight ? { x: 280 / 1280, y: 220 / 720, width: 180 / 1280, height: 48 / 720 } : { x: .2, y: .2, width: .2, height: .1 } }));
@@ -33,10 +74,14 @@ async function fixture(page: Page, legacy = false) {
     const url = new URL(route.request().url());
     const path = url.pathname;
     const id = path.includes(sessionC) ? sessionC : path.includes(sessionB) ? sessionB : sessionA;
-    const headers = { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true" };
+    const headers = { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true", "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS", "access-control-allow-headers": "content-type, x-csrf-token, idempotency-key" };
     const json = (body: unknown) => route.fulfill({ json: body, headers });
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers });
     if (path.endsWith("/auth/me")) return json({ role: state.role, email: "reader@fixture.test", tenant_id: "fixture" });
+    if (path.endsWith("/test-generations/provider")) return json({
+      policy: { provider: "codex_cli", model: "gpt-6-luna", text_transfer_accepted: true, max_seconds: 120 },
+      providers: [{ id: "codex_cli", label: "Codex", model: "gpt-6-luna", configured: true }], revision: "fixture",
+    });
     if (path.endsWith("/projects")) return json([{ id: project, name: "Fixture project", default_target: "web_ui" }]);
     if (path.endsWith("/vision/providers")) return state.catalogueFails ? route.fulfill({ status: 503, json: {}, headers }) : json({ items: [
       { id: "huggingface", display_name: "Hugging Face", models: [{ id: "custom/hf-model", display_name: "custom/hf-model" }], configured: true, supports_inline_images: false },
@@ -67,7 +112,7 @@ async function fixture(page: Page, legacy = false) {
     if (path.endsWith("/trace")) {
       state.calls++;
       if (state.delay && id === sessionA) { state.delay = false; await new Promise<void>((resolve) => { state.release = resolve; }); }
-      return json({ session_id: id, schema_version: "v1", revision: String(state.extra), trace_version: legacy ? "legacy" : "v4", items: Array.from({ length: 4 + state.extra }, (_, n) => operation(n + 1, id)), locators: locators(id), next_sequence: 4 + state.extra, has_more: false });
+      return json({ session_id: id, schema_version: "v1", revision: String(state.extra), trace_version: legacy ? "legacy" : "v4", items: Array.from({ length: 4 + state.extra }, (_, n) => ({ ...operation(n + 1, id), ...(state.agentStep && id === sessionB && n === 1 ? { agent_step: agentStep } : {}) })), locators: locators(id), next_sequence: 4 + state.extra, has_more: false });
     }
     if (path.endsWith("/result")) return json({ exploration_report: state.report ?? undefined, schema_version: "v1", session_id: id, project_id: project, revision: String(state.extra), exploration_state: state.exploration, completion_reason: state.completionReason, evidence_status: legacy ? "legacy_evidence_only" : "available", counts: { operations: 4 + state.extra, verified_locators: 2 }, branches: [], handoffs: [{ id: "handoff", branches: [2, 4].map((n, i) => ({ id: `branch${i}`, status: "ready", reason_code: null, steps: [{ operation_id: `${id}-op1` }, { operation_id: `${id}-op${n}` }] })) }], links: { handoff: { state: "ready" }, generation: { state: "failed" }, draft: { state: "not_started" }, run: { state: "failed", id: "run-fixture", href: "/runs/run-fixture" }, report: { state: "unavailable" } }, limitations: ["Business outcome unverified."] });
     if (path.endsWith("/locators") && state.evidenceFails) return route.fulfill({ status: 503, headers });
@@ -89,12 +134,44 @@ async function fixture(page: Page, legacy = false) {
   return state;
 }
 
-test("partial exploration report is discoverable without a generated test report", async ({ page }) => {
+test("saved page inventory and historical verified target survive reload", async ({ page }) => {
+  const state = await fixture(page);
+  state.exploration = "completed";
+  await page.route("**/trace*", (route) => route.fulfill({ json: {
+    schema_version: "v1", trace_version: "v4", session_id: sessionA, revision: "inventory",
+    next_sequence: 2, has_more: false,
+    items: [{ id: "saved-click", sequence: 2, purpose: "explore", action_kind: "click",
+      status: "completed", locator_id: "saved-target", executed_click: null,
+      before: { id: "saved-before", availability: "retained" },
+      after: { id: "saved-after", availability: "retained" } }],
+    locators: [{ id: "saved-target", operation_id: "saved-click", originating_frame_id: "saved-before",
+      status: "verified", descriptor: { strategy: "role", role: "link", value: "Home", scope: [] },
+      bounding_box: { x: .2, y: .3, width: .2, height: .1 } }],
+    pages: [{ state_id: "root", checkpoint_id: "checkpoint", page_url: "https://fixture.test/news",
+      url_fingerprint: "a".repeat(64), truncated: false, scrollable: true, skipped_count: 0,
+      controls: [{ key: "home", name: "Home", role: "link", status: "completed", operation_id: "saved-click" },
+        { key: "news", name: "News", role: "link", status: "pending", operation_id: null }] }],
+  } }));
+  await page.route("**/operation-frames/*", route => route.fulfill({ body: clickBefore, contentType: "image/png" }));
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  for (let reload = 0; reload < 2; reload++) {
+    const inventory = page.getByRole("region", { name: "Page interaction inventory" });
+    await expect(inventory).toContainText("2 controls · 1 performed · 1 remaining");
+    await expect(inventory.getByRole("link", { name: "Open saved URL" })).toHaveAttribute("href", "https://fixture.test/news");
+    const screen = page.getByRole("region", { name: "Vision browser screen" });
+    await expect(screen.getByTestId("vision-click-target")).toBeVisible();
+    await expect(screen.getByTestId("vision-click-marker")).toHaveCount(0);
+    await expect(screen).toContainText("exact click position was not recorded");
+    if (!reload) await page.reload();
+  }
+});
+
+for (const stepMode of [false, true]) test(`partial exploration report shows ${stepMode ? "step" : "historical session"} time limits`, async ({ page }) => {
   const state = await fixture(page);
   state.exploration = "unavailable"; state.completionReason = "model_output_invalid";
   state.report = {
     status: "partial", coverage: "not_established", stop_reason: "model_output_invalid",
-    limits: { max_steps: 3, max_session_seconds: 120, max_hops: 5, max_states: 50 },
+    limits: { max_steps: 3, max_session_seconds: 120, step_timeout_seconds: stepMode ? 120 : null, max_hops: 5, max_states: 50 },
     summary: { controls_acted_on: 1, actions_rejected: 25, actions_failed: 0, actions_unknown: 0, scrolls_completed: 1, candidates_not_attempted: 10 },
     findings: [
       { operation_id: "op2", sequence: 2, action_kind: "click", status: "rejected", reason_code: "multiple_matches", target: null, url_change: "unavailable", visual_change: "unavailable" },
@@ -106,8 +183,9 @@ test("partial exploration report is discoverable without a generated test report
   await expect(page.getByRole("region", { name: "Exploration summary" })).toBeVisible();
   await page.getByRole("link", { name: "View exploration report", exact: true }).click();
   await expect(report.getByRole("heading", { name: "Exploration report", exact: true })).toBeInViewport();
-  await expect(report).toContainText("Partial coverage");
+  await expect(report).toContainText("Chưa đủ dữ liệu để tổng hợp kết luận cho phiên này.");
   await expect(report).toContainText("3 model requests, 120 seconds");
+  await expect(report).toContainText(stepMode ? "seconds per step (no session time limit)" : "seconds per session");
   await expect(report.getByRole("cell", { name: "Not executed", exact: true })).toBeVisible();
   await expect(report.getByRole("cell", { name: "Observed", exact: true })).toBeVisible();
   await expect(report).toContainText("More than one control matches this locator");
@@ -351,6 +429,58 @@ test("legacy seven-frame gallery can select the sixth sibling", async ({ page })
   await expect(trajectory.getByText("Current gallery selection: state 7.")).toBeVisible();
 });
 
+test("Agent loop engine is offered only when enabled and is sent only when chosen", async ({ page }) => {
+  const state = await fixture(page);
+  state.policy.enabled = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await prepareExploration(page);
+  await expect(page.locator("#vision-engine")).toHaveCount(0);
+  state.policy.agent_loop_enabled = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const form = await prepareExploration(page);
+  await expect(page.locator("#vision-engine")).toHaveValue("planner");
+  await form.getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await expect.poll(() => state.submissions.length).toBe(1);
+  expect(state.submissions[0]).not.toHaveProperty("engine");
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const agentForm = await prepareExploration(page);
+  await page.locator("#vision-engine").selectOption("agent_loop");
+  await expect(agentForm).toContainText("Agent loop: the model proposes actions step by step");
+  await agentForm.getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration", exact: true }).click();
+  await expect.poll(() => state.submissions.length).toBe(2);
+  expect(state.submissions[1]).toEqual({ project_id: project, target_url: "https://fixture.test/", task_intent: "Explore synthetic controls", use_vision: true, expected_provider: "huggingface", expected_model: "custom/hf-model", engine: "agent_loop" });
+});
+
+test("agent step shows reasoning and a blocked action for its operation; planner sessions show no agent block", async ({ page }) => {
+  const state = await fixture(page);
+  state.agentStep = true;
+  await page.goto(`${dashboard}/agent?vision=${sessionB}`);
+  await page.getByRole("button", { name: "View operation 2 click", exact: true }).click();
+  const step = page.locator('[aria-label="Agent step"]');
+  await expect(step).toContainText("Đánh giá bước trước");
+  await expect(step).toContainText("Đã mở trang sản phẩm");
+  await expect(step).toContainText("Memory");
+  await expect(step).toContainText("Mục tiêu kế");
+  await expect(step).toContainText("Mở chi tiết sản phẩm");
+  await expect(step).toContainText("click: The page changed after the agent chose this element");
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await page.getByRole("button", { name: "View operation 2 click", exact: true }).click();
+  await expect(page.getByRole("button", { name: "View operation 2 click", exact: true })).toHaveAttribute("aria-current", "step");
+  await expect(page.locator('[aria-label="Agent step"]')).toHaveCount(0);
+});
+
+test("agent step text wraps at phone width without horizontal page overflow", async ({ page }) => {
+  const state = await fixture(page);
+  state.agentStep = true;
+  await page.setViewportSize({ width: 400, height: 800 });
+  await page.goto(`${dashboard}/agent?vision=${sessionB}`);
+  await page.getByRole("button", { name: "View operation 2 click", exact: true }).click();
+  await expect(page.locator('[aria-label="Agent step"]')).toContainText("SyntheticLongToken");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 async function openSettings(page: Page) {
   await page.locator("summary").filter({ hasText: /^Vision settings$/ }).click();
   return page.getByRole("region", { name: "Vision settings", exact: true });
@@ -499,7 +629,8 @@ test("Codex stages survive SSE fallback, preserve selected frames and stop on te
   await expect(screen).toContainText("Before operation 4");
   await screen.getByRole("button", { name: "Return to live" }).click();
   await expect(screen).toContainText("Analyzing the requested screenshot");
-  await expect(screen.getByTestId("vision-click-target")).toHaveCount(0);
+  await expect(screen.locator(".vision-screen-content").getByTestId("vision-click-target")).toHaveCount(0);
+  await expect(screen.locator(".vision-last-click").getByTestId("vision-click-target")).toBeVisible();
   state.progressEvents = [...state.progressEvents, codexProgress("validating", "codex.validating", 9, { job_id: "image-job", call_sequence: 2 })];
   await expect(screen).toContainText("Checking proposed action", { timeout: 12_000 });
   // Result polling still says running: the terminal activity must take precedence.
@@ -507,7 +638,7 @@ test("Codex stages survive SSE fallback, preserve selected frames and stop on te
     codexProgress("terminal", "unavailable", 10, { reason_code: "bridge_login_required" }),
     codexProgress("late", "codex.started", 11)];
   await expect(screen).toContainText("The Codex login is unavailable or expired", { timeout: 12_000 });
-  await expect(screen).toContainText("Session stopped · last saved screen");
+  await expect(screen).toContainText("Click operation 4 · recorded click location");
   await expect(screen.getByRole("img")).toBeVisible();
   await expect(screen).not.toContainText("Reading page elements");
   const calls = state.screenCalls;
@@ -725,7 +856,7 @@ test("click highlight stays on its before frame and scales on desktop and mobile
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(dashboard + "/agent?vision=" + sessionA);
   const screen = page.getByRole("region", { name: "Vision browser screen" });
-  const marker = screen.getByTestId("vision-click-marker");
+  const marker = screen.locator(".vision-screen-content").getByTestId("vision-click-marker");
   await expect(screen.locator(".vision-screen-activity")).toContainText("Step 4: Click “Branch B”");
   await expect(screen.locator(".vision-screen-activity")).toContainText("Performed");
   await screen.getByRole("button", { name: "Show action", exact: true }).click();
@@ -774,7 +905,7 @@ test("new click previews once, honors reduced motion and keeps live polling", as
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(dashboard + "/agent?vision=" + sessionA);
   const screen = page.getByRole("region", { name: "Vision browser screen" });
-  const marker = screen.getByTestId("vision-click-marker");
+  const marker = screen.locator(".vision-screen-content").getByTestId("vision-click-marker");
   await expect(page.getByRole("button", { name: "View operation 4 click", exact: true })).toBeVisible();
   await expect(marker).toHaveCount(0);
   const calls = state.screenCalls;
@@ -810,7 +941,8 @@ test("late click frame and session switch cannot put a marker on a different ima
   await page.getByRole("button", { name: "History", exact: true }).click();
   await page.getByRole("region", { name: "Visual exploration sessions" }).getByRole("button", { name: "View", exact: true }).nth(1).click();
   await expect(page).toHaveURL(new RegExp(sessionB));
-  await expect(screen.getByTestId("vision-click-marker")).toHaveCount(0);
+  await expect(screen.locator(".vision-screen-content").getByTestId("vision-click-marker")).toHaveCount(0);
+  await expect(screen.locator(".vision-last-click")).toContainText("Last confirmed click");
   await expect(screen).toContainText("Live browser");
 });
 

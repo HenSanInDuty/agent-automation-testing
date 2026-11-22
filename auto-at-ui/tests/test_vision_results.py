@@ -12,6 +12,31 @@ from vision_trace_fixtures import complete_operation, operation
 pytest_plugins = ["vision_trace_fixtures"]
 
 
+def test_page_inventory_persists_in_authorized_trace_and_export(result_client, trace_database):
+    from domain.vision_coverage import inventory
+    from infrastructure.persistence.models import VisualExplorationStateModel
+    from test_codex_candidate_service import bound_observation
+    from test_vision_page_inventory import checkpoint
+    client, base, _ = result_client
+    factory, scope, uow, lease, _ = trace_database
+    saved = inventory(checkpoint(), bound_observation(), {})
+    with factory.begin() as db:
+        db.add(VisualExplorationStateModel(id=saved.state_id, tenant_id=scope.tenant_id,
+                                          session_id=scope.session_id, parent_id=None, hop=0,
+                                          screenshot_checksum="a" * 64,
+                                          checkpoint={"id": str(saved.checkpoint_id)}))
+    before = client.get(base + "/trace").json()["revision"]
+    uow.page_inventory(lease, saved)
+    trace = client.get(base + "/trace")
+    assert trace.status_code == 200 and trace.json()["revision"] != before
+    assert trace.json()["pages"] == [saved.model_dump(mode="json")]
+    assert client.get(base + "/result/export").json()["pages"] == trace.json()["pages"]
+    with pytest.raises(ValueError):
+        uow.page_inventory(lease, saved.model_copy(update={"checkpoint_id": uuid4()}))
+    app.dependency_overrides[current_tenant] = lambda: "different-tenant"
+    assert client.get(base + "/trace").status_code == 404
+
+
 def test_confirmed_click_survives_trace_export_and_image_deletion(result_client, trace_database):
     from infrastructure.persistence.models import VisualOperationModel
     from vision_trace_fixtures import evolve
@@ -155,11 +180,55 @@ def test_interrupted_session_has_an_observation_report_without_a_run(
     assert report["summary"]["controls_acted_on"] == 0
     assert report["summary"]["scrolls_completed"] == 1
     assert report["summary"]["actions_rejected"] == 1
+    assert report["conclusion"]["status"] == "partial"
+    assert report["conclusion"]["operations_rejected"] == 1
+    assert report["conclusion"]["business_outcome"] == "unverified"
     assert [item["sequence"] for item in report["findings"]] == [2, 3]
     assert report["findings"][1]["reason_code"] == "unsupported_target"
     assert payload["links"]["report"]["href"] is None
     assert client.get(base + "/result/export").json()["exploration_report"] == report
     assert "storage_key" not in response.text and "encrypted" not in response.text
+
+
+def test_completed_report_conclusion_and_export_use_verified_distinct_controls(
+    result_client, trace_database,
+):
+    from auto_at.contracts.vision_coverage import VisualPageControl, VisualPageInventory
+    from infrastructure.persistence.models import (
+        VisualExplorationSessionModel,
+        VisualExplorationStateModel,
+        VisualOperationModel,
+    )
+    from vision_trace_fixtures import evolve
+
+    client, base, root = result_client
+    factory, scope, _, _, _ = trace_database
+    # Historical read fixture only; no browser operation is dispatched by this test.
+    click = evolve(root, purpose="explore", action_kind="click")
+    with factory.begin() as db:
+        db.get(VisualOperationModel, root.id).payload = click.model_dump(mode="json")
+        db.get(VisualExplorationSessionModel, scope.session_id).state = "completed"
+        for _ in range(2):
+            saved = VisualPageInventory(
+                state_id=uuid4(), checkpoint_id=uuid4(), url_fingerprint="a" * 64,
+                interaction_scope="buttons", controls=(VisualPageControl(
+                    key="b" * 64, role="button", name="Save", status="completed",
+                    operation_id=click.id,
+                ),),
+            )
+            db.add(VisualExplorationStateModel(
+                id=saved.state_id, tenant_id=scope.tenant_id, session_id=scope.session_id,
+                parent_id=None, hop=0, screenshot_checksum="a" * 64,
+                page_inventory=saved.model_dump(mode="json"),
+            ))
+    report = client.get(base + "/result").json()["exploration_report"]
+    assert report["status"] == "completed"
+    assert report["coverage"] == "observed_controls_completed"
+    conclusion = report["conclusion"]
+    assert conclusion["observed_controls"] == conclusion["completed_controls"] == 1
+    assert conclusion["operations_completed"] == 1
+    assert conclusion["business_outcome"] == "unverified"
+    assert client.get(base + "/result/export").json()["exploration_report"] == report
 
 
 def test_failed_object_delete_preserves_metadata_and_commits_failure_audit(

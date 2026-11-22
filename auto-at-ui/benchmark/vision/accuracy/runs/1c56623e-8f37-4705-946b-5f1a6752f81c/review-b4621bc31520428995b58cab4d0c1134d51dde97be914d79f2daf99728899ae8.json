@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "a9265a8b-cf18-4b18-ac93-b521ceca84c8",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "navigation_destination",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "eafb63ec3a9e0976533cc963c74c6d9b7dca4c56bfe21296f7ecca538292ad3a",
+  "after_checksum": "e09ea5d1d7f5f86b50aca3e4577be470599600b9a6dc65fef66141831c4a21e3",
+  "finding": "Header TRANG CHU link (box 332,11 equals oracle mct-01) returned from /cam-nang to the homepage; TRANG CHU highlighted, matches declared mongchiton.vn/."
+}

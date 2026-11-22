@@ -1,0 +1,87 @@
+{
+  "jobs": [
+    {
+      "request_sequence": 1,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5850,
+      "output_tokens": 771,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 2,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5284,
+      "output_tokens": 538,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 3,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 6303,
+      "output_tokens": 762,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 4,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5644,
+      "output_tokens": 18,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 5,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5527,
+      "output_tokens": 392,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 6,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5605,
+      "output_tokens": 507,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 7,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5247,
+      "output_tokens": 159,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 8,
+      "status": "failed",
+      "stage": "dom",
+      "input_tokens": null,
+      "output_tokens": null,
+      "safe_reason": "bridge_malformed_output"
+    },
+    {
+      "request_sequence": 9,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5272,
+      "output_tokens": 165,
+      "safe_reason": null
+    },
+    {
+      "request_sequence": 10,
+      "status": "completed",
+      "stage": "dom",
+      "input_tokens": 5250,
+      "output_tokens": 169,
+      "safe_reason": null
+    }
+  ],
+  "model_jobs": 10,
+  "monetary_cost_usd": null,
+  "cost_status": "not_reported"
+}

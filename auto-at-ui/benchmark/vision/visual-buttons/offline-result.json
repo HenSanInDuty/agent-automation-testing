@@ -1,0 +1,10 @@
+{
+  "schema_version": "visual-button-evaluation-v1",
+  "fixture": "mongchiton-desktop.json",
+  "positive_targets": 47,
+  "negative_targets": 14,
+  "true_positives": 47,
+  "false_negatives": [],
+  "false_positives": [],
+  "scope": "synthetic reproduction of captured computed styles; no live execution claim"
+}

@@ -1,0 +1,11 @@
+{
+  "after_checksum": "428c0a948349981112f6c5d286aadc69cd7f591da82c1a06bb1aaab9ba4e1e49",
+  "before_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+  "finding": "mct-54: after frame shows indicator 4 selected with matching slide Thu Cuoi Kinh Dien (before: indicator 5).",
+  "operation_id": "08d0419e-c12e-4c9a-8c3b-9bf2a0fb3ff2",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

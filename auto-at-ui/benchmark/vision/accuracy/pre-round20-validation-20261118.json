@@ -1,0 +1,266 @@
+{
+  "schema_version": "pre-round20-remediation-v1",
+  "date": "2026-11-18",
+  "status": "offline_remediation_complete_live_qualification_pending",
+  "adr": "docs/adr/036-validate-queued-targets-and-bounded-evidence.md",
+  "source_hash": "2cd003097edc26d20dea1320ed9c58b0896c4d0a43b519fe2005ea9363849578",
+  "source_hash_algorithm": "benchmark/vision/accuracy/run.py:source_hash",
+  "changed_source_sha256_utf8_lf": {
+    "apps/control-plane/application/vision_trace_events.py": "894a25c7b3d4a4af5a2e27f6dcf3902513beb5210d1783eaf0c9dfcf5df8a669",
+    "apps/control-plane/domain/vision_restoration.py": "ed1b0a074644ec34c75c386d42e1811c295a37d616ef57bfb92b41ef3f0bdb8e",
+    "apps/control-plane/domain/ports.py": "7c784662e08fe1e7003e4b26fe8e71d899a506637abccbec892e417fc31ca72f",
+    "apps/control-plane/infrastructure/vision_worker.py": "f04d89d1ae982f73cf32ffaa0d2b7ea0df0027c117e956d3685109e72158c433",
+    "packages/contracts/src/auto_at/contracts/vision_worker.py": "3d4ca93610ccca37852b759d99d92ac86ff3e5aef05d8269bf7341ac0235b954",
+    "packages/contracts/export_vision_worker.py": "ce2384cbcfb40273df771e637c4d4bd7dbdd329840fd639dfbcaeeabbbec2388",
+    "workers/playwright/src/vision-contract.generated.ts": "a3eead9cf86d0a9692e25c5b1dc676a979ad1bfe06801002b1677ed1b97499b9",
+    "workers/playwright/src/vision-operations.ts": "56fe09578ff926ba9c48bb9909699ce3ec8ff46f55e3437acbb2966b66952855",
+    "workers/playwright/src/vision-http.ts": "5a30277fb2a1723c1c09da5ee360b4696ffa991ea546afac931bd471703cfaa3",
+    "workers/playwright/src/vision-checkpoints.ts": "aedac077ac1f7a18cec6af6df0f9e50dc44625a92d817b211d959d27f93d5f49",
+    "workers/playwright/src/vision-button-semantics.ts": "6f93ca28d37c9f1295b1eed382ffe73f6d7cd6e93f9dd5de6f3cfcfaa531bd7c",
+    "workers/playwright/src/vision-screen.ts": "01169ef75e48a1c156323f4f163bcbc7fb08f65e50aa808de9807d26d0dc7fc5",
+    "workers/playwright/src/fixtures/vision-target.ts": "b6c0a8ff19d32b41802a10f066d865f56e728f8b045b9b447a6baec19952a913",
+    "workers/playwright/src/fixtures/vision-integration-server.ts": "eb20c48a60c885b5bc8c14dcac39eefc47bdf11a97146ba1c8a64689f480cf8b",
+    "workers/playwright/src/vision-target-preflight.spec.ts": "53c078620bcfcfb2141d5a4cde65c1514ba0e368d361c53a4b00fc874f7d74e4",
+    "workers/playwright/src/vision-sample-guard.spec.ts": "e8c7431166cadecd125b9795a766519d8ed958b79daac51dbc52b750784101e1",
+    "workers/playwright/src/vision-outcome-capture.spec.ts": "c87b7cb7fa8794ac2b265f2d9c7f25a761d6d1821df060dafe6358e81fe03144",
+    "tests/test_vision_target_preflight.py": "7cbe59f1838e99fa803babd7b030f37398b7089b15365c3f3933a41f17d54dcc",
+    "tests/test_vision_restoration.py": "7d32a9e93f189ddcd5824e4a378d37b4475e2f1c76662d3009627622c9a55202",
+    "tests/test_vision_dom_transport.py": "30951f8300653cc3c3147f8441a5e3163472c4b2cdf0041c889abffa8ffdac59",
+    "tests/test_vision_page_batch.py": "9b2003bca06f877208c552e3559b9e9b7dd0d105fa6f2c1d2861164be1d3cbb8",
+    "workers/playwright/src/vision-dom.ts": "99d295f2ebdacea5ed32e6408036c8d28ddcbdebed55930ca479c659ffed5655",
+    "workers/playwright/src/vision-revalidation.ts": "65e0b696cd01f1df902be435c75f4a41a5fdb3547c423ba6365c4cf7a0f1b623"
+  },
+  "scope": [
+    "approved-target preflight and proposal retirement/replanning",
+    "representative bounded lossless outcome capture",
+    "unified no-dispatch restoration proof matrix"
+  ],
+  "isolation": {
+    "synthetic_only": true,
+    "model_calls": 0,
+    "round20_submitted": false,
+    "services_deployed": false,
+    "integration_network": "isolated Docker loopback only",
+    "credentials_or_host_mounts": false
+  },
+  "preserved": [
+    "execution request/result v1",
+    "model/provider/prompt",
+    "frozen oracle",
+    "call/state/hop/deadline limits",
+    "500ms optional sample and 160ms quiet window",
+    "private-form guards",
+    "prepare/dispatch exact-node guards",
+    "rejected-operation audit"
+  ],
+  "red": {
+    "controller_target_cases": {
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "errors": 0,
+      "duration_seconds": 26.186,
+      "exit_code": 1,
+      "synthetic_measurements": []
+    },
+    "controller_restore_prepare": {
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration_seconds": 13.089,
+      "exit_code": 1,
+      "synthetic_measurements": []
+    },
+    "controller_baseline": "Original deployed round19 controller only, with current worker/fixture; expected failures, not a full old-source rerun",
+    "controller_baseline_sha256": "c3aaf924da1325fae4cf1374414f32909aaa384e29b681bf0d4c2a45d757d4e7",
+    "original_deployed_source_hash": "2337ebf96b2ff59e1c34d5c3cae4404590850597362b384534e99e93be4ebce4",
+    "capture": {
+      "failed": 5,
+      "passed": 0,
+      "log": ".pytest-artifacts/outcome-load-cpu1-baseline-repeat.log",
+      "events": [
+        {
+          "sample_status": "verify_deadline",
+          "sample_stage": "verify",
+          "duration_ms": 520,
+          "settle_ms": 317,
+          "capture_ms": 112,
+          "verify_ms": 91,
+          "error_type": null
+        },
+        {
+          "sample_status": "verify_deadline",
+          "sample_stage": "verify",
+          "duration_ms": 561,
+          "settle_ms": 325,
+          "capture_ms": 132,
+          "verify_ms": 104,
+          "error_type": null
+        },
+        {
+          "sample_status": "error",
+          "sample_stage": "capture",
+          "duration_ms": 508,
+          "settle_ms": 463,
+          "capture_ms": 0,
+          "verify_ms": 0,
+          "error_type": "contract_rejection"
+        },
+        {
+          "sample_status": "error",
+          "sample_stage": "capture",
+          "duration_ms": 504,
+          "settle_ms": 493,
+          "capture_ms": 0,
+          "verify_ms": 0,
+          "error_type": "contract_rejection"
+        },
+        {
+          "sample_status": "verify_deadline",
+          "sample_stage": "verify",
+          "duration_ms": 620,
+          "settle_ms": 313,
+          "capture_ms": 131,
+          "verify_ms": 177,
+          "error_type": null
+        }
+      ]
+    }
+  },
+  "green": {
+    "integration_shards": [
+      {
+        "validation_file": "D:\\Person\\CaoHoc\\KhoaLuanTotNghiep\\agent-at\\auto-at-ui\\.pytest-artifacts\\codex-offline-1312216d3a42.json",
+        "summary": {
+          "passed": 21,
+          "failed": 0,
+          "skipped": 0,
+          "errors": 0,
+          "duration_seconds": 552.92,
+          "exit_code": 0,
+          "synthetic_measurements": []
+        },
+        "shard": "coverage"
+      },
+      {
+        "validation_file": "D:\\Person\\CaoHoc\\KhoaLuanTotNghiep\\agent-at\\auto-at-ui\\.pytest-artifacts\\codex-offline-98730764fab1.json",
+        "summary": {
+          "passed": 64,
+          "failed": 0,
+          "skipped": 0,
+          "errors": 0,
+          "duration_seconds": 648.656,
+          "exit_code": 0,
+          "synthetic_measurements": []
+        },
+        "shard": "restoration"
+      }
+    ],
+    "integration_totals": {
+      "passed": 85,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0
+    },
+    "python": {
+      "passed": 210,
+      "duration_seconds": 2.69,
+      "log": ".pytest-artifacts/pre20-python-final.log",
+      "includes": "restoration, transport, contracts v1/v4, metrics, accuracy loop, both provenance manifests"
+    },
+    "worker_broad_before_restored_binding_followup": {
+      "passed": 198,
+      "reported_duration": "7.4m",
+      "log": ".pytest-artifacts/pre20-worker-matrix.log"
+    },
+    "worker_final_affected": {
+      "unique_cases_passed": 60,
+      "detail": "49 DOM/visual-button/sample-guard cases passed in pre20-worker-final.log; 11 preflight cases passed in pre20-preflight-final.log after correcting the restored-swap context expectation",
+      "logs": [
+        ".pytest-artifacts/pre20-worker-final.log",
+        ".pytest-artifacts/pre20-preflight-final.log"
+      ]
+    },
+    "capture": {
+      "passed": 5,
+      "failed": 0,
+      "duration_seconds": 40.7,
+      "cpu": 1,
+      "memory_gib": 1,
+      "viewport": [
+        1280,
+        720
+      ],
+      "extra_dom_nodes": 575,
+      "minimum_png_bytes": 600000,
+      "budget_ms": 500,
+      "assertions": "sample retained/reused and selected slide4 survives autoplay",
+      "log": ".pytest-artifacts/outcome-load-cpu1-green-final.log",
+      "events": [
+        {
+          "sample_status": "sampled",
+          "sample_stage": "verify",
+          "duration_ms": 399,
+          "settle_ms": 195,
+          "capture_ms": 70,
+          "verify_ms": 135,
+          "error_type": null
+        },
+        {
+          "sample_status": "sampled",
+          "sample_stage": "verify",
+          "duration_ms": 409,
+          "settle_ms": 207,
+          "capture_ms": 106,
+          "verify_ms": 95,
+          "error_type": null
+        },
+        {
+          "sample_status": "sampled",
+          "sample_stage": "verify",
+          "duration_ms": 389,
+          "settle_ms": 200,
+          "capture_ms": 91,
+          "verify_ms": 98,
+          "error_type": null
+        },
+        {
+          "sample_status": "sampled",
+          "sample_stage": "verify",
+          "duration_ms": 487,
+          "settle_ms": 255,
+          "capture_ms": 114,
+          "verify_ms": 117,
+          "error_type": null
+        },
+        {
+          "sample_status": "sampled",
+          "sample_stage": "verify",
+          "duration_ms": 480,
+          "settle_ms": 283,
+          "capture_ms": 89,
+          "verify_ms": 109,
+          "error_type": null
+        }
+      ]
+    },
+    "ruff": "whole repository passed",
+    "typescript": "typecheck passed"
+  },
+  "intermediate_failures_retained": [
+    "Full page-batch first pass: 73 passed/6 failed; identified invalid prepare fixtures, obsolete replacement expectation, and restored DOM lineage regressions.",
+    "Prepare fixtures now use real post-capture barriers with retained before evidence; legacy negative still rejects.",
+    "Replacement fixture requires 3 model calls (2 original batches plus 1 fresh proposal), not 2.",
+    "Panel/history restore regressions fixed; 5 focused cases passed with unchanged model-call expectations.",
+    "Cosmetic target class test first failed; per-target action signature now ignores cosmetic class/style and ancestor whitespace, retaining target attributes/destination/form identity.",
+    "Restored destination swap correctly failed full checkpoint/context; test expectation corrected and all 11 preflight cases passed.",
+    "Host default pytest temp ACL and PowerShell npm.ps1 restrictions avoided using owned --basetemp and .cmd commands."
+  ],
+  "limitations": [
+    "No claim that live accuracy increased or mct-47 is repaired; no oracle relabeling or merging distinct video copies.",
+    "Full repository qualification suite and live round20 remain pending; this is focused offline remediation validation.",
+    "Required target-preflight-v1 capability means API/controller and worker must be deployed together before the next live run.",
+    "Capture timing is synthetic on one constrained local container, not a live latency guarantee."
+  ]
+}

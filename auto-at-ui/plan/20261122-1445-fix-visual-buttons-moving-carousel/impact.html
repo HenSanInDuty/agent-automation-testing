@@ -1,0 +1,323 @@
+<title>Skip khung video mct-47</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single-column engineering brief; evidence tables and one geometry diagram, decision box at the end. */
+:root {
+  --bg: #f6f7f5; --panel: #ffffff; --ink: #1b2120; --muted: #5d6763; --line: #d8ddda;
+  --accent: #1d6b5a; --warn: #9a5b00; --warn-bg: #fdf1dc; --bad: #a3261d; --bad-bg: #fbe6e3; --ok: #1d6b3a; --ok-bg: #e2f2e7;
+  --code-bg: #eef1ef;
+  --f-body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121615; --panel: #1a201e; --ink: #e5ebe8; --muted: #9aa6a1; --line: #2b3431;
+  --accent: #5cc0a6; --warn: #f0b45c; --warn-bg: #352a17; --bad: #ff8b80; --bad-bg: #3a1d1a; --ok: #79d39a; --ok-bg: #18301f;
+  --code-bg: #222a27; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121615; --panel: #1a201e; --ink: #e5ebe8; --muted: #9aa6a1; --line: #2b3431;
+  --accent: #5cc0a6; --warn: #f0b45c; --warn-bg: #352a17; --bad: #ff8b80; --bad-bg: #3a1d1a; --ok: #79d39a; --ok-bg: #18301f;
+  --code-bg: #222a27; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.6; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 32px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.2rem; margin: 0 0 10px; text-wrap: balance; display: flex; gap: 10px; align-items: baseline; }
+h2 .tag { font-family: var(--f-mono); font-size: .8rem; color: var(--accent); font-weight: 600; }
+h3 { font-size: 1rem; margin: 18px 0 6px; }
+p, li { max-width: 74ch; }
+p { margin: 0 0 10px; }
+.lede { color: var(--muted); margin-top: 6px; }
+code, .mono { font-family: var(--f-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+section { min-width: 0; }
+.status { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill { font-size: .78rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; letter-spacing: .02em; }
+.p-warn { background: var(--warn-bg); color: var(--warn); } .p-bad { background: var(--bad-bg); color: var(--bad); }
+.p-ok { background: var(--ok-bg); color: var(--ok); }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.six { display: grid; gap: 12px; counter-reset: six; }
+.six > div { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.six b { display: block; margin-bottom: 4px; }
+pre { background: var(--code-bg); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-family: var(--f-mono); font-size: .82rem; line-height: 1.5; margin: 8px 0; }
+.fig { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; }
+.fig svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.fig figcaption { color: var(--muted); font-size: .85rem; margin-top: 8px; }
+.svg-vp { fill: none; stroke: var(--ink); stroke-width: 2; }
+.svg-cover { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 1.2; }
+.svg-rest { fill: var(--ok-bg); stroke: var(--ok); stroke-width: 1.5; }
+.svg-move { fill: var(--warn-bg); stroke: var(--warn); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.svg-dot { fill: var(--bad); } .svg-dot-ok { fill: var(--ok); }
+.svg-t { fill: var(--ink); font: 12px var(--f-body); } .svg-m { fill: var(--muted); font: 11px var(--f-mono); }
+.svg-arrow { stroke: var(--warn); stroke-width: 1.6; fill: none; }
+.opt { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--panel); margin-bottom: 10px; }
+.opt.rec { border-color: var(--accent); border-width: 2px; }
+.opt h3 { margin-top: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.decide { background: var(--panel); border: 2px solid var(--accent); border-radius: 10px; padding: 16px; }
+ol.steps { padding-left: 22px; } ol.steps li { margin-bottom: 6px; }
+.muted { color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Skip khung video mct-47 trong inventory</h1>
+    <p class="lede">Phạm vi ảnh hưởng và cách sửa đề xuất cho control bị bỏ qua ở Q1–Q3 (qualification 22/11). Hướng A đã trượt trên site; A2 đã làm xong, qua review và qua harness live (xem mục "Kết quả A2"). Chưa commit.</p>
+    <div class="status">
+      <span class="pill p-bad">Q1, Q2, Q3 và live 1: inventory_complete = false</span>
+      <span class="pill p-warn">Không phải hồi quy code: đã tiềm ẩn từ r21</span>
+      <span class="pill p-ok">Đã tái hiện bằng chính code worker, chỉ đọc</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="tag">A</span>Root cause</h2>
+    <div class="six">
+      <div><b>1. Triệu chứng</b>
+        Worker log <code>vision.dom.coverage_limited</code> với <code>"skipped_count":1</code>, <code>"observed_count":17</code>, <code>"interaction_scope":"visual_buttons"</code>.
+        Lý do: Q1 <code>{"unsupported_target":1}</code> (06:39:51Z), Q2 <code>{"unbound_target":1}</code> (06:56:22Z), Q3 <code>{"unsupported_target":1}</code> (07:03:12Z), live 1 hai lần.
+        Bộ chấm: <code>inventory_complete: false</code>, nên lượt trượt dù A đạt 97,9% (Q2) và 95,7% (Q3).
+        So key inventory của state bị skip với các state cùng URL và cùng scroll: thiếu đúng <b>mct-47</b> (<code>a.video-frame</code>, khung video trong swiper nhân vật), không thiếu control nào khác.</div>
+      <div><b>2. Cách tái hiện</b>
+        Chạy <code>settleState</code> + <code>observeDom</code> thật của worker (scope <code>visual_buttons</code>) trên mongchiton.vn, kịch bản cuộn 0 → 576 → 1152 rồi quan sát (harness <code>.pytest-artifacts/s4-ab-harness/ab.mts</code>).
+        Skip xảy ra ở <b>1/6 lần quét</b>, cả ở code r21 <code>8e58cfa</code> lẫn code hiện tại <code>84213bd</code>.
+        Probe theo thời gian (<code>.pytest-artifacts/s4-video-skip-probe.json</code>) cho thấy lỗi chỉ xuất hiện khi khung video đang trượt.</div>
+      <div><b>3. Mong đợi và thực tế</b>
+        Mong đợi: khung video đang hiển thị được bind ở mọi lần quan sát. Nếu trang đổi trong lúc quan sát thì lần quan sát báo "trạng thái đã đổi" để control-plane đọc lại.
+        Thực tế: lần quan sát chồng lên lúc autoplay bắt đầu trượt. Bản sao video vẫn được chọn vì nó "nằm trọn trong viewport", nhưng vài chục ms sau tâm của nó đã nằm dưới lớp khác. Control bị bỏ qua mà lần quan sát vẫn được chấp nhận.</div>
+      <div><b>4. Root cause (file:line)</b>
+        Swiper nhân vật có autoplay: <code>delay 3000</code>, <code>speed 600</code>, <code>effect slide</code>, <code>loop</code>. Cứ khoảng 3,6 s nó trượt khoảng 650 ms. Có ba chỗ cùng góp phần:
+        <ul>
+          <li><code>workers/playwright/src/vision-checkpoints.ts:162-168</code>: trong scope <code>visual_buttons</code>, entry của nút <b>không có hình học</b>. Code cố ý làm vậy cho "interchangeable copies of a video affordance". Hệ quả: settle và các cổng so trạng thái (<code>vision-dom.ts:37-38</code>, <code>:240-242</code>; <code>vision-operations.ts:327-329</code>) không thấy khung đang trượt, trừ lúc bản sao đổi tập (<code>vision-checkpoints.ts:74-77</code>).</li>
+          <li><code>vision-dom.ts:73-75</code>: lúc duyệt DOM, độ hiển thị được chụp tại một thời điểm duy nhất. <code>vision-dom.ts:177-187</code>: grounding lấy tâm hộp <b>hiện tại</b> rồi hit-test. Lần thử lại duy nhất chạy ngay lập tức, vẫn trong cùng 650 ms trượt, và chỉ áp dụng cho <code>unsupported_target</code>.</li>
+          <li><code>vision-locators.ts:32-55</code>: tâm rơi dưới panel "TẢI GAME" (<code>div.relative</code>, không cursor pointer) nên trả <code>unsupported_target</code>. <code>vision-locators.ts:167,181</code>: tâm rơi dưới cột nút nhân vật nên trả <code>locator_target_mismatch</code>, và <code>vision-dom.ts:206-213</code> quy về <code>unbound_target</code>.</li>
+        </ul></div>
+      <div><b>5. Vì sao bây giờ</b>
+        Không do thay đổi code: A/B ở trên cho cùng tần suất skip với hai phiên bản.
+        Autoplay đã có từ 09/11: trong evidence cũ, bản sao video đổi slot mà không có click nhân vật ở các vòng <code>65e78e75</code>, <code>90e66243</code>, <code>aded2b83</code> và r21 <code>39de5dc7</code>.
+        Lỗi có tính xác suất. Mọi vòng tới r21 đều có 0 trang bị skip; ngày 22/11 có 5 trang bị skip trên khoảng 58 state có video (live 1, Q1–Q3).
+        Với xác suất mỗi lần quan sát cỡ vài phần trăm, các vòng trước có số 0 là trong ngưỡng may rủi. Trên dữ liệu hiện có, tôi không tìm được thay đổi nào khác giải thích được sự khác biệt.</div>
+      <div><b>6. Blast radius</b>
+        Từ tool (<code>hgraph impact vision-dom.ts</code>): <code>vision-operations.ts</code>, <code>vision-revalidation.ts</code>, các fixture probe <code>vision-capture-probe.ts</code>, <code>vision-revalidation-probe.ts</code>, <code>visual-buttons-audit.ts</code>, các spec <code>vision-dom</code>, <code>vision-observability</code>, <code>vision-visual-buttons</code>.
+        Tự grep: control-plane đọc <code>skipped_count</code> ở <code>domain/vision_coverage.py:28,47</code> (giữ giá trị lớn nhất), <code>domain/vision_conclusion.py:25</code> (kết luận "limited"), <code>application/vision_trace_events.py:1548</code>, <code>vision_agent_loop.py:111</code>. Benchmark: <code>benchmark/vision/accuracy/rescore.py:49</code> (gate inventory).
+        Cùng cơ chế này còn có thể đánh trúng bất kỳ nút <code>visual_buttons</code> nào nằm trong vùng chuyển động có autoplay, không riêng mct-47.</div>
+    </div>
+
+    <h3>Hình học lúc lỗi (đo trên site, viewport 1280×720, scroll 1152)</h3>
+    <figure class="fig">
+      <svg viewBox="0 0 700 250" role="img" aria-label="Viewport với cột nút nhân vật bên trái, panel tải game bên phải, khung video lúc đứng yên ở giữa và hai vị trí đang trượt có tâm nằm dưới lớp phủ">
+        <rect class="svg-vp" x="20" y="20" width="640" height="200" rx="4"/>
+        <text class="svg-m" x="24" y="36">viewport 1280 px (tỉ lệ 1:2)</text>
+        <rect class="svg-cover" x="58" y="70" width="34" height="140"/>
+        <text class="svg-t" x="40" y="236">cột nút nhân vật</text>
+        <rect class="svg-cover" x="582" y="50" width="70" height="160"/>
+        <text class="svg-t" x="560" y="236">panel TẢI GAME</text>
+        <rect class="svg-rest" x="397" y="130" width="147" height="66" rx="3"/>
+        <circle class="svg-dot-ok" cx="470" cy="163" r="4"/>
+        <text class="svg-t" x="400" y="122">lúc đứng yên x=754: bind được</text>
+        <rect class="svg-move" x="12" y="140" width="147" height="66" rx="3" transform="translate(20 0)"/>
+        <circle class="svg-dot" cx="105" cy="173" r="4"/>
+        <text class="svg-m" x="100" y="124">tâm x≈153–233 → trúng nút nhân vật</text>
+        <rect class="svg-move" x="489" y="140" width="147" height="66" rx="3"/>
+        <circle class="svg-dot" cx="562" cy="173" r="4"/>
+        <text class="svg-m" x="470" y="104">tâm x≈1124 → dưới panel</text>
+        <path class="svg-arrow" d="M 560 214 C 520 214 500 205 480 200"/>
+        <path class="svg-arrow" d="M 105 214 C 300 240 380 210 420 200"/>
+      </svg>
+      <figcaption>Ô đứt nét: bản sao đang trượt, vẫn nằm trọn trong viewport nên được chọn làm ứng viên, nhưng tâm của nó nằm dưới một lớp khác. Ô liền: bản sao đã dừng, bind bình thường.</figcaption>
+    </figure>
+
+    <div class="tbl"><table>
+      <thead><tr><th>Bằng chứng</th><th>Kết quả</th><th>File</th></tr></thead>
+      <tbody>
+        <tr><td>Diff key inventory (state bị skip với state cùng scroll)</td><td>Q1, Q2, Q3, live 1: chỉ thiếu mct-47</td><td class="mono">runs/&lt;id&gt;/inventory-evidence.json</td></tr>
+        <tr><td>Probe theo thời gian, 13 kịch bản</td><td>Lỗi chỉ khi đang trượt: <code>mismatch</code> (tâm trúng <code>div.character-switcher</code>) hoặc <code>unsupported_target</code> (tâm trúng <code>div.relative</code>); xảy ra cả lúc trang đứng yên</td><td class="mono">.pytest-artifacts/s4-video-skip-probe.json</td></tr>
+        <tr><td>Cấu hình swiper và nhịp chuyển động</td><td>autoplay 3000 ms, speed 600 ms; trượt mỗi ≈3,6 s, mỗi lần ≈650 ms</td><td class="mono">.pytest-artifacts/s4-swiper-motion-probe.mts</td></tr>
+        <tr><td>A/B code worker r21 với hiện tại, 30 lần quan sát mỗi bên</td><td class="num">8e58cfa: 1/30 · 84213bd: 1/30 (cả hai ở lần quét 1152, 1/6)</td><td class="mono">.pytest-artifacts/s4-ab-*.log</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2><span class="tag">B</span>Database</h2>
+    <p><b>Database: không đụng.</b> Không có migration, không có backfill. Dữ liệu đã lưu của các lượt cũ giữ nguyên.</p>
+  </section>
+
+  <section>
+    <h2><span class="tag">C</span>Trường bị ảnh hưởng</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Trường</th><th>Định nghĩa</th><th>Đọc</th><th>Ghi</th><th>Thay đổi</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">observation.skipped_count</td><td class="mono">CodexDomObservation (contract sinh tự động)</td><td class="mono">vision_coverage.py, vision_conclusion.py, rescore.py</td><td class="mono">vision-dom.ts:245</td><td>Ý nghĩa không đổi. Không tăng khi control chỉ đang chuyển động tạm thời và dừng lại trong giới hạn chờ.</td></tr>
+        <tr><td class="mono">observation.unsupported</td><td>như trên</td><td>control-plane</td><td class="mono">vision-dom.ts:213</td><td>Không còn <code>unbound_target</code> trong trường hợp trên.</td></tr>
+        <tr><td class="mono">mã lỗi state_changed_during_observation</td><td class="mono">vision-contract (đã có)</td><td class="mono">vision_trace_events.py:479,524</td><td class="mono">vision-dom.ts:242</td><td>Sẽ xuất hiện thay cho skip im lặng khi bản sao trượt ra khỏi màn hình trong lúc chờ. Control-plane đã có đường refresh và quan sát lại (tối đa 3 lần).</td></tr>
+        <tr><td>log <span class="mono">vision.dom.coverage_limited</span></td><td class="mono">vision-dom.ts:249-255</td><td>vận hành</td><td>như trên</td><td>Thêm số lần chờ chuyển động (chỉ đếm, không có danh tính control) để chẩn đoán.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2><span class="tag">D</span>File bị ảnh hưởng</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Đường dẫn</th><th>Loại</th><th>Lý do</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">workers/playwright/src/vision-dom.ts</td><td>sửa</td><td>Grounding chờ control đứng yên rồi thử lại (chỉ scope <code>visual_buttons</code>, có giới hạn thời gian)</td></tr>
+        <tr><td class="mono">workers/playwright/src/vision-dom.spec.ts</td><td>sửa</td><td>Test tái hiện (đỏ trên code hiện tại) và các test biên</td></tr>
+        <tr><td class="mono">docs/adr/045-observe-moving-visual-buttons.md</td><td>tạo</td><td>Ghi quyết định đổi hành vi quan sát, giới hạn và rủi ro</td></tr>
+        <tr><td class="mono">benchmark/vision/codex/manifest.json</td><td>sửa</td><td>Cập nhật hash của <code>vision-dom.ts</code> (dòng 56) để test chống trôi manifest đúng</td></tr>
+        <tr><td class="mono">plan/09112026103202-vision-accuracy-loop/log.md</td><td>sửa</td><td>Nhật ký sprint</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2><span class="tag">E</span>Caller và contract</h2>
+    <ul>
+      <li><code>observeDom</code> được gọi từ <code>vision-operations.ts:330</code> (đường chính v4, qua <code>vision-http.ts:86</code>), <code>fixtures/vision-capture-probe.ts:26</code>, <code>fixtures/vision-revalidation-probe.ts:21</code>, <code>fixtures/visual-buttons-audit.ts:75</code>, <code>fixtures/vision-tsx-runtime-flow-probe.ts:50</code>. Không đổi chữ ký.</li>
+      <li>Thay đổi chỉ chạy khi scope là <code>visual_buttons</code> và ứng viên có <code>dom_path</code>, tức đường v4 mà benchmark dùng. Scope <code>all</code>/<code>buttons</code> và agent mode (đang đóng băng) không đổi hành vi.</li>
+      <li>Contract công khai: <b>không đổi</b>. Không đổi schema, mã lỗi mới, env var, config key hay chữ ký hàm export. <code>vision-contract.generated.ts</code> không bị đụng.</li>
+      <li>Phía Python: không sửa. <code>vision_trace_events.py:465-487</code> đã coi <code>state_changed_during_observation</code> là lỗi phục hồi được.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="tag">F</span>Rủi ro và cách sửa</h2>
+    <div class="opt rec">
+      <h3>A. Chờ control đứng yên rồi ground lại <span class="pill p-ok">khuyến nghị</span></h3>
+      <p>Trong <code>ground()</code> (<code>vision-dom.ts:168-195</code>), với ứng viên <code>dom_path</code> trong scope <code>visual_buttons</code>, khi grounding thất bại vì <code>unsupported_target</code>, <code>locator_target_mismatch</code> hoặc <code>target_outside_viewport</code>:</p>
+      <ol>
+        <li>Đọc hộp của ứng viên mỗi 50 ms.</li>
+        <li>Dừng khi hai mẫu liên tiếp trùng nhau, hoặc sau tối đa 1200 ms.</li>
+        <li>Nếu hộp đã dịch quá 3 px so với lúc duyệt DOM (dùng chung <code>BOX_CENTER_TOLERANCE_PX</code>) và nay đã đứng yên, ground lại một lần.</li>
+        <li>Ngoài trường hợp trên thì giữ kết quả như hiện tại.</li>
+      </ol>
+      <p>Cổng <code>equivalentState(before, after)</code> giữ nguyên. Nếu trong lúc chờ bản sao trượt ra ngoài và bản sao mới vào thay, tập control đổi, lần quan sát báo <code>state_changed_during_observation</code> và control-plane refresh. Như vậy không còn skip im lặng.</p>
+      <p>Đây là điểm mọi caller cùng đi qua. Code chỉ đọc, không đụng tới trang, không thêm dependency.</p>
+      <p><b>Giả định chính:</b> chuyển động dừng trong 1,2 s (site đo được 650 ms).<br>
+         <b>Vỡ đầu tiên khi:</b> một nút chuyển động liên tục, ví dụ dạng marquee. Khi đó vẫn skip như hôm nay, và lần quan sát chậm thêm tối đa khoảng 1,2 s cho mỗi lô 8 ứng viên. Không tệ hơn hành vi hiện tại.</p>
+    </div>
+    <div class="opt">
+      <h3>E. Báo state_changed ngay khi thấy ứng viên đang chuyển động</h3>
+      <p>Nhỏ hơn A, dồn toàn bộ việc phục hồi cho control-plane. <b>Giả định:</b> sau refresh (settle 800 ms) thì trang đã yên. <b>Vỡ đầu tiên khi:</b> chuyển động liên tục. Lúc đó 3 lần refresh đều hỏng rồi raise, và cả lượt quét bị dừng, tệ hơn hôm nay. Mỗi lần refresh còn tốn một state và hop. Không khuyến nghị.</p>
+    </div>
+    <h3>Đã loại</h3>
+    <ul>
+      <li><b>Thêm hình học vào fingerprint của <code>visual_buttons</code>:</b> đảo ngược thiết kế có chủ ý ở <code>vision-checkpoints.ts:162-166</code>, đổi chính sách hash <code>visual-buttons-v1</code> (ảnh hưởng checkpoint đã lưu), và kéo lại <code>settle_timeout</code> như r12/r20. Blast radius lớn.</li>
+      <li><b>Dừng autoplay hoặc tắt animation của site:</b> làm thay đổi trang. Plan đã cấm, và <code>vision-settle-suppression.spec.ts</code> ghi lại cái giá về ngữ nghĩa.</li>
+      <li><b>Bộ chấm bỏ qua skip do chuyển động:</b> nới gate, vi phạm ràng buộc "không nới".</li>
+      <li><b>Chỉ thêm một lần thử lại tức thì nữa:</b> chỉ vá triệu chứng. Lần thử vẫn rơi vào cùng 650 ms trượt và không xử lý được <code>locator_target_mismatch</code>.</li>
+    </ul>
+    <p class="muted">Ảnh hưởng tới qualification: nếu có bản sửa này, Q2 (A 46/47) và Q3 (A 45/47) đã đạt, nâng loạt lên 2/5. Muốn đạt 4/5 vẫn còn vướng trang login Facebook, autoplay ở carousel tính năng và lỗi hạ tầng (Q4, Q5). Những mục đó nằm ngoài bản sửa này.</p>
+  </section>
+
+  <section>
+    <h2><span class="tag">G</span>Convention và graph</h2>
+    <ul>
+      <li>Convention: <code>AGENTS.md</code>, mục "Code organization rules" (mọi thay đổi hành vi phải kèm test tập trung) và "Required checks". <code>docs/code-standards.md</code> chỉ là chỉ mục.</li>
+      <li>Graph <code>docs/graphs/playwright-vision-worker.md</code>, mục "Chạm vào đây": chạy <code>typecheck</code>, <code>lint</code> và các spec <code>vision-dom</code>, <code>vision-operations</code>, <code>vision-observability</code>, <code>vision-target-preflight</code>, <code>vision.spec</code>. Không đụng <code>equivalentState</code> nên không bắt buộc spec settle, nhưng vẫn chạy <code>vision-settle-animation.spec.ts</code> cho chắc.</li>
+      <li>Không thêm hay xoá file TS, không đổi quan hệ import: <b>không cần cập nhật graph</b>. Vẫn chạy <code>hgraph check --changed</code>.</li>
+      <li>Repo ghi quyết định đổi hành vi runtime bằng ADR, nên tạo ADR-045. Không cần lệch convention nào.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="tag">H</span>Test sẽ viết</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Test</th><th>Trên code hiện tại</th><th>Sau khi sửa</th></tr></thead>
+      <tbody>
+        <tr><td><b>Tái hiện bug:</b> fixture cục bộ, một link nút trực quan trượt bằng CSS transition 1000 ms dưới lớp phủ không phải control; gọi <code>observeDom</code> trong lúc trượt</td><td>skipped 1 (<code>unsupported_target</code>)</td><td>bind được, skipped 0</td></tr>
+        <tr><td>Như trên, lớp phủ là một control có cursor pointer</td><td>skipped 1 (<code>unbound_target</code>)</td><td>bind được, skipped 0</td></tr>
+        <tr><td>Link trượt hẳn ra khỏi viewport trong lúc quan sát</td><td>resolve với skipped 1</td><td>reject <code>state_changed_during_observation</code></td></tr>
+        <tr><td>Chuyển động liên tục, không bao giờ đứng yên</td><td>skipped 1</td><td>vẫn skipped 1, chậm thêm ≤ 1,5 s</td></tr>
+        <tr><td>Trang tĩnh (các spec hiện có)</td><td>pass</td><td>pass, không chờ thêm</td></tr>
+        <tr><td>Kiểm chứng trên site, chỉ đọc: harness A/B với code mới, ≥30 lần quét tới 1152</td><td>≈1/6 lần quét có skip</td><td>0 skip</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted">Kèm: worker <code>typecheck</code>, <code>lint</code>, các spec liên quan; Python <code>benchmark/vision/codex/run_offline.py</code> (gồm test trôi manifest); <code>uv run ruff check .</code>.</p>
+  </section>
+
+  <section>
+    <h2>Kế hoạch thực hiện sau khi duyệt</h2>
+    <ol class="steps">
+      <li>Viết test tái hiện, chạy cho thấy đỏ trên code hiện tại.</li>
+      <li>Sửa <code>vision-dom.ts</code> theo hướng A, test chuyển xanh, chạy đủ các suite ở mục H.</li>
+      <li>Viết ADR-045, cập nhật hash trong manifest, ghi nhật ký sprint.</li>
+      <li>Review song song: <code>leader</code> (kèm lượt over-engineering) và <code>qa</code> (phán quyết cuối).</li>
+      <li>Rebuild image <code>playwright-worker</code>, chạy preflight, rồi chạy harness A/B trên site (chỉ đọc, không tốn ngân sách live run).</li>
+      <li>Dừng lại để bạn quyết định có chạy qualification mới không. Ngân sách live run chỉ còn 1/8, mà một loạt cần 5 lượt.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="tag">Gate 3</span>Kết quả: hướng A đạt review nhưng chưa đạt trên site thật</h2>
+    <ul>
+      <li>Bạn đã duyệt hướng A. Code đã sửa ở <code>vision-dom.ts</code>, có 6 test chuyển động, ADR-045 và hash manifest; tất cả chưa commit.</li>
+      <li>Leader <b>PASS</b> ở vòng 2. Vòng 1 bị FAIL vì lần đọc hộp không có timeout; lỗi này đã sửa.</li>
+      <li>QA <b>PASS</b> ở vòng 2. Vòng 1 bị FAIL vì TC-03 flaky; đã sửa. 240 lần lặp, 0% flaky. Hai file spec 141 lần chạy đều pass.</li>
+      <li><b>Kiểm chứng trên site, chỉ đọc, chưa đạt:</b> harness A/B với code mới cho skip ở 7/30 lần quét tới 1152. Code cũ là khoảng 1/6, nên không có cải thiện.</li>
+    </ul>
+    <div class="tbl"><table>
+      <thead><tr><th>Log chẩn đoán (bản sao probe, 20 lần quét)</th><th>Tâm lúc duyệt</th><th>Tâm khi đứng yên</th><th>Kết cục</th></tr></thead>
+      <tbody>
+        <tr><td>4 ca: ứng viên là bản sao đang trượt RA</td><td class="num">292–901</td><td class="num">−399 (ngoài màn hình)</td><td>Ground lại cho <code>unsupported_target</code>, vẫn skip. Cổng <code>equivalentState</code> không thấy đổi vì các bản sao được coi là hoán đổi được (<code>vision-checkpoints.ts:162-166</code>).</td></tr>
+        <tr><td>1 ca: swiper <code>loop</code> nhảy slide về chỗ cũ</td><td class="num">901</td><td class="num">901</td><td><code>displaced</code> = false nên không ground lại, vẫn skip.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Test cục bộ không mô phỏng hai mẫu này. Đây là sai sót ở thiết kế hướng A: nó giả định ứng viên chính là bản sao sẽ dừng lại trong viewport.</p>
+  </section>
+
+  <section>
+    <h2><span class="tag">A2</span>Kết quả A2 (2026-11-22)</h2>
+    <p>A2 chỉ sửa <code>vision-dom.ts</code> (cộng spec, ADR-045 và hash manifest). Số liệu bên dưới là diff so với HEAD, nên gồm cả hướng A chưa commit: <code>vision-dom.ts</code> +110/−50, <code>vision-dom.spec.ts</code> +171/−1, <code>manifest.json</code> +2/−2, ADR-045 mới (99 dòng).</p>
+    <h3>Harness live trên mongchiton.vn (chỉ đọc, cổng chính)</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Mã nguồn</th><th>Kết quả</th></tr></thead>
+      <tbody>
+        <tr><td>Code cũ (84213bd, 8e58cfa)</td><td class="num">1 skip / 30 lần quét, mỗi bản</td></tr>
+        <tr><td>Hướng A</td><td class="num">7 skip / 40 (log khác: 5 / 20)</td></tr>
+        <tr><td>A2, lần 1 (phiên chính)</td><td class="num">40 quan sát, 0 skip, 0 lỗi, 1 video thấy được nhưng chưa bind</td></tr>
+        <tr><td>A2, lần 2 (QA)</td><td class="num">40 quan sát, 0 skip, 0 lỗi, 0 video chưa bind (40/40 dòng 18 elements)</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Test offline (cwd <code>workers/playwright</code>)</h3>
+    <ul>
+      <li><code>tsc --noEmit</code> exit 0. <code>vision-dom.spec.ts</code> 46/46.</li>
+      <li>8 test chuyển động và T-loop, <code>--repeat-each=20</code>: 160/160 ở <code>--workers=1</code> (be-developer) và <code>--workers=4</code> (cả be-developer lẫn QA).</li>
+      <li><code>vision-visual-buttons</code> 3, <code>vision-operations</code> 99, <code>vision-settle-animation</code> 14, manifest 1 passed.</li>
+      <li>T-loop-out và T-loop-jump đỏ trên code A (mảng elements rỗng, đúng triệu chứng live), xanh sau A2. TC-03 đổi kỳ vọng thành đúng 2 lần walk và lỗi <code>state_changed_during_observation</code>.</li>
+      <li>Leader <b>PASS</b>, QA <b>PASS</b> (19 pass, 0 fail, 1 không kết luận). Không có BLOCKING. Preflight lúc đó 7/8, trượt <code>claude_token_3h</code> (1,03 h); chạy lại sau phase-02 đã đạt (mục P2).</li>
+    </ul>
+    <div class="six"><div><b>Rủi ro còn lại (cập nhật sau phase-02)</b>
+      <p>Rủi ro QA nêu ở <code>vision-dom.ts:293</code> (lần duyệt lại ghi đè dấu skip của lần đầu) <b>đã xử lý ở phase-02</b>: ứng viên lần đầu bị chuyển động làm hỏng mà không có bản tương đương nào bind được ở cuối thì tính lại vào <code>skipped_count</code>. Chi tiết ở mục dưới.</p>
+      <p>Còn lại hai giới hạn đã ghi trong ADR-045: (1) "duyệt giữa lúc trượt", lần duyệt đầu chạy khi không bản sao nào nằm trọn viewport nên video không là ứng viên, không có skip; tần suất đo được khoảng 2/160 lần quét (1,3%), có từ code cũ, chung cho mọi scope; (2) khoá tương đương thu gọn role+name+button_kind, nên hai link cùng chữ cùng loại nhưng khác <code>href</code> bị coi là twin và có thể che một miss (khe <code>href</code>; user chấp nhận, đóng được bằng cách export khoá từ <code>vision-checkpoints.ts</code>).</p>
+    </div></div>
+  </section>
+
+  <section>
+    <h2><span class="tag">P2</span>Phase-02: giữ tín hiệu miss (2026-11-22)</h2>
+    <p>User chọn vá tín hiệu miss sau QA phase-01, rồi chọn giữ khoá tương đương thu gọn role+name+button_kind (CONVENTION_ISSUE của dev; khe <code>href</code> ghi trong ADR). Luật: ứng viên lần đầu bị chuyển động làm hỏng được kiểm sau lần duyệt lại; không bind được control tương đương thì cộng vào <code>skipped_count</code> kèm <code>unbound_target</code>; bind được thì không cộng, nên giữ được thắng lợi của A2.</p>
+    <ul>
+      <li><b>Diff phase-02 (theo báo cáo dev, so với phase-01 chưa commit):</b> <code>vision-dom.ts</code> +18/−4, <code>vision-dom.spec.ts</code> +31/−4, ADR-045 +29 (nay 128 dòng), <code>manifest.json</code> 2 hash. Database không đụng, contract không đổi. Diff so HEAD hiện tại (gồm A + A2 + phase-02, <code>git diff --numstat</code>): <code>vision-dom.ts</code> +377/−303, <code>vision-dom.spec.ts</code> +198/−1, <code>manifest.json</code> +2/−2.</li>
+      <li><b>Test offline:</b> <code>tsc --noEmit</code> exit 0; <code>vision-dom.spec.ts</code> 48/48; T-loop-lost <b>đỏ</b> trên code phase-01 (Expected 1, Received 0, theo dev), xanh sau sửa; 10 test chuyển động x20: 200/200 ở <code>--workers=1</code> (dev) và <code>--workers=4</code> (dev, QA); <code>vision-operations</code> 99, <code>vision-visual-buttons</code> 3, <code>vision-settle-animation</code> 14; manifest 1 passed.</li>
+      <li><b>Harness live (<code>AB SUMMARY</code>):</b> phiên chính 40 quan sát, 0 skip, 0 lỗi, 1 video thấy nhưng chưa bind; QA 3 lần x40 = 120 quan sát, 0 skip, 0 lỗi, miss 1 (0, 0, 1). Tổng 2/160 miss. Luật phase-02 chạy đúng trên site: 6/120 lần có <code>lost:1</code>, đều bind lại được bản tương đương, skip 0.</li>
+      <li><b>Chẩn đoán 2 miss (QA):</b> "duyệt giữa lúc trượt", không phải lỗi phase-01/02. Ở miss lần QA 3, walk đầu chỉ thấy 17 ứng viên (thường 18), bản sao video đang trượt nên chưa trọn viewport, không là ứng viên, nên không có skip/lost. Độ chắc: suy luận từ vị trí trước/sau walk, chưa đo bên trong callback walk.</li>
+      <li><b>Kết luận:</b> leader PASS, QA PASS (22 hàng: 21 pass, 0 fail, 1 dựa dev). Sau phase-02 phiên chính rebuild <code>playwright-worker</code> và chạy preflight: <code>passed: true</code>, 9/9 check, <code>images_match_tree</code> true, <code>token_hours</code> 7,6.</li>
+    </ul>
+  </section>
+
+  <section class="decide">
+    <h2>Quyết định tại Gate 3 (đã thực hiện A2)</h2>
+    <p><b>A2 (đã làm, kết quả ở mục dưới):</b> giữ phần chờ đứng yên của A và đổi hai điểm:</p>
+    <ol>
+      <li>Ground lại mỗi khi ứng viên đã chuyển động rồi dừng, bỏ điều kiện <code>displaced</code>.</li>
+      <li>Nếu chuyển động làm ứng viên dừng ngoài viewport, <code>observeDom</code> tự duyệt lại DOM và ground lại đúng <b>một lần</b>. Lúc đó trang đã yên, còn khoảng 2,9 s trước lượt autoplay kế tiếp.</li>
+    </ol>
+    <p>Vẫn chỉ đọc, không đổi contract hay control-plane. Phương án dự phòng vẫn là skip như hôm nay. Kèm test mô phỏng swiper <code>loop</code> có bản sao trượt ra và slide nhảy về chỗ cũ.</p>
+    <p><b>E′:</b> báo <code>state_changed_during_observation</code> để control-plane refresh. Rủi ro: 3 lần refresh đều trúng lúc trượt (khoảng 1%) thì cả lượt quét dừng. Mỗi lần refresh còn tốn một state và hop.</p>
+    <p><b>Revert:</b> bỏ thay đổi, chỉ giữ kết quả điều tra. <b>Dừng:</b> giữ nguyên code chưa commit để làm sau.</p>
+  </section>
+</div>

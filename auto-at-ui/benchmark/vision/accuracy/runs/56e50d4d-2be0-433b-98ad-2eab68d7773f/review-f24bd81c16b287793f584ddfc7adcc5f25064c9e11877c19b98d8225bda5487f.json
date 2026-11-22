@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "f992b718-cd86-4412-8d00-1b7b7b42d2a9",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "carousel_step",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "12d39d72471d5534f103393b4761e75fce405347ee240718d2a832d93995cdb9",
+  "after_checksum": "99348b2abed926751883e61a48a8cdf04092334975b1209a40fd03d77f615d6c",
+  "finding": "Before/after frames show active feature slide 4 (Thu Cuoi Kinh Dien) advancing exactly one position right to slide 5 (Vo Lam Chan Menh); verified right-arrow locator and immediate retained click evidence."
+}

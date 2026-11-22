@@ -1,0 +1,11 @@
+{
+  "after_checksum": "f05586d9c2a66b1f021ee01d71b40533ca15a03459f9d58153fc4939be783137",
+  "before_checksum": "a29e5eba0f67ca7c757b19cd21872edfe3104b09301105aa3791c049a7d453f5",
+  "finding": "THU CUOI tab is visibly selected; four mount controls and Xich Tho mount panel are visible.",
+  "operation_id": "99d53b52-a03a-4feb-b52c-67a0bc929cc5",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "selected_tab",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

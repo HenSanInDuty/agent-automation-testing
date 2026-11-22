@@ -1,0 +1,99 @@
+{
+  "schema_version": "vision-accuracy-score-v1",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "coverage": {
+    "numerator": 5,
+    "denominator": 47,
+    "percent": 10.638297872340425,
+    "above_95": false
+  },
+  "accuracy": {
+    "numerator": 5,
+    "denominator": 47,
+    "percent": 10.638297872340425,
+    "above_95": false
+  },
+  "detection_precision": {
+    "numerator": 47,
+    "denominator": 48,
+    "percent": 97.91666666666667,
+    "above_95": true
+  },
+  "detection_recall": {
+    "numerator": 47,
+    "denominator": 47,
+    "percent": 100.0,
+    "above_95": true
+  },
+  "inventory_complete": true,
+  "correct_operations": [
+    "e63fa49b-da00-4e18-a42b-6d455b20a6e4",
+    "f6dbd397-4f6a-45e1-9bf6-428876cee28c",
+    "f4d021bf-3627-4d40-853c-a6f100df2058",
+    "217eef87-36de-4c4d-b7f5-a7f9c1a164a0",
+    "f992b718-cd86-4412-8d00-1b7b7b42d2a9"
+  ],
+  "covered_targets": [
+    "mct-51",
+    "mct-52",
+    "mct-53",
+    "mct-57",
+    "mct-58"
+  ],
+  "remaining_targets": [
+    "mct-01",
+    "mct-02",
+    "mct-03",
+    "mct-04",
+    "mct-05",
+    "mct-06",
+    "mct-07",
+    "mct-08",
+    "mct-09",
+    "mct-10",
+    "mct-11",
+    "mct-12",
+    "mct-13",
+    "mct-14",
+    "mct-15",
+    "mct-16",
+    "mct-18",
+    "mct-19",
+    "mct-20",
+    "mct-21",
+    "mct-29",
+    "mct-30",
+    "mct-31",
+    "mct-32",
+    "mct-33",
+    "mct-34",
+    "mct-35",
+    "mct-36",
+    "mct-37",
+    "mct-38",
+    "mct-39",
+    "mct-40",
+    "mct-41",
+    "mct-42",
+    "mct-43",
+    "mct-44",
+    "mct-45",
+    "mct-46",
+    "mct-47",
+    "mct-54",
+    "mct-55",
+    "mct-56"
+  ],
+  "unsafe_operations": [],
+  "unsettled_operations": [],
+  "operation_statuses": {
+    "completed": 143,
+    "rejected": 2
+  },
+  "interaction_statuses": {
+    "completed": 46,
+    "rejected": 1
+  },
+  "passed": false,
+  "business_outcome": "unverified"
+}

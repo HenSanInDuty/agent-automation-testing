@@ -1,0 +1,26 @@
+{
+  "schema_version": "vision-accuracy-run-v1",
+  "iteration_id": "5556d5db-bae4-4571-b2bb-d99d171ab8da",
+  "created_at": "2026-11-17T04:41:49.637867+00:00",
+  "original_session_id": "d69fc7fa-d35a-42b4-a546-c5919baf9044",
+  "session_id": "472aa413-dde2-4bcd-a28e-66bd6e975d82",
+  "idempotency_key": "accuracy-loop:5556d5db-bae4-4571-b2bb-d99d171ab8da",
+  "state": "unavailable",
+  "source_hash": "02e8bf18ab41e38eee39b88518e3ef116beaf2730364b2332dbc891991ed299d",
+  "qualification_eligible": true,
+  "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+  "config": {
+    "expected_provider": "codex_cli",
+    "expected_model": "gpt-6-luna",
+    "expected_input_policy_fingerprint": "4ce9f8ca6cd98a3b24c760f18f55dd28cc21f9f191f384201e851b456a65b6b6"
+  },
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "reason": "visual_exploration_unavailable"
+}

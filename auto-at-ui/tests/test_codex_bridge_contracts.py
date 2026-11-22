@@ -75,8 +75,34 @@ def test_valid_dom_job_and_response_are_bound_to_observation():
     assert "screenshot.png" not in canonical_bytes(req).decode()
 
 
+def test_scan_stride_is_private_bounded_and_legacy_optional():
+    from auto_at.contracts.codex_bridge import CodexBoundObservation
+
+    empty = observation(elements=[])
+    old = CodexBoundObservation(observation=empty, bindings=[])
+    assert old.next_scroll_delta_y is None
+    current = CodexBoundObservation(observation=empty, bindings=[], next_scroll_delta_y=50)
+    assert current.next_scroll_delta_y == 50
+    assert b"next_scroll_delta_y" not in canonical_bytes(current.observation)
+    assert canonical_bytes(old.observation) == canonical_bytes(current.observation)
+    for invalid in [0, -1, 2001]:
+        with pytest.raises(ValueError):
+            CodexBoundObservation(observation=empty, bindings=[], next_scroll_delta_y=invalid)
+
+
+@pytest.mark.parametrize("sequence", [11, 20])
+def test_expanded_call_budget_preserves_request_response_binding(sequence):
+    req = request(request_sequence=sequence)
+    validate_response(req, response(req), now=NOW + timedelta(seconds=2))
+    with pytest.raises(ValueError):
+        request(request_sequence=21)
+    with pytest.raises(ValueError):
+        response(req, request_sequence=21)
+
+
 @pytest.mark.parametrize("version", [
     "codex-dom-v2", "codex-dom-v3", "codex-dom-v4", "codex-dom-v5", "codex-dom-v6",
+    "codex-dom-v7", "codex-dom-v8", "codex-dom-v9",
 ])
 def test_task_context_is_required_for_versioned_prompts(version):
     with pytest.raises(ValueError, match="bounded task context"):

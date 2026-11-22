@@ -1,0 +1,13 @@
+{
+  "status": "superseded_after_confirmed_provenance_failure",
+  "log": ".pytest-artifacts/qualification-full-20261117.log",
+  "failed_test": "tests/test_vision_benchmark.py::test_gehihi_manifest_provenance_and_mocked_response_gates",
+  "reason": "Two stale Gehihi fixture/test hashes; corrected metadata passed all five focused tests. Stop obsolete copied-input run and repeat entire suite against corrected metadata.",
+  "confirmed_progress_at_review": {
+    "reported_percent": 68,
+    "failed": 1,
+    "skipped": 2
+  },
+  "not_a_full_suite_pass": true,
+  "runtime_source_unchanged": true
+}

@@ -45,6 +45,28 @@ stale confirmation, SSE/polling and confirmed highlights on desktop/mobile.
 
 ## Validation record
 
+Local generation revision, 2026-10-25: API, worker, dashboard and bridge deployed;
+`demo-tenant` explicitly selects Codex for draft generation. The dashboard retains
+an administrator-controlled Hugging Face switch with separate text consent.
+One live text-only generation request (`823e96fe-186b-458e-8bba-020c25c33431`)
+completed as draft `cfc68bb6-c352-4932-ac14-5eb637bb2b4f`, titled
+"Codex connection check", with `codex_cli` / `gpt-6-luna` provenance. It remains
+pending review, without a linked run. This verifies text generation connectivity;
+it does not establish live Vision-generation quality or Hugging Face availability.
+
+Regression report `.pytest-artifacts/codex-offline-113217120eea.json` has
+892 passes, 2 RustFS skips and one stale manifest-source-hash failure. The hashes
+were refreshed for the reviewed transport, instruction, permission and test
+changes after that run. The generation follow-up passed 18 tests including Vision
+branch selection, CSRF, unavailable-provider refusal and consent revocation
+(`.pytest-artifacts/codex-offline-a1a68b9b471b.json`). Both mocked browser switch
+tests pass; dashboard production build, worker TypeScript, Ruff and generated
+worker contract parity pass. Previous v6 records below remain historical.
+After refreshing the manifest, its regression and the generation tests passed
+together: **28 passed**, no skips or failures, 12.63s
+(`.pytest-artifacts/codex-offline-98d97ca682ff.json`). The full suite was not
+repeated for this metadata-only correction.
+
 Final v6 regression: **872 passed, 2 RustFS skips**, 370.31s. The two Docker-only
 RustFS tests passed separately on a fresh retry (2 passed, 5.60s); the first
 attempt had one concurrent-writer connection reset. Ruff, both TypeScript

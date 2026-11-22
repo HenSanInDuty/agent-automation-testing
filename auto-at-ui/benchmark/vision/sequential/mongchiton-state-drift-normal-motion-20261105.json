@@ -1,0 +1,6071 @@
+{
+  "target": "https://mongchiton.vn/",
+  "model_calls": 0,
+  "clicks": 0,
+  "worker_source_sha256": "780f399eefd1c2f05ed4650a0c2e51413284637b861f58fff0ef2ca0c6b4aad0",
+  "samples": [
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 1099,
+      "sample": 1,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              320,
+              490,
+              453,
+              593
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              318,
+              489,
+              455,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              389,
+              1245,
+              464
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1148,
+              388,
+              1247,
+              465
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 2191,
+      "sample": 2,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              318,
+              489,
+              455,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              317,
+              489,
+              455,
+              595
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 3283,
+      "sample": 3,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              317,
+              489,
+              455,
+              595
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1148,
+              388,
+              1247,
+              465
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 4354,
+      "sample": 4,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              491,
+              452,
+              592
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 5433,
+      "sample": 5,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 6556,
+      "sample": 6,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              491,
+              452,
+              592
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              593
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 7630,
+      "sample": 7,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              593
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 8701,
+      "sample": 8,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              593
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 9775,
+      "sample": 9,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              593
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              491,
+              452,
+              592
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 10861,
+      "sample": 10,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 11952,
+      "sample": 11,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              491,
+              452,
+              592
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 0,
+      "actual_scroll_y": 0,
+      "elapsed_ms": 13022,
+      "sample": 12,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 53,
+      "interaction_count_after": 53,
+      "changed_interactions": [
+        {
+          "index": 38,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              490,
+              454,
+              594
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              317,
+              489,
+              455,
+              595
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 51,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1148,
+              388,
+              1247,
+              465
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ],
+      "visible_control_styles": [
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-dark-brown-linear border-palette-light-",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            332,
+            10,
+            477,
+            46
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            488,
+            11,
+            632,
+            48
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            643,
+            11,
+            788,
+            48
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            798,
+            11,
+            943,
+            48
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            953,
+            11,
+            1098,
+            48
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "h-[54.77px] w-[216.91px] rounded-[65.57px] border-1 duration-200 group flex justify-center gap-2 items-center bg-palette-light-brown-linear border-border-brown ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1109,
+            11,
+            1253,
+            48
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            764,
+            508,
+            846,
+            576
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            851,
+            508,
+            933,
+            576
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            487,
+            508,
+            609,
+            537
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            617,
+            508,
+            738,
+            537
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            487,
+            546,
+            609,
+            576
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            617,
+            546,
+            738,
+            576
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            318,
+            489,
+            455,
+            594
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            963,
+            566,
+            990,
+            592
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            993,
+            566,
+            1020,
+            592
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1023,
+            566,
+            1049,
+            592
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1118,
+            303,
+            1196,
+            352
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1199,
+            303,
+            1277,
+            352
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            161,
+            1262,
+            192
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            195,
+            1262,
+            226
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            229,
+            1262,
+            260
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            263,
+            1262,
+            294
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1152,
+            360,
+            1176,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1185,
+            360,
+            1209,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1218,
+            360,
+            1242,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1148,
+            389,
+            1247,
+            464
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "absolute inset-0 cursor-pointer",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1184,
+            470,
+            1211,
+            502
+          ]
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 1096,
+      "sample": 1,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              318,
+              0,
+              455,
+              34
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              0,
+              452,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 2226,
+      "sample": 2,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 3304,
+      "sample": 3,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 4477,
+      "sample": 4,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              0,
+              452,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              0,
+              454,
+              33
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 5557,
+      "sample": 5,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              0,
+              454,
+              33
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              0,
+              454,
+              34
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 6634,
+      "sample": 6,
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": []
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 7732,
+      "sample": 7,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              0,
+              454,
+              34
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              320,
+              0,
+              452,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 8818,
+      "sample": 8,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              320,
+              0,
+              452,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              0,
+              452,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 9899,
+      "sample": 9,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              321,
+              0,
+              452,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              320,
+              0,
+              453,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 10991,
+      "sample": 10,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              320,
+              0,
+              453,
+              32
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              318,
+              0,
+              455,
+              34
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1148,
+              388,
+              1247,
+              465
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 12105,
+      "sample": 11,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              318,
+              0,
+              455,
+              34
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              317,
+              0,
+              455,
+              35
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 560,
+      "actual_scroll_y": 560,
+      "elapsed_ms": 13180,
+      "sample": 12,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 61,
+      "interaction_count_after": 61,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              317,
+              0,
+              455,
+              35
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              319,
+              0,
+              454,
+              34
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 59,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1148,
+              388,
+              1247,
+              465
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ],
+      "visible_control_styles": [
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            764,
+            -52,
+            846,
+            16
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            851,
+            -52,
+            933,
+            16
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            487,
+            -14,
+            609,
+            16
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            617,
+            -14,
+            738,
+            16
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            318,
+            -71,
+            455,
+            35
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            963,
+            6,
+            990,
+            32
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            993,
+            6,
+            1020,
+            32
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1023,
+            6,
+            1049,
+            32
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "w-full h-full mb-2.5",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            219,
+            302,
+            641,
+            523
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-n",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            650,
+            271,
+            793,
+            306
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-n",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            799,
+            271,
+            942,
+            306
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "relative transition-all  duration-300 group bg-[url('/bg-button-news-mobile.png')] hover:bg-[url('/bg-button-news-mobile-active.png')]  lg:bg-[url('/assets/bg-n",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            947,
+            271,
+            1091,
+            306
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": " lg:bg-[url('/assets/btn-search.png')] bg-[url('/btn-search-mobile.png')] hover:lg:bg-[url('/assets/btn-search-active.png')] hover:bg-[url('/btn-search-mobile-a",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1054,
+            317,
+            1091,
+            346
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+          "animation": "none",
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "bounds": [
+            650,
+            355,
+            1091,
+            385
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+          "animation": "none",
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "bounds": [
+            650,
+            385,
+            1091,
+            415
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+          "animation": "none",
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "bounds": [
+            650,
+            415,
+            1091,
+            445
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+          "animation": "none",
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "bounds": [
+            650,
+            445,
+            1091,
+            475
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+          "animation": "none",
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "bounds": [
+            650,
+            475,
+            1091,
+            505
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+          "animation": "none",
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "bounds": [
+            650,
+            505,
+            1091,
+            535
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "block  pl-2 lg:pl-4 lg:pr-6 lg:py-[10px] border-b group duration-300 hover:bg-[#E9D8BB] transition-colors lg:!py-2.5 !py-1.5 py-2 border-main",
+          "animation": "none",
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "bounds": [
+            650,
+            535,
+            1091,
+            565
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "transition-all duration-200 ease-in-out absolute bg-[url('/assets/btn-more-mobile.png')] hover:bg-[url('/assets/btn-more-mobile-active.png')] lg:bg-[url('/asset",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            976,
+            572,
+            1093,
+            602
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title active",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            491,
+            713,
+            637,
+            750
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            643,
+            713,
+            789,
+            750
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1118,
+            303,
+            1196,
+            352
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1199,
+            303,
+            1277,
+            352
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            161,
+            1262,
+            192
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            195,
+            1262,
+            226
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            229,
+            1262,
+            260
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            263,
+            1262,
+            294
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1152,
+            360,
+            1176,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1185,
+            360,
+            1209,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1218,
+            360,
+            1242,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1148,
+            388,
+            1247,
+            465
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "absolute inset-0 cursor-pointer",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1184,
+            470,
+            1211,
+            502
+          ]
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 1039,
+      "sample": 1,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 4,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              137,
+              273,
+              242,
+              374
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              139,
+              275,
+              239,
+              372
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              97,
+              370,
+              202,
+              471
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 2085,
+      "sample": 2,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 3129,
+      "sample": 3,
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": false,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": []
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 4173,
+      "sample": 4,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 23,
+      "changed_interactions": [
+        {
+          "index": 4,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              139,
+              275,
+              239,
+              372
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              139,
+              275,
+              239,
+              372
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 5,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              97,
+              370,
+              202,
+              471
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 6,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              97,
+              466,
+              202,
+              568
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 8,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              0,
+              522,
+              43,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            1,
+            2,
+            6,
+            11
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1049,
+              522,
+              1280,
+              720
+            ],
+            "hit_test": [
+              false,
+              true,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            1,
+            6,
+            11
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              570,
+              1241,
+              661
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 11,
+          "fields": [
+            1,
+            2,
+            6,
+            11
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1118,
+              303,
+              1196,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "05bd9b1fab896dea2ab3d51cd0032fdd2dc956e8d0befca99d8e6b62191193f4"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              570,
+              1241,
+              661
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 12,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1199,
+              303,
+              1277,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "d1d0ebf2ab764c001bc7afc246d4b81746376eaa1997b44df53df29e0203e0df"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1118,
+              303,
+              1196,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "05bd9b1fab896dea2ab3d51cd0032fdd2dc956e8d0befca99d8e6b62191193f4"
+          }
+        },
+        {
+          "index": 13,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              161,
+              1262,
+              192
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "af10998d081f1d14664f372c6200ee55cd17a48201cd0438c1d73fa7ef7838db"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1199,
+              303,
+              1277,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "d1d0ebf2ab764c001bc7afc246d4b81746376eaa1997b44df53df29e0203e0df"
+          }
+        },
+        {
+          "index": 14,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              195,
+              1262,
+              226
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c40fee7e8d817dd57a563855039822995c43ee2024b4f2c422fa6598f1c3db39"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              161,
+              1262,
+              192
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "af10998d081f1d14664f372c6200ee55cd17a48201cd0438c1d73fa7ef7838db"
+          }
+        },
+        {
+          "index": 15,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              229,
+              1262,
+              260
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "52b26e2a8ca02fcee569c2758b12dbccd6d6e7be403791ab96aa2cc0fe456176"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              195,
+              1262,
+              226
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c40fee7e8d817dd57a563855039822995c43ee2024b4f2c422fa6598f1c3db39"
+          }
+        },
+        {
+          "index": 16,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              263,
+              1262,
+              294
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "25956a7f6a95e2ae89d1b582956f717857bd86ba1529b5e0550f4931995879a1"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              229,
+              1262,
+              260
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "52b26e2a8ca02fcee569c2758b12dbccd6d6e7be403791ab96aa2cc0fe456176"
+          }
+        },
+        {
+          "index": 17,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1152,
+              360,
+              1176,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "a65bdaa6c3d6dd44df31e9ae630c6e817208c658951e637588ce8dc4c902fa50"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              263,
+              1262,
+              294
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "25956a7f6a95e2ae89d1b582956f717857bd86ba1529b5e0550f4931995879a1"
+          }
+        },
+        {
+          "index": 18,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1185,
+              360,
+              1209,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "386dc452fb7fb4abc7bfd7ae8558448a088678738e667d882343dfd4853db1f7"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1152,
+              360,
+              1176,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "a65bdaa6c3d6dd44df31e9ae630c6e817208c658951e637588ce8dc4c902fa50"
+          }
+        },
+        {
+          "index": 19,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1218,
+              360,
+              1242,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b7e0ab674432a23c27548389a347d14a2e9f13bfe19b328502b6218c35a643dd"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1185,
+              360,
+              1209,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "386dc452fb7fb4abc7bfd7ae8558448a088678738e667d882343dfd4853db1f7"
+          }
+        },
+        {
+          "index": 20,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1218,
+              360,
+              1242,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b7e0ab674432a23c27548389a347d14a2e9f13bfe19b328502b6218c35a643dd"
+          }
+        },
+        {
+          "index": 21,
+          "fields": [
+            1,
+            2,
+            6,
+            7
+          ],
+          "before": {
+            "tag": "BUTTON",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1184,
+              470,
+              1211,
+              502
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c38e6316a918ec6c11a72969da10edc6801a16526b2145b19ed04a48228da46d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 22,
+          "fields": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            9,
+            10,
+            11
+          ],
+          "before": {
+            "landmark": true
+          },
+          "after": {
+            "tag": "BUTTON",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1184,
+              470,
+              1211,
+              502
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c38e6316a918ec6c11a72969da10edc6801a16526b2145b19ed04a48228da46d"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 5216,
+      "sample": 5,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 23,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 8,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              0,
+              522,
+              43,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            1,
+            2,
+            6,
+            11
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1049,
+              522,
+              1280,
+              720
+            ],
+            "hit_test": [
+              false,
+              true,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            1,
+            6,
+            11
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              570,
+              1241,
+              661
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 11,
+          "fields": [
+            1,
+            2,
+            6,
+            11
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              570,
+              1241,
+              661
+            ],
+            "hit_test": [
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1118,
+              303,
+              1196,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "05bd9b1fab896dea2ab3d51cd0032fdd2dc956e8d0befca99d8e6b62191193f4"
+          }
+        },
+        {
+          "index": 12,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1118,
+              303,
+              1196,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "05bd9b1fab896dea2ab3d51cd0032fdd2dc956e8d0befca99d8e6b62191193f4"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1199,
+              303,
+              1277,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "d1d0ebf2ab764c001bc7afc246d4b81746376eaa1997b44df53df29e0203e0df"
+          }
+        },
+        {
+          "index": 13,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1199,
+              303,
+              1277,
+              352
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "d1d0ebf2ab764c001bc7afc246d4b81746376eaa1997b44df53df29e0203e0df"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              161,
+              1262,
+              192
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "af10998d081f1d14664f372c6200ee55cd17a48201cd0438c1d73fa7ef7838db"
+          }
+        },
+        {
+          "index": 14,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              161,
+              1262,
+              192
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "af10998d081f1d14664f372c6200ee55cd17a48201cd0438c1d73fa7ef7838db"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              195,
+              1262,
+              226
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c40fee7e8d817dd57a563855039822995c43ee2024b4f2c422fa6598f1c3db39"
+          }
+        },
+        {
+          "index": 15,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              195,
+              1262,
+              226
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c40fee7e8d817dd57a563855039822995c43ee2024b4f2c422fa6598f1c3db39"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              229,
+              1262,
+              260
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "52b26e2a8ca02fcee569c2758b12dbccd6d6e7be403791ab96aa2cc0fe456176"
+          }
+        },
+        {
+          "index": 16,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              229,
+              1262,
+              260
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "52b26e2a8ca02fcee569c2758b12dbccd6d6e7be403791ab96aa2cc0fe456176"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              263,
+              1262,
+              294
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "25956a7f6a95e2ae89d1b582956f717857bd86ba1529b5e0550f4931995879a1"
+          }
+        },
+        {
+          "index": 17,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1133,
+              263,
+              1262,
+              294
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "25956a7f6a95e2ae89d1b582956f717857bd86ba1529b5e0550f4931995879a1"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1152,
+              360,
+              1176,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "a65bdaa6c3d6dd44df31e9ae630c6e817208c658951e637588ce8dc4c902fa50"
+          }
+        },
+        {
+          "index": 18,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1152,
+              360,
+              1176,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "a65bdaa6c3d6dd44df31e9ae630c6e817208c658951e637588ce8dc4c902fa50"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1185,
+              360,
+              1209,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "386dc452fb7fb4abc7bfd7ae8558448a088678738e667d882343dfd4853db1f7"
+          }
+        },
+        {
+          "index": 19,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1185,
+              360,
+              1209,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "386dc452fb7fb4abc7bfd7ae8558448a088678738e667d882343dfd4853db1f7"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1218,
+              360,
+              1242,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b7e0ab674432a23c27548389a347d14a2e9f13bfe19b328502b6218c35a643dd"
+          }
+        },
+        {
+          "index": 20,
+          "fields": [
+            2,
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1218,
+              360,
+              1242,
+              383
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b7e0ab674432a23c27548389a347d14a2e9f13bfe19b328502b6218c35a643dd"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        },
+        {
+          "index": 21,
+          "fields": [
+            1,
+            2,
+            6,
+            7
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "BUTTON",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1184,
+              470,
+              1211,
+              502
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c38e6316a918ec6c11a72969da10edc6801a16526b2145b19ed04a48228da46d"
+          }
+        },
+        {
+          "index": 22,
+          "fields": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            9,
+            10,
+            11
+          ],
+          "before": {
+            "tag": "BUTTON",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1184,
+              470,
+              1211,
+              502
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "c38e6316a918ec6c11a72969da10edc6801a16526b2145b19ed04a48228da46d"
+          },
+          "after": {
+            "landmark": true
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 6253,
+      "sample": 6,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 5,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              false,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              372,
+              199,
+              469
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1148,
+              388,
+              1247,
+              465
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 7309,
+      "sample": 7,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1148,
+              388,
+              1247,
+              465
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 8366,
+      "sample": 8,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 6,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              97,
+              466,
+              202,
+              568
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 7,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              134,
+              565,
+              234,
+              662
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              131,
+              563,
+              237,
+              664
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 9404,
+      "sample": 9,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 10440,
+      "sample": 10,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 11475,
+      "sample": 11,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 4,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              139,
+              275,
+              239,
+              372
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              137,
+              273,
+              242,
+              374
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 6,
+          "fields": [
+            11
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              99,
+              469,
+              199,
+              565
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 7,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              131,
+              563,
+              237,
+              664
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "DIV",
+            "id": null,
+            "role": null,
+            "bounds": [
+              134,
+              565,
+              234,
+              662
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 8,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              946,
+              522,
+              1240,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1047,
+              570,
+              1139,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1047,
+              570,
+              1139,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1149,
+              389,
+              1246,
+              464
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ]
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 12508,
+      "sample": 12,
+      "equivalent_to_previous": false,
+      "fingerprint_matches_initial": false,
+      "components_changed": {
+        "interaction": true,
+        "semantics": true,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [
+        {
+          "index": 8,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              946,
+              522,
+              1240,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              754,
+              522,
+              1048,
+              720
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "8b6ac21a01eaa22dc191e3d9d2eb96471f60ce699079fdfb559a3ef070d7c73d"
+          }
+        },
+        {
+          "index": 9,
+          "fields": [
+            6,
+            11
+          ],
+          "before": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1047,
+              570,
+              1139,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              false,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "svg",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 10,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1047,
+              570,
+              1139,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          },
+          "after": {
+            "tag": "path",
+            "id": null,
+            "role": null,
+            "bounds": [
+              855,
+              570,
+              947,
+              661
+            ],
+            "hit_test": [
+              true,
+              false,
+              false,
+              false,
+              false
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "0fe5c08947be1246adbc75e8cce5373be8889be9df9f0cd76bf56387ecdca017"
+          }
+        },
+        {
+          "index": 20,
+          "fields": [
+            6
+          ],
+          "before": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1150,
+              390,
+              1245,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          },
+          "after": {
+            "tag": "A",
+            "id": null,
+            "role": null,
+            "bounds": [
+              1151,
+              390,
+              1244,
+              463
+            ],
+            "hit_test": [
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "label_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+            "identity_hash": "b46891ddd051dcfd3e811fe0fad77949ccd34015c8df5ce10ce96947052b7654"
+          }
+        }
+      ],
+      "visible_control_styles": [
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "transition-all duration-200 ease-in-out absolute bg-[url('/assets/btn-more-mobile.png')] hover:bg-[url('/assets/btn-more-mobile-active.png')] lg:bg-[url('/asset",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            976,
+            -4,
+            1093,
+            26
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title active",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            491,
+            137,
+            637,
+            174
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            643,
+            137,
+            789,
+            174
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "video-frame group z-10",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            -3146,
+            522,
+            -2852,
+            720
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "video-frame group z-10",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            -1846,
+            522,
+            -1552,
+            720
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "video-frame group z-10",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            -546,
+            522,
+            -252,
+            720
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "video-frame group z-10",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            754,
+            522,
+            1048,
+            720
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1118,
+            303,
+            1196,
+            352
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1199,
+            303,
+            1277,
+            352
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            161,
+            1262,
+            192
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            195,
+            1262,
+            226
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            229,
+            1262,
+            260
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            263,
+            1262,
+            294
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1152,
+            360,
+            1176,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1185,
+            360,
+            1209,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1218,
+            360,
+            1242,
+            383
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1151,
+            390,
+            1244,
+            463
+          ]
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "absolute inset-0 cursor-pointer",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1184,
+            470,
+            1211,
+            502
+          ]
+        }
+      ]
+    }
+  ],
+  "reduced_motion": "no-preference",
+  "classification": "control_probe_not_matching_deployed_motion_preference"
+}

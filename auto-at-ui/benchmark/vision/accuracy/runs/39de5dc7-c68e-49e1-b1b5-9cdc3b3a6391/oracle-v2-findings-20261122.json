@@ -1,0 +1,4 @@
+{
+  "109": "Verified dom_path binding is mct-47 video-frame copy (swiper slot 4, an oracle v2 alternate). After-state URL fingerprint equals sha256 of https://mongchiton.vn/#true and the after frame shows the dimmed page with a modal player opening; the following frame (op 110 before) shows the embedded YouTube player titled VLCM Origin | Hoi Sinh Tinh Hoa Vo Lam Tren Da Nen Tang. Read-only probe 2026-11-22 (video-copies-probe-20261122.json): clicking the on-screen copy sets the same #true URL and embeds youtube-nocookie.com/embed/_llS1gbeknQ, the declared video. Credit is embedded-player destination only, no playback claim.",
+  "_limitations": "The run itself did not export the iframe src; the declared video id comes from the same-URL live probe on 2026-11-22 plus the retained player title."
+}

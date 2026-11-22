@@ -1,0 +1,50 @@
+{
+  "session_id": "63b8b5fa-e230-4fa4-b8d0-ef39c0d3889f",
+  "source_hash": "c5c38afb7300d43fa63d2942758e6c6c5c3bd42d3f7c19adda7a0965e515f9a2",
+  "images": {
+    "control-plane": "sha256:db46c6de0825f2110148501409e82ca4c50c9953e5f485082b2d2d07decf02df",
+    "temporal-worker": "sha256:b667415970ea491798f9475966441711df10bf55439bf075c83d298395e2f385",
+    "playwright-worker": "sha256:e542b755f2c86b176195d2d963066dbf26fe892a3126a5154effddbcea1a60bb",
+    "codex-bridge": "sha256:d5cbc0aec49efcaf4157d726b206c201024f47810c1610d1569cce52d23693bd",
+    "dashboard": "sha256:8de1616616aa83002555b133ce2c4b46c2da644daa6ff09d92f6c5d4c7aa2212"
+  },
+  "deployed_source_checks": {
+    "control-plane:apps/control-plane/application/vision_trace_events.py": "a1f334c316ea95b407ebb19cd1bbd43d315ff649be46c392b4ca2cb960588227",
+    "control-plane:apps/control-plane/api/v1/routes/generation.py": "692e8a1a02cbfba299d170c885fed6e41688bb73350241ac43801b4b0fef0331",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "control-plane:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "temporal-worker:apps/control-plane/application/vision_trace_events.py": "a1f334c316ea95b407ebb19cd1bbd43d315ff649be46c392b4ca2cb960588227",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision.py": "638585b1eb0eca83a45bc0c7696f48d78c9f26465399bc9e388eb1f039503722",
+    "temporal-worker:packages/contracts/src/auto_at/contracts/vision_worker.py": "a0a1a2ef39dd2478a82c3db49b111b1441d7c31727fa6f8c749be9e107343574",
+    "playwright-worker:workers/playwright/src/vision-operations.ts": "1bb1b019e7095764b0b45cc9cfe80ab86b51abf34f66fdf4e91a81857cb648ba",
+    "playwright-worker:workers/playwright/src/vision.ts": "870a7117b89aacad5459d05c7c4edf124d28c87daeadd1e52938cebcf8af1380",
+    "playwright-worker:workers/playwright/src/vision-dom.ts": "4b2d28180ba863baac31e2971e4f602657bb7eb8b54d0c37717490bef31aec16",
+    "playwright-worker:workers/playwright/src/vision-history.ts": "d7021992377589c2a3e51137426e3ad3cdabc9c499b6d0349c24703d194962b3",
+    "playwright-worker:workers/playwright/src/vision-contract.generated.ts": "d13ed057a1d6126b3af22143821dc67ed0faacb75e64a745d9369f8beb2fe32f"
+  },
+  "prompt_version": "codex-dom-v11",
+  "playwright_version": "1.50.1",
+  "chromium_version": "133.0.6943.16",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "observed_policy": {
+    "max_steps": 20,
+    "max_hops": 20,
+    "max_states": 100,
+    "max_session_seconds": 120,
+    "step_timeout_seconds": 120
+  },
+  "runtime_policy": {
+    "provider": "codex_cli",
+    "model": "gpt-6-luna",
+    "prompt_version": "codex-dom-v11",
+    "max_steps": 20,
+    "max_requests_per_minute": 5,
+    "max_screenshot_bytes": 5000000,
+    "max_session_seconds": 120,
+    "max_cost_usd": "0.25"
+  },
+  "hypothesis": "ADR-027 cross-viewport: release only undispatched queued targets on the same Page/URL after local UI mutation; require fresh observed model proposals. ADR-028 records bounded owned-download destination hashes for independent outcome review."
+}

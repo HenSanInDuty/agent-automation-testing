@@ -1,0 +1,11 @@
+{
+  "schema_version": "vision-outcome-review-v1",
+  "operation_id": "190bc7f5-e6ce-482f-a8f9-69d8f3bf967b",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "outcome_kind": "selected_character",
+  "verdict": "correct",
+  "review_method": "evidence_review",
+  "before_checksum": "37ed8c14be2ca07a2ccf844f3bb1a5cbda150f6483608e367a45a9c25434edfc",
+  "after_checksum": "1a98e7f0614a19c3bacc079c58fee9acf555e0f31a379e988399136b39fa0f6a",
+  "finding": "Fourth character control is visibly active and matching Co Mo panel is displayed."
+}

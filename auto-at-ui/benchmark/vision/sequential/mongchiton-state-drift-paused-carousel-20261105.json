@@ -1,0 +1,668 @@
+{
+  "target": "https://mongchiton.vn/",
+  "model_calls": 0,
+  "clicks": 0,
+  "reduced_motion": "reduce",
+  "service_workers": "block",
+  "diagnostic_intervention": "Stop only the character carousel autoplay in this disposable browser",
+  "worker_source_sha256": "780f399eefd1c2f05ed4650a0c2e51413284637b861f58fff0ef2ca0c6b4aad0",
+  "samples": [
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 1044,
+      "sample": 1,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 2087,
+      "sample": 2,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 3132,
+      "sample": 3,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 4173,
+      "sample": 4,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 5223,
+      "sample": 5,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 6290,
+      "sample": 6,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 7331,
+      "sample": 7,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 8371,
+      "sample": 8,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 9413,
+      "sample": 9,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 10454,
+      "sample": 10,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 11494,
+      "sample": 11,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      }
+    },
+    {
+      "requested_scroll_y": 1136,
+      "actual_scroll_y": 1136,
+      "elapsed_ms": 12543,
+      "sample": 12,
+      "fingerprint": "183b108a7430256c587cc99c9782dde905bb4ab0cb792a0579a6d8fb87ac2c0b",
+      "equivalent_to_previous": true,
+      "fingerprint_matches_initial": true,
+      "components_changed": {
+        "interaction": false,
+        "semantics": false,
+        "url": false,
+        "form_presence": false,
+        "form_values": false,
+        "scroll": false
+      },
+      "interaction_count_before": 22,
+      "interaction_count_after": 22,
+      "changed_interactions": [],
+      "carousel": {
+        "real_index": 0,
+        "active_index": 0,
+        "autoplay_running": false,
+        "autoplay_paused": false,
+        "delay_ms": 3000,
+        "transition_ms": 600
+      },
+      "visible_control_styles": [
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "transition-all duration-200 ease-in-out absolute bg-[url('/assets/btn-more-mobile.png')] hover:bg-[url('/assets/btn-more-mobile-active.png')] lg:bg-[url('/asset",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            976,
+            -4,
+            1093,
+            26
+          ],
+          "motion": []
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title active",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            491,
+            137,
+            637,
+            174
+          ],
+          "motion": []
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "button-common button-character-title ",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            643,
+            137,
+            789,
+            174
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-5 ml-12 active",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            137,
+            273,
+            242,
+            374
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-35 ml-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            99,
+            372,
+            199,
+            469
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-35 ml-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            99,
+            469,
+            199,
+            565
+          ],
+          "motion": []
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "classes": "character-switcher lg:-ml-9 ml-8",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            134,
+            565,
+            234,
+            662
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "video-frame group z-10",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            754,
+            522,
+            1048,
+            720
+          ],
+          "motion": [
+            {
+              "tag": "DIV",
+              "classes": "animate-fade-in",
+              "css_animation": "fadeIn",
+              "transform": "none",
+              "animations": []
+            }
+          ]
+        },
+        {
+          "tag": "svg",
+          "id": "",
+          "classes": "[object SVGAnimatedString]",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            855,
+            570,
+            947,
+            661
+          ],
+          "motion": [
+            {
+              "tag": "DIV",
+              "classes": "animate-fade-in",
+              "css_animation": "fadeIn",
+              "transform": "none",
+              "animations": []
+            }
+          ]
+        },
+        {
+          "tag": "path",
+          "id": "",
+          "classes": "[object SVGAnimatedString]",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            855,
+            570,
+            947,
+            661
+          ],
+          "motion": [
+            {
+              "tag": "DIV",
+              "classes": "animate-fade-in",
+              "css_animation": "fadeIn",
+              "transform": "none",
+              "animations": []
+            }
+          ]
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1118,
+            303,
+            1196,
+            352
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1199,
+            303,
+            1277,
+            352
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            161,
+            1262,
+            192
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            195,
+            1262,
+            226
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            229,
+            1262,
+            260
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1133,
+            263,
+            1262,
+            294
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1152,
+            360,
+            1176,
+            383
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1185,
+            360,
+            1209,
+            383
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1218,
+            360,
+            1242,
+            383
+          ],
+          "motion": []
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "classes": "absolute inset-0",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1151,
+            390,
+            1244,
+            463
+          ],
+          "motion": []
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "classes": "absolute inset-0 cursor-pointer",
+          "animation": "none",
+          "transition": "all",
+          "bounds": [
+            1184,
+            470,
+            1211,
+            502
+          ],
+          "motion": []
+        }
+      ]
+    }
+  ],
+  "intervention_applied": true
+}

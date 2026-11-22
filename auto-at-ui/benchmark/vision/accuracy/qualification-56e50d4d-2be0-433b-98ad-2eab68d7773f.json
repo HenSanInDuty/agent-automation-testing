@@ -1,0 +1,66 @@
+{
+  "recorded_at": "2026-11-17T15:08:24.790256+00:00",
+  "status": "failed",
+  "qualification_streak": 0,
+  "required_streak": 3,
+  "iteration_ids": [
+    "56e50d4d-2be0-433b-98ad-2eab68d7773f"
+  ],
+  "session_ids": [
+    "c2cb227d-6c27-4323-971d-da27bbe67fcc"
+  ],
+  "candidate_source_hash": "84354e173484092123a2728e3df4933b4cbbc77c9d8ea99dffbb4a69b1dd3eb3",
+  "config_hash": "99133119fce60532b32a8d26b38ab4b2f1956d5563c314cabb0eff0eb97da7c6",
+  "oracle_hash": "9242b33d5e4cdd155b6642262c32f166b365edeec7d7b9642c5b88df35147a4e",
+  "score_is_lower_bound": true,
+  "verified_coverage": {
+    "numerator": 5,
+    "denominator": 47,
+    "percent": 10.638297872340425,
+    "above_95": false
+  },
+  "verified_accuracy": {
+    "numerator": 5,
+    "denominator": 47,
+    "percent": 10.638297872340425,
+    "above_95": false
+  },
+  "accuracy_upper_bound_with_available_evidence": {
+    "numerator": 44,
+    "denominator": 47,
+    "percent": 93.61702127659575
+  },
+  "detection_precision": {
+    "numerator": 47,
+    "denominator": 48,
+    "percent": 97.91666666666667,
+    "above_95": true
+  },
+  "detection_recall": {
+    "numerator": 47,
+    "denominator": 47,
+    "percent": 100.0,
+    "above_95": true
+  },
+  "unsafe_operations_reported": [],
+  "unsettled_operations": [],
+  "uncredited_oracle_targets": [
+    "mct-21",
+    "mct-47",
+    "mct-54"
+  ],
+  "model_jobs": 12,
+  "monetary_cost_usd": null,
+  "timing": {
+    "measurement": "first operation start to last operation end",
+    "operation_window_seconds": 742.937198,
+    "frames_verified": 286,
+    "frames_unavailable": 4
+  },
+  "active_sessions": [],
+  "runtime_state": "unavailable",
+  "runtime_reason": "unsafe_replay",
+  "report": "QUALIFICATION-20261117-round17.md",
+  "next_phase": "04",
+  "next_action": "Reproduce carousel selected-index drift between click and retained after-frame; no new live reload before a validated fix."
+}

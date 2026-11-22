@@ -1,0 +1,11 @@
+{
+  "after_checksum": "a45c9ae156fd1f56c73e2ff52f4e66340c5891c8c4734280828bb5ff70f4621a",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "After frame explicitly shows carousel indicator 6 selected and matching slide Hoi Sinh Tinh Hoa, following the verified bound selector click. Credit uses selection identity, not generic animation.",
+  "operation_id": "85980aa3-17c0-425b-b6df-f0beefd72f19",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_selection",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

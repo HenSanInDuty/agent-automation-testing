@@ -1,0 +1,18 @@
+{
+  "outcome_accuracy": {
+    "numerator": 46,
+    "denominator": 48,
+    "percent": 95.83333333333333,
+    "above_95": true
+  },
+  "coverage": {
+    "numerator": 46,
+    "denominator": 47,
+    "percent": 97.87234042553192,
+    "above_95": true
+  },
+  "reviewed_correct_operations": 46,
+  "remaining_interactions": 2,
+  "review_method": "independent retained-image/checkpoint/redirect/download evidence review",
+  "limitations": "Navigation-only credit for YouTube loading shells; no business completion/playback claim. Unmatched video-copy click and rejected click remain in denominator without credit. Runtime restoration failure unchanged."
+}

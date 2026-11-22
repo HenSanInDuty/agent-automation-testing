@@ -6,14 +6,17 @@ No recursive deletion or model-supplied path is used here.
 
 import hashlib
 import json
+import logging
 import os
 import stat
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
 from auto_at.contracts.codex_bridge import (
+    AGENT_REQUEST_MAX_BYTES,
+    BRIDGE_PROVIDER_MODELS,
     CodexBridgeEvent,
     CodexBridgeReceipt,
     CodexBridgeRequest,
@@ -23,15 +26,26 @@ from auto_at.contracts.codex_bridge import (
     content_hash,
 )
 from domain.codex_bridge import (
-    CLI_VERSION,
+    BRIDGE_CLI_VERSIONS,
     validate_observation,
     validate_request_time,
     validate_response,
 )
 
+from infrastructure.codex_bridge.diagnostics import exception_details
+from infrastructure.observability.logging import log_event
+
+# Only request.json may be this large (agent snapshots); dom/schema keep 65_536, the image 5 MB.
+REQUEST_MAX_BYTES = AGENT_REQUEST_MAX_BYTES
+# The control plane re-signs authorization.json every ~2 s while the bridge polls with a
+# `now` sampled before the read, so a fresh receipt can be a few ms "newer" than `now`.
+# Allow that race (and sub-second container clock drift) but nothing near the 10 s ttl.
+RECEIPT_CLOCK_SKEW = timedelta(seconds=1)
+
 FILES = frozenset(
     {
         "request.json",
+        "generation.json",
         "dom.json",
         "response.schema.json",
         "screenshot.png",
@@ -62,14 +76,23 @@ def _plain(path: Path, *, directory: bool = False) -> None:
 
 
 class FileSpool:
-    def __init__(self, root: Path, bridge_id: UUID, tenant_id: str, max_pending: int = 10):
+    def __init__(
+        self, root: Path, bridge_id: UUID, tenant_id: str, max_pending: int = 10,
+        *, owner_uid: int | None = None,
+    ):
+        if owner_uid is not None and (os.name != "posix" or not 1 <= owner_uid <= 2_147_483_647):
+            raise SpoolError("invalid bridge spool owner")
+        self.owner_uid = owner_uid
         if not root.is_absolute() or ".." in root.parts:
             raise SpoolError("bridge root must be absolute")
         for parent in reversed((root, *root.parents)):
             if parent.exists():
                 _plain(parent, directory=True)
+        existed = root.exists()
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
         _plain(root, directory=True)
+        if not existed and owner_uid is not None:
+            os.chown(root, owner_uid, -1)
         self.root = root.resolve(strict=True)
         self.bridge_id, self.tenant_id = bridge_id, tenant_id
         if not 1 <= max_pending <= 10:
@@ -96,15 +119,37 @@ class FileSpool:
     def read_file(self, directory: Path, name: str, limit: int) -> bytes:
         if name not in FILES or directory.parent != self.root:
             raise SpoolError("unknown bridge file")
-        self._root()
-        _plain(directory, directory=True)
-        path = directory / name
-        _plain(path)
-        with path.open("rb") as source:
-            info = os.fstat(source.fileno())
-            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                raise SpoolError("unsafe bridge file")
-            data = source.read(limit + 1)
+        operation = "root_lstat"
+        try:
+            self._root()
+            operation = "directory_lstat"
+            _plain(directory, directory=True)
+            path = directory / name
+            operation = "file_lstat"
+            _plain(path)
+            operation = "open"
+            with path.open("rb") as source:
+                operation = "fstat"
+                info = os.fstat(source.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                    raise SpoolError("unsafe bridge file")
+                operation = "read"
+                data = source.read(limit + 1)
+                operation = "close"
+        except OSError as error:
+            # Missing optional receipts are normal while polling. Preserve the
+            # original exception and errno; never turn I/O failure into success.
+            if not isinstance(error, FileNotFoundError):
+                try:
+                    job_id = str(UUID(directory.name))
+                except ValueError:
+                    job_id = None
+                log_event(logging.getLogger(__name__), logging.ERROR,
+                          "codex.spool.read_failed", "Codex spool file read failed.",
+                          job_id=job_id, bridge_id=str(self.bridge_id), tenant_id=self.tenant_id,
+                          file_name=name, io_operation=operation, byte_limit=limit,
+                          **exception_details(error))
+            raise
         if len(data) > limit:
             raise SpoolError("bridge file exceeds limit")
         return data
@@ -119,6 +164,7 @@ class FileSpool:
             _plain(target)
         if exclusive:
             with target.open("xb") as output:
+                self._file_owner(output)
                 output.write(data)
                 output.flush()
                 os.fsync(output.fileno())
@@ -126,6 +172,7 @@ class FileSpool:
         temporary = directory / f".atomic-{uuid4()}"
         try:
             with temporary.open("xb") as output:
+                self._file_owner(output)
                 output.write(data)
                 output.flush()
                 os.fsync(output.fileno())
@@ -135,6 +182,14 @@ class FileSpool:
                 _plain(temporary)
                 temporary.unlink()
 
+    def _file_owner(self, handle):
+        # Root application producers hand off private files to the fixed non-root
+        # consumer. No group/world access is needed on the shared Linux mount.
+        if self.owner_uid is not None:
+            if os.fstat(handle.fileno()).st_uid != self.owner_uid:
+                os.fchown(handle.fileno(), self.owner_uid, -1)
+            os.fchmod(handle.fileno(), 0o600)
+
     @contextmanager
     def lock(self, consumer=False):
         self._root()
@@ -142,6 +197,7 @@ class FileSpool:
         if path.exists() or path.is_symlink():
             _plain(path)
         with path.open("a+b") as handle:
+            self._file_owner(handle)
             handle.seek(0)
             if os.name == "nt":
                 import msvcrt
@@ -185,9 +241,16 @@ class FileSpool:
         for item in directory.iterdir():
             if item.name not in FILES and not item.name.startswith(".atomic-"):
                 raise SpoolError("unexpected bridge job file")
-            _plain(item)
+            try:
+                _plain(item)
+            except FileNotFoundError:
+                # The consumer removes raw output after parsing, and either
+                # writer renames temporary files atomically during this scan.
+                # These are not request inputs; never read or trust their data.
+                if item.name != "raw-output.json" and not item.name.startswith(".atomic-"):
+                    raise
         request = CodexBridgeRequest.model_validate_json(
-            self.read_file(directory, "request.json", 16_384),
+            self.read_file(directory, "request.json", REQUEST_MAX_BYTES),
         )
         self._scope(request)
         if request.job_id != job_id:
@@ -236,7 +299,8 @@ class FileSpool:
                     ("screenshot.png", screenshot),
                 ):
                     if data is not None:
-                        if len(data) > (5_000_000 if name == "screenshot.png" else 65_536):
+                        limit = {"screenshot.png": 5_000_000, "request.json": REQUEST_MAX_BYTES}
+                        if len(data) > limit.get(name, 65_536):  # dom/schema: 65_536
                             raise SpoolError("bridge input exceeds limit")
                         self._write(staging, name, data, exclusive=True)
                 # Validate everything before publication, using the exact eventual job inputs.
@@ -253,6 +317,8 @@ class FileSpool:
                     or len(screenshot) != request.inputs.screenshot_bytes
                 ):
                     raise SpoolError("bridge image integrity mismatch")
+                if self.owner_uid is not None:
+                    os.chown(staging, self.owner_uid, -1)
                 staging.rename(target)
             finally:
                 if staging.exists():
@@ -331,7 +397,8 @@ class FileSpool:
         self._matches(request, receipt)
         ttl = (receipt.authorization_expires_at - receipt.recorded_at).total_seconds()
         if (
-            not receipt.recorded_at <= now < receipt.authorization_expires_at <= request.deadline
+            not receipt.recorded_at - RECEIPT_CLOCK_SKEW <= now
+            or not now < receipt.authorization_expires_at <= request.deadline
             or not 0 < ttl <= 10
             or receipt.status != "queued"
         ):
@@ -383,6 +450,15 @@ class FileSpool:
 
     def stages(self, request):
         """Return only scoped, ordered receipts; no raw CLI output crosses this port."""
+        try:
+            return self._stages(request)
+        except FileNotFoundError:
+            # A shared filesystem may briefly hide a receipt during atomic
+            # replacement. Missing progress is not a result or an authorization;
+            # the bounded caller polls again and still validates the final result.
+            return ()
+
+    def _stages(self, request):
         self._scope(request)
         if not self.has_file(request, "claim.json"):
             return ()
@@ -511,13 +587,14 @@ class FileSpool:
         self._write(directory, "events.jsonl", data)
 
     def heartbeat(self, readiness: dict):
+        provider = readiness.get("provider", "codex_cli")
         payload = {
             "bridge_id": str(self.bridge_id),
             "tenant_id": self.tenant_id,
             "recorded_at": datetime.now(UTC).isoformat(),
             "readiness": readiness,
-            "model": "gpt-6-luna",
+            "model": BRIDGE_PROVIDER_MODELS[provider],
             "protocol": "v1",
-            "cli_version": CLI_VERSION,
+            "cli_version": BRIDGE_CLI_VERSIONS[provider],
         }
         self._write(self.root, ".heartbeat.json", json.dumps(payload).encode())

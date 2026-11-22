@@ -1,0 +1,166 @@
+{
+  "checked_at": "2026-11-09T10:18:40.325348+00:00",
+  "purpose": "Independent public HEAD chains; requires operation destination/frame review, not sufficient alone.",
+  "rows": [
+    {
+      "target_id": "mct-02",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/su-kien",
+          "url_sha256": "a313d434f2b01f12e9128428683ad6d4ad6d59f9b4fb0633ffcb0a949c525e23",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-03",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/cam-nang",
+          "url_sha256": "5f73a3fff26056154a6bd62585f906565f20b86c49c7edd754905bfd8aa59acc",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-04",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://id.tepaylink.vn/site/rules",
+          "url_sha256": "35562c4731744d1dbf061967aa543a0dfb60197685fd1661cc46ca9c12010563",
+          "status": 301
+        },
+        {
+          "url": "https://id.tpl.vn/rules",
+          "url_sha256": "92b90b313e8223c9482e986cc069542571cffc6f1c43d61b4bd2a9860e9ed37d",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-06",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://support.tepaylink.vn/",
+          "url_sha256": "69cae6d033f2895149e0a6671c3cf620bad8b9ec7175915f926f6a045b18a054",
+          "status": 301
+        },
+        {
+          "url": "https://support.tpl.vn/",
+          "url_sha256": "93395bcfeeb990766f8c10e72e7d557d5436a4afbb6f1563f8a09525fc97ba53",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-07",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://pay.tepaylink.vn/",
+          "url_sha256": "2544aabb4170f8dc2dc6daf41c1166756a4d2591ab3b551e781071ace1516b05",
+          "status": 301
+        },
+        {
+          "url": "https://pay.tpl.vn/",
+          "url_sha256": "54db9c6f4ae2d838e8e7adad26b37639b94215177e0b0e1c751fc8deeb3dab96",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-08",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://id.tepaylink.vn/register",
+          "url_sha256": "34a968777a1aa5cc8d88ccbfa90c588718f9a81bd5cb33f520e8ac2b0c4de9dd",
+          "status": 301
+        },
+        {
+          "url": "https://id.tpl.vn/register",
+          "url_sha256": "ffcd89fd696fbbf9632b43882d4fad7a4e4c75554731f9902e70edefbf0d07a0",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-09",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-ios",
+          "url_sha256": "77f978b8585355f2a853d6454d31ba8c7548172b1605e3ff1d3298b18d14d593",
+          "status": 307
+        },
+        {
+          "url": "https://testflight.apple.com/join/f86aG3mh",
+          "url_sha256": "41e18aebbe7a2f63603f0aa880d66f17ccd1858817382f57a5e310c6da199839",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-10",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-ggplay",
+          "url_sha256": "2bf638b31c85ae594a4513ecb619cd54a48faca8ac3d63799beea21dfec94956",
+          "status": 307
+        },
+        {
+          "url": "https://play.google.com/store/apps/details",
+          "url_sha256": "cf34cc6f4e7f990b42bdd8d01782417cf06363596903f9a316fb392998bfc275",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-11",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-pc",
+          "url_sha256": "fb3d46d3afb21306e3f47fa0996b0ced82fefc2236dd0ea56fbabe7a389d6306",
+          "status": 307
+        },
+        {
+          "url": "https://mongchiton.vn/huong-dan-tai-va-cai-dat-vo-lam-chan-menh-origin-pc",
+          "url_sha256": "bf9134f1337665008656fdd14f537f2ec07566971d3695708f3a5eb0398b8d72",
+          "status": 200
+        }
+      ],
+      "content_type": "text/html"
+    },
+    {
+      "target_id": "mct-12",
+      "method": "HEAD",
+      "chain": [
+        {
+          "url": "https://mongchiton.vn/s/vlcm-apk",
+          "url_sha256": "7aca86ce0d4e77a4bc96da8e9ce856457d137ab0e7b1adb8b95ad43cf059adb3",
+          "status": 307
+        },
+        {
+          "url": "https://cdn-mct.tepaylink.vn/launcher/VlcmMobile_v0.1.1(99)_direct_simulator.apk",
+          "url_sha256": "c7c0754d3e63f81e54e09e9dc11c0def59dc0d0f39ea432bf9e84542cacbddf4",
+          "status": 200
+        }
+      ],
+      "content_type": "application/octet-stream"
+    }
+  ]
+}

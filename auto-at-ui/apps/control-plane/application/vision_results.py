@@ -9,6 +9,7 @@ from auto_at.contracts.vision import VisualLocatorEvidence
 from domain.authorization import Permission
 from domain.runs import AuditEvent
 from domain.vision import VisualSessionScope
+from domain.vision_conclusion import exploration_conclusion
 
 from application.vision_replay import (
     VisionReplay,
@@ -24,6 +25,23 @@ class VisionRevisionChanged(ValueError):
 class VisionResults:
     def __init__(self, sessions, trace, store=None, audits=None):
         self.sessions, self.trace, self.store, self.audits = sessions, trace, store, audits
+
+    def _agent_steps(self, record, scope):
+        """Agent-loop step log keyed by operation id; planner sessions never carry one."""
+        reader = getattr(self.trace, "agent_steps", None)
+        if getattr(record, "exploration_engine", "planner") != "agent_loop" or reader is None:
+            return {}
+        by_operation = {}
+        for step in reader(scope):
+            skipped = [action for action in step.actions if action.get("skipped_reason")]
+            summary = dict(
+                step_index=step.step_index,
+                evaluation_previous_goal=step.evaluation_previous_goal,
+                memory=step.memory, next_goal=step.next_goal, skipped_actions=skipped,
+            )
+            for operation_id in step.operation_ids:
+                by_operation[str(operation_id)] = summary
+        return by_operation
 
     def _load(self, tenant_id, principal, session_id, permission=Permission.READ):
         record = VisionReplay(self.sessions, self.store, self.audits)._session(
@@ -41,6 +59,7 @@ class VisionResults:
             frames=[item.metadata.model_dump(mode="json") for item in snapshot["frames"]],
             locators=[item.model_dump(mode="json") for item in snapshot["locators"]],
             handoffs=[item.content_hash for item in snapshot["handoffs"]],
+            pages=[item.model_dump(mode="json") for item in snapshot.get("pages", ())],
         )
         return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
@@ -64,10 +83,11 @@ class VisionResults:
     ):
         if not 1 <= limit <= 100 or after_sequence < 0:
             raise ValueError("invalid trace page")
-        record, _, snapshot = self._load(tenant_id, principal, session_id)
+        record, scope, snapshot = self._load(tenant_id, principal, session_id)
         current = self._revision(record, snapshot)
         if revision is not None and revision != current:
             raise VisionRevisionChanged
+        agent_steps = self._agent_steps(record, scope)
         all_items = [o for o in snapshot["operations"] if o.sequence > after_sequence]
         page = all_items[:limit]
         frames = {item.metadata.id: item for item in snapshot["frames"]}
@@ -78,6 +98,7 @@ class VisionResults:
             session_id=str(session_id),
             revision=current,
             trace_version=getattr(record, "trace_version", "legacy"),
+            pages=[item.model_dump(mode="json") for item in snapshot.get("pages", ())],
             items=[
                 o.model_dump(mode="json")
                 | {
@@ -88,6 +109,7 @@ class VisionResults:
                         o.actual_after_frame_id, frames, o.after_unavailable_reason
                     ),
                 }
+                | ({"agent_step": agent_steps[str(o.id)]} if str(o.id) in agent_steps else {})
                 for o in page
             ],
             locators=[
@@ -203,6 +225,7 @@ class VisionResults:
                 for e in edges
             ],
             handoffs=[item.model_dump(mode="json") for item in snapshot["handoffs"]],
+            pages=[item.model_dump(mode="json") for item in snapshot.get("pages", ())],
             links=links,
             limitations=[
                 "Recorded observations do not establish business success.",
@@ -214,13 +237,26 @@ class VisionResults:
         attempted = [o for o in operations if o.purpose == "explore"]
         attempted_proposals = {o.proposal_id for o in attempted if o.proposal_id}
         locator_by_id = {item.id: item for item in locators}
+        control_labels = {}
+        control_numbers = {}
+        for page in snapshot.get("pages", ()):
+            for control in page.controls:
+                key = (page.url_fingerprint, control.key)
+                ordinal = control_numbers.setdefault(key, len(control_numbers) + 1)
+                if control.operation_id:
+                    control_labels[control.operation_id] = control.name or (
+                        f"Unnamed visual button {ordinal}"
+                        if page.interaction_scope == "visual_buttons" else
+                        f"Unnamed {control.role} {ordinal}"
+                    )
         payload["exploration_report"] = dict(
             status="partial" if terminal else "in_progress",
             coverage="not_established",
             stop_reason=payload["completion_reason"],
             limits={
                 name: getattr(record, name, None)
-                for name in ("max_steps", "max_hops", "max_states", "max_session_seconds")
+                for name in ("max_steps", "max_hops", "max_states", "max_session_seconds",
+                             "step_timeout_seconds")
             },
             summary=dict(
                 controls_acted_on=sum(
@@ -243,6 +279,7 @@ class VisionResults:
                     operation_id=str(o.id), sequence=o.sequence,
                     action_kind=o.action_kind, status=o.status, reason_code=o.outcome_code,
                     target=(
+                        control_labels[o.id] if o.id in control_labels else
                         locator_by_id[o.locator_id].descriptor.value
                         if o.locator_id in locator_by_id
                         and locator_by_id[o.locator_id].descriptor else None
@@ -255,6 +292,18 @@ class VisionResults:
                 for o in attempted
             ],
         )
+        report = payload["exploration_report"]
+        conclusion = exploration_conclusion(
+            state=record.state, pages=snapshot.get("pages", ()), operations=operations,
+            candidates_not_attempted=report["summary"]["candidates_not_attempted"],
+            legacy=legacy,
+        )
+        report["conclusion"] = conclusion
+        report["status"] = (
+            "completed" if conclusion["status"] == "completed"
+            else "partial" if terminal else "in_progress"
+        )
+        report["coverage"] = conclusion["coverage"]
         payload["revision"] = hashlib.sha256(
             json.dumps(
                 payload | {"trace_revision": self._revision(record, snapshot)},

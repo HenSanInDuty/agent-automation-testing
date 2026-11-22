@@ -1,0 +1,11 @@
+{
+  "after_checksum": "db76b99aa506bf3545d88c0940a2e444a0b26a94f283f643272a52a76137a727",
+  "before_checksum": "373f68edb418f9adb2e9f954105af42bcebe6b7d787724d9d477d87f1b0a7ea4",
+  "finding": "After URL hash exactly matches declared Facebook page; rendered VLCM Origin: Vo Lam Chan Menh Origin - TPL page identity visible behind login gate. No login or social action performed.",
+  "operation_id": "18ee53a1-75fe-4ec0-a9f1-9af8b0c98fd8",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

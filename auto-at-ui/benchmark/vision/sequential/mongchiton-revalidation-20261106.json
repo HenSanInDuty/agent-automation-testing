@@ -1,0 +1,13 @@
+{
+  "target": "https://mongchiton.vn",
+  "scroll_y": 1136,
+  "delay_ms": 4500,
+  "model_calls": 0,
+  "clicks": 0,
+  "results": [
+    {"trial": 1, "scroll_y": 1136, "full_state_matches": false, "target_count": 4, "revalidated": true, "reason": null},
+    {"trial": 2, "scroll_y": 1136, "full_state_matches": false, "target_count": 4, "revalidated": true, "reason": null},
+    {"trial": 3, "scroll_y": 1136, "full_state_matches": false, "target_count": 4, "revalidated": true, "reason": null},
+    {"trial": 4, "scroll_y": 1136, "full_state_matches": false, "target_count": 4, "revalidated": true, "reason": null}
+  ]
+}

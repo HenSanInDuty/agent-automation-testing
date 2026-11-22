@@ -1,0 +1,11 @@
+{
+  "after_checksum": "23f8a83618444422f7a15134cdbc46a702328a17885fc2662799fedc14e0f3ca",
+  "before_checksum": "2d6c7698f19817ba6eda26ca2460dea529ae56fb0e9ca2aa98a51fff2a616ab6",
+  "finding": "TestFlight join page names Mong Chi Ton Internal beta; final /join/f86aG3mh matches independent 307 review of declared mongchiton.vn/s/vlcm-ios shortlink.",
+  "operation_id": "6baa18e5-00c3-4461-b73e-8a285791e935",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "popup_destination",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

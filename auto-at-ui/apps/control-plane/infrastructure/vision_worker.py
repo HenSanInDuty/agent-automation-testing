@@ -1,6 +1,9 @@
 """Bounded private v4 transport. No worker path or diagnostic crosses this boundary."""
 
+import json
+import logging
 from hashlib import sha256
+from time import monotonic
 from uuid import UUID
 
 import httpx
@@ -8,6 +11,7 @@ from auto_at.contracts.codex_bridge import canonical_bytes
 from auto_at.contracts.vision import VisualCheckpoint, VisualOperationFrame
 from auto_at.contracts.vision_worker import (
     VisualWorkerAck,
+    VisualWorkerCheckTarget,
     VisualWorkerDomObservation,
     VisualWorkerExecute,
     VisualWorkerIdentity,
@@ -16,8 +20,33 @@ from auto_at.contracts.vision_worker import (
     VisualWorkerOperationResult,
     VisualWorkerOriginObservations,
     VisualWorkerPrepare,
+    VisualWorkerTargetCheck,
 )
+from domain.vision import VisionObservationUnavailable
 from pydantic import ValidationError
+
+from infrastructure.observability.logging import log_event
+from infrastructure.observability.telemetry import current_trace_context
+
+_LOGGER = logging.getLogger(__name__)
+# Closed operational vocabulary. Never log arbitrary worker bodies/diagnostics.
+_WORKER_CODES = frozenset({
+    "session_unavailable", "stale_fencing_token", "scope_mismatch", "invalid_contract",
+    "capture_failed", "screenshot_byte_limit", "session_timeout", "step_timeout",
+    "worker_idle_timeout", "session_busy", "payload_too_large", "visual_request_rejected",
+    "operation_unavailable", "frame_unavailable", "frame_checksum_mismatch",
+    "checkpoint_unavailable", "state_mismatch", "state_changed_during_observation",
+    "stale_dom_context", "stale_dom_target", "stale_dom_snapshot",
+})
+
+
+def _worker_code(data: bytes) -> str:
+    try:
+        value = json.loads(data)
+        code = value.get("detail") if isinstance(value, dict) else None
+    except (ValueError, TypeError):
+        code = None
+    return code if isinstance(code, str) and code in _WORKER_CODES else "worker_request_rejected"
 
 
 class VisualWorkerUnavailable(RuntimeError):
@@ -29,14 +58,28 @@ class HttpVisualWorker:
         self._client, self._base, self._secret = client, base_url.rstrip("/"), secret
 
     def _headers(self, identity: VisualWorkerIdentity) -> dict[str, str]:
+        context = current_trace_context()
         return {
             "X-Auto-At-Vision-Worker-Secret": self._secret,
             "X-Auto-At-Vision-Tenant-Id": identity.tenant_id,
             "X-Auto-At-Vision-Project-Id": str(identity.project_id),
             "X-Auto-At-Vision-Fencing-Token": str(identity.fencing_token),
+            **({"X-Correlation-Id": str(context.correlation_id),
+                "traceparent": context.traceparent()} if context else {}),
         }
 
     async def _request(self, method, path, identity, payload=None, *, cap=128_000):
+        started = monotonic()
+        # The path is private transport metadata; emit only a bounded route stage.
+        suffix = path.rsplit("/", 1)[-1]
+        stage = suffix if suffix in {
+            "screen", "dom", "origins", "prepare", "execute", "ack", "visual-explorations",
+        } else "scoped_resource"
+        fields = {"session_id": str(identity.session_id), "project_id": str(identity.project_id),
+                  "method": method, "stage": stage}
+        operation_id = getattr(payload, "operation_id", None)
+        if operation_id is not None:
+            fields["operation_id"] = str(operation_id)
         try:
             async with self._client.stream(
                 method,
@@ -44,14 +87,32 @@ class HttpVisualWorker:
                 headers=self._headers(identity),
                 json=payload.model_dump(mode="json") if payload is not None else None,
             ) as response:
-                response.raise_for_status()
                 data = bytearray()
                 async for chunk in response.aiter_bytes(chunk_size=64_000):
                     if len(data) + len(chunk) > cap:
                         raise VisualWorkerUnavailable("worker response exceeds cap")
                     data.extend(chunk)
+                if response.is_error:
+                    log_event(_LOGGER, logging.WARNING, "vision.worker.rejected",
+                              "Visual worker rejected an internal request.", **fields,
+                              status_code=response.status_code, code=_worker_code(bytes(data)),
+                              duration_ms=round((monotonic() - started) * 1000))
+                if response.status_code == 422 and path.endswith("/observations/dom"):
+                    try:
+                        value = json.loads(data)
+                        code = value.get("detail") if isinstance(value, dict) else None
+                    except (ValueError, TypeError):
+                        code = None
+                    raise VisionObservationUnavailable(code if isinstance(code, str) else "")
+                response.raise_for_status()
                 return bytes(data), response.headers.get("content-type", "").split(";")[0]
-        except httpx.HTTPError:
+        except httpx.HTTPStatusError:
+            raise VisualWorkerUnavailable("visual worker transport unavailable") from None
+        except httpx.HTTPError as error:
+            log_event(_LOGGER, logging.WARNING, "vision.worker.transport_failed",
+                      "Visual worker transport unavailable.", **fields,
+                      error_type="timeout" if isinstance(error, httpx.TimeoutException)
+                      else "connection_error", duration_ms=round((monotonic() - started) * 1000))
             raise VisualWorkerUnavailable("visual worker transport unavailable") from None
 
     async def open(self, request: VisualWorkerOpen) -> str:
@@ -71,6 +132,22 @@ class HttpVisualWorker:
         ):
             raise VisualWorkerUnavailable("worker capability response invalid")
         return fingerprint
+
+    async def check_target(self, request: VisualWorkerCheckTarget) -> VisualWorkerTargetCheck:
+        data, content_type = await self._request(
+            "POST", f"/visual-explorations/{request.session_id}/observations/target", request,
+            request, cap=4096,
+        )
+        try:
+            result = VisualWorkerTargetCheck.model_validate_json(data)
+        except ValidationError:
+            raise VisualWorkerUnavailable("worker target check invalid") from None
+        if (content_type != "application/json" or any(
+            getattr(result, key) != value for key, value in request.model_dump().items()
+        ) or (result.matches_current and (not result.context_matches
+            or (not result.same_document and not request.allow_restored_document)))):
+            raise VisualWorkerUnavailable("worker target check scope mismatch")
+        return result
 
     async def observe_dom(self, request: VisualWorkerObserveDom) -> VisualWorkerDomObservation:
         data, content_type = await self._request(

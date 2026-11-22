@@ -24,7 +24,8 @@ COPY observability observability
 COPY docker/codex-bridge docker/codex-bridge
 COPY docs docs
 COPY alembic.ini docker-compose.yml docker-compose.codex.yml .env.example ./
-RUN mkdir -p /app/benchmarks/exports && chown -R pwuser:pwuser /app/benchmarks/exports \
+RUN mkdir -p /app/benchmarks/exports /app/benchmark/vision/visual-buttons \
+    && chown -R pwuser:pwuser /app/benchmarks/exports /app/benchmark/vision/visual-buttons \
     && test ! -e /usr/local/bin/codex && touch /offline-evaluation
 USER pwuser
 ENTRYPOINT ["uv", "run", "--no-sync", "python", "benchmark/vision/codex/offline_suite.py"]

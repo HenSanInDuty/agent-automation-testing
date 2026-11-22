@@ -1,0 +1,23 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 9.215,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "green": {
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 113.007,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "ruff": "passed",
+  "worker_typecheck": "passed",
+  "contract_check": "passed"
+}

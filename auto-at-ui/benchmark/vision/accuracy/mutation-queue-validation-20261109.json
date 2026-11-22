@@ -1,0 +1,44 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 11.353,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "first_regression": {
+    "passed": 9,
+    "failed": 4,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 204.363,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "audit_test_fix": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 23.179,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "final_guard_matrix": {
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 224.246,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "checks": {
+    "ruff": "passed",
+    "worker_typecheck": "passed",
+    "generated_contract": "passed"
+  },
+  "scope": "ADR-027 same Page, URL, scroll UI mutation; terminal old edges; fresh model proposals, no replay"
+}

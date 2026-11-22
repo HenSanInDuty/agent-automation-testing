@@ -37,6 +37,8 @@ if mode in {"dom_branches", "image_branches", "unknown_element"}:
                 for e in elements
             ],
         }
+        if not elements:
+            output = {"outcome": "stop", "reason": "no_safe_action"}
     Path("raw-output.json").write_text(json.dumps({"result": output}))
     print(json.dumps({"type": "thread.started", "model": "gpt-6-luna"}))
     print(json.dumps({"type": "turn.completed", "usage": {"input_tokens": 2, "output_tokens": 3}}))

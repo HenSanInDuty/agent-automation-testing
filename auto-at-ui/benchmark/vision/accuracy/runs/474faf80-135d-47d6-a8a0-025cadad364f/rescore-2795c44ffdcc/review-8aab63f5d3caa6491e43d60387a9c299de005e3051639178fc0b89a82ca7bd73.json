@@ -1,0 +1,11 @@
+{
+  "after_checksum": "87e751c564b222e39285fedbefe2717a72fe6b8414eeb1fdf674bba2cccafb82",
+  "before_checksum": "a34b2ff0d0cc262b8761b089216d28785216564fb21248225d27e342656d3258",
+  "finding": "mct-57: previous arrow; before frame indicator 2 Bang Chien Nay Lua, after frame indicator 1 Chuoi Nhiem Vu: one step backwards. Autoplay only advances forwards, so the backward step is the click result.",
+  "operation_id": "1a9055ee-eea9-4451-90fb-95a45d72788e",
+  "oracle_hash": "2795c44ffdcccb01d338b728e56455f08eae0582f7050ad91cb55c17a0f583aa",
+  "outcome_kind": "carousel_step",
+  "review_method": "evidence_review",
+  "schema_version": "vision-outcome-review-v1",
+  "verdict": "correct"
+}

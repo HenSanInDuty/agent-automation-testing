@@ -1,0 +1,40 @@
+{
+  "schema_version": "vision-accuracy-validation-v1",
+  "phase": "03",
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 10.543,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "recovery_final": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 62.477,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "broad_before_hop_guard": {
+    "passed": 177,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 800.882,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "worker": {
+    "barrier_passed": 20,
+    "remaining_passed": 82,
+    "typecheck": "passed"
+  },
+  "ruff": "passed",
+  "contract_generation_check": "passed",
+  "diff_check": "passed",
+  "live_accuracy": "not_established"
+}

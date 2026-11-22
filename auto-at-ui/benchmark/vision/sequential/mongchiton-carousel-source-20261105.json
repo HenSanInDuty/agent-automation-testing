@@ -1,0 +1,39 @@
+{
+  "source_url": "https://mongchiton.vn/_next/static/chunks/3144b5357y7dm.js",
+  "sha256": "78dd80591d7c50bbf77f1f9ac59b74e6d2bebe6702c474cc8495572646ac00ea",
+  "carousel_configuration_excerpt": "className:\"h-full w-full character-mount-swiper\",onSwiper:t,onSlideChange:e=>{let t=e.realIndex??e.activeIndex??0;d(`${l}-${t+1}`)},autoplay:{delay:3e3,pauseOnMouseEnter:!0,waitForTransition:!0},navigation:!1,speed:600,children:[\"nv\"==l&&td.map(e=>(0,y.jsx)(no,{className:\"flex ju",
+  "css_rules": [
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher{z-index:2;cursor:pointer;--tw-duration:.2s;background-position:50%;background-repeat:no-repeat;background-size:cover;width:62.77px;height:63.48px;transition-duration:.2s}"
+    },
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher:hover{--tw-scale-x:105%;--tw-scale-y:105%;--tw-scale-z:105%;scale:var(--tw-scale-x)var(--tw-scale-y)}"
+    },
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher{width:150.45px;height:152.15px}"
+    },
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher.active{--tw-scale-x:105%;--tw-scale-y:105%;--tw-scale-z:105%;scale:var(--tw-scale-x)var(--tw-scale-y)}"
+    },
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher.active:after{content:var(--tw-content);content:var(--tw-content);content:var(--tw-content);content:var(--tw-content);--tw-translate-x:calc(var(--spacing)*-1);width:66.8px;height:65.76px;translate:var(--tw-translate-x)var(--tw-translate-y);content:var(--tw-content);--tw-translate-y:calc(var(--spacing)*-.5);translate:var(--tw-translate-x)var(--tw-translate-y);content:var(--tw-content);content:var(--tw-content);content:var(--tw-content);content:var(--tw-content);--tw-content:\"\";content:var(--tw-content);content:var(--tw-content);background-image:url(/assets/characters/switcher-selected.webp);background-position:50%;background"
+    },
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher.active:after{content:var(--tw-content);content:var(--tw-content);--tw-translate-x:calc(var(--spacing)*-2);width:159px;height:157px;translate:var(--tw-translate-x)var(--tw-translate-y)}"
+    },
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher.active:after{content:var(--tw-content)}"
+    },
+    {
+      "url": "https://mongchiton.vn/_next/static/chunks/0j5d4dcl6r293.css",
+      "rule": ".character-switcher.active:after{--tw-translate-y:calc(var(--spacing)*-3);translate:var(--tw-translate-x)var(--tw-translate-y)}"
+    }
+  ]
+}

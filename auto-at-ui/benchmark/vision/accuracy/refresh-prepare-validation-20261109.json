@@ -1,0 +1,53 @@
+{
+  "red": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 6.969,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "before_history_handle_fix": {
+    "passed": 11,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 131.63,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "history_handle_diagnostic": {
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 23.754,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "regression_before_test_branch_fix": {
+    "passed": 21,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 239.442,
+    "exit_code": 1,
+    "synthetic_measurements": []
+  },
+  "final_focus": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 24.396,
+    "exit_code": 0,
+    "synthetic_measurements": []
+  },
+  "worker_barrier_passed": 3,
+  "worker_checkpoint_regression_passed": 44,
+  "contract_metrics_loop_passed": 77,
+  "ruff": "passed",
+  "typecheck": "passed",
+  "contract_check": "passed"
+}
