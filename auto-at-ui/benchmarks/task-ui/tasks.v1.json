@@ -1,0 +1,67 @@
+{
+  "schema_version": "task-ui-v1",
+  "target": "benchmarks/targets/task-ui",
+  "note": "Every task assumes the fixture's initial state (POST /__reset). Login tasks avoid the English credential keywords and use 'mật khẩu' so redact_generation_request leaves them unchanged.",
+  "tasks": [
+    {
+      "id": "modal-open-close",
+      "path": "/",
+      "task": "Trên trang chủ, nhấn nút \"Mở hộp thoại giới thiệu\" và kiểm tra hộp thoại có tiêu đề \"Giới thiệu\" hiện ra. Sau đó nhấn nút \"Đóng hộp thoại\" và kiểm tra hộp thoại đã biến mất khỏi trang.",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "login-success",
+      "path": "/login",
+      "task": "Đăng nhập bằng tài khoản thử nghiệm: nhập tên đăng nhập demo và mật khẩu Demo1234, rồi nhấn nút \"Đăng nhập\". Kiểm tra trang chuyển sang bảng điều khiển và hiện lời chào \"Xin chào, demo\" cùng nút \"Đăng xuất\".",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "login-failure",
+      "path": "/login",
+      "task": "Thử đăng nhập với thông tin sai: nhập tên đăng nhập demo và mật khẩu Sai0000, rồi nhấn nút \"Đăng nhập\". Kiểm tra trang vẫn ở màn hình đăng nhập và hiện thông báo lỗi \"Sai tên đăng nhập hoặc mật khẩu\".",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "todo-add",
+      "path": "/todos",
+      "task": "Trên trang việc cần làm, thêm một việc mới có nội dung \"Viết báo cáo\" bằng ô \"Việc mới\" và nút \"Thêm\". Kiểm tra việc \"Viết báo cáo\" xuất hiện trong danh sách và bộ đếm đổi từ \"2 việc, 1 đã xong\" thành \"3 việc, 1 đã xong\".",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "todo-delete",
+      "path": "/todos",
+      "task": "Trên trang việc cần làm, xoá việc \"Học bài\" bằng nút \"Xoá\" của việc đó. Kiểm tra việc \"Học bài\" không còn trong danh sách, việc \"Đi chợ\" vẫn còn, và bộ đếm đổi từ \"2 việc, 1 đã xong\" thành \"1 việc, 1 đã xong\".",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "tabs-switch",
+      "path": "/tabs",
+      "task": "Trên trang thẻ thông tin, lần lượt chọn thẻ \"Chi tiết\" rồi thẻ \"Cài đặt\". Kiểm tra thẻ \"Chi tiết\" hiện nội dung chứa \"trọng lượng 450 gam\" và thẻ \"Cài đặt\" hiện nội dung chứa \"chế độ tiết kiệm điện đang tắt\".",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "search-results",
+      "path": "/search",
+      "task": "Trên trang tìm kiếm, nhập từ khoá \"balo\" vào ô \"Từ khoá\" rồi nhấn nút \"Tìm\". Kiểm tra kết quả có sản phẩm \"Balo laptop\" và không còn sản phẩm \"Áo thun cotton\".",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "search-empty",
+      "path": "/search",
+      "task": "Trên trang tìm kiếm, nhập từ khoá \"xyzxyz\" vào ô \"Từ khoá\" rồi nhấn nút \"Tìm\". Kiểm tra trang hiện thông báo \"Không tìm thấy sản phẩm\" và không hiện sản phẩm nào.",
+      "expected_status": "achieved"
+    },
+    {
+      "id": "broken-save",
+      "path": "/broken",
+      "task": "Trên trang thử lỗi, nhập \"Ghi chú thử\" vào ô \"Ghi chú\" rồi nhấn nút \"Lưu thay đổi\". Kiểm tra trang hiện thông báo xác nhận đã lưu thay đổi thành công.",
+      "expected_status": "not_achieved"
+    },
+    {
+      "id": "broken-counter",
+      "path": "/broken",
+      "task": "Trên trang thử lỗi, nhấn nút \"Đếm\" ba lần. Kiểm tra số hiển thị sau \"Số lần đếm:\" tăng từ 0 lên 3.",
+      "expected_status": "not_achieved"
+    }
+  ]
+}
