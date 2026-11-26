@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Code, CodeBlock, FormField, Hint, ItemList, Notice } from "./components/agent-ui";
+import { CheckboxField, Code, CodeBlock, FormField, Hint, ItemList, Notice } from "./components/agent-ui";
 import { Section } from "./components/section";
 import { ConfirmDialog } from "./components/confirm-dialog";
 import { ActivityTimeline } from "./components/activity-timeline";
@@ -38,6 +38,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const [savedOrigins, setSavedOrigins] = useState<string[]>([]);
   const [visionMaxHops, setVisionMaxHops] = useState(5);
   const [visionMaxStates, setVisionMaxStates] = useState(50);
+  const [visionOwnedTestTarget, setVisionOwnedTestTarget] = useState(false);
   const [generation, setGeneration] = useState<GenerationRequest | null>(null);
   const [draft, setDraft] = useState<GeneratedDraft | null>(null);
   const [run, setRun] = useState<Run | null>(null);
@@ -80,7 +81,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   useEffect(() => {
     let disposed = false;
     setLoadedPolicyProject("");
-    if (!policyProjectId) { setOrigins(""); setSavedOrigins([]); setVisionMaxHops(5); setVisionMaxStates(50); return; }
+    if (!policyProjectId) { setOrigins(""); setSavedOrigins([]); setVisionMaxHops(5); setVisionMaxStates(50); setVisionOwnedTestTarget(false); return; }
     getPolicy(apiUrl, policyProjectId).then((policy) => {
       if (disposed) return;
       setLoadedPolicyProject(policyProjectId);
@@ -88,6 +89,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
       setOrigins(policy.allowed_origins.join(", "));
       setVisionMaxHops(policy.vision_max_hops);
       setVisionMaxStates(policy.vision_max_states);
+      setVisionOwnedTestTarget(policy.vision_owned_test_target === true);
     }).catch((error) => { if (!disposed) setNotice(errorMessage(error)); });
     return () => { disposed = true; };
   }, [apiUrl, policyProjectId]);
@@ -129,7 +131,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
     event.preventDefault();
     if (!policyProjectId || loadedPolicyProject !== policyProjectId) return;
     const expected = policyContext.current;
-    try { const policy = await setPolicy(apiUrl, policyProjectId, { allowed_origins: origins.split(/\s|,/).filter(Boolean), vision_max_hops: visionMaxHops, vision_max_states: visionMaxStates }); if (expected !== policyContext.current) return; setSavedOrigins(policy.allowed_origins); setOrigins(policy.allowed_origins.join(", ")); setVisionMaxHops(policy.vision_max_hops); setVisionMaxStates(policy.vision_max_states); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
+    try { const policy = await setPolicy(apiUrl, policyProjectId, { allowed_origins: origins.split(/\s|,/).filter(Boolean), vision_max_hops: visionMaxHops, vision_max_states: visionMaxStates, vision_owned_test_target: visionOwnedTestTarget }); if (expected !== policyContext.current) return; setSavedOrigins(policy.allowed_origins); setOrigins(policy.allowed_origins.join(", ")); setVisionMaxHops(policy.vision_max_hops); setVisionMaxStates(policy.vision_max_states); setVisionOwnedTestTarget(policy.vision_owned_test_target === true); setNotice(`Project policy saved: ${policy.allowed_origins.join(", ")}`); }
     catch (error) { if (expected === policyContext.current) setNotice(errorMessage(error)); }
   }
   const renderProjectPolicy = (showVisionLimits: boolean) => <Section aria-label="Project policy" title="Project policy" className={showVisionLimits ? "rounded-none border-0 bg-transparent py-5 shadow-none" : undefined} contentClassName="grid gap-5" description={<>{showVisionLimits && <>Vision continues across external origins and records them in the session log. The origin allowlist below applies to deterministic test runs. </>}Only project administrators can save the origin allowlist{showVisionLimits ? " and Vision tree bounds" : ""}.</>}>
@@ -141,6 +143,10 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
       {showVisionLimits && <>
         <FormField id={`${policyFieldId}-hops`} label="Vision maximum hops"><Input id={`${policyFieldId}-hops`} required type="number" min="1" max="20" value={visionMaxHops} onChange={(e) => setVisionMaxHops(Number(e.target.value))} /></FormField>
         <FormField id={`${policyFieldId}-states`} label="Vision maximum states"><Input id={`${policyFieldId}-states`} required type="number" min="1" max="200" value={visionMaxStates} onChange={(e) => setVisionMaxStates(Number(e.target.value))} /></FormField>
+        <div className="grid gap-1.5 min-[640px]:col-span-2">
+          <CheckboxField checked={visionOwnedTestTarget} onCheckedChange={setVisionOwnedTestTarget} disabled={!policyProjectId || loadedPolicyProject !== policyProjectId}>This is a test environment I own (dev/staging)</CheckboxField>
+          <Hint className="pl-[1.625rem] text-xs">Lets the agent-loop engine fill in and submit forms and use controls that save, send or delete test data on the allowed origins. Leave off for public or production sites.</Hint>
+        </div>
       </>}
       <div className="min-[640px]:col-span-2"><Button variant="outline" type="submit" disabled={!policyProjectId || loadedPolicyProject !== policyProjectId}>Save project policy</Button></div>
     </form>

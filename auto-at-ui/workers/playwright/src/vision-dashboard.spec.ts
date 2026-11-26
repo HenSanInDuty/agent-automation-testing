@@ -62,11 +62,11 @@ test.beforeAll(async ({ browser }) => {
 
 async function fixture(page: Page, legacy = false) {
   page.on("pageerror", (error) => { console.log("Fixture dashboard error:", error.message); });
-  const state = { highlight: false, agentStep: false, progressStage: null as string | null, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
+  const state = { taskAssessment: null as Record<string, unknown> | null, policyWrites: [] as unknown[], projectPolicy: { allowed_origins: ["https://fixture.test"], vision_max_hops: 3, vision_max_states: 8, vision_owned_test_target: false } as Record<string, unknown>, highlight: false, agentStep: false, progressStage: null as string | null, report: null as Record<string, unknown> | null, extra: 0, calls: 0, delay: false, release: () => {}, exploration: "running", completionReason: null as string | null, role: "viewer", configured: true, catalogueFails: false, evidenceFails: false, screenFails: false, screenCalls: 0, missingCapture: false, saveFails: false, stale: false, writes: [] as unknown[], submissions: [] as unknown[], reloads: [] as { sessionId: string; payload: unknown; key: string | undefined }[],
     codexReadiness: { configured: true, online: true, authenticated: true, capabilities_qualified: true, model_access: "unverified", failure_code: null, busy: false } as NonNullable<VisionProvider["bridge_readiness"]>,
     progressEvents: null as VisionProgressActivity[] | null,
     policy: { enabled: false, provider: "huggingface", model: "custom/hf-model", raw_screenshot_transfer_accepted: true, raw_screenshot_transfer_provider: "huggingface", max_steps: 3, max_screenshot_bytes: 1000, max_session_seconds: 120, max_cost_usd: 0, max_requests_per_minute: 5 } as VisionPolicy };
-  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60, ...(id === sessionB && state.agentStep ? { engine: "agent_loop" } : {}) });
+  const session = (id: string) => ({ id, project_id: project, correlation_id: id, state: state.exploration, provider: id === sessionC ? state.policy.provider : "huggingface", model: id === sessionC ? state.policy.model : "historical/hf-model", trace_version: legacy ? "legacy" : "v4", max_hops: 3, max_states: 8, max_session_seconds: 60, ...(id === sessionB && state.agentStep ? { engine: "agent_loop" } : {}), ...(state.taskAssessment ? { engine: "agent_loop", task_assessment: state.taskAssessment } : {}) });
   const frame = (id: string) => ({ id, availability: "retained", reason_code: null });
   const operation = (number: number, id: string) => ({ id: `${id}-op${number}`, sequence: number, purpose: number === 1 ? "setup" : number === 3 ? "restore" : "explore", action_kind: number === 1 ? "navigate" : number === 3 ? "back" : "click", status: "completed", started_at: "2026-09-08T12:00:00Z", outcome_code: "observed", state_id: "root", locator_id: `${id}-locator${number}`, executed_click: state.highlight && number !== 1 && number !== 3 ? { x: 320 / 1279, y: 240 / 719, viewport_width: 1280, viewport_height: 720, before_frame_id: id + "-before" + number, confirmed_at: "2026-09-08T12:00:01Z" } : null, before: frame(`${id}-before${number}`), after: state.missingCapture ? { id: null, availability: "missing", reason_code: "capture_failed" } : frame(`${id}-after${number}`) });
   const locators = (id: string) => [2, 4].map((n) => ({ id: `${id}-locator${n}`, operation_id: `${id}-op${n}`, status: "verified", reason_code: null, verified_at: "2026-09-08T12:00:00Z", descriptor: { strategy: "role", role: "button", value: n === 2 ? "Branch A" : "Branch B", scope: [] }, bounding_box: state.highlight ? { x: 280 / 1280, y: 220 / 720, width: 180 / 1280, height: 48 / 720 } : { x: .2, y: .2, width: .2, height: .1 } }));
@@ -97,7 +97,10 @@ async function fixture(page: Page, legacy = false) {
       }
       return json(state.policy);
     }
-    if (path.endsWith("/policy")) return json({ allowed_origins: [], vision_max_hops: 3, vision_max_states: 8 });
+    if (path.endsWith("/policy")) {
+      if (route.request().method() === "PUT") { const body = route.request().postDataJSON(); state.policyWrites.push(body); state.projectPolicy = { ...state.projectPolicy, ...body }; }
+      return json(state.projectPolicy);
+    }
     if (path.endsWith("/explorations") && route.request().method() === "POST") {
       state.submissions.push(route.request().postDataJSON());
       if (state.stale) return route.fulfill({ status: 409, json: { detail: { code: "vision_policy_changed" } }, headers });
@@ -114,7 +117,7 @@ async function fixture(page: Page, legacy = false) {
       if (state.delay && id === sessionA) { state.delay = false; await new Promise<void>((resolve) => { state.release = resolve; }); }
       return json({ session_id: id, schema_version: "v1", revision: String(state.extra), trace_version: legacy ? "legacy" : "v4", items: Array.from({ length: 4 + state.extra }, (_, n) => ({ ...operation(n + 1, id), ...(state.agentStep && id === sessionB && n === 1 ? { agent_step: agentStep } : {}) })), locators: locators(id), next_sequence: 4 + state.extra, has_more: false });
     }
-    if (path.endsWith("/result")) return json({ exploration_report: state.report ?? undefined, schema_version: "v1", session_id: id, project_id: project, revision: String(state.extra), exploration_state: state.exploration, completion_reason: state.completionReason, evidence_status: legacy ? "legacy_evidence_only" : "available", counts: { operations: 4 + state.extra, verified_locators: 2 }, branches: [], handoffs: [{ id: "handoff", branches: [2, 4].map((n, i) => ({ id: `branch${i}`, status: "ready", reason_code: null, steps: [{ operation_id: `${id}-op1` }, { operation_id: `${id}-op${n}` }] })) }], links: { handoff: { state: "ready" }, generation: { state: "failed" }, draft: { state: "not_started" }, run: { state: "failed", id: "run-fixture", href: "/runs/run-fixture" }, report: { state: "unavailable" } }, limitations: ["Business outcome unverified."] });
+    if (path.endsWith("/result")) return json({ exploration_report: state.report ?? undefined, schema_version: "v1", session_id: id, project_id: project, revision: String(state.extra), exploration_state: state.exploration, completion_reason: state.completionReason, task_assessment: state.taskAssessment, evidence_status: legacy ? "legacy_evidence_only" : "available", counts: { operations: 4 + state.extra, verified_locators: 2 }, branches: [], handoffs: [{ id: "handoff", branches: [2, 4].map((n, i) => ({ id: `branch${i}`, status: "ready", reason_code: null, steps: [{ operation_id: `${id}-op1` }, { operation_id: `${id}-op${n}` }] })) }], links: { handoff: { state: "ready" }, generation: { state: "failed" }, draft: { state: "not_started" }, run: { state: "failed", id: "run-fixture", href: "/runs/run-fixture" }, report: { state: "unavailable" } }, limitations: ["Business outcome unverified."] });
     if (path.endsWith("/locators") && state.evidenceFails) return route.fulfill({ status: 503, headers });
     if (path.endsWith("/screen")) { state.screenCalls++; return state.screenFails ? route.fulfill({ status: 503, headers }) : route.fulfill({ body: png, contentType: "image/png", headers }); }
     if (path.endsWith("/locators")) return json({ items: locators(id), has_more: false, next_id: null });
@@ -446,7 +449,7 @@ test("Agent loop engine is offered only when enabled and is sent only when chose
   await page.goto(`${dashboard}/agent?vision=${sessionA}`);
   const agentForm = await prepareExploration(page);
   await page.locator("#vision-engine").selectOption("agent_loop");
-  await expect(agentForm).toContainText("Agent loop: the model proposes actions step by step");
+  await expect(agentForm).toContainText("Agent loop: the agent works through your task step by step");
   await agentForm.getByRole("button", { name: "Start advisory exploration", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Start advisory exploration", exact: true }).click();
   await expect.poll(() => state.submissions.length).toBe(2);
@@ -983,4 +986,85 @@ test("nonadmin reads policy and safe failures while partial trace and draft fail
   await expect(result).toContainText("Draft generation failed");
   await expect(page.getByRole("region", { name: "Operation trace", exact: true })).toContainText("Open page");
   expect(state.writes).toHaveLength(0);
+});
+
+const taskAssessment = (overrides: Record<string, unknown> = {}) => ({
+  schema_version: "v1", status: "achieved", summary: "The cart contains the product the task asked for.",
+  checks: [
+    { expectation: "Cart shows one item", status: "met", evidence: "Cart badge reads 1 after Add to cart." },
+    { expectation: "Order total is visible", status: "not_checked", evidence: "The agent did not open the cart page." },
+  ],
+  source: "agent", stop_reason: "agent_done", facts: { actions_completed: 5, actions_failed: 1, actions_blocked_or_skipped: 2 }, advisory: true, ...overrides,
+});
+
+test("a completed agent session shows its advisory task assessment instead of a failure", async ({ page }) => {
+  const state = await fixture(page);
+  state.exploration = "completed"; state.completionReason = "agent_done"; state.taskAssessment = taskAssessment();
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const panel = page.getByRole("region", { name: "Task assessment", exact: true });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("Task achieved", { exact: true })).toBeVisible();
+  await expect(panel).toContainText("The cart contains the product the task asked for.");
+  await expect(panel.getByRole("list", { name: "Task checks" }).getByRole("listitem")).toHaveCount(2);
+  await expect(panel).toContainText("Cart shows one item");
+  await expect(panel).toContainText("Not checked");
+  await expect(panel).toContainText("Cart badge reads 1 after Add to cart.");
+  await expect(panel).toContainText("5 actions completed, 1 failed or rejected, 2 blocked or skipped");
+  await expect(panel).toContainText("Reported by the agent");
+  await expect(panel).toContainText("Advisory assessment by the agent. It is not a test verdict; a deterministic test run decides pass/fail.");
+  const detail = page.getByLabel("Saved Vision session");
+  await expect(detail).not.toContainText("The agent finished its exploration goal");
+  await expect(detail).not.toContainText("Exploration stopped");
+  await expect(detail).toContainText("Exploration complete");
+  const box = await panel.boundingBox();
+  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath("task-assessment-achieved.png"), fullPage: false });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(panel).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await panel.screenshot({ path: test.info().outputPath("task-assessment-achieved-390.png") });
+  expect(state.writes).toHaveLength(0);
+});
+
+test("a not_achieved assessment, a step-limit assessment and the session list use the assessment labels", async ({ page }) => {
+  const state = await fixture(page);
+  state.exploration = "completed"; state.completionReason = "agent_step_limit";
+  state.taskAssessment = taskAssessment({ status: "not_achieved", source: "controller", stop_reason: "agent_done", summary: "The Add to cart button did nothing." });
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const panel = page.getByRole("region", { name: "Task assessment", exact: true });
+  await expect(panel.getByText("Task not achieved (page finding)", { exact: true })).toBeVisible();
+  await expect(panel).toContainText("Reported by the platform");
+  await page.getByText("Session history", { exact: true }).click();
+  await expect(page.getByLabel("Visual exploration sessions")).toContainText("Task not achieved (page finding)");
+  state.taskAssessment = taskAssessment({ status: "inconclusive", stop_reason: "agent_step_limit", summary: "Ran out of budget." });
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await expect(page.getByRole("region", { name: "Task assessment", exact: true })).toContainText("The model call budget ran out");
+  await expect(page.getByRole("region", { name: "Task assessment", exact: true }).getByText("Inconclusive", { exact: true })).toBeVisible();
+});
+
+test("an unavailable session without an assessment still shows its failure message", async ({ page }) => {
+  const state = await fixture(page);
+  state.exploration = "unavailable"; state.completionReason = "provider_timeout";
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const summary = page.getByRole("region", { name: "Exploration summary", exact: true });
+  await expect(summary).toContainText("The Vision provider did not respond within the allowed time");
+  await expect(page.getByRole("region", { name: "Task assessment", exact: true })).toHaveCount(0);
+});
+
+test("the owned test target flag is loaded, saved with the project policy and defaults to off", async ({ page }) => {
+  const state = await fixture(page);
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await page.getByText("Project settings", { exact: true }).click();
+  const owned = page.getByRole("checkbox", { name: "This is a test environment I own (dev/staging)" });
+  await expect(owned).toBeVisible();
+  await expect(owned).not.toBeChecked();
+  await expect(page.getByText("Leave off for public or production sites.")).toBeVisible();
+  await owned.click();
+  await page.getByRole("button", { name: "Save project policy", exact: true }).click();
+  await expect.poll(() => state.policyWrites.length).toBe(1);
+  expect(state.policyWrites[0]).toMatchObject({ vision_owned_test_target: true });
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await page.getByText("Project settings", { exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "This is a test environment I own (dev/staging)" })).toBeChecked();
 });

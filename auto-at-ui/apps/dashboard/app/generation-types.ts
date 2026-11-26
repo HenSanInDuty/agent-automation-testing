@@ -66,6 +66,19 @@ export type ProjectExecutionPolicy = {
   allowed_origins: string[];
   vision_max_hops: number;
   vision_max_states: number;
+  /** Owner declaration that the target is a test environment they own; GET always returns it, PUT omitted/null keeps the stored value. */
+  vision_owned_test_target?: boolean;
+};
+/** Advisory outcome of an agent-loop task session. Never a test verdict; a deterministic run decides pass/fail. */
+export type VisionTaskAssessment = {
+  schema_version: "v1";
+  status: "achieved" | "not_achieved" | "blocked" | "inconclusive";
+  summary: string;
+  checks: { expectation: string; status: "met" | "not_met" | "not_checked"; evidence: string }[];
+  source: "agent" | "controller";
+  stop_reason: "agent_done" | "agent_stopped" | "agent_step_limit";
+  facts: { actions_completed: number; actions_failed: number; actions_blocked_or_skipped: number };
+  advisory: true;
 };
 export type VisualExploration = {
   step_timeout_seconds?: number | null;
@@ -84,6 +97,7 @@ export type VisualExploration = {
   max_session_seconds: number;
   safe_failure_reason: string | null;
   engine?: "planner" | "agent_loop";
+  task_assessment?: VisionTaskAssessment | null;
 };
 export type VisualAction = {
   sequence: number;
@@ -162,4 +176,4 @@ export type VisualLocator = { originating_frame_id?: string | null; id: string; 
 export type VisualPageInventory = { state_id: string; checkpoint_id: string; page_url: string | null; url_fingerprint: string; interaction_scope?: "all" | "buttons" | "visual_buttons"; truncated: boolean; scrollable: boolean; skipped_count: number; controls: { key: string; button_kind?: "native" | "styled_link" | "custom" | null; role: string; name: string; status: "pending" | "queued" | "completed" | "failed" | "rejected"; proposal_id: string | null; operation_id: string | null }[] };
 export type VisualTrace = { schema_version: string; session_id: string; revision: string; trace_version: string; items: VisualOperation[]; locators: VisualLocator[]; pages?: VisualPageInventory[]; next_sequence: number; has_more: boolean };
 export type VisionHandoffBranch = { id: string; status: "ready" | "blocked"; reason_code: string | null; steps: { operation_id: string; locator_id: string | null; input_reference: string | null }[] };
-export type VisionResult = { exploration_report?: VisionExplorationReport; schema_version: string; session_id: string; project_id: string; revision: string; exploration_state: string; completion_reason: string | null; evidence_status: string; counts: Record<string, number>; branches: { id: string; status: string; reason_code: string | null }[]; handoffs: { id: string; branches: VisionHandoffBranch[] }[]; links: Record<"handoff" | "generation" | "draft" | "run" | "report", { state: string; id: string | null; href: string | null; reason_code?: string | null }>; limitations: string[] };
+export type VisionResult = { exploration_report?: VisionExplorationReport; schema_version: string; session_id: string; project_id: string; revision: string; exploration_state: string; completion_reason: string | null; task_assessment?: VisionTaskAssessment | null; evidence_status: string; counts: Record<string, number>; branches: { id: string; status: string; reason_code: string | null }[]; handoffs: { id: string; branches: VisionHandoffBranch[] }[]; links: Record<"handoff" | "generation" | "draft" | "run" | "report", { state: string; id: string | null; href: string | null; reason_code?: string | null }>; limitations: string[] };
