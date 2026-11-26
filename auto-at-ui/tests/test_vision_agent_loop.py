@@ -182,7 +182,7 @@ def test_allowed_hosts_are_bounded_and_the_worst_prompt_fits_the_request_cap():
         tenant_id=obs.tenant_id, project_id=obs.project_id, session_id=obs.session_id,
         fencing_token=1, observation_id=obs.observation_id, snapshot_id=obs.snapshot_id,
         state_fingerprint=SHA, job_id=uuid4(), bridge_id=uuid4(), correlation_id=uuid4(),
-        request_sequence=1, prompt_version="agent-loop-v2", stage="dom",
+        request_sequence=1, prompt_version="agent-loop-v3", stage="dom",
         created_at=datetime.now(UTC), deadline=datetime.now(UTC) + timedelta(seconds=60),
         consent=consent, consent_hash=content_hash(consent),
         inputs=dict(dom_sha256=SHA, dom_bytes=100, schema_sha256=SHA, schema_bytes=100),
@@ -538,6 +538,13 @@ def run_agent(disposable_database, monkeypatch, outputs, *, worker=None, exchang
     return seeded
 
 
+def ended(run):
+    """ADR-046: a natural end is `completed`, and its reason lives in the task assessment."""
+    assert run.record.state == "completed" and run.record.safe_failure_reason is None
+    assert run.record.task_assessment["advisory"] is True
+    return run.record.task_assessment["stop_reason"]
+
+
 # --------------------------------------------------------------------------- loop behaviour
 
 def test_three_steps_reach_agent_done_with_a_complete_step_log(disposable_database, monkeypatch):
@@ -548,7 +555,7 @@ def test_three_steps_reach_agent_done_with_a_complete_step_log(disposable_databa
         DONE,
     ]
     run = run_agent(disposable_database, monkeypatch, outputs)
-    assert run.error is None and run.record.safe_failure_reason == "agent_done"
+    assert run.error is None and ended(run) == "agent_done"
     assert [s.step_index for s in run.steps] == [1, 2, 3]
     first = run.steps[0]
     assert (first.evaluation_previous_goal, first.memory, first.next_goal) == (
@@ -568,7 +575,7 @@ def test_three_steps_reach_agent_done_with_a_complete_step_log(disposable_databa
     # Only the newest snapshot reaches the model; earlier refs are gone.
     snapshot = run.exchange.calls[1]["agent_context"].snapshot
     assert set(re.findall(r"^(\d+):", snapshot, re.M)) == {"2"}
-    assert all(c["prompt_version"] == "agent-loop-v2" for c in run.exchange.calls)
+    assert all(c["prompt_version"] == "agent-loop-v3" for c in run.exchange.calls)
     assert len(run.exchange.calls) == 3 and run.worker.closed
     # Every acted control carries its DOM binding; nothing restores or replays.
     assert {op.purpose for op in run.operations} <= {"setup", "explore"}
@@ -587,7 +594,7 @@ def test_open_request_carries_agent_mode_terms_and_a_budget_for_twenty_calls(
     assert opened.agent_mode is True and opened.blocked_action_terms == BLOCKED_ACTION_TERMS
     assert worker_operation_budget(opened.max_states, opened.max_hops) >= 401
     assert opened.interaction_scope == "all" and opened.allowed_origins == ("https://app.test",)
-    assert run.record.safe_failure_reason == "agent_stopped"
+    assert ended(run) == "agent_stopped"
     assert [s.stop_reason for s in run.steps] == ["agent_stopped"]
     assert len(run.exchange.calls) == 1
 
@@ -690,7 +697,7 @@ def test_a_stale_observation_is_refreshed_with_a_read_only_wait(disposable_datab
     run = run_agent(disposable_database, monkeypatch, [DONE], worker=worker)
     refresh = [p for p in run.worker.prepares if p.refresh_observation]
     assert len(refresh) == 1 and refresh[0].purpose == "setup" and refresh[0].action.kind == "wait"
-    assert run.record.safe_failure_reason == "agent_done"
+    assert ended(run) == "agent_done"
 
 
 def _redirect_worker(url, errors):
@@ -713,7 +720,7 @@ def test_a_stale_read_off_origin_is_refreshed_with_the_read_only_wait(
     # the read-only refresh through off-origin, so the session goes on instead of origin_blocked.
     worker = _redirect_worker("https://other.test/support", ["state_mismatch"])
     run = run_agent(disposable_database, monkeypatch, [step(click("1:1")), DONE], worker=worker)
-    assert run.error is None and run.record.safe_failure_reason == "agent_done"
+    assert run.error is None and ended(run) == "agent_done"
     assert len(_refreshes(run)) == 1 and run.worker.explore_kinds() == ["click"]
     assert not any(op.outcome_code == "origin_blocked" for op in run.operations)
 
@@ -744,7 +751,7 @@ def test_a_stale_read_inside_the_allowlist_still_refreshes_with_a_wait(
 ):
     worker = _redirect_worker("https://app.test/next", ["state_mismatch"])
     run = run_agent(disposable_database, monkeypatch, [step(click("1:1")), DONE], worker=worker)
-    assert len(_refreshes(run)) == 1 and run.record.safe_failure_reason == "agent_done"
+    assert len(_refreshes(run)) == 1 and ended(run) == "agent_done"
 
 
 # --------------------------------------------------------------------------- budget and time
@@ -753,7 +760,7 @@ def test_twenty_calls_of_ten_actions_run_inside_the_worker_budget_then_stop(
     disposable_database, monkeypatch,
 ):
     run = run_agent(disposable_database, monkeypatch, [step(*[wait() for _ in range(10)])])
-    assert run.error is None and run.record.safe_failure_reason == "agent_step_limit"
+    assert run.error is None and ended(run) == "agent_step_limit"
     assert len(run.exchange.calls) == 20 and len(run.steps) == 20
     assert len(run.worker.prepares) == 201 <= worker_operation_budget(
         run.worker.open_request.max_states, run.worker.open_request.max_hops)
@@ -781,7 +788,7 @@ def test_every_bridge_call_counts_including_schema_retries(disposable_database, 
     run = run_agent(disposable_database, monkeypatch, outputs,
                     policy=codex_policy(max_steps=3, max_requests_per_minute=10_000))
     assert len(run.exchange.calls) == 3 and len(run.steps) == 2
-    assert run.record.safe_failure_reason == "agent_step_limit"
+    assert ended(run) == "agent_step_limit"
     assert [c["sequence"] for c in run.exchange.calls] == [1, 2, 3]
 
 
@@ -803,7 +810,7 @@ def test_need_screenshot_with_consent_takes_one_more_call_with_the_image(
     run = run_agent(disposable_database, monkeypatch, outputs, policy=policy)
     assert [c["image"] is not None for c in run.exchange.calls] == [False, True]
     assert [c["sequence"] for c in run.exchange.calls] == [1, 2]
-    assert run.record.safe_failure_reason == "agent_done"
+    assert ended(run) == "agent_done"
 
 
 def test_need_screenshot_without_consent_skips_the_image_stage_and_tells_the_model(
@@ -815,7 +822,7 @@ def test_need_screenshot_without_consent_skips_the_image_stage_and_tells_the_mod
     assert len(run.exchange.calls) == 2
     assert "screenshot unavailable" in run.exchange.calls[1]["agent_context"].snapshot
     assert run.steps[0].stop_reason == "screenshot_unavailable"
-    assert run.record.safe_failure_reason == "agent_done"
+    assert ended(run) == "agent_done"
 
 
 def test_a_model_that_only_proposes_blocked_actions_ends_at_the_limit_without_hanging(
@@ -823,7 +830,7 @@ def test_a_model_that_only_proposes_blocked_actions_ends_at_the_limit_without_ha
 ):
     run = run_agent(disposable_database, monkeypatch, [step(click("1:4"), click("1:5"))],
                     policy=codex_policy(max_steps=5, max_requests_per_minute=10_000))
-    assert run.record.safe_failure_reason == "agent_step_limit"
+    assert ended(run) == "agent_step_limit"
     assert len(run.exchange.calls) == 5 and run.worker.explore_kinds() == []
     assert all(s.operation_ids == [] for s in run.steps)
 
@@ -838,7 +845,7 @@ def test_request_rate_per_minute_is_respected_with_a_fake_clock(disposable_datab
     policy = codex_policy(max_steps=3, max_requests_per_minute=2)
     run = run_agent(disposable_database, monkeypatch, [step(wait()), step(wait()), step(wait())],
                     policy=policy, clock=(lambda: ticks[0], sleep), step_timeout_seconds=600)
-    assert run.record.safe_failure_reason == "agent_step_limit"
+    assert ended(run) == "agent_step_limit"
     assert sleeps == [30.0, 30.0]
 
 
@@ -869,7 +876,7 @@ def test_every_explore_operation_reports_the_worker_parent_not_the_previous_oper
     """Regression (live r3): `worker_result_mismatch` on the second explore click."""
     run = run_agent(disposable_database, monkeypatch,
                     [step(click("1:1")), step(wait()), step(wait()), DONE])
-    assert run.record.safe_failure_reason == "agent_done"
+    assert ended(run) == "agent_done"
     root = run.worker.prepares[0].operation_id
     explore = [p for p in run.worker.prepares if p.purpose == "explore"]
     assert len(explore) >= 3
@@ -892,7 +899,7 @@ def test_the_lease_is_renewed_every_step_even_when_no_action_reaches_the_worker(
                             on_call=lambda n: mark.append(len(renewals)) if n == 1 else None)
     run = run_agent(disposable_database, monkeypatch, [], exchange=exchange, on_seed=spy,
                     policy=codex_policy(max_steps=20, max_requests_per_minute=10_000))
-    assert run.record.safe_failure_reason == "agent_done" and run.worker.explore_kinds() == []
+    assert ended(run) == "agent_done" and run.worker.explore_kinds() == []
     assert len(run.exchange.calls) == 4 and len(renewals) - mark[0] >= 3
 
 

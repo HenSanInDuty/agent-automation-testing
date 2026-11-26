@@ -63,6 +63,13 @@ export async function startAgentLoopTarget() {
       response.end("fixture"); return;
     }
     response.setHeader("content-type", "text/html; charset=utf-8");
+    if (path === "/login") {
+      // ADR-046: a login form as real pages write it (id/name "password", a label that is not a sensitive word).
+      response.end(`<!doctype html><meta charset="utf-8"><form action="/submit" method="post">
+        <label for="username">Tên đăng nhập</label><input id="username" name="username">
+        <label for="password">Mật khẩu</label><input type="password" id="password" name="password">
+        <button type="submit">Đăng nhập</button></form>`); return;
+    }
     if (path === "/next") { response.end(`<!doctype html><meta charset="utf-8"><a href="/">Về trang chủ</a>`); return; }
     if (path === "/submit") { response.end(`<!doctype html><meta charset="utf-8"><p>Đã gửi</p>`); return; }
     if (path === "/beforeunload") {

@@ -235,6 +235,47 @@ test("agent mode blocks submit, form buttons, downloads and listed terms but not
   expect(register.operation, register.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
 });
 
+test("an owned test target (ADR-046) may use sensitive and submit controls, never downloads or Enter", async () => {
+  const opened = await agent({ blocked_action_terms: [], required_capabilities: ["owned-test-target-v1"] });
+  expect(opened.capabilities).toContain("owned-test-target-v1");
+  const home = await observe();
+  const download = await propose(home, "Tải về");
+  expect(download.operation, "download").toMatchObject({ status: "rejected", outcome_code: "sensitive_action_blocked" });
+  const newline = await propose(home, "Ô một", TYPE("a\nb"));
+  expect(newline.operation.outcome_code).toBe("sensitive_action_blocked");
+  const sensitive = await act(home, "Xoá tài khoản");
+  expect(sensitive.operation, sensitive.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  const submit = await propose(await observe(), "Gửi đi");
+  expect(submit.operation.status, submit.operation.outcome_code ?? "").toBe("prepared");
+});
+
+test("a password input stays out of the snapshot of a read-only agent session", async () => {
+  await agent({ target_url: `${target.origin}/login` });
+  const hidden = await observe();
+  expect(hidden.data.observation.elements.map(item => item.name)).toEqual(["Tên đăng nhập", "Đăng nhập"]);
+  expect(hidden.data.observation.skipped_count).toBe(1);
+});
+
+test("on an owned test target a password input is a control and its value is never exported", async () => {
+  await agent({ target_url: `${target.origin}/login`, blocked_action_terms: [], required_capabilities: ["owned-test-target-v1"] });
+  const shown = await observe();
+  expect(shown.data.observation.elements.map(item => [item.name, item.input_type, item.editable])).toEqual([
+    ["Tên đăng nhập", "text", true], ["Mật khẩu", "other", true], ["Đăng nhập", null, false]]);
+  expect(shown.data.observation.skipped_count).toBe(0);
+  const typed = await act(shown, "Mật khẩu", TYPE("Demo1234"));
+  expect(typed.operation, typed.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect(await page.locator("#password").inputValue()).toBe("Demo1234");
+  // The grounded locator is the accessible name; no descriptor, name or result field carries the typed value.
+  expect(typed.locator?.descriptor).toMatchObject({ strategy: "role", value: "Mật khẩu" });
+  expect(JSON.stringify([typed, await observe()])).not.toContain("Demo1234");
+});
+
+test("without the capability an empty term list still blocks submit controls in agent mode", async () => {
+  await agent({ blocked_action_terms: [] });
+  const blocked = await propose(await observe(), "Gửi đi");
+  expect(blocked.operation).toMatchObject({ status: "rejected", outcome_code: "sensitive_action_blocked" });
+});
+
 test("v4 mode does not apply the agent blocklist", async () => {
   await openSession({ blocked_action_terms: ["xoá tài khoản"] });
   const home = await observe();

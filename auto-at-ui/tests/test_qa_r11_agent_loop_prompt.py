@@ -1,4 +1,4 @@
-"""QA r11: `agent-loop-v2` prompt renders with real observations and keeps the old safety rules.
+"""QA r11: `agent-loop-v3` prompt renders with real observations and keeps the old safety rules.
 
 Offline only. The scripted "model" below follows the written rule on purpose; it proves the
 loop pieces (render_snapshot, prompt, check_action, call cap) accept a compliant run, not that a
@@ -55,9 +55,9 @@ def test_v2_prompt_renders_with_real_snapshot_signals(more_below, skipped):
 
 def test_v2_adds_cover_start_page_and_complete_ban():
     for needle in ("Covering the starting page first", "navigate", "back", "scroll down",
-                   "Do not return complete while the starting page"):
+                   "Do not return a result while the starting page"):
         assert needle in INSTRUCTIONS
-    assert prompt_module.PROMPT_VERSION == "agent-loop-v2"
+    assert prompt_module.PROMPT_VERSION == "agent-loop-v3"
 
 
 def test_new_instruction_is_generic():
@@ -102,9 +102,9 @@ def test_page_text_cannot_close_the_untrusted_block():
 # --- QA-R11-06: version flows through bridge job and provenance ----------------------------
 
 def test_bridge_and_session_use_v2():
-    assert set(PROMPT_BUILDERS) == {"codex-dom-v11", "agent-loop-v2"}
+    assert set(PROMPT_BUILDERS) == {"codex-dom-v11", "agent-loop-v3"}
     req = agent_job()[0]
-    assert req.prompt_version == PROMPT_VERSION == "agent-loop-v2"
+    assert req.prompt_version == PROMPT_VERSION == "agent-loop-v3"
     assert loop.PROMPT_VERSION == PROMPT_VERSION
     source = inspect.getsource(loop)
     assert "agent-loop-v" not in source  # no literal: provenance follows the constant

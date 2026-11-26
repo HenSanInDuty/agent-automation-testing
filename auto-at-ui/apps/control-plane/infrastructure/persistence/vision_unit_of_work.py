@@ -137,7 +137,8 @@ class SqlAlchemyVisualTraceUnitOfWork:
                 self._progress(session, lease, "started", "started")
             return self._detached(record)
 
-    def finish(self, lease, reason=None, *, handoff=None, intent=None, handoff_reason=None):
+    def finish(self, lease, reason=None, *, handoff=None, intent=None, handoff_reason=None,
+               task_assessment=None):
         with transactional_session(self._factory) as session:
             record = SqlAlchemyVisualTraceRepository(session)._fence(lease)
             repository = SqlAlchemyVisionRepository(session)
@@ -155,6 +156,9 @@ class SqlAlchemyVisualTraceUnitOfWork:
             if record.state != "cancelled":
                 record.state = "unavailable" if reason else "completed"
             record.safe_failure_reason = reason
+            if task_assessment is not None:
+                # ADR-046: model-authored text is redacted like the step log; advisory only.
+                record.task_assessment = redact_value(task_assessment)
             if handoff is not None:
                 SqlAlchemyVisualTraceRepository(session).add_handoff(lease, handoff)
                 accepted = False

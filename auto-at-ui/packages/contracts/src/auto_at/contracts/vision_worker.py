@@ -43,9 +43,9 @@ class VisualWorkerOpen(VisualWorkerIdentity):
     required_capabilities: tuple[Literal[
         "dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1",
         "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1",
-        "click-context-v1", "agent-dom-path-v1",
+        "click-context-v1", "agent-dom-path-v1", "owned-test-target-v1",
     ], ...] = Field(
-        default=(), max_length=9,
+        default=(), max_length=10,
     )
     # Agent-loop engine only: relaxes worker guards behind one flag and carries the single
     # source of sensitive-control terms (owned by the control plane).

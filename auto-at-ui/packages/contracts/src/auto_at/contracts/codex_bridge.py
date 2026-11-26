@@ -223,6 +223,17 @@ class AgentLoopContext(ClosedModel):
     )
     snapshot_version: int = Field(ge=1, le=1_000_000)
     snapshot: str = Field(max_length=AGENT_SNAPSHOT_MAX_CHARS)
+    # ADR-046: the project owner marked the target as a test environment they own, so the
+    # prompt may let the agent fill and submit forms. Absent (False) keeps the read-only rules.
+    owned_test_target: bool = False
+
+    @model_serializer(mode="wrap")
+    def omit_default_owned_test_target(self, handler):
+        # Keeps the canonical bytes of every request for a read-only target unchanged.
+        data = handler(self)
+        if not data.get("owned_test_target"):
+            data.pop("owned_test_target", None)
+        return data
 
 
 class CodexBridgeRequest(CodexScope):
@@ -417,12 +428,34 @@ class AgentStep(ClosedModel):
     actions: tuple[AgentAction, ...] = Field(min_length=1, max_length=AGENT_MAX_ACTIONS)
 
 
+AGENT_TASK_CHECKS_MAX = 12
+
+
+class AgentTaskCheck(ClosedModel):
+    """One expectation of the task and what the agent observed for it."""
+
+    expectation: str = Field(min_length=1, max_length=300)
+    status: Literal["met", "not_met", "not_checked"]
+    evidence: str = Field(min_length=1, max_length=300)
+
+
+class AgentTaskResult(ClosedModel):
+    """ADR-046: the agent's end-of-task assessment. Advisory only, never a test verdict."""
+
+    outcome: Literal["task_result"] = "task_result"
+    status: Literal["achieved", "not_achieved", "blocked"]
+    summary: str = Field(min_length=1, max_length=1000)
+    checks: tuple[AgentTaskCheck, ...] = Field(max_length=AGENT_TASK_CHECKS_MAX)
+
+
 AgentLoopOutput = Annotated[
-    AgentStep | CodexNeedScreenshot | CodexStop, Field(discriminator="outcome"),
+    AgentStep | CodexNeedScreenshot | CodexStop | AgentTaskResult,
+    Field(discriminator="outcome"),
 ]
 # What a bridge response may carry: either family; `CodexOutput` itself never gains a variant.
 BridgeOutput = Annotated[
-    CodexCandidates | AgentStep | CodexNeedScreenshot | CodexStop, Field(discriminator="outcome"),
+    CodexCandidates | AgentStep | CodexNeedScreenshot | CodexStop | AgentTaskResult,
+    Field(discriminator="outcome"),
 ]
 
 

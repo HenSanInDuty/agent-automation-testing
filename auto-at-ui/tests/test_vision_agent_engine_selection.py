@@ -321,7 +321,7 @@ def test_migration_adds_engine_and_step_table_and_downgrade_removes_only_them(
         ))
         connection.execute(sessions.insert().values(**session_values(scope)))
 
-    command.upgrade(alembic, "head")
+    command.upgrade(alembic, MIGRATION)
     assert version(engine) == MIGRATION
     columns = {c["name"]: c for c in inspect(engine).get_columns("visual_exploration_sessions")}
     assert columns["exploration_engine"]["nullable"] is False
@@ -364,7 +364,7 @@ def test_migration_adds_engine_and_step_table_and_downgrade_removes_only_them(
     assert "exploration_engine" not in columns and "trace_version" in columns
     with engine.connect() as connection:
         assert connection.scalar(text("SELECT count(*) FROM visual_exploration_sessions")) == 1
-    command.upgrade(alembic, "head")
+    command.upgrade(alembic, MIGRATION)
     assert version(engine) == MIGRATION
 
 

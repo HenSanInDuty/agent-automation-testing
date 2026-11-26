@@ -5,7 +5,7 @@ import { canonical, requireVision, safeLocatorValue, validateVision,
   type CodexBoundObservation, type CodexDomElement, type CodexElementBinding,
   type VisualLocatorDescriptor, type VisualWorkerObserveDom } from "./vision-contract.js";
 import { BOX_CENTER_TOLERANCE_PX, equivalentState, inspectState, interactionScope, logStateMismatch, type RuntimeState } from "./vision-checkpoints.js";
-import { groundLocator, resolveDescriptor } from "./vision-locators.js";
+import { credentialInputsAllowed, groundLocator, resolveDescriptor } from "./vision-locators.js";
 import { logVisionEvent, visionLogScope } from "./vision-observability.js";
 import { contextSignature, targetSignature, targetActionSignature } from "./vision-revalidation.js";
 
@@ -49,7 +49,7 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
   // A function so that A2 can repeat the walk once; the first call is the unchanged single walk.
   const traverse = async () => {
   const visualButtons = interactionScope(page) === "visual_buttons" || agentPaths ? await page.evaluate(visualButtonSemantics) : [];
-  return page.evaluate(({ limit, sensitive, scope, visualButtons, agentPaths }) => {
+  return page.evaluate(({ limit, sensitive, scope, visualButtons, agentPaths, credentials }) => {
     const buttonMap = new Map(visualButtons.map(item => [document.querySelector(item.path), item]));
     // Keep overlap, but do not step over a control clipped by the lower edge.
     // This geometry-only hint stays in the private worker projection, not model input.
@@ -106,14 +106,18 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
             el.matches('button,input[type="button"],input[type="submit"],input[type="reset"]')))) continue;
         const input = el as HTMLInputElement;
         const tag = el.tagName.toLowerCase(), type = el.getAttribute("type")?.toLowerCase() ?? "text";
-        if (type === "password" || type === "hidden") { this.skip("private_input"); continue; }
+        // ADR-046: a password input is a control only on an owned test target; its value is never read.
+        if (type === "hidden" || (type === "password" && !credentials)) { this.skip("private_input"); continue; }
         if (input.disabled || el.getAttribute("aria-disabled") === "true") { this.skip("disabled"); continue; }
         const formControl = el.matches("input,textarea,select,[contenteditable]");
         const labelled = (el.getAttribute("aria-labelledby") ?? "").split(/\s+/).map(id => doc.getElementById(id)?.textContent ?? "").join(" ").trim();
         const labels = Array.from(input.labels ?? []).map(label => label.textContent?.trim() ?? "");
         const rawNames = [el.getAttribute("aria-label"), labelled, ...labels, el.getAttribute("title"), formControl ? null : el.textContent?.trim()];
         // Check all labels and identity attributes before truncation; sensitive controls are omitted.
-        const identity = [...rawNames, el.getAttribute("data-testid"), el.getAttribute("id"), el.getAttribute("name")];
+        // On an owned test target only the exported names are screened: `id="password"` is how a login form is
+        // written, and an unsafe attribute is still dropped later as a locator candidate.
+        const identity = credentials ? rawNames
+          : [...rawNames, el.getAttribute("data-testid"), el.getAttribute("id"), el.getAttribute("name")];
         if (identity.some(value => value && (secret.test(value) || /[\x00-\x1f]/.test(value)))) { this.skip("sensitive_identity"); continue; }
         const name = (rawNames.find(value => value?.trim()) ?? "").trim();
         if ([...name].length > 120) { this.skip("name_length_limit"); continue; }
@@ -164,7 +168,8 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
     return { candidates, unsupported: [...unsupported], truncated, skipped, skipReasons, nextScrollDelta,
       // This transport flag means there is another vertical viewport to inspect.
       scrollable: Math.ceil(scrollY + innerHeight) < document.documentElement.scrollHeight - 1 };
-  }, { limit: request.max_elements, scope: interactionScope(page), visualButtons, agentPaths, sensitive: String.raw`\b(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{7,}\b|https?:\/\/|\[redacted\]` });
+  }, { limit: request.max_elements, scope: interactionScope(page), visualButtons, agentPaths,
+    credentials: credentialInputsAllowed(page), sensitive: String.raw`\b(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{7,}\b|https?:\/\/|\[redacted\]` });
   };
   let found = await traverse();
   const elements: CodexDomElement[] = [], bindings: CodexElementBinding[] = [];

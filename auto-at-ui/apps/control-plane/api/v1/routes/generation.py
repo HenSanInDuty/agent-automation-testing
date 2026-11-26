@@ -94,12 +94,15 @@ class PolicyRequest(BaseModel):
     allowed_origins: list[str] = Field(min_length=1, max_length=100)
     vision_max_hops: int = Field(default=5, ge=1, le=20)
     vision_max_states: int = Field(default=50, ge=1, le=200)
+    # ADR-046. Omitted (null) keeps the stored value, so older clients cannot reset it.
+    vision_owned_test_target: bool | None = None
 
 
 class PolicyResponse(BaseModel):
     allowed_origins: list[str] = Field(default_factory=list, max_length=100)
     vision_max_hops: int = Field(default=5, ge=1, le=20)
     vision_max_states: int = Field(default=50, ge=1, le=200)
+    vision_owned_test_target: bool = False
 
 
 def _request_response(
@@ -164,12 +167,14 @@ def set_policy(
     except (ValueError, AuthorizationError) as error:
         raise HTTPException(status_code=404, detail="Project not found.") from error
     with transactional_session(create_session_factory(settings)) as session:
-        SqlAlchemyGenerationRepository(session).set_policy(
+        owned = SqlAlchemyGenerationRepository(session).set_policy(
             tenant_id, project_id, normalized, vision_max_hops=payload.vision_max_hops,
             vision_max_states=payload.vision_max_states,
+            vision_owned_test_target=payload.vision_owned_test_target,
         )
     return PolicyRequest(allowed_origins=normalized, vision_max_hops=payload.vision_max_hops,
-                         vision_max_states=payload.vision_max_states)
+                         vision_max_states=payload.vision_max_states,
+                         vision_owned_test_target=owned)
 
 
 @router.get("/projects/{project_id}/policy", response_model=PolicyResponse)
@@ -189,6 +194,7 @@ def get_policy(
         allowed_origins=[] if policy is None else policy.allowed_origins,
         vision_max_hops=5 if policy is None else policy.vision_max_hops,
         vision_max_states=50 if policy is None else policy.vision_max_states,
+        vision_owned_test_target=False if policy is None else policy.vision_owned_test_target,
     )
 
 

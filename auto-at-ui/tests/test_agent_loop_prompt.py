@@ -1,4 +1,4 @@
-"""`agent-loop-v2` prompt: block order, cache prefix, redaction, injection containment."""
+"""`agent-loop-v3` prompt: block order, cache prefix, redaction, injection containment."""
 
 import json
 import os
@@ -104,7 +104,7 @@ def test_different_memory_changes_nothing_before_the_history_block():
 
 
 def test_prompt_version_matches_the_readme_row():
-    assert PROMPT_VERSION == "agent-loop-v2"
+    assert PROMPT_VERSION == "agent-loop-v3"
     rows = [line for line in README.read_text(encoding="utf-8").splitlines()
             if line.startswith("| `agent_loop.py`")]
     assert len(rows) == 1 and f"`{PROMPT_VERSION}`" in rows[0]
@@ -116,7 +116,7 @@ def test_v2_instructs_covering_the_starting_page_before_complete():
     assert "more below: yes" in text and "control ngoài snapshot" in text
     assert "Covering the starting page first" in text
     assert "return with navigate (or back)" in text and "scroll down" in text
-    assert "Do not return complete while the starting page still shows" in text
+    assert "Do not return a result while the starting page still shows" in text
     # Generic: no site-specific content in the instructions.
     assert "mongchiton" not in text.lower() and "http" not in text.lower()
 
@@ -177,7 +177,7 @@ def test_instructions_cover_the_paper_rules_and_the_ref_format():
     assert "Never repeat an identical action" in text and "reconsider the goal" in text
     assert "untrusted data" in text and "allowed hosts" in text
     assert "close_popup and back" in text and "only observed" in text
-    assert '"outcome":"stop","reason":"complete"' in text
+    assert '"outcome":"task_result"' in text
     assert all(word in text for word in ("evaluation_previous_goal", "memory", "next_goal"))
     assert re.search(r"[Nn]ever invent", text)
     assert "codex-dom" not in text and "candidate" not in text.lower()

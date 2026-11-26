@@ -346,23 +346,28 @@ class SqlAlchemyGenerationRepository:
         *,
         vision_max_hops: int = 5,
         vision_max_states: int = 50,
-    ) -> None:
+        vision_owned_test_target: bool | None = None,
+    ) -> bool:
+        """Upsert the policy; `vision_owned_test_target=None` keeps the stored value (ADR-046)."""
         model = self.get_policy(tenant_id, project_id)
         if model is None:
-            self._session.add(
-                ProjectExecutionPolicyModel(
-                    tenant_id=tenant_id,
-                    project_id=project_id,
-                    allowed_origins=origins,
-                    vision_max_hops=vision_max_hops,
-                    vision_max_states=vision_max_states,
-                )
+            model = ProjectExecutionPolicyModel(
+                tenant_id=tenant_id,
+                project_id=project_id,
+                allowed_origins=origins,
+                vision_max_hops=vision_max_hops,
+                vision_max_states=vision_max_states,
+                vision_owned_test_target=bool(vision_owned_test_target),
             )
+            self._session.add(model)
         else:
             model.allowed_origins = origins
             model.vision_max_hops = vision_max_hops
             model.vision_max_states = vision_max_states
+            if vision_owned_test_target is not None:
+                model.vision_owned_test_target = vision_owned_test_target
         self._session.flush()
+        return model.vision_owned_test_target
 
     def add_test_case(self, model: TestCaseModel) -> None:
         self._session.add(model)

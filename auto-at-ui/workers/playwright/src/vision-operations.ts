@@ -7,7 +7,7 @@ import { allowedOrigin, canonical, digest, requireVision, validateVision, Vision
   type VisualWorkerIdentity, type VisualWorkerOpen, type VisualWorkerPrepare, type VisualWorkerExecute,
   type VisualWorkerAck, type VisualOperation, type VisualOperationFrame, type VisualLocatorEvidence,
   type VisualCheckpoint, type VisualWorkerOperationResult, type VisualExternalOrigin, type VisualExecutedClick } from "./vision-contract.js";
-import { groundLocator, type GroundedLocator } from "./vision-locators.js";
+import { allowCredentialInputs, groundLocator, type GroundedLocator } from "./vision-locators.js";
 import { observeDom, resolveDomTarget, verifySnapshotTarget, type DomSnapshot } from "./vision-dom.js";
 import { revalidateDom, contextSignature, targetSignature, targetActionSignature } from "./vision-revalidation.js";
 import type { VisualWorkerCheckTarget, VisualWorkerTargetCheck } from "./vision-contract.js";
@@ -43,6 +43,8 @@ type Session = {
   navigationMethods: WeakMap<Page, string>;
   // Agent mode only (VisualWorkerOpen.agent_mode); v4 sessions keep every default below.
   agentMode: boolean; blockedTerms: string[]; latestSnapshotId: string | null;
+  // ADR-046: a project the owner marked as their own test environment; forms may be submitted.
+  ownedTestTarget: boolean;
   // Opt-in capabilities requested at open (control-plane flags, default off): scroll/URL on confirmed
   // clicks (`click-context-v1`) and dom_path locators for unnamed controls (`agent-dom-path-v1`).
   clickContext: boolean; agentDomPath: boolean;
@@ -151,6 +153,7 @@ export class VisualOperationWorker {
       // live geometry, identity and Playwright actionability checks still apply.
       const context = await browser.newContext({ viewport: { width: 1280, height: 720 },
         acceptDownloads: false, serviceWorkers: "block", reducedMotion: "reduce" });
+      if (request.agent_mode === true && request.required_capabilities.includes("owned-test-target-v1")) allowCredentialInputs(context);
       // Safety net (r17/r18, ADR 042 "Runtime"): the worker runs through tsx/esbuild keepNames, which wraps named
       // closures as `__name(fn, "name")`. Playwright serialises evaluate callbacks, so a closure that slips into one
       // would throw `__name is not defined` in the page. The callbacks are written without such closures; this no-op
@@ -219,6 +222,7 @@ export class VisualOperationWorker {
         agentMode: request.agent_mode === true, latestSnapshotId: null, recovered: null,
         clickContext: request.agent_mode === true && request.required_capabilities.includes("click-context-v1"),
         agentDomPath: request.agent_mode === true && request.required_capabilities.includes("agent-dom-path-v1"),
+        ownedTestTarget: request.agent_mode === true && request.required_capabilities.includes("owned-test-target-v1"),
         blockedTerms: request.agent_mode === true ? (request.blocked_action_terms ?? []).map(normalizeTerm) : [] };
       const opened = session;
       clearTimeout(opened.timer);
@@ -228,7 +232,7 @@ export class VisualOperationWorker {
       this.pageId(opened, page);
       this.sessions.set(request.session_id, opened);
       return { session_id: request.session_id, contract_version: "v4", state_fingerprint: state.fingerprint,
-        operation_budget: this.budget(opened), capabilities: ["dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1", "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1", "click-context-v1", "agent-dom-path-v1"] };
+        operation_budget: this.budget(opened), capabilities: ["dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1", "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1", "click-context-v1", "agent-dom-path-v1", "owned-test-target-v1"] };
     } catch (error) { await browser?.close(); throw error; }
     finally { this.opening.delete(request.session_id); }
   }
@@ -643,10 +647,11 @@ export class VisualOperationWorker {
           }
           if (session.agentMode) {
             const facts = await ground.target!.evaluate(sensitiveFacts);
-            requireVision(!facts.submit && !facts.download && !facts.names.some(name => {
+            // Downloads stay blocked everywhere; submit controls and sensitive names only off an owned test target.
+            requireVision(!facts.download && (session.ownedTestTarget || (!facts.submit && !facts.names.some(name => {
               const text = normalizeTerm(name);
               return session.blockedTerms.some(term => text.includes(term));
-            }), "sensitive_action_blocked");
+            }))), "sensitive_action_blocked");
           }
           if (request.action.kind === "click") runtime.replayable = await ground.target!.evaluate((el) => el.tagName === "A" &&
             !!el.getAttribute("href") && !el.hasAttribute("download") && !el.hasAttribute("onclick"));

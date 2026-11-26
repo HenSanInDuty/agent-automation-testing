@@ -57,9 +57,13 @@ def origin_allowed(page_origin: str | None, allowed_origins: Sequence[str]) -> b
     )
 
 
-def _unsafe_text(text: str) -> bool:
-    if "\r" in text or "\n" in text:
+def _unsafe_text(text: str, *, owned_test_target: bool = False) -> bool:
+    # A line break would press Enter; no control character is ever typed, in either mode.
+    if any(ord(char) < 32 for char in text):
         return True
+    if owned_test_target:
+        # ADR-046: test accounts (an e-mail, a phone number) may be typed on an owned target.
+        return False
     try:
         validate_locator_value(text)
     except ValueError:
@@ -68,16 +72,24 @@ def _unsafe_text(text: str) -> bool:
 
 
 def check_action(action, element, page_origin: str | None,
-                 allowed_origins: Sequence[str]) -> Decision:
-    """Decide before any worker request. `element` is the `CodexDomElement` a ref resolved to."""
+                 allowed_origins: Sequence[str], *, owned_test_target: bool = False) -> Decision:
+    """Decide before any worker request. `element` is the `CodexDomElement` a ref resolved to.
+
+    ADR-046: on a project the owner marked as their own test environment, submit/reset controls
+    and sensitively named controls are allowed. Origin, action-kind and text rules never relax.
+    """
     if action.kind not in AGENT_ACTION_KINDS:
         return Decision(False, "action_kind_blocked")
     if action.kind not in LEAVING_ACTIONS and not origin_allowed(page_origin, allowed_origins):
         return Decision(False, "origin_blocked")
-    if action.kind == "type" and _unsafe_text(action.text or ""):
+    if action.kind == "type" and _unsafe_text(
+        action.text or "", owned_test_target=owned_test_target,
+    ):
         return Decision(False, "sensitive_action_blocked")
     if element is not None and action.kind in {"click", "type"}:
-        if element.input_type in BLOCKED_INPUT_TYPES or blocked_term(element.name):
+        if not owned_test_target and (
+            element.input_type in BLOCKED_INPUT_TYPES or blocked_term(element.name)
+        ):
             return Decision(False, "sensitive_action_blocked")
         if not element.enabled or (action.kind == "type" and not element.editable):
             return Decision(False, "ineligible_target")

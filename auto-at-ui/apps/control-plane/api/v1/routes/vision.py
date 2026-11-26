@@ -160,6 +160,8 @@ class ExplorationResponse(BaseModel):
     safe_failure_reason: str | None
     trace_version: str = "legacy"
     engine: Literal["planner", "agent_loop"] = "planner"
+    # ADR-046: advisory end-of-task report of an agent-loop session; never a test verdict.
+    task_assessment: dict | None = None
 
 
 class VisualActionResponse(BaseModel):
@@ -276,6 +278,7 @@ def _response(record: object) -> ExplorationResponse:
         safe_failure_reason=record.safe_failure_reason,
         trace_version=getattr(record, "trace_version", "legacy"),
         engine=getattr(record, "exploration_engine", "planner"),
+        task_assessment=getattr(record, "task_assessment", None),
     )
 
 

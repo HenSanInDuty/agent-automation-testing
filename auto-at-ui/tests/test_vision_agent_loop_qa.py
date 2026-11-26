@@ -22,6 +22,7 @@ from test_vision_agent_loop import (
     bound_for,
     click,
     dom_element,
+    ended,
     run_agent,
     step,
     typed,
@@ -235,7 +236,7 @@ def test_a_policy_above_twenty_calls_is_rejected_by_the_contract_and_twenty_is_t
     run = run_agent(disposable_database, monkeypatch, [step(wait())],
                     policy=codex_policy(max_steps=20, max_requests_per_minute=10_000))
     assert len(run.exchange.calls) == 20  # call 20 runs, call 21 never does
-    assert run.record.safe_failure_reason == "agent_step_limit"
+    assert ended(run) == "agent_step_limit"
 
 
 def test_retry_and_screenshot_calls_share_one_ceiling(disposable_database, monkeypatch):
@@ -247,7 +248,7 @@ def test_retry_and_screenshot_calls_share_one_ceiling(disposable_database, monke
     run = run_agent(disposable_database, monkeypatch, outputs, policy=policy)
     assert len(run.exchange.calls) == 4  # malformed, need_screenshot, image answer, next step
     assert [c["image"] is not None for c in run.exchange.calls] == [False, False, True, False]
-    assert len(run.steps) == 2 and run.record.safe_failure_reason == "agent_step_limit"
+    assert len(run.steps) == 2 and ended(run) == "agent_step_limit"
 
 
 def test_need_screenshot_on_the_last_allowed_call_ends_at_the_limit(
@@ -259,7 +260,7 @@ def test_need_screenshot_on_the_last_allowed_call_ends_at_the_limit(
     run = run_agent(disposable_database, monkeypatch,
                     [CodexNeedScreenshot(reason="visual_target"), DONE], policy=policy)
     assert len(run.exchange.calls) == 1 and run.exchange.calls[0]["image"] is None
-    assert run.record.safe_failure_reason == "agent_step_limit"
+    assert ended(run) == "agent_step_limit"
 
 
 def test_every_agent_step_has_a_distinct_job_and_monotonic_sequence(
