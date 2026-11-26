@@ -4,11 +4,13 @@ The root must be private to the deployment. Paths do not replace filesystem ACLs
 No recursive deletion or model-supplied path is used here.
 """
 
+import errno
 import hashlib
 import json
 import logging
 import os
 import stat
+import time
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -62,6 +64,16 @@ FILES = frozenset(
 
 class SpoolError(ValueError):
     """Safe error; never includes file contents or caller-controlled diagnostics."""
+
+
+# ADR-046: a reader can meet these while the writer atomically replaces a file on a bind
+# mount (Docker Desktop, network filesystems). The content is either the old or the new whole
+# file, so the read is repeated a bounded number of times; any other error is never retried.
+REPLACED_UNDER_READER = frozenset(
+    code for code in (getattr(errno, "ENODATA", None), getattr(errno, "ESTALE", None))
+    if code is not None
+)
+READ_RETRY_DELAYS = (0.05, 0.2)
 
 
 def _plain(path: Path, *, directory: bool = False) -> None:
@@ -119,37 +131,53 @@ class FileSpool:
     def read_file(self, directory: Path, name: str, limit: int) -> bytes:
         if name not in FILES or directory.parent != self.root:
             raise SpoolError("unknown bridge file")
-        operation = "root_lstat"
-        try:
-            self._root()
-            operation = "directory_lstat"
-            _plain(directory, directory=True)
-            path = directory / name
-            operation = "file_lstat"
-            _plain(path)
-            operation = "open"
-            with path.open("rb") as source:
-                operation = "fstat"
-                info = os.fstat(source.fileno())
-                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                    raise SpoolError("unsafe bridge file")
-                operation = "read"
-                data = source.read(limit + 1)
-                operation = "close"
-        except OSError as error:
-            # Missing optional receipts are normal while polling. Preserve the
-            # original exception and errno; never turn I/O failure into success.
-            if not isinstance(error, FileNotFoundError):
-                try:
-                    job_id = str(UUID(directory.name))
-                except ValueError:
-                    job_id = None
-                log_event(logging.getLogger(__name__), logging.ERROR,
-                          "codex.spool.read_failed", "Codex spool file read failed.",
-                          job_id=job_id, bridge_id=str(self.bridge_id), tenant_id=self.tenant_id,
-                          file_name=name, io_operation=operation, byte_limit=limit,
-                          **exception_details(error))
-            raise
+        attempt = 0
+        while True:
+            operation = "root_lstat"
+            try:
+                self._root()
+                operation = "directory_lstat"
+                _plain(directory, directory=True)
+                path = directory / name
+                operation = "file_lstat"
+                _plain(path)
+                operation = "open"
+                with path.open("rb") as source:
+                    operation = "fstat"
+                    info = os.fstat(source.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                        raise SpoolError("unsafe bridge file")
+                    operation = "read"
+                    data = source.read(limit + 1)
+                    operation = "close"
+                break
+            except SpoolError:
+                # ADR-046: a rename in progress can show a link count other than one. A file
+                # that stays unsafe still fails after the same bounded re-read.
+                if attempt >= len(READ_RETRY_DELAYS):
+                    raise
+                time.sleep(READ_RETRY_DELAYS[attempt])
+                attempt += 1
+            except OSError as error:
+                # Missing optional receipts are normal while polling. Preserve the
+                # original exception and errno; never turn I/O failure into success.
+                if not isinstance(error, FileNotFoundError):
+                    try:
+                        job_id = str(UUID(directory.name))
+                    except ValueError:
+                        job_id = None
+                    log_event(logging.getLogger(__name__), logging.ERROR,
+                              "codex.spool.read_failed", "Codex spool file read failed.",
+                              job_id=job_id, bridge_id=str(self.bridge_id),
+                              tenant_id=self.tenant_id, file_name=name, io_operation=operation,
+                              byte_limit=limit, read_attempt=attempt + 1,
+                              **exception_details(error))
+                # ADR-046: only a file replaced under the reader is read again, and only twice.
+                if (error.errno not in REPLACED_UNDER_READER
+                        or attempt >= len(READ_RETRY_DELAYS)):
+                    raise
+                time.sleep(READ_RETRY_DELAYS[attempt])
+                attempt += 1
         if len(data) > limit:
             raise SpoolError("bridge file exceeds limit")
         return data

@@ -312,3 +312,93 @@ def test_receipt_with_excessive_ttl_is_revoked(tmp_path, monkeypatch):
                  canonical_bytes(long_ttl(req, "queued", None, UUID(int=0))))
     monkeypatch.undo()
     assert spool.stop_reason(req, datetime.now(UTC)) == "bridge_policy_revoked"
+
+
+def _flaky_fstat(module, monkeypatch, failures):
+    """`os.fstat` raises the queued errors first, then behaves normally."""
+    real, pending = module.os.fstat, list(failures)
+
+    def fstat(fd):
+        if pending:
+            raise pending.pop(0)
+        return real(fd)
+
+    monkeypatch.setattr(module.os, "fstat", fstat)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+    return pending
+
+
+@pytest.mark.parametrize("code", ["ENODATA", "ESTALE"])
+def test_a_file_replaced_under_the_reader_is_read_again(published, monkeypatch, caplog, code):
+    # ADR-046 (sprint Q4): the writer's atomic replace surfaced as ENODATA on the bind mount.
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    expected = spool.read_file(spool.path(req.job_id), "request.json", 16_384)
+    pending = _flaky_fstat(module, monkeypatch, [OSError(getattr(errno, code), "replaced")])
+    assert spool.read_file(spool.path(req.job_id), "request.json", 16_384) == expected
+    assert pending == []
+    logged = [r for r in caplog.records if getattr(r, "event", None) == "codex.spool.read_failed"]
+    assert len(logged) == 1 and logged[0].read_attempt == 1  # the lost attempt stays visible
+
+
+def test_the_reread_is_bounded_and_then_raises_the_original_error(published, monkeypatch):
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    failures = [OSError(errno.ENODATA, "replaced") for _ in range(5)]
+    pending = _flaky_fstat(module, monkeypatch, failures)
+    with pytest.raises(OSError) as caught:
+        spool.read_file(spool.path(req.job_id), "request.json", 16_384)
+    assert caught.value.errno == errno.ENODATA
+    assert len(pending) == 5 - (1 + len(module.READ_RETRY_DELAYS))
+
+
+def test_other_io_errors_are_never_read_again(published, monkeypatch):
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    failures = [OSError(errno.EIO, "disk"), OSError(errno.EIO, "disk")]
+    pending = _flaky_fstat(module, monkeypatch, failures)
+    with pytest.raises(OSError):
+        spool.read_file(spool.path(req.job_id), "request.json", 16_384)
+    assert len(pending) == 1
+
+
+def test_a_link_count_seen_during_a_rename_is_read_again(published, monkeypatch):
+    # ADR-046: a live run ended `bridge_offline` when the heartbeat showed two links mid-rename.
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    expected = spool.read_file(spool.path(req.job_id), "request.json", 16_384)
+    real, calls = module.os.fstat, []
+
+    def fstat(fd):
+        info = real(fd)
+        calls.append(fd)
+        if len(calls) == 1:
+            return os.stat_result((info.st_mode, info.st_ino, info.st_dev, 2, *info[4:10]))
+        return info
+
+    monkeypatch.setattr(module.os, "fstat", fstat)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+    assert spool.read_file(spool.path(req.job_id), "request.json", 16_384) == expected
+    assert len(calls) == 2
+
+
+def test_a_file_that_stays_hard_linked_is_still_refused(published, monkeypatch):
+    import infrastructure.codex_bridge.spool as module
+
+    spool, req = published
+    real, calls = module.os.fstat, []
+
+    def fstat(fd):
+        info = real(fd)
+        calls.append(fd)
+        return os.stat_result((info.st_mode, info.st_ino, info.st_dev, 2, *info[4:10]))
+
+    monkeypatch.setattr(module.os, "fstat", fstat)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+    with pytest.raises(module.SpoolError):
+        spool.read_file(spool.path(req.job_id), "request.json", 16_384)
+    assert len(calls) == 1 + len(module.READ_RETRY_DELAYS)

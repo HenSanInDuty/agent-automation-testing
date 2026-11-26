@@ -11,7 +11,12 @@ from infrastructure.codex_bridge.catalogue import (
     validate_catalogue,
     validate_instructions,
 )
-from infrastructure.codex_bridge.doctor import container_flags_qualified, doctor
+from infrastructure.codex_bridge.doctor import (
+    container_flags_qualified,
+    doctor,
+    inside_container,
+    root_is_overlay,
+)
 
 spec = importlib.util.spec_from_file_location(
     "codex_bridge_wire", Path(__file__).parent / "fixtures/codex_bridge_wire.py"
@@ -131,3 +136,42 @@ def test_unqualified_pin_fails_doctor_before_auth_or_process_access(monkeypatch)
     assert result.configured and not result.ready and not result.capabilities_qualified
     assert not result.authenticated and result.model_access == "unverified"
     assert result.failure_code == "bridge_cli_unsupported"
+
+
+OVERLAY_ROOT = "921 842 0:215 / / ro,relatime - overlay overlay rw,lowerdir=a:b,upperdir=c"
+EXT4_ROOT = "27 1 8:32 / / rw,relatime shared:1 - ext4 /dev/sdc rw,discard"
+PROC = "923 921 0:218 / /proc rw,nosuid - proc proc rw"
+
+
+@pytest.mark.parametrize("mountinfo, expected", [
+    (OVERLAY_ROOT, True),
+    (PROC + "\n" + OVERLAY_ROOT, True),
+    (EXT4_ROOT, False),
+    (EXT4_ROOT + "\n" + OVERLAY_ROOT, True),   # a container root mounted over the first one
+    (OVERLAY_ROOT + "\n" + EXT4_ROOT, False),
+    ("1 0 0:1 / /data rw - overlay overlay rw", False),  # an overlay elsewhere proves nothing
+    ("", False), ("garbage", False), ("921 842 0:215 / / ro - ", False),
+])
+def test_an_overlay_root_filesystem_is_recognised_from_mountinfo(mountinfo, expected):
+    assert root_is_overlay(mountinfo) is expected
+
+
+def test_container_detection_accepts_the_marker_or_an_overlay_root(monkeypatch):
+    # ADR-046: Kiri (WSL2) writes no /.dockerenv; the host must still be refused.
+    import infrastructure.codex_bridge.doctor as module
+
+    def fake(marker, mountinfo):
+        monkeypatch.setattr(module.Path, "is_file", lambda self: marker)
+
+        def read_text(self, *args, **kwargs):
+            if mountinfo is None:
+                raise OSError("no procfs")
+            return mountinfo
+
+        monkeypatch.setattr(module.Path, "read_text", read_text)
+        return inside_container()
+
+    assert fake(True, None) is True
+    assert fake(False, OVERLAY_ROOT) is True
+    assert fake(False, EXT4_ROOT) is False
+    assert fake(False, None) is False
