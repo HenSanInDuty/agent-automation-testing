@@ -1,6 +1,6 @@
 ---
 title: "Engine agent loop cho Vision (browser-agent closed loop)"
-status: paused
+status: reopened
 created: 2026-11-19
 slug: browser-agent-loop
 auto_continue: false
@@ -8,6 +8,40 @@ progress_url: "https://claude.ai/artifact/5RS8oJxEt14WqDFgp2LsyG"
 ---
 
 # Engine agent loop cho Vision
+
+> **Mở lại 2026-11-25** (quyết định của người dùng): agent loop là engine **test theo task** cho FE do người
+> dùng sở hữu (dev/staging); planner v4 giữ nguyên và vẫn là mặc định. Quyết định, lý do và phạm vi:
+> `../../docs/adr/046-agent-loop-task-testing.md`. Mục tiêu cũ ">95% mọi control trên mongchiton" không còn là
+> thước đo của engine này; AC6 bên dưới đổi tên terminal reason thành `task_assessment.stop_reason`.
+>
+> **Đo trên fixture cục bộ** (`benchmarks/targets/task-ui`, 10 task, `claude_cli / claude-opus-5-5`,
+> prompt `agent-loop-v3`, `scripts/run_task_stability.py`), 2026-11-25:
+>
+> | Lượt | Phiên | `completed` | Nhất quán giữa các lần | Đúng kỳ vọng | Ghi chú |
+> | --- | ---: | ---: | ---: | ---: | --- |
+> | r1 (1 lần/task) | 10 | 9 | n/a | 8 | 1 phiên hỏng do worker vừa khởi động lại; `login-failure` bị `not_achieved` sai vì snapshot không có chữ trên trang |
+> | r2 (2 lần/task, sau khi sửa hai lỗi trên) | 20 | 19 | 100% | 19 | 1 phiên `bridge_offline` do tranh chấp đọc file heartbeat khi đang rename, đã sửa sau lượt này |
+>
+> | r3 (3 task từng lỗi, code cuối) | 3 | 3 | n/a | 3 | chỉ là lượt xác nhận sau khi sửa lỗi heartbeat, chưa phải lượt đo lại đầy đủ |
+>
+> Mỗi phiên 25–61 giây, trung bình 3,1 lần gọi model. Dữ liệu: `.pytest-artifacts/task-stability/r1|r2|r3`
+> (không commit). Chưa có lượt 10 task × nhiều lần trên code cuối.
+>
+> **Chạy lại:** bật stack với `docker-compose.yml` + `docker-compose.codex.yml` + `docker-compose.agent-loop.yml`
+> (+ `docker-compose.spool-volume.yml` trên engine Kiri) và `--profile claude`, rồi
+> `uv run python scripts/run_task_stability.py run --project "Task UI fixture" --base-url http://task-target:7300 --repeat 5 --out .pytest-artifacts/task-stability/<tên>`
+> và `... report --out <cùng thư mục>`.
+>
+> **Test host dao động có sẵn:** `tests/test_vision_page_batch.py` trượt ngẫu nhiên với `invalid_step_deadline`
+> trên cả HEAD (4/21) lẫn nhánh này (9/21) khi chạy trên Windows: worker so `step_deadline` với `Date.now()`
+> không dung sai, mà đồng hồ Node trên máy này chậm hơn Python 0,2–10 ms tuỳ tiến trình (đo ngày 2026-11-25).
+> Trong container Linux không gặp. Chưa sửa (đụng guard của worker).
+>
+> **Còn mở:** (1) snapshot chỉ có control, không có chữ trên trang — v3 buộc agent xin ảnh chụp trước khi kết
+> luận về chữ; đưa chữ vào snapshot là cách sửa gốc, chưa làm. (2) Ô nhập có nhãn là từ nhạy cảm ("Password")
+> vẫn bị ẩn, cần quyết định về chính sách redaction. (3) Chưa nối đánh giá task sang bản nháp test Playwright.
+> (4) Giới hạn container worker (256 pids, 1 GiB): fixture đơn giản đã dùng tới 120 pids và 394 MiB; chưa đo
+> trên trang nặng. (5) Chưa chạy trên FE thật của người dùng.
 
 > **Tạm đóng băng 2026-11-22** (quyết định của người dùng). Benchmark độ chính xác quay về engine v4 với
 > `claude_cli` (xem `../09112026103202-vision-accuracy-loop/phase-06-sprint.md`). Handoff cuối của agent loop
