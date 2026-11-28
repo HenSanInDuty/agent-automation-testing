@@ -1,0 +1,23 @@
+{
+  "note": "Shared by tests/test_codex_bridge_contracts.py and workers/playwright/src/vision-agent-mode.spec.ts. worker_keeps: the worker's page-text filter keeps it; python_accepts: CodexPageTextItem accepts it. worker_keeps must imply python_accepts.",
+  "samples": [
+    { "text": "An toàn: còn 5 lượt", "worker_keeps": true, "python_accepts": true },
+    { "text": "Còn 123456 lượt", "worker_keeps": true, "python_accepts": true },
+    { "text": "Mã ١٢٣٤٥٦ ở đây", "worker_keeps": true, "python_accepts": true },
+    { "text": "ab١٢٣٤٥٦٧ liền chữ", "worker_keeps": true, "python_accepts": true },
+    { "text": "Mã ١٢٣٤٥٦٧٨ ở đây", "worker_keeps": false, "python_accepts": false },
+    { "text": "Số １２３４５６７ đầy đủ", "worker_keeps": false, "python_accepts": false },
+    { "text": "Mã 12345678 đơn", "worker_keeps": false, "python_accepts": false },
+    { "text": "đ@example.com", "worker_keeps": false, "python_accepts": false },
+    { "text": "Liên hệ mai@đại.vn nhé", "worker_keeps": false, "python_accepts": false },
+    { "text": "Reset password", "worker_keeps": false, "python_accepts": false },
+    { "text": "passwordé lộ", "worker_keeps": false, "python_accepts": true },
+    { "text": "password́ lộ", "worker_keeps": false, "python_accepts": false },
+    { "text": "TOKEN ghi nhớ", "worker_keeps": false, "python_accepts": false },
+    { "text": "Xem https://example.com/x", "worker_keeps": false, "python_accepts": false },
+    { "text": "apİ key", "worker_keeps": false, "python_accepts": false },
+    { "text": "cookıe", "worker_keeps": false, "python_accepts": false },
+    { "text": "authorızatıon failed", "worker_keeps": false, "python_accepts": false },
+    { "text": "Işık açık", "worker_keeps": true, "python_accepts": true }
+  ]
+}

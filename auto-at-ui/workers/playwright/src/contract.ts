@@ -53,6 +53,7 @@ const isObject = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const hasExactKeys = (value: JsonObject, keys: string[]): boolean =>
   Object.keys(value).length === keys.length && keys.every((key) => key in value);
+const TRACEPARENT = /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/i;
 const isUuid = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -82,7 +83,13 @@ export function validateExecutionRequestV1(value: unknown): ExecutionRequestV1 {
 }
 
 export function validatePlaywrightTestSourceMode(value: unknown): PlaywrightTestSourceMode {
-  if (!isObject(value) || !hasExactKeys(value, ["mode", "playwright_test_source", "source_hash", "allowed_origins"]) ||
+  // `traceparent` is the only extra key: `POST /api/v1/runs` stamps it on every run for log
+  // correlation (`observability.ts`). Optional and format-checked; any other unknown key still fails.
+  const { traceparent, ...config } = isObject(value) ? value : ({} as JsonObject);
+  if (traceparent !== undefined && !(typeof traceparent === "string" && TRACEPARENT.test(traceparent))) {
+    throw new Error("invalid playwright_test_source runner configuration");
+  }
+  if (!isObject(value) || !hasExactKeys(config, ["mode", "playwright_test_source", "source_hash", "allowed_origins"]) ||
     value.mode !== "playwright_test_source" ||
     typeof value.playwright_test_source !== "string" || value.playwright_test_source.length === 0 ||
     typeof value.source_hash !== "string" || !/^[a-f0-9]{64}$/.test(value.source_hash) ||
@@ -94,7 +101,7 @@ export function validatePlaywrightTestSourceMode(value: unknown): PlaywrightTest
     throw new Error("invalid playwright_test_source runner configuration");
   }
   assertAllowedGeneratedSource(value.playwright_test_source);
-  return value as PlaywrightTestSourceMode;
+  return config as PlaywrightTestSourceMode;
 }
 
 export function assertAllowedGeneratedSource(source: string): void {

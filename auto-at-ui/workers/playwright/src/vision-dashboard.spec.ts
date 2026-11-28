@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import type { VisionPolicy, VisionProgressActivity, VisionProvider } from "../../../apps/dashboard/app/generation-types.js";
+import type { AgentTaskConsistency, VisionPolicy, VisionProgressActivity, VisionProvider } from "../../../apps/dashboard/app/generation-types.js";
 
 const dashboard = process.env.VISION_DASHBOARD_URL;
 test.skip(!dashboard, "Set VISION_DASHBOARD_URL to the local dashboard fixture server.");
@@ -1067,4 +1067,328 @@ test("the owned test target flag is loaded, saved with the project policy and de
   await page.goto(`${dashboard}/agent?vision=${sessionA}`);
   await page.getByText("Project settings", { exact: true }).click();
   await expect(page.getByRole("checkbox", { name: "This is a test environment I own (dev/staging)" })).toBeChecked();
+});
+
+// ADR-047 test drafts: fake API only; the dashboard never decides eligibility, redaction or approval itself.
+const typedValue = "Zx9!hunter2-sample";
+const consistencyReport = (overrides: Record<string, unknown> = {}): AgentTaskConsistency => ({
+  schema_version: "v1", session_id: sessionA, group_sessions: 5, assessed_sessions: 5,
+  status_counts: { achieved: 5, blocked: 0, inconclusive: 0, not_achieved: 0 }, modal_status: "achieved", modal_count: 5, agreement_rate: 1,
+  source_status: "achieved", source_is_modal: true, threshold: 0.9, small_sample: false, eligible: true, reasons: [], advisory: true,
+  notice: "Agreement counts how often sessions repeated the same status. It reduces random noise only.", ...overrides,
+});
+type DraftApi = { consistency: AgentTaskConsistency; inputs: { status: number; json: unknown } | null; typeSteps: number; answer: { status: number; json: unknown }; posts: { url: string; body: unknown; key: string | undefined; csrf: boolean }[]; inputRequests: string[]; consoleText: string[] };
+async function agentDraftApi(page: Page, overrides: Partial<DraftApi> = {}) {
+  const state = await fixture(page);
+  state.exploration = "completed"; state.completionReason = "agent_done"; state.taskAssessment = taskAssessment();
+  const api: DraftApi = { consistency: consistencyReport(), inputs: null, typeSteps: 2, answer: { status: 201, json: { request_id: "req-1", draft_id: "draft-1", correlation_id: "corr-1", state: "pending_review", title: "Agent task test", source_hash: "a".repeat(64), contains_test_values: true, owned_test_target: true, created: true } }, posts: [], inputRequests: [], consoleText: [], ...overrides };
+  page.on("console", (message) => { api.consoleText.push(message.text()); });
+  const names = ["Username", "Search"]; const lengths = [typedValue.length, 5];
+  // `step_index` repeats on purpose: one agent step typed twice (the API's own shape).
+  const inputsAnswer = () => api.inputs ?? { status: 200, json: { owned_test_target: true, has_type_steps: api.typeSteps > 0, type_steps: Array.from({ length: api.typeSteps }, (_, n) => ({ step_index: 1, locator_name: names[n], text_chars: lengths[n] })) } };
+  const headers = { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true" };
+  await page.route("**/api/v1/vision/explorations/*/consistency", (route) => route.request().method() === "GET" ? route.fulfill({ headers, json: api.consistency }) : route.fallback());
+  await page.route("**/api/v1/vision/explorations/*/test-draft/inputs", (route) => { api.inputRequests.push(route.request().method()); return route.fulfill({ headers, status: inputsAnswer().status, json: inputsAnswer().json }); });
+  await page.route("**/api/v1/vision/explorations/*/test-draft", (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    api.posts.push({ url: route.request().url(), body: route.request().postDataJSON(), key: route.request().headers()["idempotency-key"], csrf: "x-csrf-token" in route.request().headers() });
+    return route.fulfill({ headers, status: api.answer.status, json: api.answer.json });
+  });
+  return { state, api };
+}
+const draftPanel = (page: Page) => page.getByRole("region", { name: "Test draft", exact: true });
+const holdsNothing = (page: Page) => page.evaluate((value) => ![JSON.stringify({ ...localStorage }), JSON.stringify({ ...sessionStorage }), location.href, document.cookie].some((text) => text.includes(value)), typedValue);
+
+test("an eligible agent session shows the agreement report, asks for each typed value in order and clears them when sent", async ({ page }) => {
+  const { state, api } = await agentDraftApi(page);
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const panel = draftPanel(page);
+  const report = panel.getByRole("list", { name: "Consistency report" });
+  await expect(report).toContainText("5 of 5 sessions of this task have an assessment.");
+  await expect(report).toContainText("Results: achieved 5.");
+  await expect(report).toContainText("Agreement: 100% reported achieved (the required agreement is 90%).");
+  await expect(panel).toContainText("It reduces random noise only.");
+  await expect(panel.getByRole("button", { name: /run|execute|approve/i })).toHaveCount(0);
+  await panel.getByRole("button", { name: "Create test draft", exact: true }).click();
+  const form = panel.getByRole("form", { name: "Test draft values" });
+  const first = form.getByLabel("Step 1: Type into field “Username”");
+  const second = form.getByLabel("Step 2: Type into field “Search”");
+  await expect(first).toBeVisible();
+  expect(api.inputRequests).toEqual(["GET"]);
+  for (const field of [first, second]) {
+    await expect(field).toHaveAttribute("autocomplete", "off");
+    await expect(field).not.toHaveAttribute("name", /.+/);
+  }
+  await expect(form).toHaveAttribute("autocomplete", "off");
+  const submit = form.getByRole("button", { name: "Create draft for review", exact: true });
+  await expect(submit).toBeDisabled();
+  await first.fill(typedValue);
+  await expect(form).toContainText(`Needs exactly ${typedValue.length} characters · ${typedValue.length} typed`);
+  await expect(form).toContainText("Needs exactly 5 characters · 0 typed");
+  await expect(submit).toBeDisabled();
+  await second.fill("query");
+  await expect(submit).toBeEnabled();
+  await page.screenshot({ path: test.info().outputPath("agent-draft-form.png"), fullPage: false });
+  await submit.click();
+  await expect(panel.getByRole("link", { name: "Open the draft for review" })).toHaveAttribute("href", "/agent?draft=draft-1");
+  await expect(panel).toContainText("Draft created. It waits for review by someone other than you.");
+  await expect(panel).toContainText("The reviewer sees them in its source");
+  expect(api.posts).toHaveLength(1);
+  expect(api.posts[0].body).toEqual({ values: [typedValue, "query"] });
+  expect(api.posts[0].key).toHaveLength(36);
+  expect(api.posts[0].csrf).toBe(true);
+  expect(api.posts[0].url.includes(typedValue) || api.posts[0].url.includes(encodeURIComponent(typedValue))).toBe(false);
+  await expect(form).toHaveCount(0);
+  expect(await page.locator("body").innerHTML()).not.toContain(typedValue);
+  expect(await page.locator("input").evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value))).not.toContain(typedValue);
+  expect(await holdsNothing(page)).toBe(true);
+  expect(api.consoleText.some((text) => text.includes(typedValue))).toBe(false);
+  expect(state.writes).toHaveLength(0);
+});
+
+test("an inconsistent or non-modal session shows why and offers no draft", async ({ page }) => {
+  const { api } = await agentDraftApi(page, { consistency: consistencyReport({ eligible: false, reasons: ["assessment_inconsistent", "source_not_modal"], assessed_sessions: 5, status_counts: { achieved: 3, not_achieved: 2, blocked: 0, inconclusive: 0 }, agreement_rate: 0.6, source_status: "not_achieved", source_is_modal: false }) });
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const panel = draftPanel(page);
+  await expect(panel).toContainText("A test draft cannot be created from this session yet.");
+  await expect(panel).toContainText("Results: achieved 3 · not achieved 2.");
+  await expect(panel).toContainText("Agreement: 60% reported achieved (the required agreement is 90%).");
+  await expect(panel).toContainText("do not agree often enough");
+  await expect(panel).toContainText("differs from what most sessions");
+  await expect(panel.getByRole("button", { name: "Create test draft" })).toHaveCount(0);
+  expect(api.posts).toHaveLength(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(panel).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await panel.screenshot({ path: test.info().outputPath("agent-draft-not-eligible-390.png") });
+});
+
+test("a failed agreement report, or one the client cannot read, leaves the session usable without a draft button", async ({ page }) => {
+  const { api } = await agentDraftApi(page);
+  await page.route("**/api/v1/vision/explorations/*/consistency", (route) => route.fulfill({ status: 404, json: { detail: "Visual exploration not found." } }));
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  await expect(draftPanel(page)).toContainText("Visual exploration not found.");
+  await expect(draftPanel(page).getByRole("button", { name: "Create test draft" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Task assessment", exact: true })).toBeVisible();
+  expect(api.posts).toHaveLength(0);
+});
+
+test("a session with no type step needs no values and sends an empty list", async ({ page }) => {
+  const { api } = await agentDraftApi(page, { typeSteps: 0, inputs: { status: 200, json: { owned_test_target: false, has_type_steps: false, type_steps: [] } }, answer: { status: 200, json: { request_id: "req-1", draft_id: "draft-1", correlation_id: "corr-1", state: "pending_review", title: "Agent task test", source_hash: "a".repeat(64), contains_test_values: false, owned_test_target: false, created: false } } });
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const panel = draftPanel(page);
+  await panel.getByRole("button", { name: "Create test draft", exact: true }).click();
+  await expect(panel).toContainText("This session types no values.");
+  await expect(panel.getByRole("textbox")).toHaveCount(0);
+  await panel.getByRole("button", { name: "Create draft for review", exact: true }).click();
+  await expect(panel).toContainText("A draft for this session already exists; no new one was made.");
+  await expect(panel).not.toContainText("It contains the test values");
+  expect(api.posts.map((post) => post.body)).toEqual([{ values: [] }]);
+});
+
+const inputsRefusals = [
+  [{ status: 200, json: { owned_test_target: false, has_type_steps: true, type_steps: [] } }, "not declared as a test environment you own"],
+  [{ status: 200, json: { owned_test_target: true, has_type_steps: true, type_steps: [{ step_index: 1, locator_name: "Username" }] } }, "could not be read"],
+  [{ status: 409, json: { detail: { code: "evidence_expired" } } }, "has expired or is incomplete"],
+  [{ status: 409, json: { detail: { code: "session_not_completed" } } }, "has not finished"],
+  [{ status: 404, json: { detail: "Visual exploration not found." } }, "Visual exploration not found."],
+  [{ status: 500, json: { detail: "boom" } }, "boom"],
+] as const;
+for (const [inputs, text] of inputsRefusals) {
+  test(`when the expected lengths are not usable (${inputs.status}, ${text}) the form does not open and nothing is guessed`, async ({ page }) => {
+    const { api } = await agentDraftApi(page, { inputs });
+    await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+    const panel = draftPanel(page);
+    await panel.getByRole("button", { name: "Create test draft", exact: true }).click();
+    await expect(panel.getByRole("alert")).toContainText(text);
+    await expect(panel.getByRole("form", { name: "Test draft values" })).toHaveCount(0);
+    await expect(panel.getByRole("textbox")).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "Create test draft", exact: true })).toBeEnabled();
+    expect(api.inputRequests).toEqual(["GET"]);
+    expect(api.posts).toHaveLength(0);
+  });
+}
+
+for (const [status, code, text] of [
+  [409, "assessment_inconsistent", "do not agree enough"],
+  [422, "input_value_mismatch", "length differs"],
+  [409, "input_value_not_allowed", "test environment you own"],
+  [409, "credentials_in_source", "cannot be revised with a model"],
+  [422, "input_value_missing", "A value is missing"],
+  [409, "locator_unavailable", "no verified target"],
+] as const) {
+  test(`the draft form explains ${code} and keeps no typed value`, async ({ page }) => {
+    const { api } = await agentDraftApi(page, { answer: { status, json: { detail: { code, step_index: 1, consistency: { eligible: false } } } } });
+    await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+    const panel = draftPanel(page);
+    await panel.getByRole("button", { name: "Create test draft", exact: true }).click();
+    const form = panel.getByRole("form", { name: "Test draft values" });
+    await form.getByLabel("Step 1: Type into field “Username”").fill(typedValue);
+    await form.getByLabel("Step 2: Type into field “Search”").fill("query");
+    await form.getByRole("button", { name: "Create draft for review", exact: true }).click();
+    await expect(panel.getByRole("alert")).toContainText(text);
+    await expect(panel.getByRole("alert")).not.toContainText(typedValue);
+    await expect(form.getByLabel("Step 1: Type into field “Username”")).toHaveValue("");
+    await expect(form.getByLabel("Step 2: Type into field “Search”")).toHaveValue("");
+    await expect(form.getByRole("button", { name: "Create draft for review", exact: true })).toBeDisabled();
+    expect(api.posts).toHaveLength(1);
+    expect(await holdsNothing(page)).toBe(true);
+    expect(api.consoleText.some((line) => line.includes(typedValue))).toBe(false);
+    expect(await page.locator("body").innerHTML()).not.toContain(typedValue);
+  });
+}
+
+const reviewSource = `import { test, expect } from '@playwright/test';\ntest('Agent task', async ({ page }) => {\n  await page.getByRole('textbox', { name: 'Username' }).fill('${typedValue}');\n});\n`;
+const agentDraft = (containsValues: boolean) => ({ id: "fixture-draft", planning_request_id: "fixture-request", correlation_id: "fixture", state: "pending_review", title: "Agent task test from session", playwright_test_source: containsValues ? reviewSource : "test('plain', async () => {});", source_hash: "b".repeat(64), assumptions: ["Steps replay the recorded agent session in order."], stop_conditions: ["The task assessment is advisory; only the run after approval gives a verdict.", "1 candidate(s) were left out: the source policy refuses their text."],
+  provenance: { provider: "deterministic", model: "agent-task-renderer", agent_trace_source: { session_id: sessionA, trace_hash: "c".repeat(64) }, contains_test_values: containsValues, owned_test_target: containsValues, requested_by: "requester@fixture.test", consistency: { schema_version: "v1", assessed_sessions: 5, group_sessions: 6, agreement_rate: 1, modal_status: "achieved", threshold: 0.9, small_sample: false } }, linked_test_case_id: null, linked_run_id: null });
+async function reviewApi(page: Page, containsValues: boolean, decision: { status: number; json: unknown } | null = null) {
+  const state = await fixture(page);
+  state.exploration = "completed"; state.taskAssessment = taskAssessment();
+  const headers = { "access-control-allow-origin": dashboard!, "access-control-allow-credentials": "true" };
+  const draft = agentDraft(containsValues); const decisions: unknown[] = [];
+  await page.route("**/test-generations/drafts/fixture-draft", (route) => route.fulfill({ headers, json: draft }));
+  await page.route("**/test-generations/requests/fixture-request", (route) => route.fulfill({ headers, json: { id: "fixture-request", project_id: project, state: "completed", redacted_request: "Deterministic draft rendered from a completed agent-loop session trace.", target_url: "https://fixture.test", correlation_id: "fixture", request_hash: "a".repeat(64), failure_reason: null, draft_id: "fixture-draft" } }));
+  await page.route("**/test-generations/drafts/fixture-draft/decision", (route) => { decisions.push(route.request().postDataJSON()); return route.fulfill({ headers, status: decision?.status ?? 200, json: decision?.json ?? { ...draft, state: "approved" } }); });
+  return { decisions, draft };
+}
+
+test("the draft review screen shows the source with its typed values, the advisory assessment, agreement and origin, and holds approval until the box is ticked", async ({ page }) => {
+  const { decisions } = await reviewApi(page, true);
+  await page.goto(`${dashboard}/agent?draft=fixture-draft`);
+  const draft = page.getByRole("region", { name: "Generated draft" });
+  await expect(draft).toContainText("Agent task test from session");
+  await expect(draft).toContainText("b".repeat(64));
+  await expect(draft.getByLabel("Generated Playwright source")).toContainText(typedValue);
+  const review = page.getByRole("region", { name: "Agent session review" });
+  await expect(review).toContainText(sessionA);
+  await expect(review).toContainText("c".repeat(64));
+  await expect(review).toContainText("requester@fixture.test");
+  await expect(review).toContainText("The requester cannot approve their own draft.");
+  const assessment = review.getByRole("region", { name: "Task assessment", exact: true });
+  await expect(assessment).toContainText("Task achieved");
+  await expect(assessment).toContainText("Cart shows one item");
+  await expect(assessment).toContainText("Cart badge reads 1 after Add to cart.");
+  await expect(assessment).toContainText("Advisory assessment by the agent. It is not a test verdict");
+  await expect(review.getByRole("group", { name: "Session agreement" })).toContainText("5 of 6 sessions of this task have an assessment.");
+  await expect(review.getByRole("group", { name: "Session agreement" })).toContainText("Agreement: 100% reported achieved");
+  await expect(review.getByRole("group", { name: "Test values" })).toContainText("entered by requester@fixture.test when the draft was requested");
+  await expect(review).toContainText("declared a test environment you own");
+  await expect(draft).toContainText("1 candidate(s) were left out");
+  const approve = page.getByRole("button", { name: "Approve and dispatch once" });
+  const ack = page.getByRole("checkbox", { name: "These typed values belong to disposable test accounts that can be reset or deleted." });
+  await expect(ack).not.toBeChecked();
+  await expect(approve).toBeDisabled();
+  await expect(draft.getByRole("button", { name: /run|dispatch/i })).toHaveCount(1);
+  await page.screenshot({ path: test.info().outputPath("agent-draft-review.png"), fullPage: true });
+  await ack.click();
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect(page.getByRole("dialog")).toContainText("The typed test values are used exactly as written in the source.");
+  await page.getByRole("dialog").getByRole("button", { name: "Approve and dispatch", exact: true }).click();
+  await expect.poll(() => decisions.length).toBe(1);
+  expect(decisions[0]).toEqual({ approved: true, reason: null, acknowledge_disposable_credentials: true });
+  expect(await holdsNothing(page)).toBe(true);
+});
+
+test("rejecting a draft with test values needs no confirmation and sends none", async ({ page }) => {
+  const { decisions } = await reviewApi(page, true, { status: 200, json: { ...agentDraft(true), state: "rejected" } });
+  await page.goto(`${dashboard}/agent?draft=fixture-draft`);
+  await page.getByRole("button", { name: "Reject draft" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Reject draft", exact: true }).click();
+  await expect.poll(() => decisions.length).toBe(1);
+  expect(decisions[0]).toEqual({ approved: false, reason: null });
+});
+
+test("a draft without test values has no confirmation box and approves without the field", async ({ page }) => {
+  const { decisions } = await reviewApi(page, false);
+  await page.goto(`${dashboard}/agent?draft=fixture-draft`);
+  await expect(page.getByRole("region", { name: "Agent session review" })).toContainText("This draft types no values.");
+  await expect(page.getByRole("checkbox", { name: /disposable test accounts/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Approve and dispatch once" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Approve and dispatch", exact: true }).click();
+  await expect.poll(() => decisions.length).toBe(1);
+  expect(decisions[0]).toEqual({ approved: true, reason: null });
+});
+
+for (const [status, detail, text] of [
+  [409, "reviewer_must_differ_from_requester", "someone else must review it"],
+  [409, "disposable_credentials_ack_required", "disposable test accounts before approving"],
+  [409, "owned_test_target_disabled", "no longer declared"],
+  [404, "Generated draft not found.", "do not have permission to review it"],
+] as const) {
+  test(`the review screen explains a refused approval: ${detail}`, async ({ page }) => {
+    const { decisions } = await reviewApi(page, true, { status, json: { detail } });
+    await page.goto(`${dashboard}/agent?draft=fixture-draft`);
+    await page.getByRole("checkbox", { name: /disposable test accounts/ }).click();
+    await page.getByRole("button", { name: "Approve and dispatch once" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Approve and dispatch", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: text })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Approve and dispatch once" })).toBeEnabled();
+    expect(decisions).toHaveLength(1);
+  });
+}
+
+test("the review screen stays readable at phone width", async ({ page }) => {
+  await reviewApi(page, true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${dashboard}/agent?draft=fixture-draft`);
+  const review = page.getByRole("region", { name: "Agent session review" });
+  await expect(review).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await review.screenshot({ path: test.info().outputPath("agent-draft-review-390.png") });
+});
+
+const qaShots = "D:/Person/CaoHoc/KhoaLuanTotNghiep/agent-at/auto-at-ui/plan/20261125-2140-agent-loop-task-testing/qa/phase-15";
+
+test("QA phase 15: typed value stays in the single draft POST, never in other requests, URL, storage or console, and no third-party host is contacted", async ({ page }) => {
+  const { api } = await agentDraftApi(page);
+  const requests: { url: string; body: string | null; method: string }[] = [];
+  const pageErrors: string[] = [];
+  page.on("request", (request) => { requests.push({ url: request.url(), body: request.postData(), method: request.method() }); });
+  page.on("pageerror", (error) => { pageErrors.push(String(error)); });
+  await page.goto(`${dashboard}/agent?vision=${sessionA}`);
+  const panel = draftPanel(page);
+  await panel.getByRole("button", { name: "Create test draft", exact: true }).click();
+  const form = panel.getByRole("form", { name: "Test draft values" });
+  const first = form.getByLabel("Step 1: Type into field “Username”");
+  await first.fill(typedValue);
+  await form.getByLabel("Step 2: Type into field “Search”").fill("query");
+  expect(await holdsNothing(page)).toBe(true);
+  await page.screenshot({ path: `${qaShots}/qa-form-filled.png` });
+  await form.getByRole("button", { name: "Create draft for review", exact: true }).click();
+  await expect(panel.getByRole("link", { name: "Open the draft for review" })).toBeVisible();
+  const origin = new URL(dashboard!).origin;
+  const hosts = new Set(requests.map((request) => new URL(request.url).host));
+  const carrying = requests.filter((request) => request.url.includes(typedValue) || request.url.includes(encodeURIComponent(typedValue)) || (request.body ?? "").includes(typedValue));
+  expect(carrying.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([`POST /api/v1/vision/explorations/${sessionA}/test-draft`]);
+  expect([...hosts].filter((host) => host !== new URL(origin).host && !host.startsWith("127.0.0.1") && !host.startsWith("localhost"))).toEqual([]);
+  expect(api.consoleText.filter((line) => line.includes(typedValue))).toEqual([]);
+  expect(pageErrors.filter((line) => line.includes(typedValue))).toEqual([]);
+  expect(await holdsNothing(page)).toBe(true);
+  await page.screenshot({ path: `${qaShots}/qa-form-sent.png` });
+});
+
+test("QA phase 15: review screen screenshots for ack gating, 409 and 404 refusals", async ({ page }) => {
+  await reviewApi(page, true, { status: 409, json: { detail: "reviewer_must_differ_from_requester" } });
+  await page.goto(`${dashboard}/agent?draft=fixture-draft`);
+  const approve = page.getByRole("button", { name: "Approve and dispatch once" });
+  await expect(approve).toBeDisabled();
+  await page.screenshot({ path: `${qaShots}/qa-review-before-ack.png`, fullPage: true });
+  await page.getByRole("checkbox", { name: /disposable test accounts/ }).click();
+  await approve.click();
+  await page.getByRole("dialog").getByRole("button", { name: "Approve and dispatch", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "someone else must review it" })).toBeVisible();
+  await page.screenshot({ path: `${qaShots}/qa-review-409.png`, fullPage: true });
+  await expect(page.getByRole("button", { name: /^(run|execute)/i })).toHaveCount(0);
+});
+
+test("QA phase 15: review 404 screenshot", async ({ page }) => {
+  await reviewApi(page, true, { status: 404, json: { detail: "Generated draft not found." } });
+  await page.goto(`${dashboard}/agent?draft=fixture-draft`);
+  await page.getByRole("checkbox", { name: /disposable test accounts/ }).click();
+  await page.getByRole("button", { name: "Approve and dispatch once" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Approve and dispatch", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "do not have permission to review it" })).toBeVisible();
+  await page.screenshot({ path: `${qaShots}/qa-review-404.png`, fullPage: true });
 });

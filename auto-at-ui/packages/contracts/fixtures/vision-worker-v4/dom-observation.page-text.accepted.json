@@ -1,0 +1,39 @@
+{
+  "contract": "VisualWorkerDomObservation",
+  "accepted": true,
+  "payload": {
+    "contract_version": "v4",
+    "tenant_id": "fixture",
+    "project_id": "00000000-0000-0000-0000-000000000001",
+    "session_id": "00000000-0000-0000-0000-000000000002",
+    "fencing_token": 1,
+    "capability": "dom-observation-v1",
+    "data": {
+      "observation": {
+        "tenant_id": "fixture",
+        "project_id": "00000000-0000-0000-0000-000000000001",
+        "session_id": "00000000-0000-0000-0000-000000000002",
+        "fencing_token": 1,
+        "schema_version": "v1",
+        "observation_id": "00000000-0000-0000-0000-000000000004",
+        "snapshot_id": "00000000-0000-0000-0000-000000000003",
+        "state_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "captured_at": "2026-11-26T09:00:00Z",
+        "viewport": { "width": 1280, "height": 720 },
+        "elements": [],
+        "truncated": false,
+        "scrollable": false,
+        "skipped_count": 0,
+        "unsupported": [],
+        "page_text": [
+          { "kind": "alert", "text": "Sai tên đăng nhập hoặc mật khẩu" },
+          { "kind": "heading", "text": "Đăng nhập" },
+          { "kind": "paragraph", "text": "Còn 3 việc chưa xong" }
+        ],
+        "page_text_truncated": true,
+        "page_text_skipped": 2
+      },
+      "bindings": []
+    }
+  }
+}
