@@ -176,4 +176,47 @@ export type VisualLocator = { originating_frame_id?: string | null; id: string; 
 export type VisualPageInventory = { state_id: string; checkpoint_id: string; page_url: string | null; url_fingerprint: string; interaction_scope?: "all" | "buttons" | "visual_buttons"; truncated: boolean; scrollable: boolean; skipped_count: number; controls: { key: string; button_kind?: "native" | "styled_link" | "custom" | null; role: string; name: string; status: "pending" | "queued" | "completed" | "failed" | "rejected"; proposal_id: string | null; operation_id: string | null }[] };
 export type VisualTrace = { schema_version: string; session_id: string; revision: string; trace_version: string; items: VisualOperation[]; locators: VisualLocator[]; pages?: VisualPageInventory[]; next_sequence: number; has_more: boolean };
 export type VisionHandoffBranch = { id: string; status: "ready" | "blocked"; reason_code: string | null; steps: { operation_id: string; locator_id: string | null; input_reference: string | null }[] };
+/** Advisory agreement report for sessions of the same task (ADR-047). The API decides `eligible`; the client only shows it. */
+export type AgentTaskConsistency = {
+  schema_version: "v1";
+  session_id: string;
+  group_sessions: number;
+  assessed_sessions: number;
+  status_counts: Record<string, number>;
+  modal_status: string | null;
+  modal_count: number;
+  agreement_rate: number | null;
+  source_status: string | null;
+  source_is_modal: boolean;
+  threshold: number;
+  small_sample: boolean;
+  eligible: boolean;
+  reasons: ("assessment_inconsistent" | "modal_not_achieved" | "source_not_modal")[];
+  advisory: true;
+  notice: string;
+};
+/** What the requester must type for a session (`GET .../test-draft/inputs`): one entry per `type` step in the order `values` expects; only lengths, never a value. `step_index` can repeat, so it is not a key. */
+export type AgentTaskDraftInputs = { owned_test_target: boolean; has_type_steps: boolean; type_steps: { step_index: number; locator_name: string; text_chars: number }[] };
+/** Identity and state of a draft made from an agent session. The typed values never come back in this response. */
+export type AgentTaskDraftCreated = {
+  request_id: string;
+  draft_id: string;
+  correlation_id: string;
+  state: DraftState;
+  title: string;
+  source_hash: string;
+  contains_test_values: boolean;
+  owned_test_target: boolean;
+  /** false: a draft for this session and trace already existed and is returned unchanged. */
+  created: boolean;
+};
+/** What a draft made from an agent session records about its origin (a subset of `GeneratedDraft.provenance`). */
+export type AgentTaskDraftProvenance = {
+  agent_trace_source: { session_id: string; trace_hash: string };
+  contains_test_values: boolean;
+  owned_test_target: boolean;
+  requested_by: string | null;
+  /** Snapshot taken when the draft was created. */
+  consistency: { assessed_sessions: number; group_sessions: number; agreement_rate: number | null; modal_status: string | null; threshold: number; small_sample: boolean } | null;
+};
 export type VisionResult = { exploration_report?: VisionExplorationReport; schema_version: string; session_id: string; project_id: string; revision: string; exploration_state: string; completion_reason: string | null; task_assessment?: VisionTaskAssessment | null; evidence_status: string; counts: Record<string, number>; branches: { id: string; status: string; reason_code: string | null }[]; handoffs: { id: string; branches: VisionHandoffBranch[] }[]; links: Record<"handoff" | "generation" | "draft" | "run" | "report", { state: string; id: string | null; href: string | null; reason_code?: string | null }>; limitations: string[] };

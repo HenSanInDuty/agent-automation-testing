@@ -20,7 +20,7 @@ test("provider catalogue and confirmation preserve API shape and structured erro
     assert.equal(requests[1].headers.has("X-CSRF-Token"), true);
   } finally { globalThis.fetch = original; }
 });
-import { ControlPlaneError, decideProposal, deleteVisualReplayFrame, getPolicy, getVisionPolicy, getVisualReplayFrameBlob, getVisualTrajectory, listDrafts, listProposals, listVisualActions, listVisualReplayFrames, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
+import { ControlPlaneError, createAgentTaskDraft, decideDraft, getAgentTaskConsistency, getAgentTaskDraftInputs, decideProposal, deleteVisualReplayFrame, getPolicy, getVisionPolicy, getVisualReplayFrameBlob, getVisualTrajectory, listDrafts, listProposals, listVisualActions, listVisualReplayFrames, setPolicy, setVisionPolicy, submitGeneration, submitVisualExploration } from "./generation-api.ts";
 
 test("generation submission sends session credentials and an idempotency key", async () => {
   const originalFetch = globalThis.fetch;
@@ -158,4 +158,157 @@ test("operation image requests can be aborted and use private session credential
   };
   try { assert.equal((await getOperationFrameBlob("http://fixture", "session", "frame", abort.signal)).size, 4); }
   finally { globalThis.fetch = originalFetch; }
+});
+
+const sampleValue = "Zx9!hunter2-sample";
+const sessionId = "00000000-0000-4000-8000-000000000001";
+const created = { request_id: "r", draft_id: "d", correlation_id: "c", state: "pending_review", title: "Agent task test", source_hash: "h", contains_test_values: true, owned_test_target: true, created: true };
+
+test("the consistency report is read with no cache from the session's own route", async () => {
+  const originalFetch = globalThis.fetch;
+  let received: Request | undefined;
+  globalThis.fetch = async (input, init) => { received = new Request(input, init); return new Response(JSON.stringify({ eligible: true, reasons: [] })); };
+  try {
+    const abort = new AbortController();
+    assert.deepEqual(await getAgentTaskConsistency("http://control-plane", sessionId, abort.signal), { eligible: true, reasons: [] });
+    assert.equal(received?.method, "GET");
+    assert.equal(received?.url, `http://control-plane/api/v1/vision/explorations/${sessionId}/consistency`);
+    assert.equal(received?.cache, "no-store");
+    assert.equal(received?.credentials, "include");
+    assert.equal(received?.headers.has("X-CSRF-Token"), false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("the expected lengths are read with no cache from the draft inputs route, as a plain GET with nothing sent", async () => {
+  const originalFetch = globalThis.fetch;
+  let received: Request | undefined; let body = "";
+  const answer = { owned_test_target: true, has_type_steps: true, type_steps: [{ step_index: 1, locator_name: "Mật khẩu", text_chars: 24 }, { step_index: 1, locator_name: "Tên", text_chars: 8 }] };
+  globalThis.fetch = async (input, init) => { received = new Request(input, init); body = await received.clone().text(); return new Response(JSON.stringify(answer)); };
+  try {
+    const abort = new AbortController();
+    assert.deepEqual(await getAgentTaskDraftInputs("http://control-plane", sessionId, abort.signal), answer);
+    assert.equal(received?.method, "GET");
+    assert.equal(received?.url, `http://control-plane/api/v1/vision/explorations/${sessionId}/test-draft/inputs`);
+    assert.equal(received?.cache, "no-store");
+    assert.equal(received?.credentials, "include");
+    assert.equal(received?.headers.has("Idempotency-Key"), false);
+    assert.equal(body, "");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("a refused or failed draft inputs request keeps its code and does not become an answer", async () => {
+  const originalFetch = globalThis.fetch;
+  const cases: [number, unknown, string | undefined][] = [
+    [404, { detail: "Visual exploration not found." }, undefined],
+    [409, { detail: { code: "session_not_completed" } }, "session_not_completed"],
+    [409, { detail: { code: "evidence_expired", step_index: 2, operation_id: "op-2" } }, "evidence_expired"],
+  ];
+  try {
+    for (const [status, answer, code] of cases) {
+      globalThis.fetch = async () => new Response(JSON.stringify(answer), { status });
+      await assert.rejects(getAgentTaskDraftInputs("http://control-plane", sessionId), (error: unknown) => {
+        assert.ok(error instanceof ControlPlaneError);
+        assert.equal(error.status, status);
+        assert.equal(error.code, code);
+        assert.equal(error.message.includes("op-2"), false);
+        return true;
+      });
+    }
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("a draft request carries the typed values only in its body and never in the address, a header, storage or the console", async () => {
+  const originalFetch = globalThis.fetch;
+  const touched: string[] = [];
+  const consoleMethods = ["log", "info", "warn", "error", "debug"] as const;
+  const originals = consoleMethods.map((name) => console[name]);
+  const storage = new Proxy({}, { get: (_, key) => () => { touched.push(`storage.${String(key)}`); }, set: () => { touched.push("storage set"); return true; } });
+  const previous = { local: Object.getOwnPropertyDescriptor(globalThis, "localStorage"), session: Object.getOwnPropertyDescriptor(globalThis, "sessionStorage") };
+  Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
+  Object.defineProperty(globalThis, "sessionStorage", { value: storage, configurable: true });
+  for (const name of consoleMethods) console[name] = () => { touched.push(`console.${name}`); };
+  let received: Request | undefined; let body = "";
+  globalThis.fetch = async (input, init) => { received = new Request(input, init); body = await received.clone().text(); return new Response(JSON.stringify(created), { status: 201 }); };
+  try {
+    const result = await createAgentTaskDraft("http://control-plane", sessionId, [sampleValue, "second"]);
+    assert.deepEqual(result, created);
+    assert.equal(received?.method, "POST");
+    assert.equal(received?.url, `http://control-plane/api/v1/vision/explorations/${sessionId}/test-draft`);
+    assert.deepEqual(JSON.parse(body), { values: [sampleValue, "second"] });
+    assert.equal(received?.headers.get("Idempotency-Key")?.length, 36);
+    assert.equal(received?.headers.has("X-CSRF-Token"), true);
+    assert.equal(received?.credentials, "include");
+    assert.equal(received?.cache, "no-store");
+    assert.equal(received?.url.includes(sampleValue) || received?.url.includes(encodeURIComponent(sampleValue)), false);
+    assert.equal([...received!.headers.values()].some((header) => header.includes(sampleValue)), false);
+    assert.equal(JSON.stringify(result).includes(sampleValue), false, "the answer holds no value");
+  } finally {
+    consoleMethods.forEach((name, index) => { console[name] = originals[index] as never; });
+    for (const [name, descriptor] of [["localStorage", previous.local], ["sessionStorage", previous.session]] as const) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete (globalThis as Record<string, unknown>)[name]; }
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual(touched, []);
+});
+
+test("a session without type steps is sent as an empty list", async () => {
+  const originalFetch = globalThis.fetch;
+  let body = "";
+  globalThis.fetch = async (input, init) => { body = await new Request(input, init).text(); return new Response(JSON.stringify({ ...created, created: false, contains_test_values: false }), { status: 200 }); };
+  try {
+    assert.equal((await createAgentTaskDraft("http://control-plane", sessionId, [])).created, false);
+    assert.deepEqual(JSON.parse(body), { values: [] });
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("every refusal of the draft route keeps its code and nothing else of the answer", async () => {
+  const originalFetch = globalThis.fetch;
+  const cases: [number, unknown, string | undefined][] = [
+    [409, { detail: { code: "assessment_inconsistent", consistency: { eligible: false, status_counts: { achieved: 1 } } } }, "assessment_inconsistent"],
+    [422, { detail: { code: "input_value_mismatch", step_index: 2, operation_id: "op-2" } }, "input_value_mismatch"],
+    [409, { detail: { code: "input_value_not_allowed" } }, "input_value_not_allowed"],
+    [409, { detail: "credentials_in_source" }, undefined],
+    [422, { detail: { code: "request_invalid" } }, "request_invalid"],
+    [404, { detail: "Visual exploration not found." }, undefined],
+  ];
+  try {
+    for (const [status, answer, code] of cases) {
+      globalThis.fetch = async () => new Response(JSON.stringify(answer), { status });
+      await assert.rejects(createAgentTaskDraft("http://control-plane", sessionId, [sampleValue]), (error: unknown) => {
+        assert.ok(error instanceof ControlPlaneError);
+        assert.equal(error.status, status);
+        assert.equal(error.code, code);
+        assert.equal(JSON.stringify([error.message, error.code]).includes(sampleValue), false);
+        assert.equal(error.message.includes("consistency") || error.message.includes("op-2"), false);
+        return true;
+      });
+    }
+    globalThis.fetch = async () => { throw new TypeError("offline"); };
+    await assert.rejects(createAgentTaskDraft("http://control-plane", sessionId, [sampleValue]), (error: unknown) => error instanceof TypeError && !String(error.message).includes(sampleValue));
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("a decision sends the disposable-account confirmation only when it was given", async () => {
+  const originalFetch = globalThis.fetch;
+  const bodies: unknown[] = [];
+  globalThis.fetch = async (input, init) => { bodies.push(await new Request(input, init).json()); return new Response(JSON.stringify({ id: "d" })); };
+  try {
+    await decideDraft("http://control-plane", "draft", true, "looks right");
+    await decideDraft("http://control-plane", "draft", true, "", true);
+    await decideDraft("http://control-plane", "draft", false, "no", false);
+    assert.deepEqual(bodies, [
+      { approved: true, reason: "looks right" },
+      { approved: true, reason: null, acknowledge_disposable_credentials: true },
+      { approved: false, reason: "no" },
+    ]);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("review refusals arrive as a plain code or a generic 404 and are not rewritten by the client", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    for (const [status, detail] of [[409, "reviewer_must_differ_from_requester"], [409, "disposable_credentials_ack_required"], [404, "Generated draft not found."]] as const) {
+      globalThis.fetch = async () => new Response(JSON.stringify({ detail }), { status });
+      await assert.rejects(decideDraft("http://control-plane", "draft", true, "", false), (error: unknown) => error instanceof ControlPlaneError && error.status === status && error.message === detail);
+    }
+  } finally { globalThis.fetch = originalFetch; }
 });

@@ -20,6 +20,8 @@ import { ConfirmDialog } from "./components/confirm-dialog";
 import { EmptyState, LoadingState } from "./components/states";
 import { StatusBadge } from "./components/status-badge";
 import { SessionStateBadge } from "./components/vision-task-assessment";
+import { validTaskAssessment } from "./components/vision-task-assessment-model";
+import { AgentTaskDraftPanel } from "./components/agent-task-draft-panel";
 import { VisionProgressTimeline } from "./components/vision-progress-timeline";
 import { VisionTrajectory } from "./components/vision-trajectory";
 import { orderedReplayFrames, replayMarkerPosition } from "./components/vision-replay-model";
@@ -269,6 +271,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
       {savedPolicy && <Hint>{visionDisclosure(savedPolicy)} Any resulting test draft requires your approval before execution.</Hint>}
     </Section>
     {notice && <Notice tone={noticeTone} role="alert">{notice}</Notice>}
+    {selected && selected.state === "completed" && validTaskAssessment(selected.task_assessment) && <AgentTaskDraftPanel key={`${apiUrl}:${selected.id}`} apiUrl={apiUrl} sessionId={selected.id} />}
     {selected && <VisionSessionDetail key={`${apiUrl}:${projectId}:${selected.id}`} apiUrl={apiUrl} session={selected} canDelete={canDeleteReplay} onActivity={() => refreshSelected(selected.id)} />}
     {selected && selected.trace_version !== "v4" && trajectory && <Section aria-label="Exploration evidence"><VisionTrajectory apiUrl={apiUrl} sessionId={selected.id} trajectory={trajectory} frames={frames} selectedFrame={selectedFrame} onSelectFrame={setSelectedFrame} /></Section>}
     {(!enabled || dirty || settingsError) && <Notice tone="info" role="status" className="flex flex-wrap items-center justify-between gap-3 text-muted-foreground">

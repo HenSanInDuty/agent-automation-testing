@@ -18,12 +18,20 @@ import { StatusBadge } from "./components/status-badge";
 import { VisionDashboard } from "./vision-dashboard";
 import { GenerationProviderSettings } from "./components/generation-provider-settings";
 import { agentWorkspaceTab } from "./components/agent-workspace-model";
+import { AgentTaskDraftReview, DisposableCredentialsAck } from "./components/agent-task-draft-panel";
+import { agentTaskProvenance, canApproveAgentDraft, decisionFailureMessage, decisionNotFoundMessage } from "./components/agent-task-draft-model";
 import { ControlPlaneError, decideDraft, getArtifacts, getDraft, getGenerationRequest, getPolicy, getRun, setPolicy, submitGeneration } from "./generation-api";
 import { shouldPollGeneration } from "./generation-polling";
 import type { Artifact, GeneratedDraft, GenerationRequest, Run } from "./generation-types";
 import { projects, type Project } from "./run-api";
 
 function errorMessage(error: unknown) { return error instanceof ControlPlaneError ? error.message : "The control plane is unavailable. Try again later."; }
+/** The decision route answers a refused review with a plain code (409) or a generic 404; word them for the reviewer. */
+function decisionError(error: unknown) {
+  if (error instanceof ControlPlaneError && error.status === 409) return decisionFailureMessage(error.message) ?? error.message;
+  if (error instanceof ControlPlaneError && error.status === 404) return decisionNotFoundMessage;
+  return errorMessage(error);
+}
 
 export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const searchParams = useSearchParams();
@@ -47,6 +55,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   const [notice, setNotice] = useState("");
   const [decision, setDecision] = useState<boolean | null>(null);
   const [isDeciding, setIsDeciding] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
   const [activeTab, setActiveTab] = useState<"generation" | "vision">(() => agentWorkspaceTab(draftId));
   const [visionProjectId, setVisionProjectId] = useState("");
   const [loadedPolicyProject, setLoadedPolicyProject] = useState("");
@@ -56,6 +65,9 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   useEffect(() => { setActiveTab(agentWorkspaceTab(draftId)); }, [draftId, visionId]);
   const visionSource = draft?.provenance.vision_source as { session_id?: string } | undefined;
   const canDecide = useMemo(() => draft?.state === "pending_review", [draft]);
+  const agentDraft = useMemo(() => agentTaskProvenance(draft?.provenance), [draft?.provenance]);
+  const needsAcknowledgement = agentDraft?.contains_test_values === true;
+  useEffect(() => { setAcknowledged(false); }, [draft?.id]);
 
   useEffect(() => {
     projects(apiUrl).then((next) => { setProjectOptions(next); setProjectId((current) => current || next[0]?.id || ""); }).catch((error) => setNotice(errorMessage(error)));
@@ -123,8 +135,8 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
   async function decide(approved: boolean) {
     if (!draft) return;
     setIsDeciding(true);
-    try { const next = await decideDraft(apiUrl, draft.id, approved, reason); setDraft(next); setNotice(next.preflight_repair_request_id ? (next.preflight_message ?? "Generated source failed while preparing execution. A revised draft is being created for review.") : approved ? "Draft approved. The control plane created one deterministic run." : "Draft rejected. This final decision is immutable."); setDecision(null); }
-    catch (error) { setNotice(errorMessage(error)); }
+    try { const next = await decideDraft(apiUrl, draft.id, approved, reason, approved && needsAcknowledgement && acknowledged); setDraft(next); setNotice(next.preflight_repair_request_id ? (next.preflight_message ?? "Generated source failed while preparing execution. A revised draft is being created for review.") : approved ? "Draft approved. The control plane created one deterministic run." : "Draft rejected. This final decision is immutable."); setDecision(null); }
+    catch (error) { setNotice(decisionError(error)); setDecision(null); }
     finally { setIsDeciding(false); }
   }
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
@@ -197,9 +209,11 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
           <h3 className="text-sm font-semibold">Provenance</h3>
           {visionSource?.session_id && <p><Link className="text-sm font-medium text-primary underline-offset-4 hover:underline" href={`/agent?vision=${encodeURIComponent(visionSource.session_id)}`}>View source Vision trace</Link></p>}
           <CodeBlock label="Draft provenance">{JSON.stringify(draft.provenance, null, 2)}</CodeBlock>
+          {agentDraft && <AgentTaskDraftReview apiUrl={apiUrl} draft={draft} />}
           {canDecide && <div className="grid gap-4 rounded-lg border bg-muted/30 p-4">
             <FormField id="generation-decision-reason" label="Decision reason" className="max-w-xl"><Input id="generation-decision-reason" value={reason} onChange={(e) => setReason(e.target.value)} /></FormField>
-            <div className="flex flex-wrap gap-2"><Button type="button" onClick={() => setDecision(true)}>Approve and dispatch once</Button><Button type="button" variant="destructive" onClick={() => setDecision(false)}>Reject draft</Button></div>
+            {needsAcknowledgement && <DisposableCredentialsAck checked={acknowledged} onChange={setAcknowledged} />}
+            <div className="flex flex-wrap gap-2"><Button type="button" disabled={!canApproveAgentDraft(needsAcknowledgement, acknowledged)} onClick={() => setDecision(true)}>Approve and dispatch once</Button><Button type="button" variant="destructive" onClick={() => setDecision(false)}>Reject draft</Button></div>
           </div>}
           {draft.linked_test_case_id && <p className="text-sm">Versioned test case: <Code>{draft.linked_test_case_id}</Code></p>}
         </Section>}
@@ -211,7 +225,7 @@ export function GenerationDashboard({ apiUrl }: { apiUrl: string }) {
           </Section>
           <ActivityTimeline apiUrl={apiUrl} runId={run.id} live={["queued", "running"].includes(run.status)} />
         </>}
-        <ConfirmDialog open={decision !== null} title={decision ? "Approve this draft?" : "Reject this draft?"} description={decision ? "Approval is final and creates one deterministic v1 run." : "Rejection is final and cannot be changed later."} confirmLabel={decision ? "Approve and dispatch" : "Reject draft"} onConfirm={() => { if (decision !== null) void decide(decision); }} onCancel={() => setDecision(null)} busy={isDeciding} />
+        <ConfirmDialog open={decision !== null} title={decision ? "Approve this draft?" : "Reject this draft?"} description={decision ? `Approval is final and creates one deterministic v1 run.${needsAcknowledgement ? " The typed test values are used exactly as written in the source." : ""}` :"Rejection is final and cannot be changed later."} confirmLabel={decision ? "Approve and dispatch" : "Reject draft"} onConfirm={() => { if (decision !== null) void decide(decision); }} onCancel={() => setDecision(null)} busy={isDeciding} />
       </TabsContent>
       <TabsContent value="vision" className="grid gap-5">
         <VisionDashboard apiUrl={apiUrl} onProjectChange={setVisionProjectId} projectPolicy={<>{notice && <Notice tone={noticeTone} role="status" className="mx-6 mt-5">{notice}</Notice>}{renderProjectPolicy(true)}</>} />
