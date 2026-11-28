@@ -22,6 +22,7 @@ from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyArtifactRepository,
     SqlAlchemyAuditEventRepository,
+    SqlAlchemyCatalogRepository,
     SqlAlchemyConfigurationRepository,
     SqlAlchemyGenerationRepository,
     SqlAlchemyOutboxEventRepository,
@@ -75,6 +76,7 @@ async def publish_forever(client: Client, settings: Settings) -> None:
                         RustFSArtifactStore(settings),
                         settings,
                         SqlAlchemyActivityEventRepository(session),
+                        test_cases=SqlAlchemyCatalogRepository(session),
                     ),
                     VisionEventProcessor(
                         SqlAlchemyVisionRepository(session),

@@ -4,10 +4,10 @@ from uuid import UUID, uuid4
 from application.reporting_events import ReportingEventProcessor
 from auto_at.contracts.agent import RunReportStatus
 from auto_at.contracts.events import EventType
-from auto_at.contracts.execution import RunStatus
+from auto_at.contracts.execution import RunStatus, TargetType, TestExecutionRequest
 from auto_at.contracts.execution import TestExecutionResult as ExecutionResult
 from config import Settings
-from domain.entities import ArtifactRecord, RunReportRecord
+from domain.entities import ArtifactRecord, RunReportRecord, TestCase
 from domain.runs import OutboxEvent, TestRun
 
 
@@ -161,3 +161,158 @@ def test_reporting_processor_records_provider_failure_as_unavailable() -> None:
     stored = next(iter(reports.items.values()))
     assert stored.status is RunReportStatus.UNAVAILABLE
     assert stored.deterministic_status is RunStatus.PASSED
+
+
+SOURCE = (
+    "import { test, expect } from '@playwright/test';\n"
+    "test('login', async ({ page }) => {\n"
+    "  await page.goto('https://example.test/');\n"
+    "  await expect(page).toHaveTitle(/x/);\n"
+    "});\n"
+)
+EXCERPT_TEXT = "page.fill('#pw', 'hunter2-literal') failed"
+RESPONSE = {
+    "choices": [
+        {
+            "message": {
+                "content": (
+                    '{"deterministic_status":"passed","headline":"Passed.",'
+                    '"what_ran":"One test ran.","observations":[],"failure":null,'
+                    '"unverified_or_skipped":[],"limitations":[]}'
+                )
+            }
+        }
+    ]
+}
+
+
+class CapturingModel(FakeModel):
+    def __init__(self) -> None:
+        super().__init__(RESPONSE)
+        self.payloads: list[str] = []
+
+    async def ainvoke(self, payload: object, **kwargs: object) -> object:
+        self.payloads.append(repr(payload))
+        return await super().ainvoke(payload, **kwargs)
+
+
+def run_with_source_and_artifact() -> tuple[TestRun, ArtifactRecord]:
+    run = TestRun.create(
+        tenant_id="tenant-a",
+        project_id=uuid4(),
+        test_case_id="case",
+        revision="a" * 40,
+        correlation_id=uuid4(),
+    )
+    run.request = TestExecutionRequest(
+        run_id=run.id,
+        correlation_id=run.correlation_id,
+        project_id=run.project_id,
+        test_case_id="case",
+        target_type=TargetType.WEB_UI,
+        revision="a" * 40,
+        runner_config={"playwright_test_source": SOURCE, "source_hash": "h" * 64},
+    )
+    uri = "memory://run/playwright-output.txt"
+    run.record_runner_result(
+        ExecutionResult(
+            run_id=run.id,
+            correlation_id=run.correlation_id,
+            status=RunStatus.PASSED,
+            started_at="2026-08-13T00:00:00Z",
+            completed_at="2026-08-13T00:00:01Z",
+            summary="Passed.",
+            artifacts=[
+                {"kind": "playwright-output", "uri": uri, "content_type": "text/plain"}
+            ],
+        )
+    )
+    artifact = ArtifactRecord(
+        id=uuid4(),
+        tenant_id=run.tenant_id,
+        run_id=run.id,
+        kind="playwright-output",
+        uri=uri,
+        checksum="c" * 64,
+        size=len(EXCERPT_TEXT),
+        content_type="text/plain",
+    )
+    return run, artifact
+
+
+class TextReader:
+    def read_verified_bytes(self, artifact: ArtifactRecord, max_bytes: int) -> bytes:
+        return EXCERPT_TEXT.encode()
+
+
+def review_payload(spec: dict[str, object] | None, *, with_repository: bool = True) -> str:
+    run, artifact = run_with_source_and_artifact()
+    model = CapturingModel()
+
+    class Runs:
+        def get(self, tenant_id: str, run_id: UUID) -> TestRun | None:
+            return run
+
+    class Configs:
+        def get(self, tenant_id: str, key: str) -> None:
+            return None
+
+    class Artifacts:
+        def list_for_run(self, tenant_id: str, run_id: UUID) -> list[ArtifactRecord]:
+            return [artifact]
+
+    class Cases:
+        def get_test_case(self, tenant_id: str, test_case_id: str) -> TestCase | None:
+            if spec is None:
+                return None
+            return TestCase(
+                id=test_case_id,
+                tenant_id=tenant_id,
+                project_id=run.project_id,
+                target_type=TargetType.WEB_UI,
+                revision="a" * 40,
+                specification=spec,
+            )
+
+    processor = ReportingEventProcessor(
+        Runs(),
+        Configs(),
+        Artifacts(),
+        Reports(),
+        TextReader(),
+        Settings(),
+        model_factory=lambda *_: model,
+        test_cases=Cases() if with_repository else None,
+    )
+    outcome = asyncio.run(processor.execute(event(run)))
+    assert outcome.status == "completed"
+    assert len(model.payloads) == 1
+    return model.payloads[0]
+
+
+def test_test_values_case_sends_no_excerpt_and_no_approved_source_to_the_model() -> None:
+    payload = review_payload({"contains_test_values": True})
+
+    assert "hunter2-literal" not in payload
+    assert "approved_playwright_test_source" not in payload
+    assert "toHaveTitle" not in payload
+
+
+def test_ordinary_case_keeps_excerpt_and_review_context() -> None:
+    payload = review_payload({"kind": "playwright"})
+
+    assert "hunter2-literal" in payload
+    assert "approved_playwright_test_source" in payload
+
+
+def test_missing_repository_or_case_keeps_the_previous_behaviour() -> None:
+    for payload in (
+        review_payload({"contains_test_values": True}, with_repository=False),
+        review_payload(None),
+    ):
+        assert "hunter2-literal" in payload
+        assert "approved_playwright_test_source" in payload
+
+
+def test_only_a_literal_true_flag_withholds_evidence() -> None:
+    assert "hunter2-literal" in review_payload({"contains_test_values": "true"})

@@ -214,3 +214,21 @@ def test_wait_terminal_returns_on_terminal_state_and_times_out_otherwise():
         FakeClient(["running"] * 50), "s", poll=5, timeout=20,
         sleep=lambda _: None, clock=lambda: next(ticks))
     assert not done and session["state"] == "running"
+
+
+@pytest.mark.parametrize(
+    ("statuses", "passed", "stable"),
+    [
+        (["passed"] * 5, 5, True),
+        (["passed"] * 9 + ["failed"], 9, True),   # exactly the 0.9 threshold of `is_stable`
+        (["passed"] * 4 + ["failed"], 4, False),
+        (["passed", "errored", "failed"], 1, False),
+        ([], 0, False),                           # nothing re-run is not a verdict
+    ],
+)
+def test_rerun_summary_uses_the_stability_threshold_on_passed_runs(statuses, passed, stable):
+    summary = stability.rerun_summary(statuses)
+    assert (summary["runs"], summary["passed"], summary["stable"]) == (
+        len(statuses), passed, stable)
+    assert summary["pass_rate"] == (None if not statuses else round(passed / len(statuses), 4))
+    assert sum(summary["statuses"].values()) == len(statuses)

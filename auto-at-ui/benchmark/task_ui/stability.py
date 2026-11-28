@@ -187,6 +187,19 @@ def is_stable(overall):
             and completed >= STABLE_THRESHOLD and agreement >= STABLE_THRESHOLD)
 
 
+def rerun_summary(statuses):
+    """Stability of ONE approved test re-run on the reset fixture (ADR-047 phase 16).
+
+    `statuses` are `TestExecutionResult.status` strings. Only "passed" counts; the threshold is the
+    same STABLE_THRESHOLD as `is_stable`. No runs means no verdict (`stable` is False).
+    """
+    counts = Counter(statuses)
+    rate = _rate(counts["passed"], len(statuses))
+    return {"runs": len(statuses), "passed": counts["passed"], "pass_rate": rate,
+            "statuses": dict(sorted(counts.items())),
+            "stable": rate is not None and rate >= STABLE_THRESHOLD}
+
+
 def _percent(value):
     return "n/a" if value is None else f"{value * 100:.0f}%"
 

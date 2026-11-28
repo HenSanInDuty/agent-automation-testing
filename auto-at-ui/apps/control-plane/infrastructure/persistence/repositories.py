@@ -1476,6 +1476,24 @@ class SqlAlchemyVisionRepository:
             )
         )
 
+    def list_same_task(
+        self, tenant_id: str, project_id: UUID, target_url: str, intent_hash: str
+    ) -> list[VisualExplorationSessionModel]:
+        """Agent-loop sessions of one task: same tenant, project, target and intent hash."""
+        return list(
+            self._session.scalars(
+                select(VisualExplorationSessionModel)
+                .where(
+                    VisualExplorationSessionModel.tenant_id == tenant_id,
+                    VisualExplorationSessionModel.project_id == project_id,
+                    VisualExplorationSessionModel.target_url == target_url,
+                    VisualExplorationSessionModel.intent_hash == intent_hash,
+                    VisualExplorationSessionModel.exploration_engine == "agent_loop",
+                )
+                .order_by(VisualExplorationSessionModel.created_at.desc())
+            )
+        )
+
     def add(self, session: VisualExplorationSessionModel) -> None:
         self._session.add(session)
         self._session.flush()

@@ -59,17 +59,28 @@ def build_run_report_evidence_bundle(
     policy: EvidencePolicy,
     verified_artifacts: Iterable[ArtifactRecord],
     reader: VerifiedArtifactTextReader,
+    *,
+    contains_test_values: bool = False,
 ) -> RunReportEvidenceBundle:
     """Add only allowlisted, bounded redacted text to the ordinary evidence bundle.
 
     Artifact records must originate from the tenant/run-scoped repository.  The
     reader verifies each local object before bytes are returned, so no raw or
     unverified file crosses the agent boundary.
+
+    ADR-047 (place 10): when the approved source carries literal typed values, no artifact text
+    and no copy of the source reaches the model. Pattern redaction cannot find a literal value
+    (Playwright prints the `fill` line in the failure code frame), so the kinds are excluded
+    whole: `playwright-output` was measured in phase 07, `worker-result` was not measured and is
+    excluded the same way. The review context is dropped for the same reason.
     """
+    if contains_test_values and "review_context" in result.runner_metadata:
+        metadata = {k: v for k, v in result.runner_metadata.items() if k != "review_context"}
+        result = result.model_copy(update={"runner_metadata": metadata})
     base = build_evidence_bundle(result, policy)
     excerpts: list[RedactedTextExcerpt] = []
     permitted_uris = {str(artifact.uri) for artifact in result.artifacts}
-    if policy.include_redacted_text:
+    if policy.include_redacted_text and not contains_test_values:
         for artifact in verified_artifacts:
             if len(excerpts) >= REPORT_MAX_TEXT_ARTIFACTS:
                 break

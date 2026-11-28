@@ -7,10 +7,18 @@ screenshots, prompts, typed action text, or execution verdicts.
 
 import asyncio
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 from agents.shared.vision_providers import VisionProviderId
+from application.agent_task_consistency import read_consistency
+from application.agent_task_draft import (
+    AgentTaskDraftNotFound,
+    AgentTaskDraftRefused,
+    CreateAgentTaskDraft,
+    ReadAgentTaskDraftInputs,
+)
+from application.generation import GenerationStateError
 from application.vision import RequestVisualExploration, VisionPolicyChanged, VisionStateError
 from application.vision_debug_evidence import DebugEvidenceNotFoundError, ReadVisionDebugEvidence
 from application.vision_policy import VisionPolicies, VisionPolicyError
@@ -33,17 +41,28 @@ from domain.authorization import (
     require,
 )
 from domain.codex_bridge import input_fingerprint
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
 from fastapi.responses import JSONResponse, StreamingResponse
 from infrastructure.artifacts.rustfs import RustFSArtifactStore
 from infrastructure.persistence.repositories import (
     SqlAlchemyActivityEventRepository,
     SqlAlchemyAuditEventRepository,
+    SqlAlchemyGenerationRepository,
     SqlAlchemyVisionRepository,
     SqlAlchemyVisualTraceRepository,
 )
 from infrastructure.persistence.session import create_session_factory, transactional_session
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from api.v1.dependencies.authorization import current_principal, current_tenant, require_csrf
 from api.v1.dependencies.vision import (
@@ -825,6 +844,220 @@ def get_result(
     if request.url.path.endswith("/export"):
         headers["Content-Disposition"] = f'attachment; filename="vision-{session_id}.json"'
     return JSONResponse(data, headers=headers)
+
+
+class AgentTaskConsistencyResponse(BaseModel):
+    """Advisory agreement report; agreement is not proof that a status is correct."""
+
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["v1"]
+    session_id: UUID
+    group_sessions: int
+    assessed_sessions: int
+    status_counts: dict[str, int]
+    modal_status: str | None
+    modal_count: int
+    agreement_rate: float | None
+    source_status: str | None
+    source_is_modal: bool
+    threshold: float
+    small_sample: bool
+    eligible: bool
+    reasons: list[Literal["assessment_inconsistent", "modal_not_achieved", "source_not_modal"]]
+    advisory: Literal[True]
+    notice: str
+
+
+@router.get(
+    "/explorations/{session_id}/consistency", response_model=AgentTaskConsistencyResponse
+)
+def get_consistency(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+):
+    with transactional_session(create_session_factory(settings)) as session:
+        session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        try:
+            data = read_consistency(
+                SqlAlchemyVisionRepository(session),
+                tenant_id=tenant_id,
+                principal=principal,
+                session_id=session_id,
+                threshold=settings.agent_task_consistency_threshold,
+            )
+        except VisionReplayNotFoundError:
+            raise HTTPException(404, "Visual exploration not found.") from None
+    return JSONResponse(data, headers={"Cache-Control": "private, no-store"})
+
+
+class AgentTaskDraftRequest(BaseModel):
+    """ADR-047 Q1: one typed value per `type` step, in step order.
+
+    Parsed by hand in the route (never as a FastAPI body model) so that no validation error can
+    echo a value back; the values appear in nothing but the draft source.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    values: list[str] = Field(default_factory=list, max_length=200)
+
+
+class AgentTaskDraftResponse(BaseModel):
+    """Identity and state only: the source (and every value in it) is read with `GET` draft."""
+
+    model_config = ConfigDict(extra="forbid")
+    request_id: UUID
+    draft_id: UUID
+    correlation_id: UUID
+    state: str
+    title: str
+    source_hash: str
+    contains_test_values: bool
+    owned_test_target: bool
+    created: bool
+
+
+# Codes about what the caller typed are 422; the rest are about the session or the project (409).
+_DRAFT_INPUT_CODES = frozenset(
+    {
+        "input_value_missing",
+        "input_value_mismatch",
+        "input_value_rejected_by_source_policy",
+    }
+)
+
+
+def _draft_refusal(error: AgentTaskDraftRefused) -> HTTPException:
+    """The one mapping of a refusal to a status and a `detail`; it never holds a value."""
+    detail = {"code": error.code}
+    if error.step_index is not None:
+        detail["step_index"] = error.step_index
+    if error.operation_id is not None:
+        detail["operation_id"] = str(error.operation_id)
+    if error.report is not None:
+        detail["consistency"] = error.report
+    return HTTPException(422 if error.code in _DRAFT_INPUT_CODES else 409, detail=detail)
+
+
+@router.post(
+    "/explorations/{session_id}/test-draft",
+    response_model=AgentTaskDraftResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_csrf)],
+)
+def create_agent_task_draft(
+    session_id: UUID,
+    response: Response,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    payload: Annotated[Any, Body()] = None,
+):
+    """A reviewable Playwright draft from a completed, achieved agent-loop session (ADR-047).
+
+    The key is required like on `revised-draft`, but a replay is recognised by the session and its
+    trace alone, so the key is not stored and no value is ever hashed or compared.
+    """
+    del idempotency_key
+    try:
+        body = AgentTaskDraftRequest.model_validate({} if payload is None else payload)
+    except ValidationError:
+        # `from None` and a fixed detail: a pydantic error would carry the offending input.
+        raise HTTPException(422, detail={"code": "request_invalid"}) from None
+    with transactional_session(create_session_factory(settings)) as session:
+        use_case = CreateAgentTaskDraft(
+            SqlAlchemyVisionRepository(session),
+            SqlAlchemyVisualTraceRepository(session),
+            SqlAlchemyGenerationRepository(session),
+            SqlAlchemyAuditEventRepository(session),
+            consistency_threshold=settings.agent_task_consistency_threshold,
+        )
+        try:
+            result = use_case.execute(
+                tenant_id=tenant_id, principal=principal, session_id=session_id,
+                input_values=body.values,
+                correlation_id=vision_policy_correlation_id(),
+            )
+        except AgentTaskDraftNotFound:
+            raise HTTPException(404, "Visual exploration not found.") from None
+        except AgentTaskDraftRefused as error:
+            raise _draft_refusal(error) from None
+        except GenerationStateError:
+            raise HTTPException(409, detail={"code": "idempotency_key_conflict"}) from None
+    provenance = result.draft.provenance
+    if not result.created:
+        response.status_code = status.HTTP_200_OK
+    return AgentTaskDraftResponse(
+        request_id=result.request.id,
+        draft_id=result.draft.id,
+        correlation_id=result.draft.correlation_id,
+        state=result.draft.state,
+        title=result.draft.title,
+        source_hash=result.draft.source_hash,
+        contains_test_values=provenance.get("contains_test_values") is True,
+        owned_test_target=provenance.get("owned_test_target") is True,
+        created=result.created,
+    )
+
+
+class AgentTaskTypeStep(BaseModel):
+    """Length only: no value, no ref, no id. `locator_name` is the verified locator's name."""
+
+    model_config = ConfigDict(extra="forbid")
+    step_index: int
+    locator_name: str
+    text_chars: int
+
+
+class AgentTaskDraftInputsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    owned_test_target: bool
+    has_type_steps: bool
+    type_steps: list[AgentTaskTypeStep]
+
+
+@router.get(
+    "/explorations/{session_id}/test-draft/inputs",
+    response_model=AgentTaskDraftInputsResponse,
+)
+def get_agent_task_draft_inputs(
+    session_id: UUID,
+    tenant_id: Annotated[str, Depends(current_tenant)],
+    principal: Annotated[Principal, Depends(current_principal)],
+    settings: Annotated[Settings, Depends(get_settings)],
+):
+    """The length each `type` step expects, so the requester can type the values `POST` needs.
+
+    Same session, tenant, permission and trace checks as `POST`; empty unless the project allows
+    owned test targets. Nothing is logged or audited: the answer is read-only.
+    """
+    with transactional_session(create_session_factory(settings)) as session:
+        use_case = ReadAgentTaskDraftInputs(
+            SqlAlchemyVisionRepository(session),
+            SqlAlchemyVisualTraceRepository(session),
+            SqlAlchemyGenerationRepository(session),
+        )
+        try:
+            result = use_case.execute(
+                tenant_id=tenant_id, principal=principal, session_id=session_id
+            )
+        except AgentTaskDraftNotFound:
+            raise HTTPException(404, "Visual exploration not found.") from None
+        except AgentTaskDraftRefused as error:
+            raise _draft_refusal(error) from None
+    body = AgentTaskDraftInputsResponse(
+        owned_test_target=result.owned_test_target,
+        has_type_steps=result.has_type_steps,
+        type_steps=[
+            AgentTaskTypeStep(step_index=index, locator_name=name, text_chars=chars)
+            for index, name, chars in result.type_steps
+        ],
+    )
+    return JSONResponse(
+        body.model_dump(mode="json"), headers={"Cache-Control": "private, no-store"}
+    )
 
 
 @router.get("/explorations/{session_id}/operation-frames/{frame_id}")

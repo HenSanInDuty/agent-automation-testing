@@ -4,6 +4,7 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 from time import perf_counter
+from typing import Protocol
 from uuid import UUID
 
 from agents.reporting.executor import ReportingExecutionOutcome, execute_run_reporting
@@ -19,6 +20,7 @@ from auto_at.contracts.events import EventType
 from auto_at.contracts.execution import validate_playwright_test_source
 from config import Settings
 from domain.activity import ActivityEvent
+from domain.entities import TestCase
 from domain.ports import (
     ActivityEventRepository,
     ArtifactRepository,
@@ -26,12 +28,16 @@ from domain.ports import (
     RunReportRepository,
     RunRepository,
 )
-from domain.runs import OutboxEvent
+from domain.runs import OutboxEvent, TestRun
 
 from application.reporting import PersistRunReport
 from application.runs import GetRun
 
 logger = logging.getLogger(__name__)
+
+
+class TestCaseReader(Protocol):
+    def get_test_case(self, tenant_id: str, test_case_id: str) -> TestCase | None: ...
 
 
 class ReportingEventProcessor:
@@ -49,6 +55,7 @@ class ReportingEventProcessor:
         model_factory: Callable[[Settings, AgentRuntimeConfig], LanguageModel] = (
             create_language_model
         ),
+        test_cases: TestCaseReader | None = None,
     ) -> None:
         self._runs = runs
         self._configurations = configurations
@@ -58,6 +65,7 @@ class ReportingEventProcessor:
         self._settings = settings
         self._activities = activities
         self._model_factory = model_factory
+        self._test_cases = test_cases
 
     async def execute(self, event: OutboxEvent) -> ReportingExecutionOutcome:
         if event.event_type != EventType.AGENT_RUN_REPORT_REQUESTED.value:
@@ -86,6 +94,7 @@ class ReportingEventProcessor:
             runtime.evidence,
             self._artifacts.list_for_run(event.tenant_id, run.id),
             self._reader,
+            contains_test_values=self._contains_test_values(run),
         )
         try:
             primary = self._model_factory(self._settings, runtime)
@@ -152,6 +161,13 @@ class ReportingEventProcessor:
             },
         }
         return run.result.model_copy(update={"runner_metadata": metadata})
+
+    def _contains_test_values(self, run: TestRun) -> bool:
+        """ADR-047: a test case with literal test values keeps its text away from the model."""
+        if self._test_cases is None:
+            return False
+        test_case = self._test_cases.get_test_case(run.tenant_id, run.test_case_id)
+        return test_case is not None and test_case.specification.get("contains_test_values") is True
 
     def _runtime(self, tenant_id: str) -> AgentRuntimeConfig:
         return resolve_agent_runtime(

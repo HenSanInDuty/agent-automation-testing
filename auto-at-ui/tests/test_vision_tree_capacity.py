@@ -57,6 +57,8 @@ def test_project_policy_capacity_http_round_trip_and_enforcement(monkeypatch):
             return saved.get((tenant, project))
 
     monkeypatch.setattr(generation, "SqlAlchemyGenerationRepository", Repository)
+    monkeypatch.setattr(generation, "SqlAlchemyAuditEventRepository",
+                        lambda _session: SimpleNamespace(append=lambda event: None))
     monkeypatch.setattr(generation, "create_session_factory", lambda _: lambda: nullcontext())
     monkeypatch.setattr(generation, "transactional_session", lambda _: nullcontext())
     path = f"/api/v1/test-generations/projects/{uuid4()}/policy"
