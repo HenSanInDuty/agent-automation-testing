@@ -1,6 +1,12 @@
-import type { ElementHandle, Frame, FrameLocator, Locator, Page } from "@playwright/test";
+import type { BrowserContext, ElementHandle, Frame, FrameLocator, Locator, Page } from "@playwright/test";
 import { safeLocatorValue, stableCss, validateVision, type VisualLocatorDescriptor,
   type VisualLocatorScope, type VisualBoundingBox } from "./vision-contract.js";
+
+// ADR-046: browser contexts of an owned test target. Only there may a password input be observed,
+// grounded and typed into; its value is never read, logged or stored (only the typed length is kept).
+const credentialContexts = new WeakSet<BrowserContext>();
+export const allowCredentialInputs = (context: BrowserContext): void => { credentialContexts.add(context); };
+export const credentialInputsAllowed = (page: Page): boolean => credentialContexts.has(page.context());
 
 export type GroundedLocator = {
   status: "verified" | "ambiguous" | "not_found" | "stale" | "unsupported" | "redacted";
@@ -135,7 +141,7 @@ export async function groundLocator(page: Page, x: number, y: number, editable =
       }
       return { role, names, labels, attributes, tag, buttonPath, password: type === "password", testId: el.getAttribute("data-testid") };
     });
-    if (details.password) return unresolved("unsupported", "credential_input_unsupported");
+    if (details.password && !credentialInputsAllowed(page)) return unresolved("unsupported", "credential_input_unsupported");
     const candidates: VisualLocatorDescriptor[] = [];
     let redacted = false;
     const candidate = (strategy: VisualLocatorDescriptor["strategy"], value: string | null, role: string | null = null) => {

@@ -101,6 +101,11 @@ class ProjectExecutionPolicyModel(TenantRecord, Base):
     allowed_origins: Mapped[list[str]] = mapped_column(JSONB, default=list)
     vision_max_hops: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     vision_max_states: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
+    # ADR-046: the owner declares this project a test environment they own (dev/staging), which
+    # lets the agent-loop engine submit forms there. Default false keeps the read-only rules.
+    vision_owned_test_target: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+    )
 
 
 class VisualExplorationSessionModel(TenantRecord, Base):
@@ -142,6 +147,8 @@ class VisualExplorationSessionModel(TenantRecord, Base):
     exploration_engine: Mapped[str] = mapped_column(
         String(20), nullable=False, default="planner", server_default="planner"
     )
+    # ADR-046: advisory end-of-task assessment of an agent-loop session; never a test verdict.
+    task_assessment: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     lease_owner: Mapped[UUID | None] = mapped_column(nullable=True)
     fencing_token: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     lease_expires_at: Mapped[datetime | None] = mapped_column(

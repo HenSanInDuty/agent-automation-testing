@@ -1,5 +1,6 @@
 """Bounded private v4 transport. No worker path or diagnostic crosses this boundary."""
 
+import asyncio
 import json
 import logging
 from hashlib import sha256
@@ -51,6 +52,15 @@ def _worker_code(data: bytes) -> str:
 
 class VisualWorkerUnavailable(RuntimeError):
     pass
+
+
+class VisualWorkerUnreachable(VisualWorkerUnavailable):
+    """No connection was made, so the worker received nothing (ADR-046)."""
+
+
+# A worker that is restarting refuses connections for a few seconds. Opening a session is the
+# only request repeated, because nothing can have run yet; the waits total seven seconds.
+OPEN_CONNECT_RETRY_DELAYS = (1.0, 2.0, 4.0)
 
 
 class HttpVisualWorker:
@@ -113,12 +123,21 @@ class HttpVisualWorker:
                       "Visual worker transport unavailable.", **fields,
                       error_type="timeout" if isinstance(error, httpx.TimeoutException)
                       else "connection_error", duration_ms=round((monotonic() - started) * 1000))
+            if isinstance(error, (httpx.ConnectError, httpx.ConnectTimeout)):
+                raise VisualWorkerUnreachable("visual worker unreachable") from None
             raise VisualWorkerUnavailable("visual worker transport unavailable") from None
 
     async def open(self, request: VisualWorkerOpen) -> str:
         import json
 
-        data, _ = await self._request("POST", "/visual-explorations", request, request)
+        for delay in (*OPEN_CONNECT_RETRY_DELAYS, None):
+            try:
+                data, _ = await self._request("POST", "/visual-explorations", request, request)
+                break
+            except VisualWorkerUnreachable:
+                if delay is None:
+                    raise
+                await asyncio.sleep(delay)
         value = json.loads(data)
         if not set(request.required_capabilities) <= set(value.get("capabilities", [])):
             raise VisualWorkerUnavailable("worker DOM capability unavailable")

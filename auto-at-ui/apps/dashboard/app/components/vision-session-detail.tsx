@@ -11,6 +11,8 @@ import { selectedOperation, shouldPollVisionResult } from "./vision-operation-mo
 import { VisionOperationLedger } from "./vision-operation-ledger";
 import { VisionResultSummary } from "./vision-result-summary";
 import { visionProviderLabel } from "./vision-provider-model";
+import { validTaskAssessment } from "./vision-task-assessment-model";
+import { VisionTaskAssessmentPanel } from "./vision-task-assessment";
 import { VisionLiveScreen } from "./vision-live-screen";
 import { VisionProgressTimeline } from "./vision-progress-timeline";
 import { VisionPageInventoryList } from "./vision-page-inventory";
@@ -20,7 +22,10 @@ export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: 
   const [progress, setProgress] = useState<VisionProgressActivity | null>(null);
   const terminalProgress = ["completed", "unavailable", "cancelled"].includes(progress?.stage ?? "");
   const live = ["queued", "running"].includes(session.state) && (!result || ["queued", "running"].includes(result.exploration_state)) && !terminalProgress;
-  const completionReason = result?.completion_reason ?? session.safe_failure_reason
+  // A session that ended with a task assessment finished normally; it must not be shown as "stopped" with failure copy.
+  const assessment = validTaskAssessment(result?.task_assessment ?? session.task_assessment);
+  const assessed = assessment !== null;
+  const completionReason = assessed ? null : result?.completion_reason ?? session.safe_failure_reason
     ?? (terminalProgress && typeof progress?.metadata.reason_code === "string" ? progress.metadata.reason_code : null);
   const [trace, setTrace] = useState<VisualTrace | null>(null);
   const [catalog, setCatalog] = useState<VisualLocator[]>([]);
@@ -83,6 +88,7 @@ export function VisionSessionDetail({ apiUrl, session, canDelete, onActivity }: 
     finally { setDeletion(null); setDeleting(false); }
   }
   return <div className="grid min-w-0 gap-6" aria-label="Saved Vision session">
+    {assessment && <VisionTaskAssessmentPanel assessment={assessment} />}
     {session.trace_version === "v4" && <div className="vision-live-workspace grid items-stretch gap-6 min-[900px]:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
       <VisionLiveScreen apiUrl={apiUrl} sessionId={session.id} live={live} progress={progress} completionReason={completionReason} operations={deleting ? [] : trace?.items ?? []} locators={trace?.locators ?? []} selectedId={selected} follow={follow} onFollow={setFollow} onSelect={(id) => { setFollow(false); setSelected(id); }} />
       <VisionOperationLedger items={trace?.items ?? []} locators={trace?.locators ?? []} branches={result?.handoffs.at(-1)?.branches ?? []} selectedId={selected} onSelect={(id) => { setFollow(false); setSelected(id); }} follow={follow} onFollow={setFollow} />

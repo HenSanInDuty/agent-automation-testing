@@ -6,6 +6,7 @@ import type { VisionResult } from "../generation-types";
 import { visionResultExportUrl } from "../generation-api";
 import { visionResultLabel } from "./vision-operation-model";
 import { visionFailureMessage } from "./vision-provider-model";
+import { completionNote, validTaskAssessment } from "./vision-task-assessment-model";
 import { Disclosure, Hint, ItemList } from "./agent-ui";
 import { Section } from "./section";
 import { VisionConclusion } from "./vision-conclusion";
@@ -25,12 +26,14 @@ const td = "px-3 py-2.5 align-top [overflow-wrap:anywhere]";
 
 export function VisionResultSummary({ result, apiUrl, compact = false }: { result: VisionResult; apiUrl: string; compact?: boolean }) {
   const report = result.exploration_report;
+  const assessment = validTaskAssessment(result.task_assessment);
+  const note = completionNote(result.completion_reason, assessment, visionFailureMessage);
   const partial = ["exploration_call_limit", "exploration_coverage_incomplete"].includes(result.completion_reason ?? "");
   const stateLabel = partial ? "Partial exploration" : visionResultLabel(result.exploration_state);
   if (compact) return <Section aria-label="Exploration summary" className="gap-4 py-5" contentClassName="grid gap-4">
     <VisionConclusion conclusion={report?.conclusion} />
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h2 className="text-base font-semibold tracking-tight">{stateLabel}</h2>{report && <span className="text-sm text-muted-foreground">{report.summary.controls_acted_on} control actions recorded</span>}</div>
-    {result.completion_reason && <Hint>{visionFailureMessage(result.completion_reason) ?? result.completion_reason.replaceAll("_", " ")}</Hint>}
+    {note && <Hint>{note}</Hint>}
     {result.evidence_status === "legacy_evidence_only" && <Hint>Legacy evidence only. Verified locators were not recorded for this session.</Hint>}
     {result.links.generation.state === "failed" && <Hint>Draft generation failed. Exploration evidence is still available.</Hint>}
     <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-medium">{(["draft", "run", "report"] as const).map((key) => result.links[key].href && <Link key={key} className="text-primary underline-offset-4 hover:underline" href={result.links[key].href!}>{key === "draft" ? "Review draft" : key === "run" ? "View run" : "View execution report"}</Link>)}</div>
@@ -39,7 +42,7 @@ export function VisionResultSummary({ result, apiUrl, compact = false }: { resul
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold tracking-tight">Exploration report</h2><a className={buttonVariants({ variant: "outline", size: "sm" })} href={visionResultExportUrl(apiUrl, result.session_id)}><Download aria-hidden="true" />Download report JSON</a></div>
     <VisionConclusion conclusion={report?.conclusion} />
     <p className="text-sm">Session: <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs break-all">{result.session_id}</code> · {stateLabel}</p>
-    <p className="text-sm text-muted-foreground">{visionFailureMessage(result.completion_reason) ?? result.completion_reason?.replaceAll("_", " ")}</p>
+    <p className="text-sm text-muted-foreground">{note}</p>
     {report && <>
       <dl className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
         {[

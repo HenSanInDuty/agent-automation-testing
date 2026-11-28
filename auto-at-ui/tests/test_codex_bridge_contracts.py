@@ -1,7 +1,9 @@
 """Offline, synthetic bridge contracts: no subprocess, credential or provider access."""
 
+import json
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from pathlib import Path
+from uuid import UUID, uuid4
 
 import pytest
 from auto_at.contracts.codex_bridge import (
@@ -194,6 +196,77 @@ def test_observation_bounds_duplicates_and_hash_binding():
         observation(elements=[element] * 2)
     with pytest.raises(ValueError, match="hash"):
         validate_observation(request(obs), obs.model_copy(update={"truncated": True}))
+
+
+def test_observation_without_page_text_keeps_its_canonical_bytes_and_hash():
+    # Hash computed with the contract as of HEAD d7d2b06 (before page text existed), fixed ids.
+    obs = CodexDomObservation.model_validate(dict(
+        tenant_id="fixture", project_id=UUID(int=1), session_id=UUID(int=2), fencing_token=1,
+        observation_id=UUID(int=3), snapshot_id=UUID(int=4), state_fingerprint="a" * 64,
+        captured_at=NOW, viewport={"width": 1280, "height": 720}, elements=[{
+            "element_id": "e_" + "a" * 32, "role": "button", "name": "Continue",
+            "enabled": True, "editable": False,
+        }], unsupported=["closed_shadow"],
+    ))
+    assert content_hash(obs) == (
+        "2b10cadeb97a2aabd4d4c6118399430949297d5722fc7319a25e615e2f353d78"
+    )
+    assert not {"page_text", "page_text_truncated", "page_text_skipped"} & obs.model_dump(
+        mode="json").keys()
+    # Explicit defaults serialize the same as absent fields.
+    explicit = CodexDomObservation.model_validate(
+        obs.model_dump() | {"page_text": [], "page_text_truncated": False, "page_text_skipped": 0})
+    assert canonical_bytes(explicit) == canonical_bytes(obs)
+
+
+def test_page_text_is_serialized_only_when_present_and_changes_the_hash():
+    items = [{"kind": "alert", "text": "Sai mật khẩu"}, {"kind": "heading", "text": "Đăng nhập"}]
+    plain, rich = observation(), observation(page_text=items, page_text_skipped=1)
+    dumped = rich.model_dump(mode="json")
+    assert dumped["page_text"] == items and dumped["page_text_skipped"] == 1
+    assert "page_text_truncated" not in dumped
+    assert content_hash(plain) != content_hash(rich)
+    assert observation(page_text_truncated=True).model_dump(mode="json")["page_text_truncated"]
+
+
+@pytest.mark.parametrize("text", [
+    "Liên hệ nguoi.dung@example.com", "password=abc", "Reset password", "token abc",
+    "https://example.com/x", "Mã 1234567", " leading", "line\nbreak", "x" * 161,
+])
+def test_page_text_rejects_sensitive_or_unbounded_text(text):
+    with pytest.raises(ValueError):
+        observation(page_text=[{"kind": "paragraph", "text": text}])
+
+
+def test_page_text_bounds_items_kinds_and_total_bytes():
+    with pytest.raises(ValueError):
+        observation(page_text=[{"kind": "paragraph", "text": "a"}] * 25)
+    with pytest.raises(ValueError):
+        observation(page_text=[{"kind": "link", "text": "a"}])
+    with pytest.raises(ValueError):
+        observation(page_text=[{"kind": "paragraph", "text": "a", "value": "x"}])
+    ok = [{"kind": "paragraph", "text": "a" * 160}] * 25
+    observation(page_text=ok[:24])  # 24 * 160 = 3840 bytes, within the 4096 cap
+    wide = [{"kind": "paragraph", "text": "ế" * 160}] * 10  # 3 bytes each: 4800 bytes
+    with pytest.raises(ValueError, match="byte limit"):
+        observation(page_text=wide)
+
+
+PAGE_TEXT_SAMPLES = json.loads((
+    Path(__file__).parents[1] / "packages/contracts/fixtures/vision-page-text-v1/samples.json"
+).read_text(encoding="utf-8"))["samples"]
+
+
+@pytest.mark.parametrize("sample", PAGE_TEXT_SAMPLES, ids=lambda s: s["text"][:20])
+def test_page_text_filter_parity_with_the_worker(sample):
+    # worker_keeps is asserted by vision-agent-mode.spec.ts on this file; here: kept => accepted.
+    try:
+        observation(page_text=[{"kind": "paragraph", "text": sample["text"]}])
+        accepted = True
+    except ValueError:
+        accepted = False
+    assert accepted == sample["python_accepts"]
+    assert accepted or not sample["worker_keeps"]
 
 
 @pytest.mark.parametrize("old,new", [

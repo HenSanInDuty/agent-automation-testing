@@ -69,6 +69,27 @@ test("accepts the all-websites wildcard for generated source", () => {
   }).allowed_origins).toEqual(["*"]);
 });
 
+test("accepts the traceparent POST /runs stamps on a generated-source run (phase 15c F1)", async () => {
+  const request = validateExecutionRequestV1(await fixture("request.playwright-test-source.json"));
+  const traceparent = `00-${"a".repeat(32)}-${"b".repeat(16)}-01`;
+  const config = validatePlaywrightTestSourceMode({ ...request.runner_config, traceparent });
+
+  expect(config.mode).toBe("playwright_test_source");
+  expect(Object.keys(config)).not.toContain("traceparent");
+  const result = await preflightPlaywrightTestSource({
+    ...request, runner_config: { ...request.runner_config, traceparent },
+  });
+  expect(result).toEqual({ accepted: true });
+});
+
+test("still rejects a malformed traceparent or any other unknown key", async () => {
+  const request = validateExecutionRequestV1(await fixture("request.playwright-test-source.json"));
+  for (const extra of [{ traceparent: "not-a-traceparent" }, { traceparent: 7 }, { shell: "x" }]) {
+    expect(() => validatePlaywrightTestSourceMode({ ...request.runner_config, ...extra }))
+      .toThrow("invalid playwright_test_source runner configuration");
+  }
+});
+
 test("rejects an invalid generated-source mode", () => {
   expect(() => validatePlaywrightTestSourceMode({ mode: "shell", source_hash: "a".repeat(64) }))
     .toThrow("invalid playwright_test_source runner configuration");

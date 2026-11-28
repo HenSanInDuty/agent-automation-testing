@@ -8,6 +8,7 @@ from application.generation import (
     GenerationNotFoundError,
     GenerationStateError,
     SubmitGeneration,
+    is_agent_task_draft,
 )
 from auto_at.contracts.generation import ProjectExecutionPolicy
 from config import Settings, get_settings
@@ -18,6 +19,7 @@ from domain.authorization import (
     actor_for_tenant,
     require,
 )
+from domain.runs import AuditEvent
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from infrastructure.persistence.repositories import (
     SqlAlchemyAuditEventRepository,
@@ -88,18 +90,23 @@ class DraftListResponse(BaseModel):
 class DecisionRequest(BaseModel):
     approved: bool
     reason: str | None = Field(default=None, max_length=4_000)
+    # ADR-047: required to approve a draft whose source carries literal test values.
+    acknowledge_disposable_credentials: bool = False
 
 
 class PolicyRequest(BaseModel):
     allowed_origins: list[str] = Field(min_length=1, max_length=100)
     vision_max_hops: int = Field(default=5, ge=1, le=20)
     vision_max_states: int = Field(default=50, ge=1, le=200)
+    # ADR-046. Omitted (null) keeps the stored value, so older clients cannot reset it.
+    vision_owned_test_target: bool | None = None
 
 
 class PolicyResponse(BaseModel):
     allowed_origins: list[str] = Field(default_factory=list, max_length=100)
     vision_max_hops: int = Field(default=5, ge=1, le=20)
     vision_max_states: int = Field(default=50, ge=1, le=200)
+    vision_owned_test_target: bool = False
 
 
 def _request_response(
@@ -164,12 +171,29 @@ def set_policy(
     except (ValueError, AuthorizationError) as error:
         raise HTTPException(status_code=404, detail="Project not found.") from error
     with transactional_session(create_session_factory(settings)) as session:
-        SqlAlchemyGenerationRepository(session).set_policy(
+        repository = SqlAlchemyGenerationRepository(session)
+        previous = repository.get_policy(tenant_id, project_id)
+        # Read before the write: set_policy mutates the same ORM row in this session.
+        was_owned = False if previous is None else previous.vision_owned_test_target
+        owned = repository.set_policy(
             tenant_id, project_id, normalized, vision_max_hops=payload.vision_max_hops,
             vision_max_states=payload.vision_max_states,
+            vision_owned_test_target=payload.vision_owned_test_target,
         )
+        # ADR-047: audit in the same transaction, so a failed write leaves no event behind.
+        if was_owned == owned:
+            action = "project_policy.updated"
+        else:
+            action = ("project_policy.owned_test_target.enabled" if owned
+                      else "project_policy.owned_test_target.disabled")
+        SqlAlchemyAuditEventRepository(session).append(AuditEvent(
+            id=uuid4(), tenant_id=tenant_id, actor=principal.subject, action=action,
+            entity_type="project_execution_policy", entity_id=project_id,
+            correlation_id=uuid4(),
+        ))
     return PolicyRequest(allowed_origins=normalized, vision_max_hops=payload.vision_max_hops,
-                         vision_max_states=payload.vision_max_states)
+                         vision_max_states=payload.vision_max_states,
+                         vision_owned_test_target=owned)
 
 
 @router.get("/projects/{project_id}/policy", response_model=PolicyResponse)
@@ -189,6 +213,7 @@ def get_policy(
         allowed_origins=[] if policy is None else policy.allowed_origins,
         vision_max_hops=5 if policy is None else policy.vision_max_hops,
         vision_max_states=50 if policy is None else policy.vision_max_states,
+        vision_owned_test_target=False if policy is None else policy.vision_owned_test_target,
     )
 
 
@@ -341,7 +366,13 @@ def decide(
             if request is None:
                 raise GenerationNotFoundError(draft_id)
             actor = actor_for_tenant(principal, tenant_id, request.project_id)
-            require(actor, Permission.DECIDE_GENERATION)
+            # ADR-047/ADR-004: agent-task drafts need a human reviewer, not a contributor.
+            require(
+                actor,
+                Permission.DECIDE_PROPOSAL
+                if is_agent_task_draft(draft.provenance)
+                else Permission.DECIDE_GENERATION,
+            )
             decided, _, repair = DecideGeneratedDraft(
                 repository,
                 SqlAlchemyAuditEventRepository(session),
@@ -354,6 +385,7 @@ def decide(
                 approved=payload.approved,
                 decided_by=actor.subject,
                 reason=payload.reason,
+                acknowledge_disposable_credentials=payload.acknowledge_disposable_credentials,
             )
         except (GenerationNotFoundError, AuthorizationError) as error:
             raise HTTPException(status_code=404, detail="Generated draft not found.") from error

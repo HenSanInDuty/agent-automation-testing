@@ -225,7 +225,7 @@ class VisualTraceUnitOfWork(Protocol):
     def finish(
         self, lease: VisualSessionLease, reason: str | None = None, *,
         handoff: VisualLocatorHandoff | None = None, intent: str | None = None,
-        handoff_reason: str | None = None,
+        handoff_reason: str | None = None, task_assessment: dict | None = None,
     ) -> str: ...
 
     def progress(self, lease: VisualSessionLease, stage: str, key: str, metadata=None) -> None: ...

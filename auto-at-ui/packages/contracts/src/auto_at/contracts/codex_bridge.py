@@ -122,6 +122,25 @@ class CodexDomElement(ClosedModel):
         return value
 
 
+# ADR-046 (page text): caps shared with the worker (`vision-dom.ts`); the worker applies them first.
+PAGE_TEXT_MAX_ITEMS = 24
+PAGE_TEXT_MAX_CHARS = 160
+PAGE_TEXT_MAX_BYTES = 4096
+
+
+class CodexPageTextItem(ClosedModel):
+    """Visible page text (alert/status, heading, short paragraph); never a field value."""
+
+    kind: Literal["alert", "status", "heading", "paragraph"]
+    text: str = Field(min_length=1, max_length=PAGE_TEXT_MAX_CHARS)
+
+    @field_validator("text")
+    @classmethod
+    def safe_text(cls, value: str) -> str:
+        # Same sensitive-identity filter as an element name; no new rule.
+        return validate_locator_value(value)
+
+
 class CodexDomObservation(CodexScope):
     schema_version: Literal["v1"] = "v1"
     observation_id: UUID
@@ -136,11 +155,27 @@ class CodexDomObservation(CodexScope):
     unsupported: tuple[Literal["iframe", "closed_shadow", "canvas", "unbound_target"], ...] = (
         Field(default=(), max_length=4)
     )
+    # Capability `page-text-v1` (agent mode only). Empty/false/0 are omitted when serialized, so the
+    # canonical bytes and hash of every observation without page text are unchanged.
+    page_text: tuple[CodexPageTextItem, ...] = Field(default=(), max_length=PAGE_TEXT_MAX_ITEMS)
+    page_text_truncated: bool = False
+    page_text_skipped: int = Field(default=0, ge=0, le=5000)
+
+    @model_serializer(mode="wrap")
+    def omit_default_page_text(self, handler):
+        data = handler(self)
+        for key, empty in (("page_text", []), ("page_text_truncated", False),
+                           ("page_text_skipped", 0)):
+            if data.get(key) == empty:
+                data.pop(key, None)
+        return data
 
     @model_validator(mode="after")
     def bounded(self):
         if len({e.element_id for e in self.elements}) != len(self.elements):
             raise ValueError("duplicate element ID")
+        if sum(len(i.text.encode("utf-8")) for i in self.page_text) > PAGE_TEXT_MAX_BYTES:
+            raise ValueError("page text exceeds byte limit")
         if len(canonical_bytes(self)) > 65_536:
             raise ValueError("DOM observation exceeds byte limit")
         return self
@@ -223,6 +258,17 @@ class AgentLoopContext(ClosedModel):
     )
     snapshot_version: int = Field(ge=1, le=1_000_000)
     snapshot: str = Field(max_length=AGENT_SNAPSHOT_MAX_CHARS)
+    # ADR-046: the project owner marked the target as a test environment they own, so the
+    # prompt may let the agent fill and submit forms. Absent (False) keeps the read-only rules.
+    owned_test_target: bool = False
+
+    @model_serializer(mode="wrap")
+    def omit_default_owned_test_target(self, handler):
+        # Keeps the canonical bytes of every request for a read-only target unchanged.
+        data = handler(self)
+        if not data.get("owned_test_target"):
+            data.pop("owned_test_target", None)
+        return data
 
 
 class CodexBridgeRequest(CodexScope):
@@ -417,12 +463,34 @@ class AgentStep(ClosedModel):
     actions: tuple[AgentAction, ...] = Field(min_length=1, max_length=AGENT_MAX_ACTIONS)
 
 
+AGENT_TASK_CHECKS_MAX = 12
+
+
+class AgentTaskCheck(ClosedModel):
+    """One expectation of the task and what the agent observed for it."""
+
+    expectation: str = Field(min_length=1, max_length=300)
+    status: Literal["met", "not_met", "not_checked"]
+    evidence: str = Field(min_length=1, max_length=300)
+
+
+class AgentTaskResult(ClosedModel):
+    """ADR-046: the agent's end-of-task assessment. Advisory only, never a test verdict."""
+
+    outcome: Literal["task_result"] = "task_result"
+    status: Literal["achieved", "not_achieved", "blocked"]
+    summary: str = Field(min_length=1, max_length=1000)
+    checks: tuple[AgentTaskCheck, ...] = Field(max_length=AGENT_TASK_CHECKS_MAX)
+
+
 AgentLoopOutput = Annotated[
-    AgentStep | CodexNeedScreenshot | CodexStop, Field(discriminator="outcome"),
+    AgentStep | CodexNeedScreenshot | CodexStop | AgentTaskResult,
+    Field(discriminator="outcome"),
 ]
 # What a bridge response may carry: either family; `CodexOutput` itself never gains a variant.
 BridgeOutput = Annotated[
-    CodexCandidates | AgentStep | CodexNeedScreenshot | CodexStop, Field(discriminator="outcome"),
+    CodexCandidates | AgentStep | CodexNeedScreenshot | CodexStop | AgentTaskResult,
+    Field(discriminator="outcome"),
 ]
 
 

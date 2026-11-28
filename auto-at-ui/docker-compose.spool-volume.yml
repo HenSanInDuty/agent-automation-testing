@@ -1,0 +1,56 @@
+# Opt-in overlay: keep the bridge spool in a named Linux volume instead of a host bind mount.
+#
+# Use it when the host path of CODEX_BRIDGE_HOST_SPOOL is a Windows folder that the engine
+# mounts without Linux ownership (for example Kiri on WSL2: a 9p/drvfs mount where every file
+# is owned by uid 0 and chown fails). The spool hands private files from the root producers to
+# the non-root bridge (uid 1000) with chown/chmod, which needs a real Linux filesystem.
+# Docker Desktop's bind mounts accept those calls, so this overlay is not needed there.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.codex.yml \
+#     -f docker-compose.spool-volume.yml --profile claude up -d
+#
+# Entries below replace the `/codex-jobs` bind of docker-compose.codex.yml (same target path).
+# CODEX_BRIDGE_HOST_SPOOL must still be set, because the base overlay requires it.
+x-spool: &spool
+  type: volume
+  source: codex-jobs
+  target: /codex-jobs
+
+services:
+  spool-init:
+    image: busybox:1.37
+    command: ["sh", "-c", "chown 1000:1000 /codex-jobs && chmod 700 /codex-jobs"]
+    volumes:
+      - *spool
+    restart: "no"
+
+  control-plane:
+    depends_on:
+      spool-init:
+        condition: service_completed_successfully
+    volumes:
+      - *spool
+
+  temporal-worker:
+    depends_on:
+      spool-init:
+        condition: service_completed_successfully
+    volumes:
+      - *spool
+
+  codex-bridge:
+    depends_on:
+      spool-init:
+        condition: service_completed_successfully
+    volumes:
+      - *spool
+
+  claude-bridge:
+    depends_on:
+      spool-init:
+        condition: service_completed_successfully
+    volumes:
+      - *spool
+
+volumes:
+  codex-jobs: {}

@@ -5,7 +5,7 @@ import { canonical, requireVision, safeLocatorValue, validateVision,
   type CodexBoundObservation, type CodexDomElement, type CodexElementBinding,
   type VisualLocatorDescriptor, type VisualWorkerObserveDom } from "./vision-contract.js";
 import { BOX_CENTER_TOLERANCE_PX, equivalentState, inspectState, interactionScope, logStateMismatch, type RuntimeState } from "./vision-checkpoints.js";
-import { groundLocator, resolveDescriptor } from "./vision-locators.js";
+import { credentialInputsAllowed, groundLocator, resolveDescriptor } from "./vision-locators.js";
 import { logVisionEvent, visionLogScope } from "./vision-observability.js";
 import { contextSignature, targetSignature, targetActionSignature } from "./vision-revalidation.js";
 
@@ -24,13 +24,86 @@ export type DomSnapshot = { data: CodexBoundObservation; state: RuntimeState; pa
   actionSignatures?: Map<string, string>;
   anonymousTargets: Map<string, ElementHandle<Element>> };
 
+// ADR-046 (capability `page-text-v1`, agent mode only): visible text the page shows, so the agent sees an error
+// banner, a title or a counter without asking for a screenshot. Main document only. Never a field value, never
+// hidden / script / style / contenteditable text. Same sensitive filter as an element name (`safeLocatorValue`,
+// mirrored by the Python contract); the owned-test-target flag does not relax it.
+// ponytail: fixed caps (mirrored by PAGE_TEXT_* in codex_bridge.py); alerts/status first, then headings, then
+// paragraphs, each in document order. Raise the caps there and here together if a live page needs more.
+const PAGE_TEXT_ITEMS = 24, PAGE_TEXT_CHARS = 160, PAGE_TEXT_BYTES = 4096, PAGE_TEXT_SCAN = 64, PAGE_TEXT_NODES = 400;
+// Python's `re` reads word boundaries, \w and \d as Unicode, `safeLocatorValue` reads them as ASCII. Page text is free-form, so it
+// is also checked with this Unicode twin of the contract's pattern (vision.py `_SENSITIVE_LOCATOR`): every item the
+// worker keeps must pass `CodexPageTextItem`, or the control plane would lose the whole observation. Stricter is fine.
+const W = String.raw`\p{L}\p{N}_`;
+const PAGE_TEXT_SENSITIVE = new RegExp(String.raw`(?<![${W}])(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)(?![${W}])` +
+  String.raw`|[${W}.+-]+@[${W}.-]+\.[a-z]{2,}|(?<![${W}])\p{Nd}{7,}(?![${W}])|https?:\/\/|\[redacted\]`, "iu");
+// Python's IGNORECASE also folds U+0130 and U+0131 onto `i` ("apİ key", "cookıe"); JS `iu` does not. So the check
+// runs on a copy with those two folded; the kept text itself is not changed.
+const pageTextSafe = (text: string) => safeLocatorValue(text, PAGE_TEXT_CHARS * 2) &&
+  !PAGE_TEXT_SENSITIVE.test(text.replace(/[İı]/g, "i"));
+type PageTextItem = { kind: "alert" | "status" | "heading" | "paragraph"; text: string };
+async function collectPageText(page: Page): Promise<{ items: PageTextItem[]; skipped: number; truncated: boolean }> {
+  const raw = await page.evaluate(({ nodes, scan, chars }) => {
+    const groups: Array<[PageTextItem["kind"], string]> = [["alert", '[role="alert"]'], ["status", '[role="status"]'],
+      ["heading", 'h1,h2,h3,h4,h5,h6,[role="heading"]'], ["paragraph", "p"]];
+    const never = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "INPUT", "TEXTAREA", "SELECT", "BUTTON", "SVG",
+      "CANVAS", "IFRAME", "OBJECT"]);
+    const shown = (el: Element) => {
+      if (el.closest('[aria-hidden="true"]') || !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
+      const rect = el.getBoundingClientRect();
+      // Not 1px screen-reader-only text, and not parked off the left/top edge.
+      return rect.width > 1 && rect.height > 1 && rect.right > 0 && rect.bottom > 0;
+    };
+    const read = (node: Node, out: string[]) => {
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeType === Node.TEXT_NODE) out.push(child.nodeValue ?? "");
+        else if (child.nodeType === Node.ELEMENT_NODE) {
+          const el = child as HTMLElement;
+          if (never.has(el.tagName.toUpperCase()) || el.getAttribute("aria-hidden") === "true" || el.isContentEditable ||
+            !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+          const block = !getComputedStyle(el).display.startsWith("inline") || el.tagName === "BR";
+          if (block) out.push(" ");
+          read(el, out);
+          if (block) out.push(" ");
+        }
+      }
+    };
+    const found: PageTextItem[] = [], seen = new Set<string>();
+    let overflow = false, visited = 0;
+    for (const [kind, selector] of groups) for (const el of Array.from(document.querySelectorAll(selector))) {
+      if (++visited > nodes) { overflow = true; break; }
+      if (never.has(el.tagName.toUpperCase()) || (el as HTMLElement).isContentEditable || !shown(el)) continue;
+      // A heading/paragraph inside an alert or status region is already part of that item.
+      if (kind !== "alert" && kind !== "status" && el.parentElement?.closest('[role="alert"],[role="status"]')) continue;
+      const parts: string[] = []; read(el, parts);
+      const chars_ = Array.from(parts.join("").replace(/[\s\x00-\x1f\x7f-\x9f\u2028\u2029]+/g, " ").trim());
+      if (!chars_.length) continue;
+      const text = chars_.length > chars ? chars_.slice(0, chars - 1).join("").trimEnd() + "…" : chars_.join("");
+      if (seen.has(text)) continue;
+      seen.add(text);
+      if (found.length >= scan) { overflow = true; break; }
+      found.push({ kind, text });
+    }
+    return { found, overflow };
+  }, { nodes: PAGE_TEXT_NODES, scan: PAGE_TEXT_SCAN, chars: PAGE_TEXT_CHARS });
+  const items: PageTextItem[] = [];
+  let skipped = 0, bytes = 0, truncated = raw.overflow;
+  for (const item of raw.found) {
+    if (!pageTextSafe(item.text)) { skipped++; continue; }
+    const size = Buffer.byteLength(item.text);
+    if (items.length >= PAGE_TEXT_ITEMS || bytes + size > PAGE_TEXT_BYTES) { truncated = true; break; }
+    items.push(item); bytes += size;
+  }
+  return { items, skipped: Math.min(skipped, 5000), truncated };
+}
+
 // Browser traversal is deliberately separate from inspectState's private form capture.
 // Only bounded candidate geometry and already-filtered labels leave this callback.
 // `agentDomPath` (capability `agent-dom-path-v1`, agent mode only): controls without an accessible name
 // get a main-document `dom_path` locator (any button/link/custom control), so they can be bound and
 // clicked. Named controls keep their role/label locators and are unchanged; off = old behaviour.
 export async function observeDom(page: Page, request: VisualWorkerObserveDom,
-  options: { agentDomPath?: boolean; held?: RuntimeState } = {}): Promise<DomSnapshot> {
+  options: { agentDomPath?: boolean; pageText?: boolean; held?: RuntimeState } = {}): Promise<DomSnapshot> {
   const agentPaths = options.agentDomPath === true;
   const before = await inspectState(page);
   const documentRoot = await page.locator("html").elementHandle();
@@ -49,7 +122,7 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
   // A function so that A2 can repeat the walk once; the first call is the unchanged single walk.
   const traverse = async () => {
   const visualButtons = interactionScope(page) === "visual_buttons" || agentPaths ? await page.evaluate(visualButtonSemantics) : [];
-  return page.evaluate(({ limit, sensitive, scope, visualButtons, agentPaths }) => {
+  return page.evaluate(({ limit, sensitive, scope, visualButtons, agentPaths, credentials }) => {
     const buttonMap = new Map(visualButtons.map(item => [document.querySelector(item.path), item]));
     // Keep overlap, but do not step over a control clipped by the lower edge.
     // This geometry-only hint stays in the private worker projection, not model input.
@@ -106,14 +179,18 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
             el.matches('button,input[type="button"],input[type="submit"],input[type="reset"]')))) continue;
         const input = el as HTMLInputElement;
         const tag = el.tagName.toLowerCase(), type = el.getAttribute("type")?.toLowerCase() ?? "text";
-        if (type === "password" || type === "hidden") { this.skip("private_input"); continue; }
+        // ADR-046: a password input is a control only on an owned test target; its value is never read.
+        if (type === "hidden" || (type === "password" && !credentials)) { this.skip("private_input"); continue; }
         if (input.disabled || el.getAttribute("aria-disabled") === "true") { this.skip("disabled"); continue; }
         const formControl = el.matches("input,textarea,select,[contenteditable]");
         const labelled = (el.getAttribute("aria-labelledby") ?? "").split(/\s+/).map(id => doc.getElementById(id)?.textContent ?? "").join(" ").trim();
         const labels = Array.from(input.labels ?? []).map(label => label.textContent?.trim() ?? "");
         const rawNames = [el.getAttribute("aria-label"), labelled, ...labels, el.getAttribute("title"), formControl ? null : el.textContent?.trim()];
         // Check all labels and identity attributes before truncation; sensitive controls are omitted.
-        const identity = [...rawNames, el.getAttribute("data-testid"), el.getAttribute("id"), el.getAttribute("name")];
+        // On an owned test target only the exported names are screened: `id="password"` is how a login form is
+        // written, and an unsafe attribute is still dropped later as a locator candidate.
+        const identity = credentials ? rawNames
+          : [...rawNames, el.getAttribute("data-testid"), el.getAttribute("id"), el.getAttribute("name")];
         if (identity.some(value => value && (secret.test(value) || /[\x00-\x1f]/.test(value)))) { this.skip("sensitive_identity"); continue; }
         const name = (rawNames.find(value => value?.trim()) ?? "").trim();
         if ([...name].length > 120) { this.skip("name_length_limit"); continue; }
@@ -164,7 +241,8 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
     return { candidates, unsupported: [...unsupported], truncated, skipped, skipReasons, nextScrollDelta,
       // This transport flag means there is another vertical viewport to inspect.
       scrollable: Math.ceil(scrollY + innerHeight) < document.documentElement.scrollHeight - 1 };
-  }, { limit: request.max_elements, scope: interactionScope(page), visualButtons, agentPaths, sensitive: String.raw`\b(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{7,}\b|https?:\/\/|\[redacted\]` });
+  }, { limit: request.max_elements, scope: interactionScope(page), visualButtons, agentPaths,
+    credentials: credentialInputsAllowed(page), sensitive: String.raw`\b(?:password|passwd|secret|token|api[_ -]?key|authorization|cookie)\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{7,}\b|https?:\/\/|\[redacted\]` });
   };
   let found = await traverse();
   const elements: CodexDomElement[] = [], bindings: CodexElementBinding[] = [];
@@ -177,7 +255,9 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
   const base = { schema_version: "v1", tenant_id: request.tenant_id, project_id: request.project_id,
     session_id: request.session_id, fencing_token: request.fencing_token, observation_id: randomUUID(),
     snapshot_id: request.snapshot_id, state_fingerprint: held?.fingerprint ?? before.fingerprint, captured_at: capturedAt, viewport,
-    elements, truncated, unsupported: [], scrollable: found.scrollable, skipped_count: skipped };
+    elements, truncated, unsupported: [], scrollable: found.scrollable, skipped_count: skipped,
+    // Defaults the validated observation carries anyway; here so the byte reservation counts them.
+    page_text: [] as PageTextItem[], page_text_truncated: false, page_text_skipped: 0 };
   const motion = { waits: 0, regrounded: 0, retraversals: 0, invalidated: false };
   // Phase 02: candidates of the first walk that motion made lose their binding; checked against the final walk.
   const lost: Array<{ role: string; name: string; button_kind: string | null; reason: string }> = [];
@@ -306,12 +386,20 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
     if (at >= 0) twins.splice(at, 1);
     else { skip(miss.reason); unsupported.add("unbound_target"); }
   }
+  // Capability `page-text-v1`: read after the controls, inside the state checks below. Text is dropped (never the
+  // controls) when the observation would not fit the byte cap; absent capability leaves every field at its default.
+  const text = options.pageText === true ? await collectPageText(page) : null;
   const after = await inspectState(page);
   if (!equivalentState(before, after)) logStateMismatch(before, after, "dom_collection");
   requireVision(equivalentState(before, after), "state_changed_during_observation");
   requireVision(context === await contextSignature(page), "state_changed_during_observation");
+  const observed = { ...base, truncated, unsupported: [...unsupported], skipped_count: Math.min(skipped, 5000) };
+  let pageTextCut = text?.truncated ?? false;
+  const kept = [...(text?.items ?? [])];
+  const withText = () => ({ ...observed, page_text: kept, page_text_truncated: pageTextCut, page_text_skipped: text?.skipped ?? 0 });
+  while (kept.length && Buffer.byteLength(canonical(withText())) > request.max_bytes) { kept.pop(); pageTextCut = true; }
   const data = validateVision<CodexBoundObservation>("CodexBoundObservation", {
-    observation: { ...base, truncated, unsupported: [...unsupported], skipped_count: Math.min(skipped, 5000) }, bindings,
+    observation: withText(), bindings,
     next_scroll_delta_y: found.nextScrollDelta,
   });
   requireVision(Buffer.byteLength(canonical(data.observation)) <= request.max_bytes, "dom_byte_limit");
@@ -320,6 +408,9 @@ export async function observeDom(page: Page, request: VisualWorkerObserveDom,
     "Visual buttons that moved during observation were grounded after they stopped.", scope?.context,
     { ...scope?.fields, session_id: request.session_id, snapshot_id: request.snapshot_id,
       motion_waits: motion.waits, motion_regrounded: motion.regrounded, motion_retraversals: motion.retraversals });
+  if (text) logVisionEvent("info", "vision.dom.page_text", "Page text was read for an agent observation.", scope?.context,
+    { ...scope?.fields, session_id: request.session_id, snapshot_id: request.snapshot_id,
+      page_text_items: kept.length, page_text_filtered: text.skipped, page_text_truncated: pageTextCut });
   if (skipped || truncated) {
     logVisionEvent("warn", "vision.dom.coverage_limited", "DOM observation omitted controls; coverage is incomplete.",
       scope?.context, { ...scope?.fields, session_id: request.session_id, snapshot_id: request.snapshot_id,

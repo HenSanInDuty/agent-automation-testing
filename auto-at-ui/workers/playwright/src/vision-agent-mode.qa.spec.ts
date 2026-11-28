@@ -38,6 +38,26 @@ const home = () => `<!doctype html><meta charset="utf-8"><style>button,a,input{d
   <a href="${externalOrigin}/landing" target="_blank">Mở ngoài popup</a>
   <a href="/next">Trang kế</a>
   <p><span id="out">chưa đổi</span></p>`;
+// ADR-048 QA pages: /qa-clock (timer carousel + form), /qa-raf (control moved by requestAnimationFrame),
+// /qa-marquee (infinite CSS translate animation, not a timer).
+const clockPage = (path: string) => `<!doctype html><meta charset="utf-8"><style>body{margin:8px;font:14px sans-serif}
+  button,a,input{display:inline-block;margin:4px;padding:3px 6px}
+  @keyframes slide{from{transform:translateX(0)}to{transform:translateX(200px)}}
+  #marquee{animation:slide 1s linear infinite alternate}</style>
+  <a id="slide" href="#slide0">Slide 0</a>
+  <a href="/next">Trang kế</a>
+  <button type="button" onclick="document.getElementById('out').textContent='đã đổi'">Đổi nội dung</button>
+  <input aria-label="Ô gõ" name="typed">
+  ${path === "/qa-raf" ? `<button type="button" id="mover" style="position:absolute;top:120px;left:0">Nút chạy</button>` : ""}
+  ${path === "/qa-marquee" ? `<button type="button" id="marquee" style="position:absolute;top:120px;left:0">Nút trôi</button>` : ""}
+  <p><span id="out">chưa đổi</span></p>
+  <script>
+    var ticks = 0;
+    window.startCarousel = function (period) { setInterval(function () { ticks++;
+      var slide = document.getElementById('slide'); slide.textContent = 'Slide ' + ticks; slide.setAttribute('href', '#slide' + ticks); }, period); };
+    ${path === "/qa-raf" ? `(function frame() { var m = document.getElementById('mover');
+      m.style.left = (Math.floor(performance.now() / 20) % 150) + 'px'; requestAnimationFrame(frame); })();` : ""}
+  </script>`;
 test.beforeAll(async () => {
   posts = [];
   external = createServer((request, response) => {
@@ -50,6 +70,17 @@ test.beforeAll(async () => {
     if (request.method === "POST") posts.push(request.url ?? "");
     response.setHeader("content-type", "text/html; charset=utf-8");
     response.setHeader("cache-control", "no-store");
+    // ADR-048 round 2 QA: `/qa-delay` answers after 480 ms (real time); `/qa-slow` makes every state read (inspectState
+    // calls document.getAnimations once per sample) block on a synchronous request, i.e. a slow page, not a changing one.
+    if (request.url?.startsWith("/qa-delay")) { setTimeout(() => response.end("ok"), Number(request.url.split("ms=")[1] ?? 480)); return; }
+    if (request.url?.startsWith("/qa-slow")) {
+      const ms = request.url.split("ms=")[1] ?? "480";
+      response.end(`<!doctype html><meta charset="utf-8"><button type="button">Nút tĩnh</button><p>Trang tĩnh, đọc trạng thái chậm</p>
+        <script>var real = document.getAnimations.bind(document);
+        document.getAnimations = function () { var x = new XMLHttpRequest(); x.open("GET", "/qa-delay?ms=${ms}", false); x.send(); return real(); };</script>`);
+      return;
+    }
+    if (request.url === "/qa-clock" || request.url === "/qa-raf" || request.url === "/qa-marquee") { response.end(clockPage(request.url)); return; }
     response.end(request.url === "/next" ? `<!doctype html><meta charset="utf-8"><a href="/">Về</a>` : home());
   });
   origin = await listen(main);
@@ -327,4 +358,284 @@ test("QA-W21 inside the allowlist the refresh keeps its checks and plain actions
   const done = await act(await observe(), "Đổi nội dung");
   expect(done.operation.status).toBe("completed");
   expect(await page.locator("#out").textContent()).toBe("đã đổi");
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// ADR-048 QA (`agent-frozen-clock-v1`), adversarial cases the developer spec does not cover.
+const CLOCK_CAP = { required_capabilities: ["agent-frozen-clock-v1"] };
+const qaSleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+const qaTime = (on: Page = page) => on.evaluate(() => Date.now());
+const qaSlide = (on: Page = page) => on.locator("#slide").textContent();
+const qaStart = (period: number, on: Page = page) => on.evaluate((ms) =>
+  (window as unknown as { startCarousel: (n: number) => void }).startCarousel(ms), period);
+const sessionPage = (id: string) => (worker as unknown as { sessions: Map<string, { page: Page }> }).sessions.get(id)!.page;
+async function mismatches<T>(attempt: () => Promise<T>): Promise<{ value: T; events: Array<Record<string, unknown>> }> {
+  const lines: string[] = [], original = console.error;
+  console.error = (line: string) => lines.push(line);
+  try {
+    const value = await attempt();
+    const events = lines.flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } });
+    return { value, events: events.filter(entry => entry.event === "vision.state.mismatch") };
+  } finally { console.error = original; }
+}
+const qaStill = async (ms = 500, on: Page = page) => {
+  const time = await qaTime(on), text = await qaSlide(on);
+  await qaSleep(ms);
+  expect(await qaTime(on)).toBe(time);
+  expect(await qaSlide(on)).toBe(text);
+};
+
+test("QA-C01 twelve observe, idle, act rounds on a ticking carousel: no state_mismatch, page Date.now() frozen while idle", async () => {
+  test.setTimeout(240_000);
+  await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP });
+  await qaStart(400);
+  const { events } = await mismatches(async () => {
+    for (let round = 0; round < 12; round++) {
+      const seen = await observe();
+      const time = await qaTime(), text = await qaSlide();
+      await qaSleep(1300); // three carousel periods if the page clock ran
+      expect(await qaTime(), `round ${round} Date.now()`).toBe(time);
+      expect(await qaSlide(), `round ${round} slide`).toBe(text);
+      const done = round % 3 === 1 ? await act(seen, "Ô gõ", TYPE(`v${round}`)) : await act(seen, "Đổi nội dung");
+      expect(done.operation, `round ${round}: ${done.operation.outcome_code ?? ""}`).toMatchObject({ status: "completed", outcome_code: "observed" });
+    }
+  });
+  expect(events).toEqual([]);
+  await qaStill();
+});
+
+test("QA-C02 close and expiry leave nothing behind (browser gone, no unhandled rejection, expiry during a running wait)", async () => {
+  test.setTimeout(60_000);
+  const unhandled: unknown[] = [];
+  const onRejection = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", onRejection);
+  try {
+    // close(): idle session
+    await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP });
+    await qaStart(400);
+    const closing = browser;
+    await worker.close(identity, identity.session_id);
+    expect(closing.isConnected()).toBe(false);
+    await expect(worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current })).rejects.toThrow();
+    // expiry while idle (clock stopped)
+    identity = { ...identity, session_id: randomUUID() };
+    await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP, deadline: new Date(Date.now() + 4000).toISOString(), max_session_seconds: 4 });
+    const idle = browser;
+    await qaSleep(5000);
+    expect(idle.isConnected()).toBe(false);
+    // expiry while a wait holds the clock running
+    identity = { ...identity, session_id: randomUUID() };
+    await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP, deadline: new Date(Date.now() + 4000).toISOString(), max_session_seconds: 4 });
+    const running = browser;
+    const outcome = await Promise.race([
+      run({ kind: "wait", duration_ms: 8000 }).then(result => `${result.operation.status}:${result.operation.outcome_code ?? ""}`, (error: Error) => `throw:${error.message}`),
+      qaSleep(20_000).then(() => "HUNG"),
+    ]);
+    expect(outcome, "wait returned").not.toBe("HUNG");
+    for (let polls = 0; polls < 40 && running.isConnected(); polls++) await qaSleep(250); // the 4 s deadline may still be ahead
+    expect(running.isConnected(), `outcome ${outcome}`).toBe(false);
+    await qaSleep(500);
+    expect(unhandled).toEqual([]);
+  } finally { process.off("unhandledRejection", onRejection); }
+});
+
+test("QA-C03 two parallel sessions, one with the capability and one without, do not affect each other", async () => {
+  test.setTimeout(60_000);
+  await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP });
+  const aState = { identity, current };
+  const pageA = page;
+  identity = { ...identity, session_id: randomUUID(), project_id: randomUUID() };
+  await agent({ target_url: `${origin}/qa-clock` });
+  const bState = { identity, current }, pageB = page;
+  expect(pageA).not.toBe(pageB);
+  await qaStart(400, pageA); await qaStart(400, pageB);
+  const swap = (state: { identity: VisualWorkerIdentity; current: string }) => { identity = state.identity; current = state.current; };
+  // B (no capability) keeps running while A is stopped.
+  const a0 = await qaTime(pageA), b0 = await qaTime(pageB), slideA = await qaSlide(pageA), slideB = await qaSlide(pageB);
+  await qaSleep(600);
+  expect(await qaTime(pageA)).toBe(a0); expect(await qaSlide(pageA)).toBe(slideA);
+  expect(await qaTime(pageB)).toBeGreaterThanOrEqual(b0 + 500); expect(await qaSlide(pageB)).not.toBe(slideB);
+  // An operation in A neither starts nor stops B's clock, and A is stopped again afterwards.
+  swap(aState); page = pageA;
+  const doneA = await act(await observe(), "Đổi nội dung");
+  expect(doneA.operation, doneA.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  aState.current = current;
+  await qaStill(500, pageA);
+  const b1 = await qaTime(pageB); await qaSleep(300);
+  expect(await qaTime(pageB)).toBeGreaterThanOrEqual(b1 + 250);
+  // An operation in B does not start A's clock.
+  swap(bState); page = pageB;
+  await run({ kind: "scroll", delta_y: 5 }).catch(() => undefined);
+  await qaStill(500, pageA);
+  // Closing B leaves A stopped and usable.
+  await worker.close(bState.identity, bState.identity.session_id);
+  swap(aState); page = pageA;
+  await qaStill(500, pageA);
+  expect((await act(await observe(), "Đổi nội dung")).operation.status).toBe("completed");
+});
+
+test("QA-C04 type, same-origin navigation, back and reload under the stopped clock", async () => {
+  test.setTimeout(60_000);
+  await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP });
+  await qaStart(400);
+  const typed = await act(await observe(), "Ô gõ", TYPE("tiếng Việt có dấu"));
+  expect(typed.operation, typed.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect(await page.locator("input[name=typed]").inputValue()).toBe("tiếng Việt có dấu");
+  await qaStill();
+  const moved = await act(await observe(), "Trang kế");
+  expect(moved.operation, moved.operation.outcome_code ?? "").toMatchObject({ status: "completed", url_change: "changed" });
+  const next = sessionPage(identity.session_id);
+  expect(next.url()).toBe(`${origin}/next`);
+  const time = await qaTime(next);
+  await qaSleep(400);
+  expect(await qaTime(next)).toBe(time);
+  const back = await run({ kind: "back" });
+  expect(back.operation, back.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  page = sessionPage(identity.session_id);
+  expect(page.url()).toBe(`${origin}/qa-clock`);
+  // The document is fresh (carousel not started): the observation after back is accepted and the page is stopped.
+  expect((await observe()).data.observation.elements.map(item => item.name)).toContain("Đổi nội dung");
+  await qaStill(400);
+  await qaStart(400);
+  const reload = await worker.prepare(command({ kind: "navigate" }));
+  if (reload.operation.status === "prepared") {
+    const done = await worker.execute(executeCommand(reload)); current = done.state_fingerprint ?? current;
+    expect(done.operation, done.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+    await qaStill(400, sessionPage(identity.session_id));
+  } else expect(reload.operation.outcome_code).toBeTruthy(); // reload in explore may be refused by policy: recorded, not a clock fault
+});
+
+test("QA-C05 changes not caused by a timer are still refused while the clock is stopped", async () => {
+  test.setTimeout(90_000);
+  for (const [label, change] of [
+    ["relabel", () => page.evaluate(() => { [...document.querySelectorAll("button")].find(b => b.textContent === "Đổi nội dung")!.nextElementSibling!.setAttribute("aria-label", "Ô khác"); })],
+    ["modal", () => page.evaluate(() => { const d = document.createElement("div"); d.setAttribute("role", "dialog");
+      d.style.cssText = "position:fixed;left:0;top:0;width:200px;height:100px"; d.textContent = "Cookie"; document.body.append(d); })],
+    ["url", () => page.evaluate(() => history.pushState(null, "", "/pushed"))],
+    ["scroll", () => page.evaluate(() => { const s = document.createElement("div"); s.style.height = "3000px"; document.body.append(s); scrollTo(0, 40); })],
+    ["form", () => page.evaluate(() => { (document.querySelector("input[name=typed]") as HTMLInputElement).value = "x"; })],
+    ["manual DOM swap of the slide link", () => page.evaluate(() => { document.getElementById("slide")!.textContent = "Slide X"; document.getElementById("slide")!.setAttribute("href", "#x"); })],
+  ] as [string, () => Promise<unknown>][]) {
+    await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP });
+    const seen = await observe();
+    await change();
+    const { value } = await mismatches(() => propose(seen, "Đổi nội dung"));
+    expect(value.operation, label).toMatchObject({ status: "rejected", outcome_code: "state_mismatch", executed_click: null });
+    expect(await page.locator("#out").textContent(), label).toBe("chưa đổi");
+    await qaStill(300);
+    await worker.close(identity, identity.session_id);
+    identity = { ...identity, session_id: randomUUID() };
+  }
+});
+
+// Opens like `agent()` but tolerates a first navigate that cannot settle (a page that animates for ever).
+async function agentLoose(extra: object): Promise<string> {
+  try { await agent(extra); return "open=completed"; }
+  catch (error) { return `open=${(error as Error).message.split("\n")[0]}`; }
+}
+const lastNavigate = () => (worker as unknown as { sessions: Map<string, { operations: Map<string, { result: OperationResult }> }> })
+  .sessions.get(identity.session_id)!.operations;
+
+test("QA-C06 requestAnimationFrame that moves a control: moves without the capability; with it the page is stopped between operations, but an operation (clock running) cannot settle", async () => {
+  test.setTimeout(90_000);
+  const left = () => page.locator("#mover").evaluate(el => (el as HTMLElement).style.left);
+  const without = await agentLoose({ target_url: `${origin}/qa-raf` });
+  const l0 = await left(); await qaSleep(300);
+  expect(await left()).not.toBe(l0);
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const withClock = await agentLoose({ target_url: `${origin}/qa-raf`, ...CLOCK_CAP });
+  // Stopped after the (failed or not) first operation: the control no longer moves.
+  const l1 = await left(); await qaSleep(600);
+  expect(await left(), "rAF-driven control while the page clock is stopped").toBe(l1);
+  const statuses = [...lastNavigate().values()].map(entry => `${entry.result.operation.status}:${entry.result.operation.outcome_code ?? ""}`);
+  test.info().annotations.push({ type: "raf-behaviour", description: `without=${without} | with=${withClock} | ops=${statuses.join(",")}` });
+  console.log(`QA-C06 without=${without} | with=${withClock} | ops=${statuses.join(",")}`);
+});
+
+test("QA-C07 specification of the documented limit: an infinite CSS translate animation is not stopped by the page clock", async () => {
+  test.setTimeout(60_000);
+  const seen: string[] = [await agentLoose({ target_url: `${origin}/qa-marquee`, ...CLOCK_CAP })];
+  const x = () => page.locator("#marquee").evaluate(el => Math.round(el.getBoundingClientRect().left));
+  const x0 = await x(); await qaSleep(400);
+  seen.push(`css-animation-moves-with-frozen-clock=${(await x()) !== x0}`);
+  seen.push(await observe().then(() => "observe=ok", (error: Error) => `observe=${error.message}`));
+  // Records the real behaviour (ADR-048 Limits: state_kept_changing / settle_timeout). Never fails on it.
+  test.info().annotations.push({ type: "marquee-behaviour", description: seen.join(" | ") });
+  console.log(`QA-C07 ${seen.join(" | ")}`);
+  expect(seen).toHaveLength(3);
+});
+
+test("QA-C08 specification: a page timer faster than the 160 ms quiet window cannot settle inside an operation (clock runs during it) but is stopped afterwards", async () => {
+  test.setTimeout(60_000);
+  await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP });
+  await qaStart(100);
+  const done = await act(await observe(), "Đổi nội dung");
+  const record = `${done.operation.status}:${done.operation.outcome_code ?? ""}`;
+  test.info().annotations.push({ type: "fast-timer-behaviour", description: record });
+  console.log(`QA-C08 100 ms timer, click => ${record}`);
+  await qaStill(500); // whatever the outcome, the page must be stopped afterwards
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// ADR-048 round 2 QA.
+const operationsOf = () => [...(worker as unknown as { sessions: Map<string, { operations: Map<string, { result: OperationResult }> }> })
+  .sessions.get(identity.session_id)!.operations.values()].map(entry => `${entry.result.operation.status}:${entry.result.operation.outcome_code ?? ""}`);
+async function settleLogs(attempt: () => Promise<unknown>) {
+  const lines: string[] = [], originals = { log: console.log, warn: console.warn, error: console.error };
+  const take = (line: unknown) => { if (typeof line === "string" && line.startsWith("{")) lines.push(line); };
+  console.log = take; console.warn = take; console.error = take;
+  try { await attempt(); } finally { Object.assign(console, originals); }
+  return lines.map(line => JSON.parse(line) as Record<string, unknown>);
+}
+
+test("QA-C09 regression (ADR-048 FAIL-1): a static but slow-to-read page passes the second settle with the capability, which keeps the operation's own budget, not a fixed 1000 ms cap", async () => {
+  test.setTimeout(60_000);
+  const logs = await settleLogs(async () => {
+    // Control: no capability, same page, 480 ms per state read: the first settle (800 ms quiet, 10 s) accepts it.
+    await agent({ target_url: `${origin}/qa-slow?ms=480` });
+    expect(operationsOf()).toEqual(["completed:observed"]);
+    await worker.close(identity, identity.session_id);
+    identity = { ...identity, session_id: randomUUID() };
+    // Same page with the capability: the page is static (0 state changes). The second settle on the stopped page
+    // runs with the navigate budget (10 s), so two 480 ms reads pass and the operation completes.
+    await agentLoose({ target_url: `${origin}/qa-slow?ms=480`, ...CLOCK_CAP });
+  });
+  expect(operationsOf()).toEqual(["completed:observed"]);
+  // No settle of the operation may give up on the fixed 1000 ms cap that the defect used.
+  const capped = logs.filter(line => line.event === "vision.state.settle_timeout" && Number(line.timeout_ms) <= 1000);
+  expect(capped, JSON.stringify(logs.map(line => [line.event, line.reason, line.timeout_ms]))).toHaveLength(0);
+  // A faster read (150 ms) also passes with the capability.
+  identity = { ...identity, session_id: randomUUID() };
+  await agent({ target_url: `${origin}/qa-slow?ms=150`, ...CLOCK_CAP });
+  expect(operationsOf()).toEqual(["completed:observed"]);
+});
+
+test("QA-C10 regression (ADR-048 FAIL-2): a stop that reports 'past' while the clock still runs is not accepted: two page reads 250 ms apart stay different, the operation fails settle_timeout and clockRunning stays true", async () => {
+  test.setTimeout(90_000);
+  await agent({ target_url: `${origin}/qa-clock`, ...CLOCK_CAP });
+  const clock = sessionPage(identity.session_id).context().clock, realPause = clock.pauseAt.bind(clock);
+  clock.pauseAt = async () => { throw new Error("Cannot fast-forward to the past"); }; // lies: nothing is paused
+  const outcomes: string[] = [];
+  let falseAccepts = 0;
+  for (let round = 0; round < 6; round++) {
+    const seen = await observe();
+    const done = await act(seen, "Đổi nội dung");
+    outcomes.push(`${done.operation.status}:${done.operation.outcome_code ?? ""}`);
+    if (done.operation.status === "completed") {
+      // The worker believes the page is stopped. Is it?
+      const time = await qaTime(sessionPage(identity.session_id));
+      await qaSleep(400);
+      if (await qaTime(sessionPage(identity.session_id)) !== time) falseAccepts++;
+    }
+  }
+  // The worker saw the lie (every frame still ticking) and refused it on each operation, flag left on "running".
+  const clockRunning = (worker as unknown as { sessions: Map<string, { clockRunning: boolean }> })
+    .sessions.get(identity.session_id)!.clockRunning;
+  clock.pauseAt = realPause;
+  test.info().annotations.push({ type: "pause-lie", description: `outcomes=${outcomes.join(",")} falseAccepts=${falseAccepts} clockRunning=${clockRunning}` });
+  console.log(`QA-C10 outcomes=${outcomes.join(",")} falseAccepts=${falseAccepts} clockRunning=${clockRunning}`);
+  expect(outcomes).toEqual(Array(6).fill("failed:settle_timeout"));
+  expect(falseAccepts).toBe(0);
+  expect(clockRunning).toBe(true);
 });

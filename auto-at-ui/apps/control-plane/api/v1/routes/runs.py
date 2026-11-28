@@ -329,6 +329,9 @@ def create_revised_draft(
             raise HTTPException(
                 status_code=409, detail="Run does not reference generated Playwright source."
             )
+        if test_case.specification.get("contains_test_values") is True:
+            # ADR-047, place 12: the source carries typed values and must not reach a model.
+            raise HTTPException(status_code=409, detail="credentials_in_source")
         report = SqlAlchemyRunReportRepository(session).get_for_run(tenant_id, run.id)
         failure = None if report is None or report.payload is None else report.payload.failure
         failure_detail = failure.message if failure is not None else run.result.summary

@@ -23,6 +23,33 @@ from infrastructure.codex_bridge.process import (
 )
 
 
+def root_is_overlay(mountinfo: str) -> bool:
+    """True when the filesystem mounted at `/` is an overlay, as in an OCI container."""
+    overlay = False
+    for line in mountinfo.splitlines():
+        fields = line.split()
+        # id parent major:minor root mount_point options [tags...] - fstype source options
+        if len(fields) >= 7 and fields[4] == "/" and "-" in fields[6:]:
+            kind = fields[fields.index("-", 6) + 1:][:1]
+            overlay = kind == ["overlay"]  # a later mount at `/` covers an earlier one
+    return overlay
+
+
+def inside_container() -> bool:
+    """Refuse to run the bridge CLI on a host.
+
+    ADR-046: not every Docker-compatible engine writes `/.dockerenv` (Kiri on WSL2 does not),
+    so an overlay root filesystem is accepted as the same evidence. The hardening checks in
+    `container_flags_qualified` are separate and unchanged.
+    """
+    if Path("/.dockerenv").is_file():
+        return True
+    try:
+        return root_is_overlay(Path("/proc/self/mountinfo").read_text())
+    except OSError:
+        return False
+
+
 def container_flags_qualified(*, uid: int, root_read_only: bool, status: str) -> bool:
     fields = dict(line.split(":", 1) for line in status.splitlines() if ":" in line)
     try:
@@ -39,7 +66,7 @@ def claude_doctor(settings: Settings, configured: bool) -> CodexBridgeReadiness:
         provider="claude_cli", configured=configured, failure_code="bridge_cli_unsupported",
     )
     executable = settings.codex_bridge_executable
-    if (os.name != "posix" or not Path("/.dockerenv").is_file()
+    if (os.name != "posix" or not inside_container()
             or executable != "/usr/local/bin/claude"):
         return fail
     try:
@@ -85,7 +112,7 @@ def doctor(settings: Settings) -> CodexBridgeReadiness:
     if CLI_VERSION not in TOOL_ISOLATION_QUALIFIED_VERSIONS:
         return fail
     executable = settings.codex_bridge_executable
-    if (os.name != "posix" or not Path("/.dockerenv").is_file()
+    if (os.name != "posix" or not inside_container()
             or executable != "/usr/local/bin/codex"):
         return fail
 
@@ -183,7 +210,7 @@ class FileReadiness:
         phase, age = "file_read", None
         try:
             root = Path(settings.codex_bridge_container_spool)
-            from infrastructure.codex_bridge.spool import _plain
+            from infrastructure.codex_bridge.spool import SpoolError, _plain
             _plain(root, directory=True)
             file = root / ".heartbeat.json"
             for attempt in range(3):
@@ -192,10 +219,13 @@ class FileReadiness:
                     with file.open("rb") as source:
                         data = json.loads(source.read(4097))
                     break
-                except FileNotFoundError:
+                except (FileNotFoundError, SpoolError):
                     # Some shared mounts briefly hide the old name during
-                    # atomic replacement. Retry only this read race; never use
-                    # cached readiness or relax freshness/identity validation.
+                    # atomic replacement, and some show the new file with two
+                    # links while it is renamed (ADR-046: a live run ended
+                    # `bridge_offline` on that). Retry only this read race; a
+                    # file that stays unsafe still fails. Never use cached
+                    # readiness or relax freshness/identity validation.
                     if attempt == 2:
                         raise
                     sleep(.01)

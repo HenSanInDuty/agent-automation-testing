@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     vision_agent_dom_path_enabled: bool = False
     # A3: per-state page inventory of what the agent observed (`/result` `pages`).
     vision_agent_inventory_enabled: bool = False
+    # ADR-047: share of same-task sessions that must repeat the modal assessment status before a
+    # draft may be offered. A starting point measured on a fixture, not a proven constant.
+    agent_task_consistency_threshold: float = Field(default=0.9, gt=0, le=1)
     codex_bridge_enabled: bool = False
     codex_bridge_id: UUID | None = None
     codex_bridge_allowed_tenant: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,200}$")

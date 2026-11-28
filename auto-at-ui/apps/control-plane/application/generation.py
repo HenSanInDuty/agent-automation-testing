@@ -43,6 +43,16 @@ class GenerationStateError(ValueError):
     pass
 
 
+def is_agent_task_draft(provenance: object) -> bool:
+    """ADR-047: a draft rendered from an agent-loop task trace (`provenance.agent_trace_source`)."""
+    return isinstance(provenance, dict) and provenance.get("agent_trace_source") is not None
+
+
+def draft_contains_test_values(provenance: object) -> bool:
+    """The draft source carries literal typed values; `None`/absent (older drafts) means no."""
+    return isinstance(provenance, dict) and provenance.get("contains_test_values") is True
+
+
 class PreflightRepairQueued:
     """A safe repair request queued after source cannot load in the pinned worker."""
 
@@ -240,7 +250,14 @@ class DecideGeneratedDraft:
         self._preflight = preflight
 
     def execute(
-        self, *, tenant_id: str, draft_id: UUID, approved: bool, decided_by: str, reason: str | None
+        self,
+        *,
+        tenant_id: str,
+        draft_id: UUID,
+        approved: bool,
+        decided_by: str,
+        reason: str | None,
+        acknowledge_disposable_credentials: bool = False,
     ):
         draft = self._repository.get_draft(tenant_id, draft_id)
         if draft is None:
@@ -266,6 +283,19 @@ class DecideGeneratedDraft:
             policy = ProjectExecutionPolicy(
                 project_id=request.project_id, allowed_origins=policy_record.allowed_origins
             )
+            provenance = getattr(draft, "provenance", None)
+            has_values = draft_contains_test_values(provenance)
+            if is_agent_task_draft(provenance):
+                # ADR-047/ADR-004: a different human reviews; the route already required
+                # DECIDE_PROPOSAL. A missing requester fails closed.
+                requested_by = provenance.get("requested_by")
+                if not requested_by or requested_by == decided_by:
+                    raise GenerationStateError("reviewer_must_differ_from_requester")
+            if has_values:
+                if not acknowledge_disposable_credentials:
+                    raise GenerationStateError("disposable_credentials_ack_required")
+                if not getattr(policy_record, "vision_owned_test_target", False):
+                    raise GenerationStateError("owned_test_target_disabled")
             test_case_id = f"generated-{draft.id}"
             runner_config = {
                 "mode": "playwright_test_source",
@@ -287,6 +317,10 @@ class DecideGeneratedDraft:
                         )
                     )
                 except RuntimeError:
+                    if has_values:
+                        # Freeform repair would store the source (with its values) in
+                        # generation_requests and send it to a model (ADR-047, place 11).
+                        raise GenerationStateError("credentials_in_source") from None
                     if getattr(request, "vision_handoff_id", None) is not None:
                         # The renderer is deterministic; freeform repair would discard grounding.
                         raise GenerationStateError(
@@ -310,6 +344,14 @@ class DecideGeneratedDraft:
                         idempotency_key=f"preflight-repair:{draft.id}",
                     )
                     return draft, None, PreflightRepairQueued(repair.id)
+            specification = {
+                "playwright_test_source": draft.playwright_test_source,
+                "source_hash": draft.source_hash,
+                "generated_draft_id": str(draft.id),
+            }
+            if has_values:
+                # Lets `revised-draft` and run-report evidence recognise the case without a join.
+                specification["contains_test_values"] = True
             self._repository.add_test_case(
                 TestCaseModel(
                     id=test_case_id,
@@ -317,11 +359,7 @@ class DecideGeneratedDraft:
                     project_id=request.project_id,
                     target_type="web_ui",
                     revision=draft.source_hash,
-                    specification={
-                        "playwright_test_source": draft.playwright_test_source,
-                        "source_hash": draft.source_hash,
-                        "generated_draft_id": str(draft.id),
-                    },
+                    specification=specification,
                     name=draft.title,
                 )
             )

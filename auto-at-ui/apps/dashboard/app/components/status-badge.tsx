@@ -13,8 +13,8 @@ const toneClasses: Record<StatusTone, { badge: string; dot: string }> = {
   muted: { badge: "border-border bg-muted text-muted-foreground", dot: "bg-muted-foreground/60" },
 };
 
-export function StatusBadge({ status, children, className }: { status: string; children?: ReactNode; className?: string }) {
-  const tone = statusTone(status);
+export function StatusBadge({ status, children, className, tone: toneOverride }: { status: string; children?: ReactNode; className?: string; tone?: StatusTone }) {
+  const tone = toneOverride ?? statusTone(status);
   const live = ["running", "generating", "queued"].includes(status.toLowerCase());
   return <Badge variant="outline" data-tone={tone} className={cn("gap-1.5 capitalize", toneClasses[tone].badge, className)}>
     <span className={cn("size-1.5 rounded-full", toneClasses[tone].dot, live && "animate-pulse")} aria-hidden="true" />

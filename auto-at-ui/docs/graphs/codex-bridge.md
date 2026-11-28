@@ -61,13 +61,22 @@ files:
     role: test
   - path: tests/test_agent_loop_prompt.py
     role: test
+  - path: tests/test_codex_bridge_contracts.py
+    role: test
+  - path: tests/test_codex_bridge_qualification.py
+    role: test
+  - path: tests/test_codex_bridge_spool.py
+    role: test
+  - path: tests/test_qa_p2_page_text.py
+    role: test
   - path: tests/test_qa_r11_agent_loop_prompt.py
     role: test
   - path: tests/test_qa_r9_bridge_receipt.py
     role: test
-updated: 2026-11-21
+updated: 2026-11-26
 generated_by: hgraph 1.0.0
 ---
+
 
 # Bridge Codex/Claude local
 
@@ -98,41 +107,45 @@ Người vận hành chạy một container bridge cục bộ (`python codex_bri
 
 ## Quan hệ file — hgraph tự sinh, ĐỪNG sửa tay
 
-Cập nhật: 2026-11-21 · `hgraph sync codex-bridge --apply` để tạo lại.
+Cập nhật: 2026-11-26 · `hgraph sync codex-bridge --apply` để tạo lại.
 
 | File | Vai trò | Import (trong graph) | Bị import bởi (trong graph) |
 |---|---|---|---|
 | `apps/control-plane/agents/prompts/agent_loop.py` | other | — | `tests/test_agent_loop_bridge.py`<br>`tests/test_agent_loop_bridge_qa.py`<br>`tests/test_agent_loop_prompt.py`<br>`tests/test_qa_r11_agent_loop_prompt.py` |
 | `apps/control-plane/agents/prompts/claude_bridge.py` | other | — | `apps/control-plane/infrastructure/codex_bridge/claude_process.py` |
-| `apps/control-plane/agents/prompts/codex_exploration.py` | other | — | `plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py`<br>`tests/test_agent_loop_bridge.py`<br>`apps/control-plane/application/codex_bridge.py`<br>`apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/vision/codex_batch.py` |
-| `apps/control-plane/agents/vision/codex_service.py` | service | — | `plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py`<br>`tests/test_agent_loop_bridge.py`<br>`tests/test_agent_loop_prompt.py`<br>`apps/control-plane/application/codex_candidates.py`<br>`apps/control-plane/infrastructure/vision/codex_batch.py` |
+| `apps/control-plane/agents/prompts/codex_exploration.py` | other | — | `apps/control-plane/application/codex_bridge.py`<br>`apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/vision/codex_batch.py`<br>`plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py`<br>`tests/test_agent_loop_bridge.py`<br>`tests/test_codex_bridge_qualification.py` |
+| `apps/control-plane/agents/vision/codex_service.py` | service | — | `apps/control-plane/application/codex_candidates.py`<br>`apps/control-plane/infrastructure/vision/codex_batch.py`<br>`plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py`<br>`tests/test_agent_loop_bridge.py`<br>`tests/test_agent_loop_prompt.py` |
 | `apps/control-plane/application/codex_bridge.py` | other | `apps/control-plane/agents/prompts/codex_exploration.py`<br>`apps/control-plane/config.py` | — |
 | `apps/control-plane/application/codex_candidates.py` | other | `apps/control-plane/agents/vision/codex_service.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/infrastructure/vision/codex_batch.py` |
 | `apps/control-plane/application/codex_generation_bridge.py` | other | — | `apps/control-plane/codex_bridge_cli.py` |
 | `apps/control-plane/codex_bridge_cli.py` | other | `apps/control-plane/application/codex_generation_bridge.py`<br>`apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/codex_bridge/claude_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_spool.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `tests/test_agent_loop_bridge.py`<br>`tests/test_agent_loop_bridge_qa.py`<br>`tests/test_qa_r11_agent_loop_prompt.py` |
-| `apps/control-plane/config.py` | other | — | `apps/control-plane/application/codex_bridge.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/observability/logging.py` |
+| `apps/control-plane/config.py` | other | — | `apps/control-plane/application/codex_bridge.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/observability/logging.py`<br>`tests/test_codex_bridge_qualification.py` |
 | `apps/control-plane/domain/codex_bridge.py` | service | — | — |
-| `apps/control-plane/infrastructure/codex_bridge/catalogue.py` | other | `apps/control-plane/agents/prompts/codex_exploration.py` | `apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py` |
-| `apps/control-plane/infrastructure/codex_bridge/claude_process.py` | other | `apps/control-plane/agents/prompts/claude_bridge.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `tests/test_agent_loop_bridge.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py` |
-| `apps/control-plane/infrastructure/codex_bridge/doctor.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/codex_bridge/claude_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/codex_bridge_cli.py` |
+| `apps/control-plane/infrastructure/codex_bridge/catalogue.py` | other | `apps/control-plane/agents/prompts/codex_exploration.py` | `apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`tests/test_codex_bridge_qualification.py` |
+| `apps/control-plane/infrastructure/codex_bridge/claude_process.py` | other | `apps/control-plane/agents/prompts/claude_bridge.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`tests/test_agent_loop_bridge.py` |
+| `apps/control-plane/infrastructure/codex_bridge/doctor.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/codex_bridge/claude_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/codex_bridge_cli.py`<br>`tests/test_codex_bridge_qualification.py` |
 | `apps/control-plane/infrastructure/codex_bridge/generation_process.py` | other | `apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py` | `apps/control-plane/codex_bridge_cli.py` |
 | `apps/control-plane/infrastructure/codex_bridge/generation_spool.py` | other | `apps/control-plane/infrastructure/codex_bridge/spool.py` | `apps/control-plane/codex_bridge_cli.py` |
-| `apps/control-plane/infrastructure/codex_bridge/process.py` | other | `apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `tests/test_agent_loop_bridge.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_process.py` |
-| `apps/control-plane/infrastructure/codex_bridge/spool.py` | other | `apps/control-plane/infrastructure/observability/logging.py` | `tests/test_agent_loop_bridge.py`<br>`tests/test_agent_loop_bridge_qa.py`<br>`tests/test_qa_r9_bridge_receipt.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_spool.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py` |
-| `apps/control-plane/infrastructure/observability/logging.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/observability/telemetry.py` | `apps/control-plane/application/codex_candidates.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/claude_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/vision/codex_batch.py` |
+| `apps/control-plane/infrastructure/codex_bridge/process.py` | other | `apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_process.py`<br>`tests/test_agent_loop_bridge.py` |
+| `apps/control-plane/infrastructure/codex_bridge/spool.py` | other | `apps/control-plane/infrastructure/observability/logging.py` | `apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/generation_spool.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`tests/test_agent_loop_bridge.py`<br>`tests/test_agent_loop_bridge_qa.py`<br>`tests/test_codex_bridge_spool.py`<br>`tests/test_qa_r9_bridge_receipt.py` |
+| `apps/control-plane/infrastructure/observability/logging.py` | other | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/observability/telemetry.py` | `apps/control-plane/application/codex_candidates.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/claude_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/vision/codex_batch.py`<br>`tests/test_codex_bridge_spool.py` |
 | `apps/control-plane/infrastructure/observability/telemetry.py` | other | — | `apps/control-plane/infrastructure/observability/logging.py` |
 | `apps/control-plane/infrastructure/vision/codex_batch.py` | other | `apps/control-plane/agents/prompts/codex_exploration.py`<br>`apps/control-plane/agents/vision/codex_service.py`<br>`apps/control-plane/application/codex_candidates.py`<br>`apps/control-plane/infrastructure/observability/logging.py` | — |
 | `plan/20261119-2212-browser-agent-loop/reports/phase-00/v4_identity.py` | model | `apps/control-plane/agents/prompts/codex_exploration.py`<br>`apps/control-plane/agents/vision/codex_service.py` | — |
-| `tests/test_agent_loop_bridge.py` | test | `apps/control-plane/agents/prompts/agent_loop.py`<br>`apps/control-plane/agents/prompts/codex_exploration.py`<br>`apps/control-plane/agents/vision/codex_service.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/claude_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py` | `tests/test_agent_loop_bridge_qa.py`<br>`tests/test_qa_r11_agent_loop_prompt.py` |
+| `tests/test_agent_loop_bridge.py` | test | `apps/control-plane/agents/prompts/agent_loop.py`<br>`apps/control-plane/agents/prompts/codex_exploration.py`<br>`apps/control-plane/agents/vision/codex_service.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/claude_process.py`<br>`apps/control-plane/infrastructure/codex_bridge/process.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`tests/test_codex_bridge_contracts.py` | `tests/test_agent_loop_bridge_qa.py`<br>`tests/test_qa_r11_agent_loop_prompt.py` |
 | `tests/test_agent_loop_bridge_qa.py` | test | `apps/control-plane/agents/prompts/agent_loop.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`tests/test_agent_loop_bridge.py` | — |
-| `tests/test_agent_loop_prompt.py` | test | `apps/control-plane/agents/prompts/agent_loop.py`<br>`apps/control-plane/agents/vision/codex_service.py` | — |
-| `tests/test_qa_r11_agent_loop_prompt.py` | test | `apps/control-plane/agents/prompts/agent_loop.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`tests/test_agent_loop_bridge.py` | — |
-| `tests/test_qa_r9_bridge_receipt.py` | test | `apps/control-plane/infrastructure/codex_bridge/spool.py` | — |
+| `tests/test_agent_loop_prompt.py` | test | `apps/control-plane/agents/prompts/agent_loop.py`<br>`apps/control-plane/agents/vision/codex_service.py`<br>`tests/test_codex_bridge_contracts.py` | — |
+| `tests/test_codex_bridge_contracts.py` | test | — | `tests/test_agent_loop_bridge.py`<br>`tests/test_agent_loop_prompt.py`<br>`tests/test_codex_bridge_spool.py`<br>`tests/test_qa_r11_agent_loop_prompt.py` |
+| `tests/test_codex_bridge_qualification.py` | test | `apps/control-plane/config.py`<br>`apps/control-plane/infrastructure/codex_bridge/catalogue.py`<br>`apps/control-plane/infrastructure/codex_bridge/doctor.py`<br>`apps/control-plane/agents/prompts/codex_exploration.py` | — |
+| `tests/test_codex_bridge_spool.py` | test | `apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`apps/control-plane/infrastructure/observability/logging.py`<br>`tests/test_codex_bridge_contracts.py` | `tests/test_qa_r9_bridge_receipt.py` |
+| `tests/test_qa_p2_page_text.py` | test | — | — |
+| `tests/test_qa_r11_agent_loop_prompt.py` | test | `apps/control-plane/agents/prompts/agent_loop.py`<br>`apps/control-plane/codex_bridge_cli.py`<br>`tests/test_agent_loop_bridge.py`<br>`tests/test_codex_bridge_contracts.py` | — |
+| `tests/test_qa_r9_bridge_receipt.py` | test | `apps/control-plane/infrastructure/codex_bridge/spool.py`<br>`tests/test_codex_bridge_spool.py` | — |
 
 ### Ranh giới (blast radius ra ngoài graph)
 
-- **File ngoài graph đang gọi vào** (104): `apps/control-plane/agents/shared/gemini.py`, `apps/control-plane/agents/shared/openrouter.py`, `apps/control-plane/agents/shared/runtime.py`, `apps/control-plane/api/v1/dependencies/authorization.py`, `apps/control-plane/api/v1/dependencies/generation_policy.py`, `apps/control-plane/api/v1/dependencies/vision.py`, `apps/control-plane/api/v1/routes/activities.py`, `apps/control-plane/api/v1/routes/auth.py`, `apps/control-plane/api/v1/routes/catalog.py`, `apps/control-plane/api/v1/routes/demo.py`, `apps/control-plane/api/v1/routes/generation.py`, `apps/control-plane/api/v1/routes/operations.py`, `apps/control-plane/api/v1/routes/proposals.py`, `apps/control-plane/api/v1/routes/runs.py`, `apps/control-plane/api/v1/routes/vision.py`, `apps/control-plane/api/v1/routes/worker_progress.py`, `apps/control-plane/application/generation_events.py`, `apps/control-plane/application/reporting_events.py`, `apps/control-plane/application/triage_events.py`, `apps/control-plane/application/vision.py`, `apps/control-plane/application/vision_agent_loop.py`, `apps/control-plane/application/vision_events.py`, `apps/control-plane/application/vision_operations.py`, `apps/control-plane/application/vision_policy.py`, `apps/control-plane/application/vision_reload.py`, `apps/control-plane/application/vision_trace_events.py`, `apps/control-plane/cli.py`, `apps/control-plane/infrastructure/artifacts/rustfs.py`, `apps/control-plane/infrastructure/codex_bridge/generation_model.py`, `apps/control-plane/infrastructure/observability/__init__.py`, `apps/control-plane/infrastructure/persistence/session.py`, `apps/control-plane/infrastructure/runners.py`, `apps/control-plane/infrastructure/vision/codex_composition.py`, `apps/control-plane/infrastructure/vision/model_batch.py`, `apps/control-plane/infrastructure/vision_worker.py`, `apps/control-plane/infrastructure/workflows/temporal.py`, `apps/control-plane/infrastructure/workflows/temporal_worker.py`, `apps/control-plane/main.py`, `benchmark/vision/codex/live_canary.py`, `benchmark/vision/codex/offline_suite.py`, `benchmark/vision/gehihi/run_offline.py`, `docker/codex-bridge/check_mount.py`, `migrations/env.py`, `scripts/migrate_minio_to_rustfs.py`, `tests/fixtures/codex_bridge_mount_probe.py`, `tests/fixtures/codex_bridge_tool_probe.py`, `tests/test_agent_loop_contracts.py`, `tests/test_agent_runtime.py`, `tests/test_catalog_routes.py`, `tests/test_claude_bridge.py`, `tests/test_codex_bridge_benchmark.py`, `tests/test_codex_bridge_end_to_end.py`, `tests/test_codex_bridge_migrations.py`, `tests/test_codex_bridge_process.py`, `tests/test_codex_bridge_qualification.py`, `tests/test_codex_bridge_repository.py`, `tests/test_codex_bridge_service.py`, `tests/test_codex_bridge_spool.py`, `tests/test_codex_candidate_service.py`, `tests/test_codex_exploration_integration.py`, `tests/test_codex_generation.py`, `tests/test_codex_model_batch.py`, `tests/test_config.py`, `tests/test_gemini_vision_model.py`, `tests/test_generation_event_processor.py`, `tests/test_generation_planner.py`, `tests/test_generation_provider_routes.py`, `tests/test_playwright_worker_compose.py`, `tests/test_qa_r8_agent_evidence.py`, `tests/test_reporting_event_processor.py`, `tests/test_reporting_routes.py`, `tests/test_run_report_repository.py`, `tests/test_run_repository.py`, `tests/test_run_routes.py`, `tests/test_rustfs_artifacts.py`, `tests/test_rustfs_operation_storage.py`, `tests/test_rustfs_read_after_write.py`, `tests/test_telemetry.py`, `tests/test_temporal_cancellation.py`, `tests/test_triage_event_processor.py`, `tests/test_vision_agent_engine_selection.py`, `tests/test_vision_agent_evidence_flags.py`, `tests/test_vision_agent_loop.py`, `tests/test_vision_event_processor.py`, `tests/test_vision_handoff_repository.py`, `tests/test_vision_live_persistence.py`, `tests/test_vision_locator_pipeline.py`, `tests/test_vision_migration_compatibility.py`, `tests/test_vision_model_batch.py`, `tests/test_vision_operation_failure_stage.py`, `tests/test_vision_operation_transport.py`, `tests/test_vision_page_batch.py`, `tests/test_vision_policy.py`, `tests/test_vision_policy_persistence.py`, `tests/test_vision_policy_routes.py`, `tests/test_vision_progress.py`, `tests/test_vision_provider_integration.py`, `tests/test_vision_provider_submission.py`, `tests/test_vision_reload.py`, `tests/test_vision_target_preflight.py`, `tests/test_vision_tree_capacity.py`, `tests/test_vision_viewport_scan.py`, `tests/test_vision_worker_observability.py`, `tests/test_worker_progress.py`
-- **File ngoài graph bị graph này gọi** (13): `apps/control-plane/agents/shared/redaction.py`, `apps/control-plane/agents/shared/runtime.py`, `apps/control-plane/agents/shared/vision_providers.py`, `apps/control-plane/application/vision_agent_loop.py`, `apps/control-plane/application/vision_model_batch.py`, `apps/control-plane/domain/vision_agent_safety.py`, `tests/test_agent_loop_contracts.py`, `tests/test_claude_bridge.py`, `tests/test_codex_bridge_contracts.py`, `tests/test_codex_bridge_service.py`, `tests/test_codex_bridge_spool.py`, `tests/test_codex_model_batch.py`, `tests/test_vision_agent_loop.py`
+- **File ngoài graph đang gọi vào** (106): `apps/control-plane/agents/shared/gemini.py`, `apps/control-plane/agents/shared/openrouter.py`, `apps/control-plane/agents/shared/runtime.py`, `apps/control-plane/api/v1/dependencies/authorization.py`, `apps/control-plane/api/v1/dependencies/generation_policy.py`, `apps/control-plane/api/v1/dependencies/vision.py`, `apps/control-plane/api/v1/routes/activities.py`, `apps/control-plane/api/v1/routes/auth.py`, `apps/control-plane/api/v1/routes/catalog.py`, `apps/control-plane/api/v1/routes/demo.py`, `apps/control-plane/api/v1/routes/generation.py`, `apps/control-plane/api/v1/routes/operations.py`, `apps/control-plane/api/v1/routes/proposals.py`, `apps/control-plane/api/v1/routes/runs.py`, `apps/control-plane/api/v1/routes/vision.py`, `apps/control-plane/api/v1/routes/worker_progress.py`, `apps/control-plane/application/generation_events.py`, `apps/control-plane/application/reporting_events.py`, `apps/control-plane/application/triage_events.py`, `apps/control-plane/application/vision.py`, `apps/control-plane/application/vision_agent_loop.py`, `apps/control-plane/application/vision_events.py`, `apps/control-plane/application/vision_operations.py`, `apps/control-plane/application/vision_policy.py`, `apps/control-plane/application/vision_reload.py`, `apps/control-plane/application/vision_trace_events.py`, `apps/control-plane/cli.py`, `apps/control-plane/infrastructure/artifacts/rustfs.py`, `apps/control-plane/infrastructure/codex_bridge/generation_model.py`, `apps/control-plane/infrastructure/observability/__init__.py`, `apps/control-plane/infrastructure/persistence/session.py`, `apps/control-plane/infrastructure/runners.py`, `apps/control-plane/infrastructure/vision/codex_composition.py`, `apps/control-plane/infrastructure/vision/model_batch.py`, `apps/control-plane/infrastructure/vision_worker.py`, `apps/control-plane/infrastructure/workflows/temporal.py`, `apps/control-plane/infrastructure/workflows/temporal_worker.py`, `apps/control-plane/main.py`, `benchmark/vision/codex/live_canary.py`, `benchmark/vision/codex/offline_suite.py`, `benchmark/vision/gehihi/run_offline.py`, `docker/codex-bridge/check_mount.py`, `migrations/env.py`, `scripts/migrate_minio_to_rustfs.py`, `tests/fixtures/codex_bridge_mount_probe.py`, `tests/fixtures/codex_bridge_tool_probe.py`, `tests/test_agent_loop_contracts.py`, `tests/test_agent_runtime.py`, `tests/test_catalog_routes.py`, `tests/test_claude_bridge.py`, `tests/test_codex_bridge_benchmark.py`, `tests/test_codex_bridge_end_to_end.py`, `tests/test_codex_bridge_migrations.py`, `tests/test_codex_bridge_process.py`, `tests/test_codex_bridge_repository.py`, `tests/test_codex_bridge_service.py`, `tests/test_codex_candidate_service.py`, `tests/test_codex_exploration_integration.py`, `tests/test_codex_generation.py`, `tests/test_codex_model_batch.py`, `tests/test_config.py`, `tests/test_gemini_vision_model.py`, `tests/test_generation_event_processor.py`, `tests/test_generation_planner.py`, `tests/test_generation_provider_routes.py`, `tests/test_playwright_worker_compose.py`, `tests/test_qa_phase01_edges.py`, `tests/test_qa_r8_agent_evidence.py`, `tests/test_reporting_event_processor.py`, `tests/test_reporting_routes.py`, `tests/test_run_report_repository.py`, `tests/test_run_repository.py`, `tests/test_run_routes.py`, `tests/test_rustfs_artifacts.py`, `tests/test_rustfs_operation_storage.py`, `tests/test_rustfs_read_after_write.py`, `tests/test_telemetry.py`, `tests/test_temporal_cancellation.py`, `tests/test_tenant_selection.py`, `tests/test_triage_event_processor.py`, `tests/test_vision_agent_engine_selection.py`, `tests/test_vision_agent_evidence_flags.py`, `tests/test_vision_agent_loop.py`, `tests/test_vision_agent_task_assessment.py`, `tests/test_vision_dom_transport.py`, `tests/test_vision_event_processor.py`, `tests/test_vision_handoff_repository.py`, `tests/test_vision_live_persistence.py`, `tests/test_vision_locator_pipeline.py`, `tests/test_vision_migration_compatibility.py`, `tests/test_vision_model_batch.py`, `tests/test_vision_operation_failure_stage.py`, `tests/test_vision_operation_transport.py`, `tests/test_vision_page_batch.py`, `tests/test_vision_policy.py`, `tests/test_vision_policy_persistence.py`, `tests/test_vision_policy_routes.py`, `tests/test_vision_progress.py`, `tests/test_vision_provider_integration.py`, `tests/test_vision_provider_submission.py`, `tests/test_vision_reload.py`, `tests/test_vision_target_preflight.py`, `tests/test_vision_tree_capacity.py`, `tests/test_vision_viewport_scan.py`, `tests/test_vision_worker_observability.py`, `tests/test_worker_progress.py`
+- **File ngoài graph bị graph này gọi** (11): `apps/control-plane/agents/shared/redaction.py`, `apps/control-plane/agents/shared/runtime.py`, `apps/control-plane/agents/shared/vision_providers.py`, `apps/control-plane/application/vision_agent_loop.py`, `apps/control-plane/application/vision_model_batch.py`, `apps/control-plane/domain/vision_agent_safety.py`, `tests/test_agent_loop_contracts.py`, `tests/test_claude_bridge.py`, `tests/test_codex_bridge_service.py`, `tests/test_codex_model_batch.py`, `tests/test_vision_agent_loop.py`
 
 ```mermaid
 graph LR
@@ -157,11 +170,15 @@ graph LR
   n18["v4_identity.py<br/><small>plan/20261119-2212-browser-agent-loop/reports/phase-00</small>"]
   n19["test_agent_loop_bridge.py<br/><small>tests</small>"]
   n20["agent_loop.py<br/><small>apps/control-plane/agents/prompts</small>"]
-  n21["test_agent_loop_bridge_qa.py<br/><small>tests</small>"]
-  n22["test_agent_loop_prompt.py<br/><small>tests</small>"]
-  n23["test_qa_r11_agent_loop_prompt.py<br/><small>tests</small>"]
-  n24["test_qa_r9_bridge_receipt.py<br/><small>tests</small>"]
-  n25["codex_bridge.py<br/><small>apps/control-plane/domain</small>"]
+  n21["test_codex_bridge_contracts.py<br/><small>tests</small>"]
+  n22["test_agent_loop_bridge_qa.py<br/><small>tests</small>"]
+  n23["test_agent_loop_prompt.py<br/><small>tests</small>"]
+  n24["test_codex_bridge_qualification.py<br/><small>tests</small>"]
+  n25["test_codex_bridge_spool.py<br/><small>tests</small>"]
+  n26["test_qa_r11_agent_loop_prompt.py<br/><small>tests</small>"]
+  n27["test_qa_r9_bridge_receipt.py<br/><small>tests</small>"]
+  n28["codex_bridge.py<br/><small>apps/control-plane/domain</small>"]
+  n29["test_qa_p2_page_text.py<br/><small>tests</small>"]
   n0 --> n1
   n0 --> n2
   n3 --> n4
@@ -206,16 +223,27 @@ graph LR
   n19 --> n8
   n19 --> n12
   n19 --> n13
-  n21 --> n20
-  n21 --> n6
-  n21 --> n13
-  n21 --> n19
+  n19 --> n21
   n22 --> n20
-  n22 --> n4
+  n22 --> n6
+  n22 --> n13
+  n22 --> n19
   n23 --> n20
-  n23 --> n6
-  n23 --> n19
-  n24 --> n13
+  n23 --> n4
+  n23 --> n21
+  n24 --> n2
+  n24 --> n14
+  n24 --> n9
+  n24 --> n1
+  n25 --> n13
+  n25 --> n5
+  n25 --> n21
+  n26 --> n20
+  n26 --> n6
+  n26 --> n19
+  n26 --> n21
+  n27 --> n13
+  n27 --> n25
 ```
 
 <!-- hgraph:end auto -->

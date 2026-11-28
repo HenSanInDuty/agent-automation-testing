@@ -179,6 +179,7 @@ class VisionResults:
             for o in operations
             for role in ("before", "after")
         )
+        assessment = getattr(record, "task_assessment", None)
         payload = dict(
             schema_version="v1",
             session_id=str(session_id),
@@ -192,7 +193,11 @@ class VisionResults:
                 if record.safe_failure_reason
                 else None
             )
+            # ADR-046: a completed agent-loop session names its natural end in the assessment.
+            or (assessment or {}).get("stop_reason")
             or ("exploration_finished" if terminal else None),
+            # Advisory agent report; never a test verdict (see `limitations`).
+            task_assessment=assessment,
             evidence_status="legacy_evidence_only"
             if legacy
             else ("partial" if missing or deleted else "available" if retained else "not_started"),

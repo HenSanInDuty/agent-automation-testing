@@ -82,7 +82,7 @@ def agent_job(*, provider="codex_cli", context=None):
         changes = {"provider": provider, "model": claude_tests.MODEL, "consent": consent,
                    "consent_hash": content_hash(consent)}
     req = request(
-        obs, created_at=now, deadline=now + timedelta(seconds=120), prompt_version="agent-loop-v2",
+        obs, created_at=now, deadline=now + timedelta(seconds=120), prompt_version="agent-loop-v4",
         agent_context=context or agent_context(), inputs={
             "dom_sha256": content_hash(obs), "dom_bytes": len(canonical_bytes(obs)),
             "schema_sha256": sha(schema), "schema_bytes": len(schema),
@@ -135,7 +135,7 @@ def host(spool, req, process):
 
 
 def test_cli_registers_exactly_the_two_prompt_families():
-    assert set(PROMPT_BUILDERS) == {"codex-dom-v11", "agent-loop-v2"}
+    assert set(PROMPT_BUILDERS) == {"codex-dom-v11", "agent-loop-v4"}
 
 
 def test_dispatch_rejects_a_prompt_version_without_a_builder():
@@ -228,11 +228,11 @@ async def test_batch_publishes_an_agent_request_with_its_own_schema_and_context(
     batch, args, spool, gateway, _ready = harness
     context = AgentLoopContext.model_validate(agent_context())
     task = asyncio.create_task(batch(**{
-        **args, "context": None, "max_candidates": 10, "prompt_version": "agent-loop-v2",
+        **args, "context": None, "max_candidates": 10, "prompt_version": "agent-loop-v4",
         "schema_bytes": agent_output_schema(), "agent_context": context,
     }))
     req = await batch_tests.wait_authorized(spool)
-    assert (req.prompt_version, req.agent_context, req.context) == ("agent-loop-v2", context, None)
+    assert (req.prompt_version, req.agent_context, req.context) == ("agent-loop-v4", context, None)
     assert req.stage == "dom" and req.candidate_limit == 10
     assert req.inputs.schema_sha256 == sha(agent_output_schema())
     assert spool.verify_inputs(req)[1] == agent_output_schema()

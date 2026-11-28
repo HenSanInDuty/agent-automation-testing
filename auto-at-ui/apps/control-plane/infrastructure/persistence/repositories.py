@@ -346,23 +346,28 @@ class SqlAlchemyGenerationRepository:
         *,
         vision_max_hops: int = 5,
         vision_max_states: int = 50,
-    ) -> None:
+        vision_owned_test_target: bool | None = None,
+    ) -> bool:
+        """Upsert the policy; `vision_owned_test_target=None` keeps the stored value (ADR-046)."""
         model = self.get_policy(tenant_id, project_id)
         if model is None:
-            self._session.add(
-                ProjectExecutionPolicyModel(
-                    tenant_id=tenant_id,
-                    project_id=project_id,
-                    allowed_origins=origins,
-                    vision_max_hops=vision_max_hops,
-                    vision_max_states=vision_max_states,
-                )
+            model = ProjectExecutionPolicyModel(
+                tenant_id=tenant_id,
+                project_id=project_id,
+                allowed_origins=origins,
+                vision_max_hops=vision_max_hops,
+                vision_max_states=vision_max_states,
+                vision_owned_test_target=bool(vision_owned_test_target),
             )
+            self._session.add(model)
         else:
             model.allowed_origins = origins
             model.vision_max_hops = vision_max_hops
             model.vision_max_states = vision_max_states
+            if vision_owned_test_target is not None:
+                model.vision_owned_test_target = vision_owned_test_target
         self._session.flush()
+        return model.vision_owned_test_target
 
     def add_test_case(self, model: TestCaseModel) -> None:
         self._session.add(model)
@@ -1468,6 +1473,24 @@ class SqlAlchemyVisionRepository:
         return list(
             self._session.scalars(
                 statement.order_by(VisualExplorationSessionModel.created_at.desc())
+            )
+        )
+
+    def list_same_task(
+        self, tenant_id: str, project_id: UUID, target_url: str, intent_hash: str
+    ) -> list[VisualExplorationSessionModel]:
+        """Agent-loop sessions of one task: same tenant, project, target and intent hash."""
+        return list(
+            self._session.scalars(
+                select(VisualExplorationSessionModel)
+                .where(
+                    VisualExplorationSessionModel.tenant_id == tenant_id,
+                    VisualExplorationSessionModel.project_id == project_id,
+                    VisualExplorationSessionModel.target_url == target_url,
+                    VisualExplorationSessionModel.intent_hash == intent_hash,
+                    VisualExplorationSessionModel.exploration_engine == "agent_loop",
+                )
+                .order_by(VisualExplorationSessionModel.created_at.desc())
             )
         )
 

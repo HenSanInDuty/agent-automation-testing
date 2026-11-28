@@ -1,0 +1,19 @@
+# Opt-in local overlay for agent_loop task testing (ADR-046). Combine with the base file, e.g.:
+#   docker compose -f docker-compose.yml -f docker-compose.codex.yml -f docker-compose.agent-loop.yml up -d
+# It enables the agent_loop engine on both services that read the flag and adds the local
+# deterministic target http://task-target:7300 (benchmarks/targets/task-ui).
+services:
+  control-plane:
+    environment:
+      VISION_AGENT_LOOP_ENABLED: "true"
+
+  temporal-worker:
+    environment:
+      VISION_AGENT_LOOP_ENABLED: "true"
+
+  # Same default network as benchmark-target and playwright-worker.
+  task-target:
+    build: ./benchmarks/targets/task-ui
+    expose:
+      - "7300"
+    restart: unless-stopped

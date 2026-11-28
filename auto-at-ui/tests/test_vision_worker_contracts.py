@@ -87,3 +87,21 @@ def test_open_does_not_change_execution_contract_or_accept_browser_storage():
     assert vision_worker.VisualWorkerOpen(**payload).contract_version == "v4"
     with pytest.raises(ValidationError):
         vision_worker.VisualWorkerOpen(**payload, storage_state={"cookies": []})
+
+
+def test_open_accepts_page_text_capability_and_defaults_to_none():
+    payload = dict(
+        tenant_id="fixture", project_id=UUID(int=1), session_id=UUID(int=2), fencing_token=1,
+        target_url="http://127.0.0.1:1234", allowed_origins=["http://127.0.0.1:1234"],
+        deadline=datetime.now(UTC), max_session_seconds=60, max_states=2, max_hops=1,
+        max_screenshot_bytes=1024,
+    )
+    assert vision_worker.VisualWorkerOpen(**payload).required_capabilities == ()
+    opened = vision_worker.VisualWorkerOpen(
+        **payload, agent_mode=True,
+        required_capabilities=("owned-test-target-v1", "page-text-v1", "agent-frozen-clock-v1"),
+    )
+    assert "page-text-v1" in opened.required_capabilities
+    assert "agent-frozen-clock-v1" in opened.required_capabilities
+    with pytest.raises(ValidationError):
+        vision_worker.VisualWorkerOpen(**payload, required_capabilities=("page-text-v2",))

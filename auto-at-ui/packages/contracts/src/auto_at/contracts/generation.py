@@ -113,6 +113,18 @@ def vision_generation_key(source: VisionPlanningSource, redacted_request: str) -
     )
 
 
+class AgentTraceSource(BaseModel):
+    """ADR-047: the agent-loop session and trace a draft was rendered from.
+
+    Only identity and hash: never the assessment text or any typed value.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    session_id: UUID
+    trace_hash: str = Field(pattern=_SHA256)
+
+
 class PlanningProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -123,6 +135,12 @@ class PlanningProvenance(BaseModel):
     vision_source: VisionPlanningSource | None = None
     selected_branch_ids: list[UUID] = Field(default_factory=list, max_length=50)
     operation_ids: list[UUID] = Field(default_factory=list, max_length=5000)
+    # ADR-047 (additive, all optional so a stored v1 provenance still validates): set only on a
+    # draft rendered from an agent-loop task trace. `None` means "not recorded", not "false".
+    agent_trace_source: AgentTraceSource | None = None
+    contains_test_values: bool | None = None  # the source carries literal typed values
+    owned_test_target: bool | None = None  # the project flag when the draft was created
+    requested_by: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class VisionGroundedAssertion(BaseModel):

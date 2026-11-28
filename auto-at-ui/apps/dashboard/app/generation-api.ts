@@ -1,6 +1,6 @@
 import { apiRequest, ControlPlaneError, idempotencyKey } from "./api-client.ts";
 import type { VisualTrace, VisualLocator, VisionResult, VisionProvider } from "./generation-types";
-import type { Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisualReplayFrames, VisualTrajectory, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy, VisionProgressActivity } from "./generation-types";
+import type { AgentTaskConsistency, AgentTaskDraftInputs, AgentTaskDraftCreated, Artifact, GeneratedDraft, GenerationRequest, Page, ProjectExecutionPolicy, Proposal, ProposalDecision, Run, VisualAction, VisualExploration, VisualReplayFrames, VisualTrajectory, VisionDebugEvidence, VisionDebugEvidencePayload, VisionPolicy, VisionProgressActivity } from "./generation-types";
 export { ControlPlaneError } from "./api-client.ts";
 
 export function submitGeneration(apiUrl: string, payload: { project_id: string; target_url: string; request: string }) {
@@ -16,9 +16,22 @@ export function getDraft(apiUrl: string, id: string) {
   return apiRequest<GeneratedDraft>(apiUrl, `/api/v1/test-generations/drafts/${id}`);
 }
 export function listDrafts(apiUrl: string, state?: string) { return apiRequest<Page<GeneratedDraft>>(apiUrl, `/api/v1/test-generations/drafts${state ? `?state=${encodeURIComponent(state)}` : ""}`); }
-export function decideDraft(apiUrl: string, id: string, approved: boolean, reason: string) {
+/** `acknowledgeDisposableCredentials` is sent only when true; the API requires it to approve a draft that carries test values. */
+export function decideDraft(apiUrl: string, id: string, approved: boolean, reason: string, acknowledgeDisposableCredentials = false) {
   return apiRequest<GeneratedDraft>(apiUrl, `/api/v1/test-generations/drafts/${id}/decision`, {
-    method: "POST", body: JSON.stringify({ approved, reason: reason || null }),
+    method: "POST", body: JSON.stringify({ approved, reason: reason || null, ...(acknowledgeDisposableCredentials ? { acknowledge_disposable_credentials: true } : {}) }),
+  });
+}
+export function getAgentTaskConsistency(apiUrl: string, sessionId: string, signal?: AbortSignal) {
+  return apiRequest<AgentTaskConsistency>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/consistency`, { signal, cache: "no-store" });
+}
+export function getAgentTaskDraftInputs(apiUrl: string, sessionId: string, signal?: AbortSignal) {
+  return apiRequest<AgentTaskDraftInputs>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/test-draft/inputs`, { signal, cache: "no-store" });
+}
+/** `values`: one typed value per `type` step, in step order. They travel only in this request body: never in the URL, a header or storage. */
+export function createAgentTaskDraft(apiUrl: string, sessionId: string, values: readonly string[]) {
+  return apiRequest<AgentTaskDraftCreated>(apiUrl, `/api/v1/vision/explorations/${encodeURIComponent(sessionId)}/test-draft`, {
+    method: "POST", headers: { "Idempotency-Key": idempotencyKey() }, body: JSON.stringify({ values }), cache: "no-store",
   });
 }
 export function setPolicy(apiUrl: string, projectId: string, policy: ProjectExecutionPolicy) {

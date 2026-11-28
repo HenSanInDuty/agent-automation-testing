@@ -19,6 +19,9 @@ import type { VisionProvider } from "./generation-types";
 import { ConfirmDialog } from "./components/confirm-dialog";
 import { EmptyState, LoadingState } from "./components/states";
 import { StatusBadge } from "./components/status-badge";
+import { SessionStateBadge } from "./components/vision-task-assessment";
+import { validTaskAssessment } from "./components/vision-task-assessment-model";
+import { AgentTaskDraftPanel } from "./components/agent-task-draft-panel";
 import { VisionProgressTimeline } from "./components/vision-progress-timeline";
 import { VisionTrajectory } from "./components/vision-trajectory";
 import { orderedReplayFrames, replayMarkerPosition } from "./components/vision-replay-model";
@@ -138,7 +141,8 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
         setSelected((current) => {
           if (current?.id !== sessionId) return current;
           return current.state === session.state
-            && current.safe_failure_reason === session.safe_failure_reason ? current : session;
+            && current.safe_failure_reason === session.safe_failure_reason
+            && current.task_assessment?.status === session.task_assessment?.status ? current : session;
         });
         setSessions((current) => current.map((item) => item.id === sessionId ? session : item));
         if (nextActions.status === "fulfilled") setActions(nextActions.value);
@@ -246,7 +250,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
 
   return <div className="grid min-w-0 gap-6 [overflow-wrap:anywhere]">
     {selected && <div role="group" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border bg-card px-4 py-2.5 shadow-xs" aria-label="Session controls">
-      <div className="flex min-w-0 items-center gap-2.5"><strong className="truncate text-sm font-semibold">{options.find((project) => project.id === selected.project_id)?.name ?? "Website exploration"}</strong> <StatusBadge status={selected.state} /></div>
+      <div className="flex min-w-0 items-center gap-2.5"><strong className="truncate text-sm font-semibold">{options.find((project) => project.id === selected.project_id)?.name ?? "Website exploration"}</strong> <SessionStateBadge state={selected.state} assessment={selected.task_assessment} /></div>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" aria-expanded={historyOpen} onClick={() => { setHistoryOpen(true); historyRef.current?.scrollIntoView({ block: "nearest" }); }}><History aria-hidden="true" />History</Button>
         <Button type="button" variant="outline" size="sm" aria-expanded={newOpen} aria-controls="vision-new" onClick={() => setNewOpen((open) => !open)}><Plus aria-hidden="true" />New exploration</Button>
@@ -258,8 +262,8 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
         <FormField id="vision-project" label="Project"><NativeSelect id="vision-project" required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Choose a project</option>{options.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</NativeSelect></FormField>
         <FormField id="vision-target-url" label="Target URL"><Input id="vision-target-url" required type="url" placeholder="https://example.com" value={targetUrl} onChange={(event) => setTargetUrl(event.target.value)} /></FormField>
         <FormField id="vision-intent" label="Exploration intent" className="min-[720px]:col-span-2"><Textarea id="vision-intent" required className="min-h-24" value={taskIntent} onChange={(event) => setTaskIntent(event.target.value)} /></FormField>
-        {agentLoopAvailable && <FormField id="vision-engine" label="Exploration engine"><NativeSelect id="vision-engine" value={engine} onChange={(event) => setEngine(explorationEngine(event.target.value))}><option value="planner">Planner</option><option value="agent_loop">Agent loop</option></NativeSelect></FormField>}
-        {agentLoopAvailable && <Hint className="min-[720px]:col-span-2">{engine === "agent_loop" ? "Agent loop: the model proposes actions step by step and the platform runs only guarded ones. Advisory only; any test draft still needs approval." : "Planner: advisory, model proposals only. Any test draft still needs approval."}</Hint>}
+        {agentLoopAvailable && <FormField id="vision-engine" label="Exploration engine"><NativeSelect id="vision-engine" value={engine} onChange={(event) => setEngine(explorationEngine(event.target.value))}><option value="planner">Planner</option><option value="agent_loop">Agent loop (task testing)</option></NativeSelect></FormField>}
+        {agentLoopAvailable && <Hint className="min-[720px]:col-span-2">{engine === "agent_loop" ? "Agent loop: the agent works through your task step by step, the platform runs only guarded actions, and the session ends with an advisory task assessment. Any test draft still needs approval." : "Planner: advisory, model proposals only. Any test draft still needs approval."}</Hint>}
         {!enabled && <Notice tone="warning" className="min-[720px]:col-span-2">Vision is unavailable until a tenant administrator enables an available provider and accepts its required data-transfer disclosure in Vision settings below.</Notice>}
         <div className="min-[720px]:col-span-2"><Button disabled={!projectId || !enabled || dirty || saving || submitting}>Start advisory exploration</Button></div>
       </form>
@@ -267,6 +271,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
       {savedPolicy && <Hint>{visionDisclosure(savedPolicy)} Any resulting test draft requires your approval before execution.</Hint>}
     </Section>
     {notice && <Notice tone={noticeTone} role="alert">{notice}</Notice>}
+    {selected && selected.state === "completed" && validTaskAssessment(selected.task_assessment) && <AgentTaskDraftPanel key={`${apiUrl}:${selected.id}`} apiUrl={apiUrl} sessionId={selected.id} />}
     {selected && <VisionSessionDetail key={`${apiUrl}:${projectId}:${selected.id}`} apiUrl={apiUrl} session={selected} canDelete={canDeleteReplay} onActivity={() => refreshSelected(selected.id)} />}
     {selected && selected.trace_version !== "v4" && trajectory && <Section aria-label="Exploration evidence"><VisionTrajectory apiUrl={apiUrl} sessionId={selected.id} trajectory={trajectory} frames={frames} selectedFrame={selectedFrame} onSelectFrame={setSelectedFrame} /></Section>}
     {(!enabled || dirty || settingsError) && <Notice tone="info" role="status" className="flex flex-wrap items-center justify-between gap-3 text-muted-foreground">
@@ -276,7 +281,7 @@ export function VisionDashboard({ apiUrl, projectPolicy, onProjectChange }: { ap
     <Disclosure ref={settingsRef} title="Vision settings">{visionSettings}</Disclosure>
     <Disclosure title="Project settings" bodyClassName="p-0">{projectPolicy}</Disclosure>
     <Disclosure ref={historyRef} open={historyOpen} onToggle={(event) => setHistoryOpen(event.currentTarget.open)} title="Session history">
-      <section aria-label="Visual exploration sessions" className="grid gap-3"><h2 className="text-sm font-semibold">Visual exploration sessions</h2>{sessions.length ? <ul className="grid gap-2">{sessions.map((session, index) => <li key={session.id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2", session.id === selected?.id && "border-primary/40 bg-accent/50")}><Button type="button" variant="outline" size="sm" onClick={() => showHistory(session)}>View</Button> <span className="text-sm font-medium">Exploration {sessions.length - index}</span> <StatusBadge status={session.state} /> <Disclosure variant="plain" title="Session ID" className="ml-auto"><Code>{session.id}</Code></Disclosure></li>)}</ul> : <EmptyState title="No visual explorations">Start one only after confirming the privacy disclosure above.</EmptyState>}</section>
+      <section aria-label="Visual exploration sessions" className="grid gap-3"><h2 className="text-sm font-semibold">Visual exploration sessions</h2>{sessions.length ? <ul className="grid gap-2">{sessions.map((session, index) => <li key={session.id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2", session.id === selected?.id && "border-primary/40 bg-accent/50")}><Button type="button" variant="outline" size="sm" onClick={() => showHistory(session)}>View</Button> <span className="text-sm font-medium">Exploration {sessions.length - index}</span> <SessionStateBadge state={session.state} assessment={session.task_assessment} /> <Disclosure variant="plain" title="Session ID" className="ml-auto"><Code>{session.id}</Code></Disclosure></li>)}</ul> : <EmptyState title="No visual explorations">Start one only after confirming the privacy disclosure above.</EmptyState>}</section>
     </Disclosure>
     {selected && selected.trace_version !== "v4" && <Section aria-label="Selected visual exploration" title="Advisory session" actions={<StatusBadge status={selected.state} />} contentClassName="grid gap-5">
       <ItemList className="text-muted-foreground"><li>Correlation: <Code>{selected.correlation_id}</Code></li><li>Bounded to {selected.max_hops} hops, {selected.max_states} states, and {selected.max_session_seconds} seconds.</li><li>Stop condition: state/depth limit, time limit, policy guard, provider failure, or model stop.</li>{selected.safe_failure_reason && <li>Safe failure: {selected.safe_failure_reason}</li>}</ItemList>

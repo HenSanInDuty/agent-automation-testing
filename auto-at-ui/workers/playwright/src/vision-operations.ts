@@ -7,14 +7,14 @@ import { allowedOrigin, canonical, digest, requireVision, validateVision, Vision
   type VisualWorkerIdentity, type VisualWorkerOpen, type VisualWorkerPrepare, type VisualWorkerExecute,
   type VisualWorkerAck, type VisualOperation, type VisualOperationFrame, type VisualLocatorEvidence,
   type VisualCheckpoint, type VisualWorkerOperationResult, type VisualExternalOrigin, type VisualExecutedClick } from "./vision-contract.js";
-import { groundLocator, type GroundedLocator } from "./vision-locators.js";
+import { allowCredentialInputs, groundLocator, type GroundedLocator } from "./vision-locators.js";
 import { observeDom, resolveDomTarget, verifySnapshotTarget, type DomSnapshot } from "./vision-dom.js";
 import { revalidateDom, contextSignature, targetSignature, targetActionSignature } from "./vision-revalidation.js";
 import type { VisualWorkerCheckTarget, VisualWorkerTargetCheck } from "./vision-contract.js";
 import type { VisualWorkerObserveDom, VisualWorkerDomObservation } from "./vision-contract.js";
 import { captureVisionScreen } from "./vision-screen.js";
 import { observeClick } from "./vision-click-evidence.js";
-import { logVisionEvent, logVisionFailure, visionErrorType, visionLogScope } from "./vision-observability.js";
+import { logVisionEvent, logVisionFailure, visionErrorDetails, visionErrorType, visionLogScope } from "./vision-observability.js";
 import { checkpointMetadata, equivalentState, inspectState, isPresentationOnlyAnimated, logStateMismatch, setInteractionScope, settleState, type RuntimeState } from "./vision-checkpoints.js";
 import { captureHistory, validateHistory, returnToHistory, type HistoryCheckpoint } from "./vision-history.js";
 
@@ -43,9 +43,15 @@ type Session = {
   navigationMethods: WeakMap<Page, string>;
   // Agent mode only (VisualWorkerOpen.agent_mode); v4 sessions keep every default below.
   agentMode: boolean; blockedTerms: string[]; latestSnapshotId: string | null;
+  // ADR-046: a project the owner marked as their own test environment; forms may be submitted.
+  ownedTestTarget: boolean;
   // Opt-in capabilities requested at open (control-plane flags, default off): scroll/URL on confirmed
   // clicks (`click-context-v1`) and dom_path locators for unnamed controls (`agent-dom-path-v1`).
   clickContext: boolean; agentDomPath: boolean;
+  // `page-text-v1` (ADR-046): visible page text in the DOM observation; agent mode and a requested capability only.
+  pageText: boolean;
+  // `agent-frozen-clock-v1` (ADR-048): page timers are stopped between operations; `clockRunning` is RAM-only state.
+  frozenClock: boolean; clockRunning: boolean;
   // Recoverable dialog/download caused by the running operation (K4); cleared per operation.
   recovered: string | null;
 };
@@ -151,6 +157,7 @@ export class VisualOperationWorker {
       // live geometry, identity and Playwright actionability checks still apply.
       const context = await browser.newContext({ viewport: { width: 1280, height: 720 },
         acceptDownloads: false, serviceWorkers: "block", reducedMotion: "reduce" });
+      if (request.agent_mode === true && request.required_capabilities.includes("owned-test-target-v1")) allowCredentialInputs(context);
       // Safety net (r17/r18, ADR 042 "Runtime"): the worker runs through tsx/esbuild keepNames, which wraps named
       // closures as `__name(fn, "name")`. Playwright serialises evaluate callbacks, so a closure that slips into one
       // would throw `__name is not defined` in the page. The callbacks are written without such closures; this no-op
@@ -210,6 +217,9 @@ export class VisualOperationWorker {
           if (!session.activeOperation) session.policyFailure = "unattributed_popup";
         }
       });
+      // ADR-048: the fake clock must exist before the first page so every document, popup included, gets it.
+      const frozenClock = request.agent_mode === true && request.required_capabilities.includes("agent-frozen-clock-v1");
+      if (frozenClock) await context.clock.install();
       const page = await context.newPage();
       const state = await inspectState(page);
       session = { request, browser, context, page, pages: new Map(), parents: new Map(), deadline,
@@ -219,7 +229,11 @@ export class VisualOperationWorker {
         agentMode: request.agent_mode === true, latestSnapshotId: null, recovered: null,
         clickContext: request.agent_mode === true && request.required_capabilities.includes("click-context-v1"),
         agentDomPath: request.agent_mode === true && request.required_capabilities.includes("agent-dom-path-v1"),
+        pageText: request.agent_mode === true && request.required_capabilities.includes("page-text-v1"),
+        ownedTestTarget: request.agent_mode === true && request.required_capabilities.includes("owned-test-target-v1"),
+        frozenClock, clockRunning: frozenClock,
         blockedTerms: request.agent_mode === true ? (request.blocked_action_terms ?? []).map(normalizeTerm) : [] };
+      await this.setClock(session, false, page);
       const opened = session;
       clearTimeout(opened.timer);
       opened.timer = setTimeout(() => { void this.expire(opened); }, Math.max(1, deadline - Date.now()));
@@ -228,9 +242,47 @@ export class VisualOperationWorker {
       this.pageId(opened, page);
       this.sessions.set(request.session_id, opened);
       return { session_id: request.session_id, contract_version: "v4", state_fingerprint: state.fingerprint,
-        operation_budget: this.budget(opened), capabilities: ["dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1", "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1", "click-context-v1", "agent-dom-path-v1"] };
+        operation_budget: this.budget(opened), capabilities: ["dom-observation-v1", "step-timeout-v1", "button-scope-v1", "anonymous-button-v1", "visual-button-scope-v1", "viewport-context-v1", "target-preflight-v1", "click-context-v1", "agent-dom-path-v1", "owned-test-target-v1", "page-text-v1", "agent-frozen-clock-v1"] };
     } catch (error) { await browser?.close(); throw error; }
     finally { this.opening.delete(request.session_id); }
+  }
+  // ADR-048: run or stop the page clock of a session that asked for `agent-frozen-clock-v1` (no-op otherwise).
+  // `clockRunning` is set before the call that can start the clock and cleared only once it is known to be stopped,
+  // so a call that throws midway leaves the flag on "running" and the next exit retries the stop.
+  private async setClock(session: Session, running: boolean, page: Page): Promise<void> {
+    if (!session.frozenClock || session.clockRunning === running) return;
+    if (running) { session.clockRunning = true; await session.context.clock.resume(); return; }
+    for (let attempt = 1; ; attempt++) {
+      try {
+        // Stopping needs a time in the page's own timeline, read from a live page.
+        const alive = page.isClosed() ? session.context.pages().find(candidate => !candidate.isClosed()) ?? page : page;
+        await session.context.clock.pauseAt(await alive.evaluate(() => Date.now()) + 1);
+        break;
+      } catch (error) {
+        // A child frame's clock runs a few ms ahead of the main frame's, so `pauseAt` reports "the past" for that
+        // frame, but only after it stopped every frame. Accept that only when every frame is seen standing still.
+        if (/Cannot fast-forward to the past/.test(String(error)) && await this.pageClockStopped(session)) break;
+        // A late navigation destroys the context the time was read from: read again, within the step's limit.
+        if (attempt >= 4 || Date.now() >= session.deadline) throw error;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    session.clockRunning = false;
+  }
+  private async pageClockStopped(session: Session): Promise<boolean> {
+    try {
+      const read = () => Promise.all(session.context.pages().filter(page => !page.isClosed())
+        .flatMap(page => page.frames().map(frame => frame.evaluate(() => Date.now()))));
+      const first = await read();
+      await new Promise(resolve => setTimeout(resolve, 250));
+      const second = await read();
+      return first.length === second.length && first.every((time, index) => time === second[index]);
+    } catch { return false; }
+  }
+  private clockStopFailed(session: Session, operationId: string, error: unknown): void {
+    const type = visionErrorType(error);
+    logVisionEvent("warn", "vision.clock.freeze_failed", "The page clock could not be stopped after an operation.", {},
+      { session_id: session.request.session_id, operation_id: operationId, error_type: type, ...visionErrorDetails(error, type) });
   }
   private budget(session: Session): number { return 1 + session.request.max_states * (2 * session.request.max_hops + 3); }
   private observeOrigin(session: Session, url: string, kind: VisualExternalOrigin["request_kind"]): void {
@@ -327,7 +379,7 @@ export class VisualOperationWorker {
       const current = await inspectState(session.page);
       if (!equivalentState(session.state, current)) logStateMismatch(session.state, current, "observe_start");
       requireVision(equivalentState(session.state, current), "state_mismatch");
-      const snapshot = await observeDom(session.page, request, { agentDomPath: session.agentDomPath, held: session.state });
+      const snapshot = await observeDom(session.page, request, { agentDomPath: session.agentDomPath, pageText: session.pageText, held: session.state });
       if (request.revalidate_snapshot_id) {
         const previous = session.domSnapshots.get(request.revalidate_snapshot_id);
         requireVision(previous && (request.revalidate_context_only || request.revalidate_element_ids.length > 0), "stale_dom_snapshot");
@@ -643,10 +695,11 @@ export class VisualOperationWorker {
           }
           if (session.agentMode) {
             const facts = await ground.target!.evaluate(sensitiveFacts);
-            requireVision(!facts.submit && !facts.download && !facts.names.some(name => {
+            // Downloads stay blocked everywhere; submit controls and sensitive names only off an owned test target.
+            requireVision(!facts.download && (session.ownedTestTarget || (!facts.submit && !facts.names.some(name => {
               const text = normalizeTerm(name);
               return session.blockedTerms.some(term => text.includes(term));
-            }), "sensitive_action_blocked");
+            }))), "sensitive_action_blocked");
           }
           if (request.action.kind === "click") runtime.replayable = await ground.target!.evaluate((el) => el.tagName === "A" &&
             !!el.getAttribute("href") && !el.hasAttribute("download") && !el.hasAttribute("onclick"));
@@ -746,6 +799,8 @@ export class VisualOperationWorker {
         }
         if (command.history_checkpoint_id) await validateHistory(
           session.checkpoints.get(command.history_checkpoint_id)?.history, runtime.page, runtime.historyFromEntryId);
+        // ADR-048: every check above ran on a stopped page; only now may the page's time move (wait relies on it).
+        await this.setClock(session, true, runtime.page);
         runtime.result.operation.status = "executing";
         runtime.result.dispatch_started = true;
         const sequential = session.agentMode && command.purpose === "explore";
@@ -884,8 +939,21 @@ export class VisualOperationWorker {
           afterPage !== runtime.page || runtime.before.url_fingerprint !== digest(afterPage.url());
         const viewportChanged = navigated || action.kind === "scroll";
         const settleTimeout = viewportChanged ? 10_000 : 1500;
-        const settled = await settleState(afterPage, Math.min(session.deadline, Date.now() + settleTimeout), viewportChanged ? 800 : 160);
+        let settled = await settleState(afterPage, Math.min(session.deadline, Date.now() + settleTimeout), viewportChanged ? 800 : 160);
         if (!settled.settled) { status = "failed"; code = "settle_timeout"; }
+        if (session.frozenClock) {
+          // ADR-048: timers had the whole operation to run. Stop the page, then take the published state from the
+          // stopped page, so CSS transitions still in flight settle and no timer can move it before the next step.
+          // A page that could not be stopped is not a settled one: report it as such; `finally` tries again.
+          const stopped = await this.setClock(session, false, afterPage).then(() => true, (error) => {
+            this.clockStopFailed(session, request.operation_id, error);
+            status = "failed"; code = "settle_timeout"; return false;
+          });
+          if (stopped) {
+            settled = await settleState(afterPage, Math.min(session.deadline, Date.now() + settleTimeout), 160);
+            if (!settled.settled) { status = "failed"; code = "settle_timeout"; }
+          }
+        }
         if (downloadStarted) {
           // Download events can precede Chromium's popup page event. Reconcile
           // again after settle so a late uncommitted tab cannot leak into the
@@ -917,6 +985,8 @@ export class VisualOperationWorker {
         session.context.off("page", onPage);
         session.downloadOwner = undefined;
         session.activeOperation = null; session.pending = null; session.page = afterPage; session.recovered = null;
+        // ADR-048: every exit leaves the page stopped, before the after-capture publishes its state.
+        await this.setClock(session, false, afterPage).catch((error) => this.clockStopFailed(session, request.operation_id, error));
         let captured: RuntimeState | null = null;
         try {
           // Failed/unknown actions retain diagnostic pixels even when the page

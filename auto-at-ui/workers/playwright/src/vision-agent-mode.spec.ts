@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { chromium, expect, test, type Browser, type Page } from "@playwright/test";
 import { VisualOperationWorker, type OperationResult } from "./vision-operations.js";
-import type { VisualWorkerIdentity, VisualWorkerDomObservation } from "./vision-contract.js";
+import { canonical, type VisualWorkerIdentity, type VisualWorkerDomObservation } from "./vision-contract.js";
 import { startAgentLoopTarget } from "./fixtures/agent-loop-target.js";
 
 let target: Awaited<ReturnType<typeof startAgentLoopTarget>>;
@@ -235,6 +236,47 @@ test("agent mode blocks submit, form buttons, downloads and listed terms but not
   expect(register.operation, register.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
 });
 
+test("an owned test target (ADR-046) may use sensitive and submit controls, never downloads or Enter", async () => {
+  const opened = await agent({ blocked_action_terms: [], required_capabilities: ["owned-test-target-v1"] });
+  expect(opened.capabilities).toContain("owned-test-target-v1");
+  const home = await observe();
+  const download = await propose(home, "Tải về");
+  expect(download.operation, "download").toMatchObject({ status: "rejected", outcome_code: "sensitive_action_blocked" });
+  const newline = await propose(home, "Ô một", TYPE("a\nb"));
+  expect(newline.operation.outcome_code).toBe("sensitive_action_blocked");
+  const sensitive = await act(home, "Xoá tài khoản");
+  expect(sensitive.operation, sensitive.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  const submit = await propose(await observe(), "Gửi đi");
+  expect(submit.operation.status, submit.operation.outcome_code ?? "").toBe("prepared");
+});
+
+test("a password input stays out of the snapshot of a read-only agent session", async () => {
+  await agent({ target_url: `${target.origin}/login` });
+  const hidden = await observe();
+  expect(hidden.data.observation.elements.map(item => item.name)).toEqual(["Tên đăng nhập", "Đăng nhập"]);
+  expect(hidden.data.observation.skipped_count).toBe(1);
+});
+
+test("on an owned test target a password input is a control and its value is never exported", async () => {
+  await agent({ target_url: `${target.origin}/login`, blocked_action_terms: [], required_capabilities: ["owned-test-target-v1"] });
+  const shown = await observe();
+  expect(shown.data.observation.elements.map(item => [item.name, item.input_type, item.editable])).toEqual([
+    ["Tên đăng nhập", "text", true], ["Mật khẩu", "other", true], ["Đăng nhập", null, false]]);
+  expect(shown.data.observation.skipped_count).toBe(0);
+  const typed = await act(shown, "Mật khẩu", TYPE("Demo1234"));
+  expect(typed.operation, typed.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect(await page.locator("#password").inputValue()).toBe("Demo1234");
+  // The grounded locator is the accessible name; no descriptor, name or result field carries the typed value.
+  expect(typed.locator?.descriptor).toMatchObject({ strategy: "role", value: "Mật khẩu" });
+  expect(JSON.stringify([typed, await observe()])).not.toContain("Demo1234");
+});
+
+test("without the capability an empty term list still blocks submit controls in agent mode", async () => {
+  await agent({ blocked_action_terms: [] });
+  const blocked = await propose(await observe(), "Gửi đi");
+  expect(blocked.operation).toMatchObject({ status: "rejected", outcome_code: "sensitive_action_blocked" });
+});
+
 test("v4 mode does not apply the agent blocklist", async () => {
   await openSession({ blocked_action_terms: ["xoá tài khoản"] });
   const home = await observe();
@@ -429,3 +471,298 @@ for (const [label, change, expected] of [
     expect(target.requests.filter(line => line.startsWith("POST"))).toEqual([]);
   });
 }
+
+// ADR-046 page text (`page-text-v1`): visible text for the agent, in agent mode and on request only.
+const PAGE_TEXT = { required_capabilities: ["page-text-v1"] };
+const textOf = (observed: VisualWorkerDomObservation) => observed.data.observation.page_text.map(item => [item.kind, item.text]);
+
+test("page text is read, in priority order, from what the page shows and nothing it hides", async () => {
+  const opened = await agent({ target_url: `${target.origin}/page-text`, ...PAGE_TEXT });
+  expect(opened.capabilities).toContain("page-text-v1");
+  const seen = (await observe()).data.observation;
+  const items = seen.page_text.map(item => [item.kind, item.text]);
+  const long = items.find(([, text]) => text.startsWith("Chữ dài"))!;
+  expect(items.filter(item => item !== long)).toEqual([
+    ["alert", "Sai tên đăng nhập"], ["alert", "Lỗi Hết phiên làm việc"], ["status", "Còn 3 việc"],
+    ["heading", "Trang thử chữ"], ["heading", "Tiêu đề hai"],
+    ["paragraph", "Đoạn văn ngắn hiển thị."], ["paragraph", "Trước sau"], ["paragraph", "Chữ thường và hết"]]);
+  // An over-long paragraph is cut to the cap, with a visible mark; that is not "more items than fit".
+  expect(long[0]).toBe("paragraph");
+  expect([...long[1]].length).toBeLessThanOrEqual(160);
+  expect(long[1].endsWith("…")).toBe(true);
+  expect(seen).toMatchObject({ page_text_truncated: false, page_text_skipped: 0 });
+  // Field values, hidden text, script/style and contenteditable text never leave the worker.
+  const wire = JSON.stringify(seen);
+  for (const hidden of ["giá-trị-ô-nhập", "MatKhauBiMat1", "nội dung textarea", "ẩn", "mờ", "trình đọc", "ngoài màn hình",
+    "trong script", "trong style", "Đang gõ dở", "Đóng"]) expect(JSON.stringify(seen.page_text), hidden).not.toContain(hidden);
+  expect(wire).not.toContain("giá-trị-ô-nhập");
+});
+
+test("without the capability, or outside agent mode, the observation carries no page text", async () => {
+  await agent({ target_url: `${target.origin}/page-text` });
+  expect((await observe()).data.observation).toMatchObject({ page_text: [], page_text_truncated: false, page_text_skipped: 0 });
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  const opened = await openSession({ target_url: `${target.origin}/page-text`, ...PAGE_TEXT });
+  expect(opened.capabilities).toContain("page-text-v1");
+  expect((await observe()).data.observation).toMatchObject({ page_text: [], page_text_truncated: false, page_text_skipped: 0 });
+});
+
+test("sensitive page text is dropped and counted, also on an owned test target", async () => {
+  for (const extra of [{}, { blocked_action_terms: [], required_capabilities: ["owned-test-target-v1", "page-text-v1"] }]) {
+    await agent({ target_url: `${target.origin}/page-text-sensitive`, ...PAGE_TEXT, ...extra });
+    const seen = (await observe()).data.observation;
+    expect(textOf(await observe())).toEqual([["alert", "Sai mật khẩu"], ["heading", "Hồ sơ"], ["paragraph", "An toàn: còn 5 lượt"]]);
+    expect(seen.page_text_skipped).toBe(6);
+    expect(JSON.stringify(seen)).not.toMatch(/nguoi\.dung|abc123|abcdef|1234567890|example\.com|Reset/);
+    await worker.close(identity, identity.session_id);
+    identity = { ...identity, session_id: randomUUID() };
+  }
+});
+
+test("page text is capped by item count, by total bytes and by the observation byte limit", async () => {
+  await agent({ target_url: `${target.origin}/page-text-many`, ...PAGE_TEXT });
+  const many = (await observe()).data.observation;
+  expect(many.page_text).toHaveLength(24);
+  expect(many).toMatchObject({ page_text_truncated: true });
+  expect(many.page_text[0]).toEqual({ kind: "heading", text: "Danh sách" });
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+
+  await agent({ target_url: `${target.origin}/page-text-bytes`, ...PAGE_TEXT });
+  const wide = (await observe()).data.observation;
+  expect(wide.page_text).toHaveLength(9);
+  expect(wide.page_text.reduce((sum, item) => sum + Buffer.byteLength(item.text), 0)).toBeLessThanOrEqual(4096);
+  expect(wide.page_text_truncated).toBe(true);
+
+  // A request byte cap smaller than the observation drops text first and says so; the controls stay.
+  const room = Buffer.byteLength(canonical(wide)) - 1500;
+  const tight = (await worker.observeDom({ ...identity, snapshot_id: randomUUID(), expected_state_fingerprint: current,
+    max_bytes: room })).data.observation;
+  expect(Buffer.byteLength(canonical(tight))).toBeLessThanOrEqual(room);
+  expect(tight.page_text.length).toBeLessThan(9);
+  expect(tight.page_text.length).toBeGreaterThan(0);
+  expect(tight.page_text_truncated).toBe(true);
+});
+
+test("page text filter matches the Python contract on non-ASCII digits, e-mail and case folding", async () => {
+  // Same strings as tests/test_codex_bridge_contracts.py: whatever the worker keeps, CodexPageTextItem must accept.
+  const { samples } = JSON.parse(readFileSync(new URL("../../../packages/contracts/fixtures/vision-page-text-v1/samples.json", import.meta.url), "utf8")) as
+    { samples: Array<{ text: string; worker_keeps: boolean }> };
+  await agent({ target_url: `${target.origin}/page-text-samples`, ...PAGE_TEXT });
+  const seen = (await observe()).data.observation;
+  expect(seen.page_text.map(item => item.text)).toEqual(samples.filter(sample => sample.worker_keeps).map(sample => sample.text));
+  expect(seen.page_text_skipped).toBe(samples.filter(sample => !sample.worker_keeps).length);
+});
+
+// ADR-048 (`agent-frozen-clock-v1`): the page's timers stand still between operations, so a page that changes
+// by itself (autoplay carousel) keeps the state the model was shown. Nothing here relies on the real site.
+const CLOCK = { required_capabilities: ["agent-frozen-clock-v1"] };
+const CAROUSEL = `/carousel`;
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+const startCarousel = (period: number) => page.evaluate((ms) =>
+  (window as unknown as { startCarousel: (n: number) => void }).startCarousel(ms), period);
+const slide = () => page.locator("#slide").textContent();
+const pageTime = (on: Page = page) => on.evaluate(() => Date.now());
+const slideOn = async (on: Page) => await on.locator("#slide").count() ? on.locator("#slide").textContent() : null;
+async function expectStill(on: Page = page, ms = 600) {
+  const time = await pageTime(on), text = await slideOn(on);
+  await sleep(ms);
+  expect(await pageTime(on)).toBe(time);
+  expect(await slideOn(on)).toBe(text);
+}
+
+test("without the capability a page timer moves the state while the model is idle (behaviour before ADR-048)", async () => {
+  await agent({ target_url: `${target.origin}${CAROUSEL}` });
+  await startCarousel(1000);
+  const seen = await observe();
+  await sleep(1500); // one tick, the next is at 2 s
+  const { result, mismatch } = await captureMismatch(() => propose(seen, "Đổi nội dung"));
+  expect(result.operation).toMatchObject({ status: "rejected", outcome_code: "state_mismatch", executed_click: null });
+  expect(mismatch).toMatchObject({ failure_stage: "prepare_start", interaction_changed: true });
+  expect(await out()).toBe("chưa đổi");
+});
+
+test("with the capability the state survives many timer periods between observe, prepare and execute", async () => {
+  const opened = await agent({ target_url: `${target.origin}${CAROUSEL}`, ...CLOCK });
+  expect(opened.capabilities).toContain("agent-frozen-clock-v1");
+  await startCarousel(300);
+  for (const round of [1, 2]) {
+    const seen = await observe();
+    await sleep(2500); // eight periods if the page clock were running
+    const { result, mismatch } = await captureMismatch(async () => {
+      const prepared = await propose(seen, "Đổi nội dung");
+      expect(prepared.operation, `round ${round}: ${prepared.operation.outcome_code ?? ""}`).toMatchObject({ status: "prepared" });
+      await sleep(1000);
+      const done = await worker.execute(executeCommand(prepared)); current = done.state_fingerprint ?? current; return done;
+    });
+    expect(result.operation, `round ${round}: ${result.operation.outcome_code ?? ""}`).toMatchObject({ status: "completed", outcome_code: "observed" });
+    expect(mismatch).toBeUndefined();
+    expect(await out()).toBe("đã đổi");
+    // The state published by the operation is the one the next round's observe still finds.
+    await sleep(1000);
+  }
+  await expectStill();
+});
+
+test("wait lets the page's time pass (the carousel moves), then the page stands still again", async () => {
+  await agent({ target_url: `${target.origin}${CAROUSEL}`, ...CLOCK });
+  await startCarousel(300);
+  const before = { fingerprint: current, slide: await slide() };
+  const waited = await run({ kind: "wait", duration_ms: 1000 });
+  expect(waited.operation, waited.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect(waited.state_fingerprint).not.toBe(before.fingerprint);
+  const after = await slide();
+  expect(after).not.toBe(before.slide);
+  expect(Number(after!.replace("Slide ", ""))).toBeGreaterThanOrEqual(2);
+  await sleep(1200);
+  expect(await slide()).toBe(after);
+  await expectStill();
+  // The refresh wait of the control-plane loop passes time too, and observe accepts what it published.
+  const refreshed = await refreshWait();
+  expect(refreshed.operation, refreshed.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect((await observe()).data.observation.elements.map(item => item.name)).toContain("Đổi nội dung");
+});
+
+test("click, type, scroll and capture work on a stopped page; a timer started by the click still fires", async () => {
+  await agent({ target_url: `${target.origin}${CAROUSEL}`, ...CLOCK });
+  await startCarousel(1500); // slower than the 800 ms scroll settle window, as a real autoplay is
+  let seen = await observe();
+  const clicked = await act(seen, "Chạm trễ");
+  expect(clicked.operation, clicked.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect(clicked.frames.map(frame => frame.role).sort()).toEqual(["after", "before"]);
+  expect(await page.locator("#late-out").textContent()).toBe("xong");
+  await expectStill();
+  seen = await observe();
+  const typed = await act(seen, "Ô gõ", TYPE("abc"));
+  expect(typed.operation, typed.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect(await page.locator("input[name=typed]").inputValue()).toBe("abc");
+  await expectStill();
+  const scrolled = await run({ kind: "scroll", delta_y: 400 });
+  expect(scrolled.operation, scrolled.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+  await expectStill();
+  expect((await worker.screen(identity, identity.session_id)).length).toBeGreaterThan(0);
+  expect((await run({ kind: "scroll", delta_y: -400 })).operation.status).toBe("completed");
+  expect((await observe()).data.observation.elements.length).toBeGreaterThan(0);
+});
+
+test("a popup and a new document get the stopped clock too", async () => {
+  test.setTimeout(60_000);
+  await agent({ target_url: `${target.origin}${CAROUSEL}`, ...CLOCK });
+  const popup = await act(await observe(), "Mở popup");
+  expect(popup.operation, popup.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  const child = internals().page;
+  expect(child.url()).toBe(`${target.externalOrigin}/popup`);
+  await expectStill(child);
+  const closed = await run({ kind: "close_popup" });
+  expect(closed.operation, closed.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  await expectStill(internals().page);
+  // `/carousel-late` starts its timer 4 s of page time after load; the operation only runs the clock for ~1.5 s.
+  const moved = await act(await observe(), "Sang trang trễ");
+  expect(moved.operation, moved.operation.outcome_code ?? "").toMatchObject({ status: "completed", url_change: "changed" });
+  expect(internals().page.url()).toBe(`${target.origin}/carousel-late`);
+  await expectStill(internals().page);
+  await sleep(4500);
+  expect(await slide()).toBe("Slide 0");
+  expect((await observe()).data.observation.elements.map(item => item.name)).toContain("Slide 0");
+});
+
+test("a rejected or failed operation leaves the clock stopped", async () => {
+  await agent({ target_url: `${target.origin}${CAROUSEL}`, ...CLOCK });
+  await startCarousel(300);
+  // Rejected at prepare (stale snapshot): no dispatch.
+  const first = await observe();
+  await observe();
+  const stale = await propose(first, "Đổi nội dung");
+  expect(stale.operation).toMatchObject({ status: "rejected", outcome_code: "stale_dom_snapshot" });
+  await expectStill();
+  // Rejected at execute before dispatch: the page changed between prepare and execute; the clock never ran.
+  const seen = await observe();
+  const prepared = await propose(seen, "Đổi nội dung");
+  expect(prepared.operation.status).toBe("prepared");
+  const time = await pageTime();
+  await page.evaluate(() => scrollTo(0, 40));
+  const rejected = await worker.execute(executeCommand(prepared));
+  expect(rejected.operation).toMatchObject({ status: "rejected", outcome_code: "state_mismatch" });
+  expect(rejected.failure_stage).toBe("before_dispatch");
+  expect(await pageTime()).toBe(time);
+  await expectStill();
+  current = rejected.state_fingerprint ?? current;
+  current = (await refreshWait()).state_fingerprint ?? current;
+  // Fails after dispatch started (outcome unknown): the clock was running, and is stopped again.
+  internals().page.mouse.wheel = async () => { throw new Error("browser lost"); };
+  const lost = await run({ kind: "scroll", delta_y: 10 });
+  expect(lost.operation).toMatchObject({ status: "unknown", outcome_code: "action_outcome_unknown" });
+  await expectStill();
+});
+
+test("a session without the capability never gets a fake clock, and open reports the capability when asked", async () => {
+  await agent({ target_url: `${target.origin}${CAROUSEL}` });
+  const time = await pageTime();
+  await sleep(300);
+  expect(await pageTime()).toBeGreaterThanOrEqual(time + 250);
+  await worker.close(identity, identity.session_id);
+  identity = { ...identity, session_id: randomUUID() };
+  // v4 mode (no agent_mode) asks for the capability and is not given a stopped clock either.
+  const v4 = await openSession({ target_url: `${target.origin}${CAROUSEL}`, ...CLOCK });
+  expect(v4.capabilities).toContain("agent-frozen-clock-v1");
+  const v4time = await pageTime();
+  await sleep(300);
+  expect(await pageTime()).toBeGreaterThanOrEqual(v4time + 250);
+});
+
+// ADR-048 round 2: live, 1 of 15 sessions ended `initial_capture_failed` because stopping the clock threw
+// "Cannot fast-forward to the past" on a page with child frames (a child frame's clock is ahead of the main one).
+const framesTimes = (on: Page) => Promise.all(on.frames().map(frame => frame.evaluate(() => Date.now())));
+async function logLines(attempt: () => Promise<unknown>) {
+  const lines: string[] = [], originals = { log: console.log, warn: console.warn, error: console.error };
+  const take = (line: unknown) => { if (typeof line === "string" && line.startsWith("{")) lines.push(line); };
+  console.log = take; console.warn = take; console.error = take;
+  try { await attempt(); } finally { Object.assign(console, originals); }
+  return lines.map(line => JSON.parse(line) as Record<string, unknown>);
+}
+
+test("a page with child frames still opens, runs operations and ends every operation with every frame stopped", async () => {
+  const lines = await logLines(async () => {
+    await agent({ target_url: `${target.origin}/carousel-frames`, ...CLOCK });
+    expect(page.frames().length).toBeGreaterThanOrEqual(4);
+    for (const round of [1, 2]) {
+      const seen = await observe();
+      const done = await act(seen, "Đổi nội dung");
+      expect(done.operation, `round ${round}: ${done.operation.outcome_code ?? ""}`).toMatchObject({ status: "completed" });
+      const before = await framesTimes(page);
+      await sleep(400);
+      expect(await framesTimes(page)).toEqual(before);
+    }
+    const waited = await run({ kind: "wait", duration_ms: 300 });
+    expect(waited.operation, waited.operation.outcome_code ?? "").toMatchObject({ status: "completed" });
+  });
+  expect(lines.filter(line => line.event === "vision.clock.freeze_failed")).toEqual([]);
+  expect(lines.filter(line => line.event === "vision.state.mismatch")).toEqual([]);
+});
+
+test("when the page cannot be stopped the operation says so, the session keeps the clock marked running and recovers", async () => {
+  await agent({ target_url: `${target.origin}/carousel-frames`, ...CLOCK });
+  const clock = internals().page.context().clock, realPause = clock.pauseAt.bind(clock);
+  clock.pauseAt = async () => { throw new Error("stop refused for https://secret.example/token"); };
+  let failed: OperationResult | undefined;
+  const lines = await logLines(async () => {
+    const seen = await observe();
+    failed = await act(seen, "Đổi nội dung");
+  });
+  expect(failed!.operation).toMatchObject({ status: "failed", outcome_code: "settle_timeout" });
+  expect((worker as unknown as { sessions: Map<string, { clockRunning: boolean }> }).sessions.get(identity.session_id)!.clockRunning).toBe(true);
+  const logged = lines.filter(line => line.event === "vision.clock.freeze_failed");
+  expect(logged.length).toBeGreaterThan(0);
+  expect(logged[0]).toMatchObject({ error_type: "unexpected_error", error_name: "Error" });
+  expect(typeof logged[0].error_digest).toBe("string");
+  expect(JSON.stringify(logged)).not.toContain("secret.example");
+  // The stop works again: the next operation brings the page to a stop and the flag is honest.
+  clock.pauseAt = realPause;
+  current = failed!.state_fingerprint ?? current;
+  const recovered = await run({ kind: "wait", duration_ms: 200 }, { purpose: "setup", state_id: null, proposal_id: null,
+    refresh_observation: true, checkpoint_id: randomUUID(), checkpoint_state_id: randomUUID() }).catch(() => null);
+  expect(recovered).not.toBeNull();
+  await expectStill();
+});
