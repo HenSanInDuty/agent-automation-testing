@@ -1,8 +1,7 @@
 ---
 phase: 01
 title: Commit nhánh feat/agent-loop-task-testing
-status: in_progress
-cook_step: B1
+status: completed
 owner: none
 qa: skip
 dependencies: []

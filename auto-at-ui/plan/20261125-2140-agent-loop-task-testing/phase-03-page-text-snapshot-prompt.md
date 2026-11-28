@@ -1,7 +1,7 @@
 ---
 phase: 03
 title: Chữ trên trang trong snapshot — render_snapshot và prompt agent
-status: pending
+status: completed
 owner: be-developer
 qa: required
 dependencies: [phase-02]

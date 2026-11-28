@@ -1,7 +1,7 @@
 ---
 phase: 06
 title: Thiết kế nối task assessment sang bản nháp test Playwright
-status: pending
+status: completed
 owner: none
 qa: skip
 dependencies: [phase-01]

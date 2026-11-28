@@ -7,10 +7,11 @@ File này do `hgraph` tự sinh — đừng sửa tay.
 
 | Graph | Chức năng | Owner | Số file | Cập nhật |
 |---|---|---|---|---|
-| [`codex-bridge`](codex-bridge.md) | Bridge Codex/Claude local | be | 28 | 2026-11-26 |
-| [`playwright-vision-worker`](playwright-vision-worker.md) | Worker Playwright Vision | be | 38 | 2026-11-21 |
-| [`task-ui-stability`](task-ui-stability.md) | Fixture task-ui và bộ đo ổn định agent loop theo task (ADR-046) | be | 4 | 2026-11-26 |
+| [`agent-task-draft`](agent-task-draft.md) | Bản nháp test Playwright từ phiên agent-loop (ADR-047) | be | 37 | 2026-11-28 |
+| [`codex-bridge`](codex-bridge.md) | Bridge Codex/Claude local | be | 30 | 2026-11-26 |
+| [`playwright-vision-worker`](playwright-vision-worker.md) | Worker Playwright Vision | be | 40 | 2026-11-26 |
+| [`task-ui-stability`](task-ui-stability.md) | Fixture task-ui và bộ đo ổn định agent loop theo task (ADR-046) | be | 5 | 2026-11-28 |
 | [`vision-accuracy-harness`](vision-accuracy-harness.md) | Harness chấm điểm benchmark độ chính xác Vision (collect, ground, evaluate) | be | 7 | 2026-11-21 |
-| [`vision-agent-loop`](vision-agent-loop.md) | Vòng agent loop Vision | be | 29 | 2026-11-26 |
-| [`vision-dashboard`](vision-dashboard.md) | Dashboard Vision | fe | 32 | 2026-11-26 |
-| [`vision-exploration`](vision-exploration.md) | Khám phá Vision (control-plane) | be | 61 | 2026-11-26 |
+| [`vision-agent-loop`](vision-agent-loop.md) | Vòng agent loop Vision | be | 34 | 2026-11-28 |
+| [`vision-dashboard`](vision-dashboard.md) | Dashboard Vision | fe | 37 | 2026-11-27 |
+| [`vision-exploration`](vision-exploration.md) | Khám phá Vision (control-plane) | be | 68 | 2026-11-27 |

@@ -1,7 +1,7 @@
 ---
 phase: 04
 title: Đo lại độ ổn định 10 task × 3–5 lần trên code cuối
-status: pending
+status: completed
 owner: none
 qa: skip
 dependencies: [phase-03]

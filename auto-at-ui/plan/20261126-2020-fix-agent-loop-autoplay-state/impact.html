@@ -1,0 +1,275 @@
+<title>Agent loop và trang tự chuyển động</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: một cột đọc 880px, mục A–H theo đúng thứ tự cổng duyệt; bảng và code cuộn ngang trong khung riêng. */
+:root {
+  --bg: #f5f7f8; --surface: #ffffff; --fg: #17232b; --muted: #55656f; --line: #d5dde2;
+  --accent: #0b6e75; --accent-soft: #e0f1f2;
+  --crit: #b3261e; --crit-soft: #fbe9e7; --warn: #8a5a00; --warn-soft: #fbf1d9; --ok: #1d6b3a; --ok-soft: #e3f3e8;
+  --code-bg: #eef2f4;
+  --display: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --body: Inter, "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10181c; --surface: #172228; --fg: #e4ecef; --muted: #9db0ba; --line: #2c3c45;
+  --accent: #5cc4cb; --accent-soft: #143a3e;
+  --crit: #ff8a80; --crit-soft: #40201d; --warn: #f0c060; --warn-soft: #3a2f12; --ok: #7fd49b; --ok-soft: #173524;
+  --code-bg: #1e2c33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10181c; --surface: #172228; --fg: #e4ecef; --muted: #9db0ba; --line: #2c3c45;
+  --accent: #5cc4cb; --accent-soft: #143a3e;
+  --crit: #ff8a80; --crit-soft: #40201d; --warn: #f0c060; --warn-soft: #3a2f12; --ok: #7fd49b; --ok-soft: #173524;
+  --code-bg: #1e2c33; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--body); }
+.wrap { max-width: 880px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+h1 { font: 700 28px/1.2 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 19px/1.3 var(--display); margin: 0 0 10px; text-wrap: balance; }
+h3 { font: 600 15px/1.4 var(--display); margin: 14px 0 6px; }
+p { margin: 0 0 10px; max-width: 70ch; } ul, ol { margin: 0 0 10px; padding-left: 20px; max-width: 72ch; } li { margin-bottom: 4px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.lede { color: var(--muted); font-size: 16px; }
+.status { display: inline-block; font: 500 12px/1 var(--mono); padding: 6px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
+section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; min-width: 0; }
+.tag { font: 500 12px/1 var(--mono); color: var(--accent); margin-right: 8px; }
+code { font: 13px/1.5 var(--mono); background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre { font: 12.5px/1.55 var(--mono); background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; margin: 8px 0 12px; }
+pre code { background: none; padding: 0; overflow-wrap: normal; }
+.scroll { overflow-x: auto; margin: 8px 0 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px/1.3 var(--body); color: var(--muted); letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+dl.six { display: grid; grid-template-columns: minmax(120px, 170px) 1fr; gap: 10px 18px; margin: 0; }
+dl.six dt { font: 600 13.5px/1.4 var(--display); color: var(--muted); } dl.six dd { margin: 0; min-width: 0; }
+@media (max-width: 560px) { dl.six { grid-template-columns: 1fr; gap: 2px 0; } dl.six dd { margin-bottom: 10px; } }
+.note { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 10px 0; }
+.opt { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-top: 12px; }
+.opt.rec { border-color: var(--accent); background: var(--accent-soft); }
+.pill { display: inline-block; font: 500 11.5px/1 var(--mono); padding: 4px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+.pill.rec { background: var(--accent); color: var(--surface); } .pill.no { background: var(--crit-soft); color: var(--crit); } .pill.alt { background: var(--code-bg); color: var(--muted); }
+.crit { color: var(--crit); font-weight: 600; } .okc { color: var(--ok); font-weight: 600; }
+svg text { font-family: var(--mono); }
+figure { margin: 12px 0 4px; } figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; max-width: 70ch; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">h-fix · Gate 2 · phạm vi ảnh hưởng</div>
+  <h1>Agent loop dừng trên mongchiton.vn vì trang tự chuyển động</h1>
+  <p class="lede" style="margin-top:10px">17/21 phiên chỉ đọc kết thúc <code>state_changed_during_observation</code> hoặc <code>state_mismatch</code>. Nguyên nhân đã đo được: 3 carousel tự chạy làm trạng thái trang không tồn tại quá 2,9 giây, còn vòng agent cần nó đứng yên qua một lượt gọi model khoảng 9 giây.</p>
+  <span class="status" style="background:var(--ok-soft);color:var(--ok)">Gate 3 xong · QA PASS ở vòng 3 · chưa commit</span>
+</header>
+
+<section>
+  <h2><span class="tag">KQ</span>Kết quả sau khi sửa (hướng 1, bạn đã duyệt)</h2>
+  <div class="scroll"><table>
+    <tr><th>Lượt đo</th><th class="num"><code>completed</code></th><th class="num">Nhất quán</th><th class="num">Dừng vì hai mã lỗi carousel</th><th>Phiên không xong</th></tr>
+    <tr><td>mongchiton trước sửa (r3 + r4)</td><td class="num crit">4/21 (19%)</td><td class="num">không đánh giá được</td><td class="num crit">17</td><td>13 + 4 mã lỗi carousel</td></tr>
+    <tr><td>mongchiton sau sửa, code vòng 1 (r5)</td><td class="num okc">14/15 (93%)</td><td class="num">100%</td><td class="num okc">0</td><td>1 <code>initial_capture_failed</code>: lệnh dừng đồng hồ ném lỗi (đã sửa ở vòng 2)</td></tr>
+    <tr><td>mongchiton sau sửa, code vòng 2 (r6)</td><td class="num okc">14/15 (93%)</td><td class="num">100%</td><td class="num okc">0</td><td>1 <code>initial_capture_failed</code>: trần 1 giây của lần settle thứ hai (đã sửa ở vòng 3)</td></tr>
+    <tr><td>fixture <code>task-ui</code>, code vòng 2 (10 task × 3)</td><td class="num okc">30/30</td><td class="num">100%</td><td class="num okc">0</td><td>không có; đúng kỳ vọng 30/30</td></tr>
+    <tr><td><strong>mongchiton sau sửa, code cuối (r7)</strong></td><td class="num okc"><strong>15/15 (100%)</strong></td><td class="num">93%</td><td class="num okc">0</td><td>không có</td></tr>
+  </table></div>
+  <p>Lượt r7 trên code cuối: log worker có 0 dòng <code>vision.state.mismatch</code>, 0 <code>settle_timeout</code>, 0 lỗi dừng đồng hồ, 0 thao tác hỏng (QA tự đếm lại từ <code>r7/worker.log</code>). Worker 2 GiB, đỉnh 0,80 GiB, 0 lần chạm trần. Cờ FE test của Project-MCT tắt, task chỉ đọc. Fixture không đo lại sau vòng 3; QA chấp nhận lượt 30/30 của vòng 2 vì vòng 3 chỉ nới một ngân sách chờ.</p>
+  <p>Nhất quán 93% ở r7 do một phiên <code>home-requirements</code> kết luận <code>not_achieved</code> (bốn phiên kia <code>achieved</code>): agent không thấy dòng cấu hình trong phần chữ đọc được và chưa xem ảnh chụp. Cùng kiểu với phiên <code>bef6fc15</code> trước khi sửa; không có log nào chỉ về đồng hồ dừng, nhưng cũng chưa chứng minh là không liên quan.</p>
+
+  <h3>Ba vòng review</h3>
+  <ul>
+    <li><strong>Vòng 1:</strong> leader PASS, QA offline PASS. Đo thật (r5) lộ ra lệnh dừng đồng hồ ném lỗi ở thao tác mở trang đầu.</li>
+    <li><strong>Vòng 2:</strong> sửa lệnh dừng. Đo thật (r6) lộ ra trần cứng 1 giây của lần chờ trang đứng yên sau khi dừng đồng hồ (<code>vision-operations.ts:953</code>): trên trang vừa nạp mỗi lần đọc state mất khoảng 0,5 giây nên hết giờ dù trang không đổi. QA tái hiện bằng <code>QA-C09</code> và phán FAIL.</li>
+    <li><strong>Vòng 3 (bạn cho thêm):</strong> lần chờ đó dùng lại ngân sách của thao tác (10 giây cho điều hướng và cuộn, 1,5 giây cho thao tác khác); phép kiểm "đồng hồ đã dừng" đọc cách 250 ms thay vì 40 ms. <code>QA-C09</code> đỏ sau khi sửa code rồi xanh với kỳ vọng mới. QA PASS.</li>
+  </ul>
+
+  <h3>Đã làm</h3>
+  <ul>
+    <li><strong>Code:</strong> capability <code>agent-frozen-clock-v1</code> trong contract; worker cài đồng hồ giả khi mở phiên agent, cho chạy lúc dispatch và dừng sau settle (<code>vision-operations.ts</code>, hàm <code>setClock</code>); <code>worker_capabilities(..., frozen_clock=True)</code> ở lời gọi duy nhất. ADR mới: <code>docs/adr/048-agent-frozen-page-clock.md</code>.</li>
+    <li><strong>Vòng sửa 2:</strong> trang có frame con làm <code>clock.pauseAt</code> ném <code>Cannot fast-forward to the past</code> sau khi đã dừng; worker giờ kiểm mọi frame đứng yên rồi mới chấp nhận, lỗi khác thì thử lại có chờ. Tái hiện bằng fixture cục bộ; việc đây là nguyên nhân của phiên hỏng r5 trên trang thật là suy luận.</li>
+    <li><strong>Test:</strong> toàn bộ spec worker trên code cuối (QA chạy một lệnh): 402 qua, 66 bỏ qua, 1 hỏng. Test hỏng là <code>vision-settle-suppression.spec.ts:84</code> (<code>-0</code> so với <code>0</code>), chạy riêng lặp 5 lần thì 30/30 qua; spec này không dùng agent mode hay capability mới nên QA xếp là dao động có sẵn khi máy tải cao, chưa đối chiếu trên code gốc. QA thêm 10 test <code>QA-C01</code>–<code>C10</code>. Test tái hiện bug đỏ trước khi sửa (<code>round 1: state_mismatch</code>) và xanh sau. <code>ruff</code>, typecheck, <code>export_vision_worker.py --check</code> sạch.</li>
+    <li><strong>Pytest:</strong> 424 qua, 17 bỏ qua, 1 hỏng. Test hỏng là <code>test_qa_r8_agent_evidence.py::test_worker_dom_skips_private_inputs_and_redacts_sensitive_names</code>, có sẵn từ HEAD (chuỗi nó tìm không còn trong <code>vision-dom.ts</code> của HEAD), không do bản sửa.</li>
+    <li><strong>Leader:</strong> PASS ở vòng 1, không mục chặn; lượt over-engineering không có <code>delete</code>/<code>yagni</code>/<code>stdlib</code>/<code>native</code>. Leader chưa xem phần code của vòng 2 và vòng 3 (theo quy trình chỉ chạy lại bên đã FAIL, là QA).</li>
+    <li><strong>Graph:</strong> không thêm file sản phẩm; phần mô tả của hai graph đã bổ sung. <code>hgraph check</code> sạch sau vòng 3 (7 graph, 530 file). <code>hgraph check --changed</code> vẫn thoát 1 với 19 file <code>uncovered-changed</code>; mọi dòng đều mang tiền tố <code>auto-at-ui/</code> và <code>hgraph which</code> xác nhận file đã thuộc graph, tức báo nhầm đã biết với file tracked chưa commit. Cổng này chỉ về 0 sau khi commit.</li>
+    <li><strong>Convention:</strong> theo <code>AGENTS.md</code> (contract ở <code>packages/contracts/</code>, file generated được sinh lại, thay đổi hành vi kèm test) và quy tắc runtime của ADR 042 (không named closure trong callback chạy trong trang). Không có đề nghị đổi convention.</li>
+    <li><strong>Comment <code>ponytail:</code>:</strong> không có. Gợi ý ngoài phạm vi: sửa test pytest đỏ có sẵn nêu trên; dọn 23 lỗi lint <code>no-explicit-any</code> có sẵn ở các spec worker.</li>
+  </ul>
+
+  <h3>Nợ và điều chưa kiểm</h3>
+  <ul>
+    <li>Nguyên nhân của phiên hỏng ở r5 trên trang thật (frame con làm lệnh dừng ném lỗi) là suy luận từ fixture cục bộ; HTML trang chủ không có <code>&lt;iframe&gt;</code> tĩnh. r6 và r7 không gặp lại, và log giờ ghi tên lỗi nếu tái diễn.</li>
+    <li>Giới hạn đã ghi trong ADR 048: CSS marquee và video không dừng được; timer dưới 160 ms hoặc <code>requestAnimationFrame</code> vô hạn làm thao tác <code>settle_timeout</code>; nội dung hiện sau timer chỉ xuất hiện khi agent chạy thao tác kế tiếp.</li>
+    <li>Task <code>home-license</code>: 14/14 phiên chạy xong (r5, r6, r7) đều <code>not_achieved</code>, trong khi suite ghi kỳ vọng <code>achieved</code>. Trong HTML trang chủ, cả 14 lần "Mộng Chí Tôn" nằm ở <code>&lt;title&gt;</code> và meta; agent báo đầu trang chỉ có logo "Võ Lâm Chân Mệnh". Kỳ vọng nhiều khả năng sai từ đầu, chưa ai đối chiếu bằng mắt.</li>
+    <li>Chưa đo: độ lệch <code>Date.now()</code> của trang so với giờ server, và phiên dài hàng trăm thao tác.</li>
+    <li>Container <code>playwright-worker</code> đã được tạo lại ba lần để nạp code; mỗi lần tôi đặt lại 2 GiB bằng <code>docker update</code>. <code>docker-compose.yml</code> vẫn ghi 1 GiB.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="tag">A</span>Root cause</h2>
+  <dl class="six">
+    <dt>1. Triệu chứng</dt>
+    <dd>Phiên kết thúc <code>unavailable</code> với <code>safe_failure_reason</code> = <code>state_changed_during_observation</code> (13 phiên) hoặc <code>state_mismatch</code> (4 phiên), gộp r3 + r4 ở worker 2 GiB. Log worker: <code>"Page state changed before dispatch; no browser action was executed."</code> (112 dòng <code>vision.state.mismatch</code>) và <code>"Page did not stay stable for 800 ms within 10000 ms: state_kept_changing. Observed 53 state changes"</code>.</dd>
+    <dt>2. Tái hiện</dt>
+    <dd>Phiên <code>engine=agent_loop</code> trên <code>https://mongchiton.vn/</code> với task buộc cuộn xuống (ví dụ <code>home-license</code>). Không cần model: mở trang bằng đúng context của worker, scope <code>all</code>, cuộn tới <code>scrollY</code> 1440, gọi <code>inspectState</code> mỗi 200 ms rồi so với state đầu bằng <code>equivalentState</code>. Script: <code>.pytest-artifacts/fix-state-mismatch/probe.mts</code>.</dd>
+    <dt>3. Mong đợi và thực tế</dt>
+    <dd>Mong đợi: task chỉ đọc chạy tới <code>completed</code> (ngưỡng bộ đo 90%). Thực tế: 4/21 phiên <code>completed</code> (19%). Ở vùng có carousel, 84,7–85,7% mẫu không còn tương đương với state worker đang giữ; state chỉ quay lại sau khoảng 16,9 giây hoặc không quay lại trong 20 giây.</dd>
+    <dt>4. Root cause</dt>
+    <dd>
+      Phiên agent-loop mở worker với <code>interaction_scope="all"</code> (<code>apps/control-plane/application/vision_agent_loop.py:453</code>). Ở scope này mọi control đang thấy đều vào phép so trạng thái kèm vị trí và danh tính (<code>workers/playwright/src/vision-checkpoints.ts:171-174</code>), dung sai chỉ 3 px và đòi cùng số control (<code>:222-238</code>, <code>:271-275</code>). Slide của carousel là control <code>a &gt; img</code>, nên mỗi lần chuyển slide là một lần "đổi trạng thái".<br>
+      Mọi cổng của worker đều dùng phép so đó với state cũ: <code>vision-operations.ts:334-336</code> (trước khi quan sát), <code>vision-dom.ts:392-394</code> (trong lúc quan sát), <code>vision-operations.ts:563-568</code> (trước thao tác), <code>:662-664</code>, <code>:736-738</code>. Vòng agent thì giữ state qua một lượt gọi model. Khi cổng từ chối, <code>_observe</code> chỉ thử 3 lượt rồi ném lỗi của lượt cuối (<code>vision_agent_loop.py:517-545</code>); cả 17 phiên chết ở đây.
+    </dd>
+    <dt>5. Vì sao bây giờ</dt>
+    <dd>Phase 05 (2026-11-26) là lần đầu <code>agent_loop</code> chạy trên trang có autoplay. Fixture <code>task-ui</code> không có timer nào (grep <code>setTimeout|setInterval</code>: 0 dòng) nên r4 fixture đạt 50/50. Planner v4 chạy trên cùng trang bằng scope <code>visual_buttons</code>, vốn không mang hình học (<code>vision-checkpoints.ts:162-169</code>). ADR 042 đã ghi sẵn giới hạn: carousel translate không được miễn và "vẫn kết thúc <code>state_kept_changing</code>".</dd>
+    <dt>6. Blast radius</dt>
+    <dd>Mọi phiên <code>agent_loop</code> trên trang có chuyển động tự chạy trong viewport (carousel, ticker, đếm ngược). Planner v4 không bị ảnh hưởng. Từ <code>hgraph impact vision-checkpoints.ts --depth 2</code>: 32 file phụ thuộc (worker và spec). Tự grep: 5 cổng nêu trên, 3 nơi gọi <code>observe_dom</code> phía Python (1 của agent-loop, 3 dòng của v4 trong <code>vision_trace_events.py:469,513,603</code>), và <code>worker_capabilities()</code> có 1 nơi gọi thật.</dd>
+  </dl>
+
+  <h3>Bằng chứng đo trên trang thật (chỉ đọc, 4 lần tải trang)</h3>
+  <div class="scroll"><table>
+    <tr><th class="num">scrollY</th><th class="num">Không tương đương state đầu</th><th class="num">Sau khi dừng autoplay</th><th class="num">Sau khi đóng băng đồng hồ</th><th class="num">Đứng yên dài nhất</th></tr>
+    <tr><td class="num">0</td><td class="num">0%</td><td class="num">chưa đo</td><td class="num">chưa đo</td><td class="num">cả 20 s</td></tr>
+    <tr><td class="num">720</td><td class="num">0%</td><td class="num">chưa đo</td><td class="num">chưa đo</td><td class="num">cả 20 s</td></tr>
+    <tr><td class="num">1440</td><td class="num crit">85,7%</td><td class="num okc">0%</td><td class="num okc">0% (0/81)</td><td class="num">2,65 s</td></tr>
+    <tr><td class="num">2160</td><td class="num crit">84,7%</td><td class="num okc">0%</td><td class="num okc">0% (0/80)</td><td class="num">2,87 s</td></tr>
+    <tr><td class="num">2181 (chân trang)</td><td class="num crit">84,7%</td><td class="num okc">0%</td><td class="num">chưa đo</td><td class="num">2,86 s</td></tr>
+  </table></div>
+  <ul>
+    <li>Thủ phạm: 3 phần tử <code>div.swiper</code> (Swiper), cả ba <code>autoplay.delay</code> 3000 ms, <code>speed</code> 300–600 ms, hai cái <code>loop</code>. Phần tử đổi là <code>a.relative.block</code> và <code>img.object-cover</code> trong <code>.swiper-slide</code>, khớp với log worker (tag <code>A</code>, <code>IMG</code> theo cặp 1/2/4/6).</li>
+    <li>Phản chứng: gọi <code>swiper.autoplay.stop()</code> thì mismatch về 0% ở cả ba vị trí, không còn phần tử nào đổi.</li>
+    <li>Đã loại: lazy-load (0/40 mẫu sau giây thứ 5), iframe/popup/quảng cáo (không có), cuộn tự gây đổi (0 và 720 ổn định), bộ nhớ (r3 + r4 không lần nào chạm trần). <code>reducedMotion: "reduce"</code> của worker không dừng được swiper.</li>
+    <li>Tuổi của state lúc bị từ chối (từ log): trước khi quan sát median 9,2 s, trước thao tác median 9,3 s, trong lúc quan sát median 1,0 s. Chu kỳ slide khoảng 3,3–3,6 s.</li>
+  </ul>
+
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 760 170" width="760" height="170" role="img" aria-label="Dòng thời gian một bước của agent so với chu kỳ carousel">
+      <rect x="0" y="0" width="760" height="170" fill="none"/>
+      <g stroke="var(--line)" stroke-width="1">
+        <line x1="40" y1="130" x2="740" y2="130"/>
+        <line x1="40" y1="126" x2="40" y2="134"/><line x1="156" y1="126" x2="156" y2="134"/><line x1="272" y1="126" x2="272" y2="134"/>
+        <line x1="388" y1="126" x2="388" y2="134"/><line x1="504" y1="126" x2="504" y2="134"/><line x1="620" y1="126" x2="620" y2="134"/><line x1="736" y1="126" x2="736" y2="134"/>
+      </g>
+      <g fill="var(--muted)" font-size="11" text-anchor="middle">
+        <text x="40" y="150">0 s</text><text x="156" y="150">2</text><text x="272" y="150">4</text><text x="388" y="150">6</text><text x="504" y="150">8</text><text x="620" y="150">10</text><text x="736" y="150">12</text>
+      </g>
+      <text x="40" y="22" fill="var(--muted)" font-size="11">agent</text>
+      <rect x="40" y="30" width="35" height="22" rx="3" fill="var(--accent)"/>
+      <rect x="77" y="30" width="522" height="22" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+      <text x="338" y="45" fill="var(--fg)" font-size="11" text-anchor="middle">gọi model, giữ state cũ (median 9,3 s)</text>
+      <rect x="601" y="30" width="26" height="22" rx="3" fill="var(--crit)"/>
+      <text x="636" y="45" fill="var(--crit)" font-size="11">cổng từ chối</text>
+      <text x="40" y="66" fill="var(--muted)" font-size="10">đọc DOM 0,6 s</text>
+      <text x="40" y="90" fill="var(--muted)" font-size="11">carousel</text>
+      <g fill="var(--warn)">
+        <rect x="231" y="98" width="35" height="18" rx="3"/><rect x="440" y="98" width="35" height="18" rx="3"/><rect x="649" y="98" width="35" height="18" rx="3"/>
+      </g>
+      <g fill="var(--muted)" font-size="10" text-anchor="middle"><text x="248" y="92">slide 1</text><text x="457" y="92">slide 2</text><text x="666" y="92">slide 3</text></g>
+    </svg>
+    </div>
+    <figcaption>Một bước của agent dài hơn hai chu kỳ slide (3,6 s mỗi chu kỳ: nghỉ 3,0 s, trượt 0,6 s). State agent đọc lúc 0 s đã lỗi thời trước khi model trả lời.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="tag">B</span>Database bị ảnh hưởng</h2>
+  <p><strong>Database: không đụng.</strong> Không bảng, cột, migration hay backfill nào. Các phiên <code>unavailable</code> đã lưu giữ nguyên.</p>
+</section>
+
+<section>
+  <h2><span class="tag">C</span>Trường bị ảnh hưởng</h2>
+  <div class="scroll"><table>
+    <tr><th>Trường</th><th>Định nghĩa</th><th>Nơi ghi</th><th>Nơi đọc</th><th>Thay đổi</th></tr>
+    <tr><td><code>VisualWorkerOpen.required_capabilities</code></td><td><code>packages/contracts/.../vision_worker.py:43-50</code></td><td><code>vision_agent_loop.py:454</code> qua <code>worker_capabilities()</code></td><td><code>vision-operations.ts:158,226-228</code></td><td>Thêm giá trị <code>agent-frozen-clock-v1</code>; <code>max_length</code> 11 → 12. Chỉ thêm, giá trị cũ không đổi.</td></tr>
+    <tr><td><code>capabilities</code> worker trả khi mở phiên</td><td><code>vision-operations.ts:238</code></td><td>worker</td><td><code>apps/control-plane/infrastructure/vision_worker.py:118-134</code></td><td>Thêm cùng giá trị vào danh sách quảng bá.</td></tr>
+    <tr><td><code>Session.frozenClock</code> (chỉ trong RAM worker)</td><td><code>vision-operations.ts</code>, kiểu <code>Session</code> (~<code>:45-51</code>)</td><td><code>open()</code></td><td><code>open()</code>, <code>execute()</code></td><td>Trường mới, không ra transport, không ghi đĩa.</td></tr>
+  </table></div>
+  <p>Không đổi: fingerprint lưu trữ, <code>equivalentState</code>, mã lỗi, payload của planner v4, prompt <code>agent-loop-v4</code>.</p>
+</section>
+
+<section>
+  <h2><span class="tag">D</span>File bị ảnh hưởng (theo hướng khuyến nghị)</h2>
+  <div class="scroll"><table>
+    <tr><th>Đường dẫn</th><th>Việc</th><th>Lý do</th></tr>
+    <tr><td><code>workers/playwright/src/vision-operations.ts</code></td><td>sửa</td><td>Cài đồng hồ giả khi mở phiên; cho chạy lúc dispatch, dừng lại sau khi settle; quảng bá capability.</td></tr>
+    <tr><td><code>packages/contracts/src/auto_at/contracts/vision_worker.py</code></td><td>sửa</td><td>Thêm literal capability, nới <code>max_length</code>.</td></tr>
+    <tr><td><code>workers/playwright/src/vision-contract.generated.ts</code></td><td>sinh lại</td><td><code>uv run python packages/contracts/export_vision_worker.py</code>; không sửa tay.</td></tr>
+    <tr><td><code>apps/control-plane/application/vision_agent_loop.py</code></td><td>sửa</td><td><code>worker_capabilities()</code> thêm tham số và phiên agent-loop yêu cầu capability.</td></tr>
+    <tr><td><code>workers/playwright/src/fixtures/agent-loop-target.ts</code></td><td>sửa</td><td>Thêm trang có carousel chạy bằng timer cho test tái hiện.</td></tr>
+    <tr><td><code>workers/playwright/src/vision-agent-mode.spec.ts</code></td><td>sửa</td><td>Test tái hiện bug và các ca phải giữ nguyên.</td></tr>
+    <tr><td><code>tests/test_vision_agent_loop.py</code>, <code>tests/test_vision_worker_contracts.py</code></td><td>sửa</td><td>Capability mới và contract.</td></tr>
+    <tr><td><code>benchmark/vision/codex/manifest.json</code></td><td>sinh lại</td><td>Ghim hash của <code>vision-operations.ts</code> và <code>vision_worker.py</code> (<code>.pytest-artifacts/refresh_manifest.py</code>).</td></tr>
+    <tr><td><code>docs/adr/048-agent-frozen-page-clock.md</code></td><td>tạo</td><td>Quyết định mới về hành vi của worker, cùng lối với ADR 042/045.</td></tr>
+    <tr><td><code>docs/graphs/playwright-vision-worker.md</code>, <code>vision-agent-loop.md</code></td><td>sửa phần mô tả</td><td>Thêm lưu ý về đồng hồ đóng băng; không thêm file vào graph.</td></tr>
+    <tr><td><code>plan/20261125-2140-agent-loop-task-testing/plan.md</code></td><td>sửa</td><td>Ghi kết quả h-fix và số đo lại.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="tag">E</span>Caller và contract</h2>
+  <ul>
+    <li><code>worker_capabilities()</code>: 1 nơi gọi sản phẩm (<code>vision_agent_loop.py:454</code>), 17 dòng gọi trong 6 file test (<code>test_qa_p3_page_text_snapshot.py</code>, <code>test_qa_r8_agent_evidence.py</code>, <code>test_vision_agent_evidence_flags.py</code>, <code>test_vision_agent_loop.py</code>, <code>test_vision_agent_task_assessment.py</code>). Tham số mới có mặc định tắt nên các lời gọi cũ trả đúng tuple cũ.</li>
+    <li><code>VisualOperationWorker.open / execute</code>: mọi phiên đi qua, nhưng nhánh mới chỉ chạy khi <code>agent_mode</code> và capability được yêu cầu. Planner v4 không yêu cầu nên hành vi của v4 không đổi.</li>
+    <li>Contract công khai bị đụng: giá trị enum của <code>required_capabilities</code> (thêm 1). Worker cũ gặp control-plane mới sẽ từ chối mở phiên vì thiếu capability, nên phải build lại <code>playwright-worker</code> cùng lúc với <code>temporal-worker</code>.</li>
+    <li>Không đổi: route HTTP, header, mã lỗi 422, response API, event, env var, config key, chữ ký <code>_observe</code>, <code>equivalentState</code>, <code>settleState</code>, <code>observeDom</code>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="tag">F</span>Rủi ro và cách sửa đề xuất</h2>
+
+  <div class="opt rec">
+    <h3 style="margin-top:0">Hướng 1: đóng băng đồng hồ của trang giữa các thao tác <span class="pill rec">khuyến nghị</span></h3>
+    <p>Trong phiên agent-loop, worker cài đồng hồ giả của Playwright (<code>context.clock</code>, có sẵn ở bản 1.50.1 đang ghim, không thêm dependency). Timer của trang chỉ chạy trong lúc một thao tác đang thực thi và settle; ngoài ra thì dừng. Trang không thể tự đổi trong lúc quan sát và lúc model suy nghĩ, nên mọi cổng hiện có đều qua mà không phải nới cổng nào.</p>
+    <p>Đây là một điểm sửa duy nhất mà cả 5 cổng cùng hưởng. Đã đo khả thi trên trang thật: 0/81 và 0/80 mẫu lệch trong 20 s khi đóng băng; chụp ảnh (300 ms), chờ phần tử ổn định (60 ms) và <code>settleState</code> vẫn chạy; cho đồng hồ chạy lại thì autoplay trở lại.</p>
+    <p><strong>Giả định phụ thuộc nhất:</strong> chuyển động của trang do timer JavaScript điều khiển (<code>setTimeout</code>, <code>setInterval</code>, <code>requestAnimationFrame</code>).</p>
+    <p><strong>Vỡ trước tiên khi:</strong></p>
+    <ul>
+      <li>Trang chuyển động bằng CSS animation vô hạn có translate (marquee) hoặc video: đồng hồ giả không dừng được, vẫn <code>state_kept_changing</code> như ADR 042 đã ghi.</li>
+      <li>Nội dung xuất hiện sau một timer mà không có thao tác nào (ví dụ kết quả hiện sau <code>setTimeout</code> 1 s): hôm nay nó hiện ra trong lúc model suy nghĩ, sau khi sửa nó chỉ hiện khi agent chạy thao tác kế tiếp, kể cả <code>wait</code>. Prompt không đổi, nên đây là thay đổi hành vi phải đo lại trên fixture.</li>
+      <li><code>Date.now()</code> trong trang chậm dần so với giờ thật, bằng tổng thời gian đóng băng. FE nào so giờ máy với giờ server (đếm ngược, hạn token phía client) sẽ thấy lệch.</li>
+    </ul>
+    <p><strong>Chưa kiểm:</strong> click thật dưới đồng hồ đóng băng (phép đo không click trên trang production), popup mở trang mới, và độ lặp lại (mỗi vị trí mới đo một lần). Các ca này nằm trong test ở mục H.</p>
+  </div>
+
+  <div class="opt">
+    <h3 style="margin-top:0">Hướng 2: cổng theo đích trong agent mode <span class="pill alt">thay thế</span></h3>
+    <p>Với agent mode, cổng trước thao tác chỉ kiểm URL, scroll, form, hộp thoại và chính phần tử đích; control khác đổi thì bỏ qua. <code>observeDom</code> tự lấy lại state rồi đọc.</p>
+    <p><strong>Giả định:</strong> kiểm đúng nút đích là đủ an toàn. <strong>Vỡ khi:</strong> một thay đổi ngoài đích làm đổi nghĩa của thao tác (lớp phủ không phải dialog, nội dung quanh nút đổi). Phải sửa riêng cả 5 cổng cùng <code>resolveDomTarget</code>, đảo một quyết định có test ghim (<code>vision-agent-mode.spec.ts:401-473</code>, "the gate itself is deliberately unchanged"), và quan sát vẫn có thể trượt vì slide đổi giữa lúc đọc.</p>
+  </div>
+
+  <div class="opt">
+    <h3 style="margin-top:0">Hướng 3: chỉ tăng số lượt thử ở <code>_observe</code> <span class="pill no">đã loại</span></h3>
+    <p>Chỉ vá triệu chứng ở đúng chỗ phiên chết. Quan sát có thể qua sau nhiều lượt hơn, nhưng thao tác sau lượt gọi model vẫn bị từ chối khoảng 85% (số đo ở bảng trên), mỗi lần từ chối tốn thêm một lượt gọi model trong trần 20 lượt.</p>
+  </div>
+
+  <div class="note">
+    <strong>Ngoài phạm vi, chỉ ghi nhận:</strong> khi lượt refresh hết giờ (<code>settle_timeout</code>), worker không cập nhật state đang giữ, nên lần <code>observe_dom</code> kế tiếp gần như chắc chắn <code>state_mismatch</code> (phiên <code>747d5fe7</code>: 7 lần liên tiếp). Hướng 1 làm ca này hiếm đi nhưng không sửa nó. Phiên <code>completed</code> chốt <code>not_achieved</code> khi check còn <code>not_checked</code> cũng là việc riêng.
+  </div>
+</section>
+
+<section>
+  <h2><span class="tag">G</span>Convention và graph</h2>
+  <ul>
+    <li><strong>Convention:</strong> <code>AGENTS.md</code>, mục "Code organization rules" (contract chung ở <code>packages/contracts/</code>, thay đổi hành vi phải kèm test) và "Required checks before helping" (<code>uv run ruff check .</code>, <code>uv run pytest</code>). <code>docs/code-standards.md</code> chỉ là mục lục trỏ về đó. Bản sửa không lệch convention.</li>
+    <li><strong>Graph phủ vùng lỗi:</strong> <code>docs/graphs/playwright-vision-worker.md</code> và <code>docs/graphs/vision-agent-loop.md</code>. Sau khi sửa, phần mô tả của hai graph thiếu một ý (đồng hồ đóng băng, capability mới) nên cần bổ sung bằng tay.</li>
+    <li><strong>Cập nhật graph:</strong> không thêm hay xoá file sản phẩm, quan hệ import không đổi. Chạy <code>hgraph sync</code> cho hai graph rồi <code>hgraph check</code>. ADR mới là file docs, không thuộc graph.</li>
+    <li><strong>Lưu ý quy trình:</strong> đổi contract công khai và hành vi của worker nên việc sửa giao <code>be-developer</code>, không giao bản junior.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="tag">H</span>Test sẽ viết</h2>
+  <ol>
+    <li><strong>Tái hiện bug</strong> (<code>vision-agent-mode.spec.ts</code>): trang fixture có carousel đổi slide <code>a &gt; img</code> bằng <code>setInterval</code>. Phiên agent không có capability: quan sát, chờ quá một chu kỳ, gửi thao tác, nhận <code>state_mismatch</code> ở <code>prepare_start</code> (đỏ đúng như hôm nay). Cùng kịch bản có capability: quan sát, chờ, thao tác đều qua.</li>
+    <li>Thời gian vẫn chạy trong thao tác: <code>wait</code> 1000 ms làm carousel sang slide khác; sau đó trang lại đứng yên.</li>
+    <li>Click, gõ, cuộn, chụp ảnh và popup hoạt động dưới đồng hồ đóng băng; lỗi giữa chừng vẫn trả đồng hồ về trạng thái dừng.</li>
+    <li>Giữ nguyên: thay đổi không do timer (đổi nhãn, modal, URL, scroll, form) vẫn bị từ chối; các ca ở <code>vision-agent-mode.spec.ts:415-473</code> không sửa.</li>
+    <li>Phiên không yêu cầu capability (planner v4, agent cũ) không cài đồng hồ giả.</li>
+    <li>Python: <code>worker_capabilities()</code> và contract; <code>vision-contract.generated.ts</code> khớp bản sinh.</li>
+    <li>Hồi quy: toàn bộ spec worker, nhóm test Python của agent-loop, <code>ruff</code>, typecheck.</li>
+    <li><strong>Đo lại, có gọi model thật qua bridge:</strong> fixture 10 task × 3 lần (không được tụt dưới 90%) và mongchiton.vn 3 task × 5 lần, chỉ đọc, cờ FE test tắt. Tiêu chí: <code>completed</code> ≥ 90% và không còn phiên nào dừng vì hai mã lỗi trên do carousel.</li>
+  </ol>
+</section>
+</div>

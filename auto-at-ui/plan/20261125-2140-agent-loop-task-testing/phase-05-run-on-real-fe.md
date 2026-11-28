@@ -1,7 +1,7 @@
 ---
 phase: 05
 title: Chạy trên FE thật của người dùng
-status: pending
+status: completed
 owner: none
 qa: skip
 dependencies: [phase-01, phase-04]
@@ -16,6 +16,22 @@ tạo project, đặt allowed origin, bật cờ FE test, chạy 2–3 task th�
 giới hạn container worker hay không.
 
 Toàn bộ phase cần user: URL/origin FE, tài khoản test dùng-một-lần, đồng ý bật cờ, task cần thử. Không có dev/QA.
+
+## Thay đổi phạm vi (user, 2026-11-26)
+
+User không đưa FE test riêng mà chỉ định `mongchiton.vn` ("thử với mongchiton.vn đi"), rồi xác nhận đó là trang chuẩn
+("mongchiton mới là web chuẩn, vì tôi sẽ làm việc trên web đấy"). Trang này là production, nên phase chạy như sau, khác với các mục
+bên dưới:
+
+- Cờ `vision_owned_test_target` **tắt**; task chỉ đọc (không đăng nhập, không gửi form). Tiêu chí 3 và 8 không áp dụng; tiêu chí 1
+  và 2 thay bằng: dùng lại project có sẵn `Project-MCT` (allowed origin chỉ `https://mongchiton.vn`), runner tự soạn 3 task.
+- Mục "Cấm trỏ vào site production hoặc site bên thứ ba" được user gỡ riêng cho `mongchiton.vn`, chỉ ở chế độ an toàn mặc định.
+- Mục "Không đổi giới hạn container worker" được user gỡ cho một phép thử: 1 GiB → 2 GiB bằng `docker update` trên container đang
+  chạy, không sửa compose; user chọn giữ 2 GiB tạm thời.
+- User duyệt xuất lại token bridge (`scripts/export_claude_bridge_token.py`) sau khi r1 lỗi `bridge_model_unavailable`.
+
+Kết quả: `reports/phase-05/runner-r1.md` … `runner-r4.md`, tóm tắt ở plan.md mục "Kết quả trên mongchiton.vn". Chưa làm: đối
+chiếu bằng mắt người (tiêu chí 5).
 
 ## Tiêu chí xong (kiểm chứng được)
 

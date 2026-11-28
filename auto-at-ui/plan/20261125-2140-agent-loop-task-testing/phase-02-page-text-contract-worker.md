@@ -1,7 +1,7 @@
 ---
 phase: 02
 title: Chữ trên trang trong observation — contract và worker
-status: pending
+status: completed
 owner: both
 qa: required
 dependencies: [phase-01]
@@ -105,3 +105,5 @@ PM, không tự mở rộng.
   đỏ. Tách phase này khỏi phase 03 để phía Python chưa phụ thuộc vào nó.
 - Quyết định "dung sai `step_deadline`" **không** thuộc phase này; test worker trên host Windows có thể dao động
   (`invalid_step_deadline`), A/B với HEAD trước khi coi là hồi quy.
+- **User chốt 2026-11-26 (phân loại dữ liệu chữ trang):** theo đề xuất của phase — alert/status, heading và đoạn văn
+  ngắn; chỉ ở agent mode; qua bộ lọc nhạy cảm; có trần dung lượng. Không nới, không siết thêm.
